@@ -50,6 +50,6 @@ This command installs all dependencies listed in `package.json`.
 - Create a file named `.env` in the projects root directory.
 - Pls ask me for the contents of this env file (should not be posted to github)
 
-## Step 4 - Run the server
+## Step 5 - Run the server
 - You should now be good to go.
 - Run `npm start` in the projects root directory, then head to `localhost:2121` to see the website.
