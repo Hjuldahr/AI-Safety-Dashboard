@@ -13,8 +13,8 @@ function generateCall(offsetTime, model = "GPT-n") {
   const responseTimestamp = offsetTime - responseTime;
 
   return {
-    timestamp: responseTimestamp,
-    model,
+    "timestamp": responseTimestamp,
+    "model": model,
     "policy compliance": policyCompliance,
     "response helpfulness": responseHelpfulness,
     "response time": responseTime,
@@ -57,11 +57,15 @@ function generateInterval(intervalLength, frequency, mean, stdDev) {
 
 // summarize calls
 function summarizeInterval(calls) {
-  const stats = { meta: { timestamp: new Date().toISOString() } };
+  const stats = {
+    meta: {
+        timestamp: new Date().toISOString(),
+        model: calls.length ? calls[0]["model"] : null
+    }
+  };
   if (calls.length === 0) return stats;
 
-  const keys = ["policy compliance", "response helpfulness", "response time", "energy consumption"];
-  for (const key of keys) {
+  for (const key of ["policy compliance", "response helpfulness", "response time", "energy consumption"]) {
     const values = calls.map(call => call[key]);
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
     stats[key] = mean
@@ -70,9 +74,9 @@ function summarizeInterval(calls) {
   return stats;
 }
 
-// --- Main async function --- //
+// --- Main async function --- //  
 async function main() {
-  results = summarizeInterval(generateInterval(5, 3, 0.5, 0.125));
+  return summarizeInterval(generateInterval(5, 3, 0.5, 0.125));
 }
 
 main().catch(console.error);
