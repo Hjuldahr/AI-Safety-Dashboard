@@ -62,72 +62,15 @@ function summarizeInterval(calls) {
 
   const keys = ["policy compliance", "response helpfulness", "response time", "energy consumption"];
   for (const key of keys) {
-    const values = calls.map(call => call[key]);
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const sorted = [...values].sort((a, b) => a - b);
-    const median = sorted.length % 2 === 1
-      ? sorted[(sorted.length - 1) / 2]
-      : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
-    const variance = values.length > 1
-      ? values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (values.length - 1)
-      : 0;
-
-    stats[key] = {
-      min: Math.min(...values),
-      max: Math.max(...values),
-      mean,
-      median,
-      stdev: Math.sqrt(variance),
-      variance
-    };
+    stats[key] = values.reduce((a, b) => a + b, 0) / values.length;
   }
 
   return stats;
 }
 
-// CSV escape helper
-function escapeCsvValue(value) {
-  if (value === null || value === undefined) return '';
-  const str = String(value);
-  if (str.includes('"') || str.includes(',') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
-}
-
-// async CSV writer
-async function writeCsv(filePath, data) {
-  if (data.length === 0) return;
-
-  const headers = Object.keys(data[0]);
-  const csvHeader = headers.map(escapeCsvValue).join(',') + '\n';
-  const csvRows = data
-    .map(row => headers.map(h => escapeCsvValue(row[h])).join(','))
-    .join('\n');
-
-  await fs.writeFile(filePath, csvHeader + csvRows);
-}
-
 // --- Main async function --- //
 async function main() {
-  const calls = generateInterval(5, 3, 0.5, 0.125);
-  const summary = summarizeInterval(calls);
-
-  const ROOT_PATH = __dirname;
-  const ID = randomUUID();
-  const csvFolder = path.join(ROOT_PATH, 'data dump');
-
-  await fs.mkdir(csvFolder, { recursive: true });
-
-  const csvPath = path.join(csvFolder, `call-data-${ID}.csv`);
-  const jsonPath = path.join(csvFolder, `stat-data-${ID}.json`);
-
-  await writeCsv(csvPath, calls);
-  await fs.writeFile(jsonPath, JSON.stringify(summary, null, 2));
-
-  console.log('Data written successfully:');
-  console.log('CSV:', csvPath);
-  console.log('JSON:', jsonPath);
+  return summarizeInterval(generateInterval(5, 3, 0.5, 0.125));
 }
 
 main().catch(console.error);
