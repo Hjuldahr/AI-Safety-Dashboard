@@ -1,0 +1,13 @@
+.chart-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* Responsiveness for charts */
+@media (max-width: 768px) {
+  .chart-row {
+    flex-direction: column;
+    align-items: center;
+  }
+}
