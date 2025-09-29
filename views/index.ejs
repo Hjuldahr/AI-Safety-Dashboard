@@ -5,6 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/chart.js" defer></script>
+    <link rel="stylesheet" href="/css/index.css">
+
 </head>
 
 <body>
@@ -21,6 +25,18 @@
         <% } else { %>
             <p>You are not logged in</p>
             <% } %>
+
+    <!-- Charts -->
+    <div style="width:100%; max-width:600px; position: relative;" class="chart-row">
+        <canvas id="ModelDriftChart"></canvas>
+        <canvas id="helpfullnessChart"></canvas>
+    </div>
+
+    <div style="width:100%; max-width:600px; position: relative;" class="chart-row">
+        <canvas id="complianceChart"></canvas>
+        <canvas id="activeUsersQueryChart"></canvas>
+    </div>
+
 </body>
 
 </html>
