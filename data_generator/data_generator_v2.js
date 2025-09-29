@@ -62,7 +62,9 @@ function summarizeInterval(calls) {
 
   const keys = ["policy compliance", "response helpfulness", "response time", "energy consumption"];
   for (const key of keys) {
-    stats[key] = values.reduce((a, b) => a + b, 0) / values.length;
+    const values = calls.map(call => call[key]);
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    stats[key] = mean
   }
 
   return stats;
@@ -70,7 +72,7 @@ function summarizeInterval(calls) {
 
 // --- Main async function --- //
 async function main() {
-  return summarizeInterval(generateInterval(5, 3, 0.5, 0.125));
+  results = summarizeInterval(generateInterval(5, 3, 0.5, 0.125));
 }
 
 main().catch(console.error);
