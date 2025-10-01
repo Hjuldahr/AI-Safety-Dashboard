@@ -12,19 +12,11 @@
 </head>
 
 <body>
-    <h1>AI Safety Dashboard</h1>
-    <a href="/login">Login:</a>
-    <% if(user){ %>
-        <p>You are logged in as <%= user.username %>
-        </p>
-        <p>Roles: <%= user.roles%>
-        </p>
-        <form action="/api/logout" method="post" class="logout-form">
-            <button type="submit" id="logout-btn">Logout</button>
-        </form>
-        <% } else { %>
-            <p>You are not logged in</p>
-            <% } %>
+    <%- include('components/header') %>
+
+    
+
+    <%- include('components/nav') %>
 
     <!-- Charts -->
     <div style="width:100%; max-width:600px; position: relative;" class="chart-row">
