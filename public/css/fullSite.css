@@ -1,3 +1,18 @@
+@media screen and (max-width: 768px) {
+  .site-nav {
+    flex-basis: 100%;
+        max-width: none;
+    
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 1px solid #eee;
+  }
+
+  main.content {
+    padding: 1rem;
+  }
+}
+
 body {
     margin: 0;
     font-family: system-ui, sans-serif;
