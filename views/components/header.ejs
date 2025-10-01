@@ -1,0 +1,11 @@
+<header class="site-header">
+    <h1>AI Safety Dashboard</h1>
+    <% if(user){ %>
+        <p>User: <%= user.username%></p>
+        <form action="/api/logout" method="post" class="logout-form">
+            <button type="submit" id="logout-btn">Logout</button>
+        </form>
+    <% } else { %>
+        <a href="/login">Login:</a>
+    <% } %>
+</header>
