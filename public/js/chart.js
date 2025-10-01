@@ -227,9 +227,8 @@ const actions = [
 
 // Create buttons for every action and attach event handlers
 actions.forEach(action => {
-    const btn = document.createElement('button');
+    const btn = document.getElementById("refresh-button");
     btn.innerText = `${action.name}`;
     //Add listener to every chart
     btn.addEventListener('click', () => charts.forEach(chart => action.handler(chart)));
-    document.body.appendChild(btn);
 });
