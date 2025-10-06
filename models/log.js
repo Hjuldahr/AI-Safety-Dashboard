@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const LogSchema = new mongoose.Schema({
+const ModelCallSchema = new mongoose.Schema({
     policyCompliance: {
         type: Float,
         required: true,
@@ -28,6 +28,6 @@ const LogSchema = new mongoose.Schema({
     }
 }); 
 
-const Log = mongoose.model('Log', LogSchema);
+const ModelCall = mongoose.model('ModelCall', ModelCallSchema);
 
 export default Log;

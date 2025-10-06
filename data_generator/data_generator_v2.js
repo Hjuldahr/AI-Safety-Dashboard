@@ -78,5 +78,3 @@ function summarizeInterval(calls) {
 async function main() {
   return summarizeInterval(generateInterval(5, 3, 0.5, 0.125));
 }
-
-main().catch(console.error);
