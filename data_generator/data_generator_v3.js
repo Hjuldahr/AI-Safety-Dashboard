@@ -48,18 +48,52 @@ async function pseudoAI(intervalDuration, min_callrate = 1, max_callrate = 10, m
 
         calls[i] = {
             time: getRandomInt(start_time, end_time),
-            policy_compliance: getRandomFloat(min_pc, max_pc),
-            response_helpfulness: getRandomFloat(min_rh, max_rh),
-            response_time: responseTime,
-            energy_consumption: parseFloat(energyConsumption.toFixed(3))
+            policyCompliance: getRandomFloat(min_pc, max_pc),
+            responseHelpfulness: getRandomFloat(min_rh, max_rh),
+            responseTime: responseTime,
+            energyConsumption: energyConsumption
         };
     }
-
-    //TODO collapse into single averaged single json blurb
-
+ 
     calls.sort((a, b) => a.time - b.time);
 
     await sleep(intervalDuration * 1000);
 
     return calls;
+}
+
+function AIGeneralizer(calls) {
+    if (!calls || calls.length === 0) {
+        return {};
+    }
+
+    const computeStats = (arr) => {
+        const len = arr.length;
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(len / 2);
+        return {
+            min: Math.min(...arr),
+            max: Math.max(...arr),
+            mean: arr.reduce((a, b) => a + b, 0) / len,
+            median: len % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+        };
+    };
+
+    // Extract arrays in one efficient loop
+    const t = [], pc = [], rh = [], rt = [], ec = [];
+    for (const call of calls) {
+        t.push(call.time);
+        pc.push(call.policyCompliance);
+        rh.push(call.responseHelpfulness);
+        rt.push(call.responseTime);
+        ec.push(call.energyConsumption);
+    }
+
+    return {
+        time: computeStats(t),
+        policyCompliance: computeStats(pc),
+        responseHelpfulness: computeStats(rh),
+        responseTime: computeStats(rt),
+        energyConsumption: computeStats(ec)
+    };
 }
