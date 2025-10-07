@@ -21,7 +21,7 @@
             <!--horizontal-->
             <div class="log-panel"> <!--master-->
                 <!--vertical-->
-                <ul>
+                <ul id="modelSelectors">
                     <li><button>Model 1</button></li>
                     <li><button>Model 2</button></li>
                     <li><button>Model 3</button></li>
@@ -29,8 +29,8 @@
             </div>
             <div class="log-panel"> <!--view-->
                 <!--vertical-->
-                <h1>Model 1 Logs</h1> 
-                <table>
+                <h1 id="modelHeader">Model 1 Logs</h1> 
+                <table id="modelLogTable">
                     <tr>
                         <th>Row #</th>
                         <th>Call ID</th>
@@ -63,19 +63,19 @@
                     <!--horizontal-->
                     <div class="view-controls"> 
                         <!--horizontal-->
-                        <button>« First</button>
-                        <button>‹ Prev</button>
-                        <button>Next ›</button>
-                        <button>Last »</button>
+                        <button id="firstPageSelector">« First</button>
+                        <button id="prevPageSelector">‹ Prev</button>
+                        <button id="nextPageSelector">Next ›</button>
+                        <button id="lastPageSelector">Last »</button>
                     </div>
                     <div class="view-page"> 
-                        <p>Page: 1 / 10</p>
+                        <p id="pageIndicator">Page: 1 / 10</p>
                     </div>
                 </div>
             </div>
             <div class="log-panel"> <!--details-->
                 <ul>
-                    <li><p>Model: Model 1</p></li>
+                    <li><p id="modelLabel">Model: Model 1</p></li>
                     <li><p>First Ran: 06-Oct-2025 18:27</p></li>
                     <li><p>Last Ran: 06-Oct-2025 18:27</p></li>
                     <li><button>Export</button></li>

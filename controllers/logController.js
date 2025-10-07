@@ -1,3 +1,8 @@
+
+
+
+
+
 const getPage = async (req, res) => {
     try{
         res.render("logs", {
