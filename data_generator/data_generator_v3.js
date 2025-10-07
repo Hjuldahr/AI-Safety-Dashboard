@@ -32,7 +32,7 @@ async function pseudoAI(intervalDuration, min_callrate = 1, max_callrate = 10, m
     const angle = ((hour - 3) / 24) * 2 * Math.PI;
     let timeWeight = Math.sin(angle); // -1 to 1
     timeWeight = Math.max(0, timeWeight); // clamp negative values to 0 (no traffic)
-    // Scale to a realistic max factor (~1.2)
+    // Scale to a realistic max factor (+20%)
     timeWeight *= 1.2;
 
     // Compute queries with min/max callrate and interval duration
@@ -54,6 +54,8 @@ async function pseudoAI(intervalDuration, min_callrate = 1, max_callrate = 10, m
             energy_consumption: parseFloat(energyConsumption.toFixed(3))
         };
     }
+
+    //TODO collapse into single averaged single json blurb
 
     calls.sort((a, b) => a.time - b.time);
 
