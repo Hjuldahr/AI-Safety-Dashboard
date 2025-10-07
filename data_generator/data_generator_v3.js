@@ -22,18 +22,6 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function getRandomFloat(min, max) {
-    return Math.random() * (max - min) + min;
-}
-
-function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function pseudoAI(intervalDuration, min_callrate = 1, max_callrate = 10, min_pc = 0.6, max_pc = 1.0, min_rh = 0.6, max_rh = 1.0) {
     // Tweak min and max params to get Good / Bad / Neutral / Max-Chaos Archetypes
     const now = new Date();
