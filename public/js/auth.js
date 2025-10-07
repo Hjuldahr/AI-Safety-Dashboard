@@ -34,7 +34,6 @@ signUpForm.addEventListener("submit", async (e) => {
     const password = document.querySelector("#signUpPassword").value;
     const confirmPassword = document.querySelector("#signUpConfirmPassword").value;
 
-
     if (password !== confirmPassword) {
         showError('Passwords do not match.');
         return;
