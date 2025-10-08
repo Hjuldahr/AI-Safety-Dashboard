@@ -8,4 +8,12 @@ const getPage = async (req, res) => {
     }
 };
 
+const getUserLogs = async (req, res) => {
+
+}
+
+const getAILogs = async (req, res) => {
+
+}
+
 export default { getPage };
