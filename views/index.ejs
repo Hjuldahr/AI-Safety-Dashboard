@@ -8,35 +8,29 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/js/chart.js" defer></script>
     <link rel="stylesheet" href="/css/index.css">
+    <link rel="stylesheet" href="/css/fullSite.css">
 
 </head>
 
 <body>
-    <h1>AI Safety Dashboard</h1>
-    <a href="/login">Login:</a>
-    <% if(user){ %>
-        <p>You are logged in as <%= user.username %>
-        </p>
-        <p>Roles: <%= user.roles%>
-        </p>
-        <form action="/api/logout" method="post" class="logout-form">
-            <button type="submit" id="logout-btn">Logout</button>
-        </form>
-        <% } else { %>
-            <p>You are not logged in</p>
-            <% } %>
+    <%- include('components/header') %>
 
-    <!-- Charts -->
-    <div style="width:100%; max-width:600px; position: relative;" class="chart-row">
-        <canvas id="ModelDriftChart"></canvas>
-        <canvas id="helpfullnessChart"></canvas>
-    </div>
+    <%- include('components/nav') %>
 
-    <div style="width:100%; max-width:600px; position: relative;" class="chart-row">
-        <canvas id="complianceChart"></canvas>
-        <canvas id="activeUsersQueryChart"></canvas>
-    </div>
+    <main class="content">
+        <!-- Charts -->
+        <div style="width:100%; max-width:450px; position: relative;" class="chart-row">
+            <canvas id="ModelDriftChart"></canvas>
+            <canvas id="helpfullnessChart"></canvas>
+        </div>
 
+        <div style="width:100%; max-width:450px; position: relative;" class="chart-row">
+            <canvas id="complianceChart"></canvas>
+            <canvas id="activeUsersQueryChart"></canvas>
+        </div>
+
+        <button id="refresh-button">refresh</button>
+    </main>
 </body>
 
 </html>

@@ -1,0 +1,76 @@
+/* header.css */
+
+:root {
+    --header-text-color: #333;
+    --header-bg-color: #ffffff;
+    --button-bg-color: #f0f2f5;
+    --button-hover-bg-color: #e4e6e8;
+    --primary-accent-color: #0056b3;
+}
+
+.site-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    box-sizing: border-box; /* Ensures padding is included in the element's total width */
+    background-color: var(--header-bg-color);
+}
+
+.site-header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--header-text-color);
+    margin: 0;
+}
+
+/* This is a wrapper to group user items together */
+.site-header .user-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.site-header p {
+    margin: 0;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.userInfo{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.site-header .logout-form {
+    margin: 0;
+}
+
+.site-header #logout-btn {
+    border: 1px solid #ccc;
+    background-color: var(--button-bg-color);
+    color: var(--header-text-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.site-header #logout-btn:hover {
+    background-color: var(--button-hover-bg-color);
+}
+
+.site-header a {
+    color: var(--primary-accent-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.site-header a:hover {
+    text-decoration: underline;
+}
+

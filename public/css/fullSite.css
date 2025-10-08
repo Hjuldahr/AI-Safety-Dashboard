@@ -1,0 +1,44 @@
+@media screen and (max-width: 768px) {
+  .site-nav {
+    flex-basis: 100%;
+        max-width: none;
+    
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 1px solid #eee;
+  }
+
+  main.content {
+    padding: 1rem;
+  }
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+header {
+    flex-basis: 100%;
+    position: sticky;
+    top: 0;
+    height: 60px;
+
+    background-color: white;
+    z-index: 10;
+    border-bottom: 1px solid #eee;
+}
+
+nav {
+    flex-basis: 15%;
+    max-width: 300px;
+    flex-shrink: 0;
+}
+
+main.content {
+    flex-grow: 1;
+    min-width: 0; 
+    padding: 1rem 2rem;
+}
