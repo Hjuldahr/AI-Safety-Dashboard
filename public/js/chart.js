@@ -1,149 +1,160 @@
+import { pseudoAI, AIGeneralizer } from './test_data_generator_v3.js';
+
 // ========== Utility Functions ==========
 const Utils = {
     days({ count }) {
         return Array.from({ length: count }, (_, i) => `Day ${i + 1}`);
     },
-    numbers({ count, min, max }) {
-        return Array.from({ length: count }, () => Math.floor(Math.random() * (max - min + 1)) + min);
+    numbers({ count, min, max, precision = 0 }) {
+        return Array.from({ length: count }, () => {
+            const value = Math.random() * (max - min) + min;
+            return parseFloat(value.toFixed(precision));
+        });
     },
     rand(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     },
     CHART_COLORS: {
-        red: 'rgb(255, 99, 132)',
-        blue: 'rgb(54, 162, 235)'
+        coral: 'rgb(244, 91, 105)',
+        blue: 'rgb(0, 122, 204)',
+        teal: 'rgb(44, 165, 141)',
+        amber: 'rgb(255, 179, 0)',
+        purple: 'rgb(142, 68, 173)',
     },
     transparentize(color, opacity) {
+        if (!color) return 'rgba(0,0,0,0.1)';
         return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
     }
 };
 
+// ========== Defining Models NOTE: Might need to be moved to a different file ==========
+async function goodModel() {
+    const calls = await pseudoAI("GoodModel", 2, 5, 10, 0.9, 1.0, 0.9, 1.0);
+    const summary = AIGeneralizer("GoodModel", calls);
+    return {
+        modelName: summary.model,
+        avgCompliance: summary.policyCompliance.mean * 100,
+        avgHelpfulness: summary.responseHelpfulness.mean * 5,
+        avgResponseTime: summary.responseTime.mean,
+        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // Convert kWh to Wh for better readability
+    };
+}
+
+async function badModel() {
+    const calls = await pseudoAI("badModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6);
+    const summary = AIGeneralizer("badModel", calls);
+    return {
+        modelName: summary.model,
+        avgCompliance: summary.policyCompliance.mean * 100,
+        avgHelpfulness: summary.responseHelpfulness.mean * 5,
+        avgResponseTime: summary.responseTime.mean,
+        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // Convert kWh to Wh for better readability
+    };
+}
+
 // ========== Chart Creation Functions ==========
 
-// Model Drift Line Chart
-function createModelDriftChart(ctx) {
-    const DATA_COUNT = 7;
-    const labels = Utils.days({ count: DATA_COUNT });
-    const NUMBER_CFG = { count: DATA_COUNT, min: -100, max: 100 };
-
+// Response Time Line Chart
+function createResponseTimeChart(ctx, initialData) {
     return new Chart(ctx, {
         type: 'line',
         data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Model Drift',
-                    borderColor: Utils.CHART_COLORS.red,
-                    backgroundColor: Utils.transparentize(Utils.CHART_COLORS.red, 0.5),
-                    fill: false,
-                    data: Utils.numbers(NUMBER_CFG),
-                },
-                {
-                    label: 'Baseline',
-                    data: Utils.numbers(NUMBER_CFG),
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: true },
-                title: { display: true, text: 'Model Drift Over Time' }
-            }
-        }
-    });
-}
-
-// Helpfulness Bar Chart
-function createHelpfulnessChart(ctx) {
-    const categories = ['Category A', 'Category B', 'Category C', 'Category D', 'Category E'];
-    return new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: categories,
+            labels: [new Date().toLocaleTimeString()], // Start with one label
             datasets: [{
-                label: 'Helpfulness',
-                data: Utils.numbers({ count: categories.length, min: 0, max: 100 }),
-                backgroundColor: Utils.CHART_COLORS.red
+                label: 'Average Response Time (ms)',
+                data: [initialData.avgResponseTime], // Use initial data point
+                borderColor: Utils.CHART_COLORS.blue,
+                backgroundColor: Utils.transparentize(Utils.CHART_COLORS.blue, 0.5),
+                fill: true,
+                tension: 0.3
             }]
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false },
+                legend: { display: true },
+                title: { display: true, text: 'Response Time Over Time' }
+            }
+        }
+    });
+}
+
+// Energy Consumption Line Chart
+function createEnergyConsumptionChart(ctx, initialData) {
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [new Date().toLocaleTimeString()], // Start with one label
+            datasets: [{
+                label: 'Average Energy Consumption (Wh)',
+                data: [initialData.avgEnergyConsumption], // Use initial data point
+                borderColor: Utils.CHART_COLORS.amber,
+                backgroundColor: Utils.transparentize(Utils.CHART_COLORS.amber, 0.5),
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true },
+                title: { display: true, text: 'Energy Consumption Over Time' }
+            }
+        }
+    });
+}
+
+// Compliance Doughnut Chart
+function createComplianceChart(ctx, initialData) {
+    const complianceScore = initialData.avgCompliance;
+    return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Compliant', 'Non-Compliant'],
+            datasets: [{
+                label: 'Compliance',
+                data: [complianceScore, 100 - complianceScore], // Use initial data
+                backgroundColor: [Utils.CHART_COLORS.teal, Utils.CHART_COLORS.coral],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true, position: 'bottom' },
+                title: {
+                    display: true,
+                    // Use initial data in the title
+                    text: `Overall Compliance Score: ${complianceScore.toFixed(1)}%`
+                }
+            }
+        }
+    });
+}
+
+// Helpfulness Line Chart
+function createHelpfulnessChart(ctx, initialData) {
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [new Date().toLocaleTimeString()], // Start with one label
+            datasets: [{
+                label: 'Average Helpfulness Score (out of 5)',
+                data: [initialData.avgHelpfulness], // Use initial data point
+                borderColor: Utils.CHART_COLORS.purple,
+                backgroundColor: Utils.transparentize(Utils.CHART_COLORS.purple, 0.5),
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { min: 1, max: 5 } // Fixed y-axis from 1 to 5
+            },
+            plugins: {
+                legend: { display: true, position: 'bottom' },
                 title: { display: true, text: 'Response Helpfulness by Category' }
-            }
-        }
-    });
-}
-
-// Compliance Bubble Chart
-function createComplianceChart(ctx) {
-    const categories = ['Profanity', 'Sensitive Info', 'Hate Speech', 'Other'];
-    return new Chart(ctx, {
-        type: 'bubble',
-        data: {
-            labels: categories,
-            datasets: [{
-                label: 'Compliance Issues',
-                data: categories.map(() => ({
-                    x: Utils.rand(1, 100),
-                    y: Utils.rand(1, 100),
-                    r: Utils.rand(5, 20)
-                })),
-                backgroundColor: Utils.transparentize(Utils.CHART_COLORS.red, 0.5),
-                borderColor: Utils.CHART_COLORS.red,
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: false },
-                title: { display: true, text: 'Policy Compliance Issues' }
-            },
-            scales: {
-                x: { title: { display: true, text: 'Severity' }, min: 0, max: 100 },
-                y: { title: { display: true, text: 'Frequency' }, min: 0, max: 100 }
-            }
-        }
-    });
-}
-
-// Active Users + Query Volume Combo Chart
-function createActiveUsersQueryChart(ctx) {
-    const DATA_COUNT = 7;
-    const labels = Utils.days({ count: DATA_COUNT });
-
-    return new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [
-                {
-                    type: 'line',
-                    label: 'Active Users',
-                    borderColor: Utils.CHART_COLORS.red,
-                    backgroundColor: Utils.transparentize(Utils.CHART_COLORS.red, 0.5),
-                    fill: false,
-                    data: Utils.numbers({ count: DATA_COUNT, min: 0, max: 100 }),
-                },
-                {
-                    type: 'bar',
-                    label: 'Query Volume',
-                    data: Utils.numbers({ count: DATA_COUNT, min: 0, max: 1000 }),
-                    backgroundColor: Utils.CHART_COLORS.blue,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: true },
-                title: { display: true, text: 'Query Volume and Active Users Over Time' }
-            },
-            scales: {
-                y: { beginAtZero: true }
             }
         }
     });
@@ -152,66 +163,117 @@ function createActiveUsersQueryChart(ctx) {
 // ========== Chart Registry ==========
 
 const chartDefinitions = [
-    { id: 'ModelDriftChart', create: createModelDriftChart },
-    { id: 'helpfullnessChart', create: createHelpfulnessChart },
+    { id: 'responseTimeChart', create: createResponseTimeChart },
+    { id: 'energyConsumptionChart', create: createEnergyConsumptionChart },
     { id: 'complianceChart', create: createComplianceChart },
-    { id: 'activeUsersQueryChart', create: createActiveUsersQueryChart }
+    { id: 'helpfulnessChart', create: createHelpfulnessChart },
+    
 ];
 
-const charts = {}; // store chart instances
+const charts = {};
 
 // ========== Chart Initialization ==========
 
-function initCharts() {
+// Initialize all charts with data from the selected model
+async function initCharts() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentModel = urlParams.get('model') || 'good'; // Default to 'good' if not specified
+    const initialModelData = currentModel === 'bad' ? await badModel() : await goodModel();
+
     chartDefinitions.forEach(def => {
         const ctx = document.getElementById(def.id)?.getContext('2d');
-        if (ctx) charts[def.id] = def.create(ctx);
+        if (ctx) {
+            // Pass the initial data to the creation function
+            charts[def.id] = def.create(ctx, initialModelData);
+        }
     });
 }
 
 // ========== Data Refresh Logic ==========
 
-function refreshCharts() {
-    Object.values(charts).forEach(chart => {
-        const data = chart.data;
+// refresh the charts with new data from the selected model
+async function refreshCharts() {
+    // Determine which model to use based on URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentModel = urlParams.get('model') || 'good'; // Default to 'good' if not specified
+    const newData = currentModel === 'bad' ? await badModel() : await goodModel();
 
-        switch (chart.config.type) {
-            case 'bar':
-                if (chart.canvas.id === 'activeUsersQueryChart') {
-                    data.labels.push(`Day ${data.labels.length + 1}`);
-                    data.datasets[0].data.push(Utils.rand(0, 100)); // Active Users
-                    data.datasets[1].data.push(Utils.rand(0, 1000)); // Query Volume
-                } else {
-                    data.datasets.forEach(dataset => {
-                        dataset.data = Utils.numbers({ count: data.labels.length, min: 0, max: 100 });
-                    });
-                }
-                break;
-
-            case 'bubble':
-                data.datasets.forEach(dataset => {
-                    dataset.data = dataset.data.map(() => ({
-                        x: Utils.rand(1, 100),
-                        y: Utils.rand(1, 100),
-                        r: Utils.rand(5, 20)
-                    }));
-                });
-                break;
-
-            case 'line':
-                data.labels.push(`Day ${data.labels.length + 1}`);
-                data.datasets.forEach(dataset => dataset.data.push(Utils.rand(-100, 100)));
-                break;
+    // --- Update Response Time Chart ---
+    const responseTimeChart = charts.responseTimeChart;
+    if (responseTimeChart) {
+        const { data } = responseTimeChart;
+        data.labels.push(new Date().toLocaleTimeString());
+        data.datasets[0].data.push(newData.avgResponseTime);
+        // Keep the chart from getting too crowded
+        if (data.labels.length > 15) {
+            data.labels.shift();
+            data.datasets[0].data.shift();
         }
+        responseTimeChart.update();
+    }
 
-        chart.update();
-    });
+            // --- Update Energy Consumption Chart ---
+    const energyConsumptionChart = charts.energyConsumptionChart;
+    if (energyConsumptionChart) {
+        const { data } = energyConsumptionChart;
+        data.labels.push(new Date().toLocaleTimeString());
+        data.datasets[0].data.push(newData.avgEnergyConsumption);
+        // Keep the chart from getting too crowded
+        if (data.labels.length > 15) {
+            data.labels.shift();
+            data.datasets[0].data.shift();
+        }
+        energyConsumptionChart.update();
+    }
+
+    // --- Update Compliance Chart ---
+    const complianceChart = charts.complianceChart;
+    if (complianceChart) {
+        const newScore = newData.avgCompliance;
+        complianceChart.data.datasets[0].data = [newScore, 100 - newScore];
+        complianceChart.options.plugins.title.text = `Overall Compliance Score: ${newScore.toFixed(1)}%`;
+        complianceChart.update();
+    }
+
+        // --- Update Helpfulness Chart ---
+    const helpfulnessChart = charts.helpfulnessChart;
+    if (helpfulnessChart) {
+        const { data } = helpfulnessChart;
+        data.labels.push(new Date().toLocaleTimeString());
+        data.datasets[0].data.push(newData.avgHelpfulness);
+        if (data.labels.length > 15) {
+            data.labels.shift();
+            data.datasets[0].data.shift();
+        }
+        helpfulnessChart.update();
+    }
 }
 
 // ========== Event Bindings ==========
 
-document.addEventListener('DOMContentLoaded', () => {
-    initCharts();
+// Refresh charts on button click
+document.addEventListener('DOMContentLoaded', async () => {
+    await initCharts();
     const refreshBtn = document.getElementById('refresh-button');
-    refreshBtn.addEventListener('click', refreshCharts);
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            await refreshCharts();
+        });
+    }
+});
+
+// Set the dropdown to match the current model from the URL on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const modelSelect = document.getElementById('model-select');
+  if (modelSelect) {
+    // Set the dropdown to match the current model from the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentModel = urlParams.get('model') || 'good';
+    modelSelect.value = currentModel;
+
+    modelSelect.addEventListener('change', function() {
+      const selectedModel = this.value;
+      window.location.search = '?model=' + encodeURIComponent(selectedModel);
+    });
+  }
 });
