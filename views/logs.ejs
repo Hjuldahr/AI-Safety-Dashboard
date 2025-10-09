@@ -11,78 +11,13 @@
     <%- include('components/header') %>
     <%- include('components/nav') %>
 
-    <div class="log-container">
-        <div class="title-container">
-            <div class="site-title">
-                <h1>AI Model Logs</h1>
-            </div>
-        </div>
-        <div class="log-mcp"> 
-            <!--horizontal-->
-            <div class="log-panel"> <!--master-->
-                <!--vertical-->
-                <ul id="modelSelectors">
-                    <li><button>Model 1</button></li>
-                    <li><button>Model 2</button></li>
-                    <li><button>Model 3</button></li>
-                </ul>
-            </div>
-            <div class="log-panel"> <!--view-->
-                <!--vertical-->
-                <h1 id="modelHeader">Model 1 Logs</h1> 
-                <table id="modelLogTable">
-                    <tr>
-                        <th>Row #</th>
-                        <th>Call ID</th>
-                        <th>Policy Compliance</th>
-                        <th>Response Helpfulness</th>
-                        <th>Response Time</th>
-                        <th>Energy Consumption</th>
-                        <th>Response Timestamp</th>
-                    </tr>
-                    <tr>
-                        <td>1</td>
-                        <td>e13a11</td>
-                        <td>99%</td>
-                        <td>80%</td>
-                        <td>3</td>
-                        <td>22</td>
-                        <td>06-Oct-2025 18:27</td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>e13a12</td>
-                        <td>98%</td>
-                        <td>72%</td>
-                        <td>8</td>
-                        <td>10</td>
-                        <td>06-Oct-2025 18:32</td>
-                    </tr>
-                </table>
-                <div>
-                    <!--horizontal-->
-                    <div class="view-controls"> 
-                        <!--horizontal-->
-                        <button id="firstPageSelector">« First</button>
-                        <button id="prevPageSelector">‹ Prev</button>
-                        <button id="nextPageSelector">Next ›</button>
-                        <button id="lastPageSelector">Last »</button>
-                    </div>
-                    <div class="view-page"> 
-                        <p id="pageIndicator">Page: 1 / 10</p>
-                    </div>
-                </div>
-            </div>
-            <div class="log-panel"> <!--details-->
-                <ul>
-                    <li><p id="modelLabel">Model: Model 1</p></li>
-                    <li><p>First Ran: 06-Oct-2025 18:27</p></li>
-                    <li><p>Last Ran: 06-Oct-2025 18:27</p></li>
-                    <li><button>Export</button></li>
-                </ul>
-            </div>
-        </div>
-
+    <div>
+        <!--Horizontal-->
+        <button id="switchToAITable">AI Logs</button>
+        <button id="switchToUserTable">User Logs</button>
+    </div>
+    <!--Dynamic Table goes here-->
+    <div id="logTableContainer">
     </div>
 </body>
 </html>

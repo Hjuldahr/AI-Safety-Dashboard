@@ -22,7 +22,7 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function pseudoAI(intervalDuration, min_callrate = 1, max_callrate = 10, min_pc = 0.6, max_pc = 1.0, min_rh = 0.6, max_rh = 1.0) {
+async function pseudoAI(modelName, intervalDuration, min_callrate = 1, max_callrate = 10, min_pc = 0.6, max_pc = 1.0, min_rh = 0.6, max_rh = 1.0) {
     // Tweak min and max params to get Good / Bad / Neutral / Max-Chaos Archetypes
     const now = new Date();
     const hour = now.getHours() + now.getMinutes() / 60; // fractional hour
@@ -30,11 +30,7 @@ async function pseudoAI(intervalDuration, min_callrate = 1, max_callrate = 10, m
     // Sine-based weighting: peak at 15:00 (~3pm), minimum at 3:00am
     // Map hour 0-24 to angle 0-2pi, offset so peak aligns around 15:00
     const angle = ((hour - 3) / 24) * 2 * Math.PI;
-    let timeWeight = Math.sin(angle); // -1 to 1
-    timeWeight = Math.max(0, timeWeight); // clamp negative values to 0 (no traffic)
-    // Scale to a realistic max factor (+20%)
-    timeWeight *= 1.2;
-
+    let timeWeight = Math.sin(angle) + 2;
     // Compute queries with min/max callrate and interval duration
     const queries = Math.floor(getRandomInt(min_callrate, max_callrate) * intervalDuration * timeWeight);
 
@@ -47,6 +43,7 @@ async function pseudoAI(intervalDuration, min_callrate = 1, max_callrate = 10, m
         const energyConsumption = getRandomFloat(0.03, 0.06) + (responseTime - 10) * 0.001 + getRandomFloat(0, 0.002);
 
         calls[i] = {
+            model: modelName,
             time: getRandomInt(start_time, end_time),
             policyCompliance: getRandomFloat(min_pc, max_pc),
             responseHelpfulness: getRandomFloat(min_rh, max_rh),
@@ -57,12 +54,12 @@ async function pseudoAI(intervalDuration, min_callrate = 1, max_callrate = 10, m
  
     calls.sort((a, b) => a.time - b.time);
 
-    await sleep(intervalDuration * 1000);
+    //await sleep(intervalDuration * 1000);
 
     return calls;
 }
 
-function AIGeneralizer(calls) {
+function AIGeneralizer(modelName, calls) {
     if (!calls || calls.length === 0) {
         return {};
     }
@@ -90,6 +87,7 @@ function AIGeneralizer(calls) {
     }
 
     return {
+        model: modelName,
         time: computeStats(t),
         policyCompliance: computeStats(pc),
         responseHelpfulness: computeStats(rh),

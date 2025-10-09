@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const ModelCallSchema = new mongoose.Schema({
+    
     policyCompliance: {
         type: Float,
         required: true,
@@ -29,5 +30,8 @@ const ModelCallSchema = new mongoose.Schema({
 }); 
 
 const ModelCall = mongoose.model('ModelCall', ModelCallSchema);
+
+//TODO add DB calls for
+//get models of user, get logs of model
 
 export default Log;
