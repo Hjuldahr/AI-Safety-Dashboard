@@ -1,7 +1,10 @@
 import mongoose from 'mongoose';
 
-const ModelCallSchema = new mongoose.Schema({
-    
+const AIModelSchema = new mongoose.Schema({
+    modelID: {
+        type: String,
+        required: true
+    },
     policyCompliance: {
         type: Float,
         required: true,
@@ -29,9 +32,15 @@ const ModelCallSchema = new mongoose.Schema({
     }
 }); 
 
-const ModelCall = mongoose.model('ModelCall', ModelCallSchema);
+const AIModelCall = mongoose.model('ModelCall', ModelCallSchema);
 
-//TODO add DB calls for
-//get models of user, get logs of model
+//query 1 - get all models for user
+
+//query 2 - get all logs for model
+
+//query 3 - add logs to model
+
+//query 4 - add model to user
+
 
 export default Log;

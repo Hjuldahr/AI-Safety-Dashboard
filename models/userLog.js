@@ -2,9 +2,9 @@ import mongoose from 'mongoose';
 
 const UserLogSchema = new mongoose.Schema({
     userID: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
         required: true,
-        default: "0"
+        ref: 'User'
     }, 
     eventType: {
         type: Enum(),
@@ -13,3 +13,4 @@ const UserLogSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+//TODO update
