@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/js/chart.js" defer></script>
+    <script type="module" src="/js/data_generator_v3.js" defer></script>
+    <script type="module" src="/js/chart.js" defer></script>
     <link rel="stylesheet" href="/css/index.css">
     <link rel="stylesheet" href="/css/fullSite.css">
 
@@ -20,16 +21,22 @@
     <main class="content">
         <!-- Charts -->
         <div style="width:100%; max-width:450px; position: relative;" class="chart-row">
-            <canvas id="ModelDriftChart"></canvas>
-            <canvas id="helpfullnessChart"></canvas>
+            <canvas id="responseTimeChart"></canvas>
+            <canvas id="energyConsumptionChart"></canvas>
         </div>
 
         <div style="width:100%; max-width:450px; position: relative;" class="chart-row">
             <canvas id="complianceChart"></canvas>
-            <canvas id="activeUsersQueryChart"></canvas>
+            <canvas id="helpfulnessChart"></canvas>
         </div>
 
-        <button id="refresh-button">refresh</button>
+        <button id="refresh-button">Refresh</button>
+
+        <select id="model-select">
+            <option value="good">Good Model</option>
+            <option value="bad">Bad Model</option>
+        </select>
+
     </main>
 </body>
 
