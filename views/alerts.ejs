@@ -1,17 +1,237 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alerts</title>
-    <link rel="stylesheet" href="/css/fullSite.css">
-</head>
-<body>
-    <%- include('components/header') %>
-    <%- include('components/nav') %>
 
-    <main class="content">
-        <h1>Alerts</h1>
-    </main>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerts</title>
+<link rel="stylesheet" href="/css/fullSite.css">
+  <link rel="stylesheet" href="css/alerts.css">
+</head>
+
+<body>
+  <%- include('components/header') %>
+  <%- include('components/nav') %>
+
+  <main class="content">
+
+    <div class="alert-popup-container">
+      <div class="alert-popup">
+        <p>Alerts pop up on screen here.</p>
+        <p class="alert-popup-emphasis">Critical Alerts Make Background Flash Red</p>
+      </div>
+      <button class="notification-bell">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="main-container">
+      <!-- Alert Builder Section -->
+      <section class="card alert-builder">
+        <h2 class="card-title">Alert Builder</h2>
+        <div class="alert-builder-grid">
+          <div class="form-group">
+            <label for="alert-name">Alert Name:</label>
+            <input type="text" id="alert-name" name="alert-name" placeholder="Alert 1...">
+          </div>
+
+          <div class="form-group">
+            <label for="alert-level">Alert Level:</label>
+            <select id="alert-level" name="alert-level">
+              <option value="">-- select alert level --</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Info">Info</option>
+            </select>
+          </div>
+
+          <div class="form-group add-alert-button-container">
+            <button id="add-alert-btn" class="btn btn-primary">Add Alert</button>
+          </div>
+
+          <div class="rule-builder form-group">
+            <label>Alert Rule:</label>
+            <div class="rule-builder-inputs">
+              <select id="data-type">
+                <option value="">-- select data type --</option>
+                <option value="Harmful Messages">Harmful Messages</option>
+                <option value="Accuracy">Accuracy</option>
+                <option value="Usage">Usage</option>
+              </select>
+              <div class="operator-buttons">
+                <button class="btn btn-operator">&gt;=</button>
+                <button class="btn btn-operator">&lt;=</button>
+              </div>
+              <input type="text" placeholder="value" class="value-input">
+              <span class="rule-builder-note">(add another part to the rule)</span>
+              <div class="logical-operators">
+                <button class="btn btn-secondary">AND</button>
+                <button class="btn btn-secondary">OR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Content Area with Live Alerts and Log -->
+      <div class="alerts-layout">
+
+        <!-- View and Edit Live Alerts Section -->
+        <aside class="card live-alerts-panel">
+          <h2 class="card-title">View and Edit Live Alerts</h2>
+          <ul id="live-alerts-list" class="live-alerts-list">
+            <li>
+              <h3 class="alert-category critical"><span class="color-dot"></span>Critical Alerts</h3>
+              <ul class="alert-items">
+                <li><span>Alert 1</span><button class="delete-btn">&times;</button></li>
+              </ul>
+            </li>
+            <li>
+              <h3 class="alert-category high"><span class="color-dot"></span>High Alerts</h3>
+              <ul class="alert-items">
+                <li><span>Alert 2</span><button class="delete-btn">&times;</button></li>
+                <li><span>Alert 3</span><button class="delete-btn">&times;</button></li>
+              </ul>
+            </li>
+            <li>
+              <h3 class="alert-category medium"><span class="color-dot"></span>Medium Alerts</h3>
+              <ul class="alert-items"></ul>
+            </li>
+            <li>
+              <h3 class="alert-category info"><span class="color-dot"></span>Info Alerts</h3>
+              <ul class="alert-items">
+                <li><span>Alert 4</span><button class="delete-btn">&times;</button></li>
+              </ul>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- Alert Log Section -->
+        <main class="card alert-log-panel">
+          <h2 class="card-title">Alert Log</h2>
+          <div class="table-container">
+            <table class="alert-log-table">
+              <thead>
+                <tr>
+                  <th>Level</th>
+                  <th>Time</th>
+                  <th>Alert Name</th>
+                  <th>Alert Details</th>
+                </tr>
+              </thead>
+              <tbody id="alert-log-body">
+                <tr>
+                  <td><span class="level-tag critical">Critical</span></td>
+                  <td class="time-cell">2025-09-29: 6:18:58PM <span>Eastern Standard Time</span></td>
+                  <td>Alert 1</td>
+                  <td class="details-cell">"Harmful Messages" greater than 200, and "Accuracy" less than 80%</td>
+                </tr>
+                <tr>
+                  <td><span class="level-tag high">High</span></td>
+                  <td class="time-cell">2025-09-28: 10:32:12AM <span>Eastern Standard Time</span></td>
+                  <td>Alert 2</td>
+                  <td class="details-cell">"Harmful Messages" greater than 100, and "Accuracy" less than 85%</td>
+                </tr>
+                <tr>
+                  <td><span class="level-tag info">Info</span></td>
+                  <td class="time-cell">2025-09-27: 11:10:52AM <span>Eastern Standard Time</span></td>
+                  <td>Alert 4</td>
+                  <td class="details-cell">"Usage" > 100</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+  </main>
+  </div>
+
+  <script>
+    // The JavaScript remains largely the same as it targets IDs, which haven't changed.
+    document.addEventListener('DOMContentLoaded', function() {
+      const addAlertBtn = document.getElementById('add-alert-btn');
+      const alertLogBody = document.getElementById('alert-log-body');
+      const liveAlertsList = document.getElementById('live-alerts-list');
+
+      addAlertBtn.addEventListener('click', function() {
+        const alertNameInput = document.getElementById('alert-name');
+        const alertLevelSelect = document.getElementById('alert-level');
+        const alertName = alertNameInput.value || 'New Alert';
+        const alertLevel = alertLevelSelect.value || 'Info';
+
+        if (!alertLevelSelect.value) {
+          alert('Please select an alert level.'); // Simple alert for prototype
+          return;
+        }
+
+        // 1. Add to Alert Log
+        const newRow = document.createElement('tr');
+        const now = new Date();
+        const timeString = now.toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        }).replace(',', ':');
+        const levelClass = alertLevel.toLowerCase();
+
+        newRow.innerHTML = `
+                    <td><span class="level-tag ${levelClass}">${alertLevel}</span></td>
+                    <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
+                    <td>${alertName}</td>
+                    <td class="details-cell">"New Rule" > 0</td>
+                `;
+        alertLogBody.prepend(newRow);
+
+        // 2. Add to Live Alerts List
+        const categoryMap = {
+          'Critical': 'Critical Alerts',
+          'High': 'High Alerts',
+          'Medium': 'Medium Alerts',
+          'Info': 'Info Alerts'
+        };
+        const categoryTitle = categoryMap[alertLevel];
+        const h3s = liveAlertsList.getElementsByTagName('h3');
+        let targetUl = null;
+        for (let h3 of h3s) {
+          if (h3.textContent.trim() === categoryTitle) {
+            targetUl = h3.nextElementSibling;
+            break;
+          }
+        }
+
+        if (targetUl) {
+          const newLi = document.createElement('li');
+          newLi.innerHTML = `<span>${alertName}</span><button class="delete-btn">&times;</button>`;
+          targetUl.appendChild(newLi);
+        }
+
+        // 3. Trigger flash effect for critical alerts
+        if (alertLevel === 'Critical') {
+          document.body.classList.add('critical-flash');
+          setTimeout(() => {
+            document.body.classList.remove('critical-flash');
+          }, 1500); // Flash for 1.5 seconds
+        }
+
+        alertNameInput.value = '';
+      });
+
+      // Event delegation for deleting live alerts
+      liveAlertsList.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('delete-btn')) {
+          e.target.parentElement.remove();
+        }
+      });
+    });
+  </script>
 </body>
+
 </html>
