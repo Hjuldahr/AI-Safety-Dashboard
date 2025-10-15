@@ -153,11 +153,9 @@ export const exportAILogPDF = async (req, res) => {
 };
 
 // === Filtered Pagination ===
-
-
-
-
+// TODO
+// paginate through db with filter (perhaps cascade UI filter through to exports)
 
 // === Log Manipulation ===
 // TODO
-// 
+// Read, write, etc
