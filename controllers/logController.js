@@ -1,61 +1,82 @@
-import AI_Log_Model from "../models/AI_Log_Model.js";
-import AI_Model from "../models/AI_Model.js";
+import { Parser } from 'json2csv';
+import User_Log from '../models/User_Log.js';
+import AI_Log from '../models/AI_Log.js';
 
-// === Render logs page ===
-const getPage = async (req, res) => {
-    try {
-        res.render("logs", { user: req.user });
-    } catch (error) {
-        console.error("Error fetching logs page:", error);
-        res.status(500).send("Internal Server Error");
-    }
-};
-
-// === Get paginated logs for current user ===
-const getUserLog = async (req, res) => {
+// === File Read/Write ===
+export const exportUserLogCSV = async (req, res) => {
     try {
         const userID = req.user._id;
-        const page = parseInt(req.query.page) || 1; // default page 1
-        const limit = 100;
-        const skip = (page - 1) * limit;
+        const startDate = req.startDate || null;
+        const endDate = req.endDate || null;
 
-        // Find all models for the user
-        const userModels = await AI_Model.find({ userID }, { _id: 1 });
-        const modelIDs = userModels.map(m => m._id);
+        const logs = await User_Log.getLogsByUserAndTime(userID, startDate, endDate);
+        if (!logs || logs.length === 0) {
+            return res.status(404).json({ message: 'No logs found.' });
+        }
 
-        // Get logs for all user's models
-        const logs = await AI_Log_Model.find({ modelID: { $in: modelIDs } })
-            .sort({ responseTimestamp: -1 })
-            .skip(skip)
-            .limit(limit);
+        // Convert to plain JS objects
+        const data = logs.map(log => log.toObject());
 
-        res.json({ logs, page });
-    } catch (error) {
-        console.error("Error fetching user logs:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        // Convert JSON → CSV
+        const parser = new Parser();
+        const csv = parser.parse(data);
+
+        // Send CSV directly as download
+        const timestamp = Date.now();
+        const filename = `UserLog_${userID}_${timestamp}.csv`;
+
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'text/csv');
+        res.status(200).send(csv);
+
+    } catch (err) {
+        console.error('Export User Log Error:', err);
+        res.status(500).json({ message: 'Failed to export logs', error: err.message });
     }
 };
 
-// === Get paginated logs for a specific AI model ===
-const getAILog = async (req, res) => {
+export const exportAILogCSV = async (req, res) => {
     try {
-        const modelID = req.query.modelID;
-        const page = parseInt(req.query.page) || 1;
-        const limit = 100;
-        const skip = (page - 1) * limit;
+        const modelID = req.model._id;
+        const startDate = req.startDate || null;
+        const endDate = req.endDate || null;
 
-        if (!modelID) return res.status(400).json({ error: "modelID is required" });
+        const logs = await AI_Log.getLogsByModelAndTime(modelID, startDate, endDate);
+        if (!logs || logs.length === 0) {
+            return res.status(404).json({ message: 'No logs found.' });
+        }
 
-        const logs = await AI_Log_Model.find({ modelID })
-            .sort({ responseTimestamp: -1 })
-            .skip(skip)
-            .limit(limit);
+        const data = logs.map(log => log.toObject());
+        const parser = new Parser();
+        const csv = parser.parse(data);
 
-        res.json({ logs, page });
-    } catch (error) {
-        console.error("Error fetching AI model logs:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        const timestamp = Date.now();
+        const filename = `AILog_${modelID}_${timestamp}.csv`;
+
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'text/csv');
+        res.status(200).send(csv);
+
+    } catch (err) {
+        console.error('Export AI Log Error:', err);
+        res.status(500).json({ message: 'Failed to export logs', error: err.message });
     }
 };
 
-export default { getPage, getUserLog, getAILog };
+const writeUserLogPDF = async (req, res) => {
+    
+} 
+
+const writeAILogPDF = async (req, res) => {
+    
+} 
+
+// === Filtered Pagination ===
+
+
+
+
+
+// === Log Manipulation ===
+// TODO
+// 

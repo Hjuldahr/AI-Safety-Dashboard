@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const AI_ModelSchema = new mongoose.Schema({
+const AI_Model_Schema = new mongoose.Schema({
     modelName: {
         type: String,
         required: true
@@ -15,27 +15,27 @@ const AI_ModelSchema = new mongoose.Schema({
 // ---------- QUERIES ----------
 
 // Add a new model for a user
-AI_ModelSchema.statics.addModel = async function(userID, modelName) {
+AI_Model_Schema.statics.addModel = async function(userID, modelName) {
     const model = new this({ userID, modelName });
     return model.save();
 };
 
 // Get a model by userID and modelName
-AI_ModelSchema.statics.getModelByUserAndName = function(userID, modelName) {
+AI_Model_Schema.statics.getModelByUserAndName = function(userID, modelName) {
     return this.findOne({ userID, modelName });
 };
 
 // Get all models by userID
-AI_ModelSchema.statics.getAllModelsByUser = function(userID) {
+AI_Model_Schema.statics.getAllModelsByUser = function(userID) {
     return this.find({ userID });
 };
 
 // Remove a model by model ID
-AI_ModelSchema.statics.removeModelById = function(modelID) {
+AI_Model_Schema.statics.removeModelById = function(modelID) {
     return this.findByIdAndDelete(modelID);
 };
 
 // ---------- EXPORT ----------
-const AI_Model = mongoose.model('AI_Model', AI_ModelSchema);
+const AI_Model = mongoose.model('AI_Model', AI_Model_Schema);
 
 export default AI_Model;
