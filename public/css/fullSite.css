@@ -1,8 +1,8 @@
 @media screen and (max-width: 768px) {
   .site-nav {
     flex-basis: 100%;
-        max-width: none;
-    
+    max-width: none;
+
     display: flex;
     justify-content: space-around;
     border-bottom: 1px solid #eee;
@@ -14,34 +14,39 @@
 }
 
 body {
-    margin: 0;
-    font-family: system-ui, sans-serif;
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    /* min-height: 100vh; */
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: 60px auto;
+  grid-template-areas:
+    "header header"
+    "nav    main";
+  min-height: 100vh;
 }
 
 header {
-    flex-basis: 100%;
-    position: sticky;
-    top: 0;
-    height: 60px;
+  grid-area: header;
+  /* flex-basis: 100%; */
+  position: sticky;
+  top: 0;
+  height: 60px;
 
-    background-color: white;
-    z-index: 10;
-    border-bottom: 1px solid #eee;
+  background-color: white;
+  z-index: 10;
+  border-bottom: 1px solid #eee;
 }
 
 nav {
-    flex-basis: 250px;
-    max-width: 300px;
-    flex-shrink: 0;
+  grid-area: nav;
+  /* flex-basis: 250px; */
+  max-width: 300px;
+  /* flex-shrink: 0; */
 }
 
 main.content {
-    flex-grow: 1;
-    min-width: 0; 
-    padding: 1rem 2rem;
+  grid-area: main;
+  /* flex-grow: 1; */
+  min-width: 0;
+  padding: 1rem 2rem;
 }
