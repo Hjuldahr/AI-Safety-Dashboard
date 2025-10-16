@@ -9,4 +9,5 @@
 # Reports
 
 # Logs
-
+[] Connect events to log db
+[] setup log html page

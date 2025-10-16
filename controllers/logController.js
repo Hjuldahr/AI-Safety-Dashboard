@@ -16,6 +16,7 @@ const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
 };
 
 const buildAILogQuery = ({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate }) => {
+    //TODO if start date is 0 and end date is -1 include all entries
     const query = { modelID };
     if (policyCompliance !== undefined) query.policyCompliance = policyCompliance;
     if (responseHelpfulness !== undefined) query.responseHelpfulness = responseHelpfulness;
@@ -27,7 +28,7 @@ const buildAILogQuery = ({ modelID, policyCompliance, responseHelpfulness, respo
         if (responseTimestamp.start) query.responseTimestamp.$gte = responseTimestamp.start;
         if (responseTimestamp.end) query.responseTimestamp.$lte = responseTimestamp.end;
     }
-
+    
     if (startDate || endDate) {
         query.createdAt = {};
         if (startDate) query.createdAt.$gte = startDate;
