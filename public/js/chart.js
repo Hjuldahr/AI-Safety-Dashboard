@@ -78,7 +78,8 @@ function createResponseTimeChart(ctx, initialData) {
             plugins: {
                 legend: { display: true },
                 title: { display: true, text: 'Response Time Over Time' }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
@@ -106,7 +107,8 @@ function createEnergyConsumptionChart(ctx, initialData) {
             plugins: {
                 legend: { display: true },
                 title: { display: true, text: 'Energy Consumption Over Time' }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
@@ -136,7 +138,8 @@ function createComplianceChart(ctx, initialData) {
                     display: true,
                     text: `Overall Compliance Score: ${complianceScore.toFixed(1)}%`
                 }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
@@ -167,7 +170,8 @@ function createHelpfulnessChart(ctx, initialData) {
             plugins: {
                 legend: { display: true, position: 'bottom' },
                 title: { display: true, text: 'Response Helpfulness by Category' }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
@@ -228,7 +232,7 @@ async function refreshCharts() {
         responseTimeChart.update();
     }
 
-            // --- Update Energy Consumption Chart ---
+    // --- Update Energy Consumption Chart ---
     const energyConsumptionChart = charts.energyConsumptionChart;
     if (energyConsumptionChart) {
         const { data } = energyConsumptionChart;
@@ -251,7 +255,7 @@ async function refreshCharts() {
         complianceChart.update();
     }
 
-        // --- Update Helpfulness Chart ---
+    // --- Update Helpfulness Chart ---
     const helpfulnessChart = charts.helpfulnessChart;
     if (helpfulnessChart) {
         const { data } = helpfulnessChart;
@@ -280,16 +284,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Set the dropdown to match the current model from the URL on page load
 document.addEventListener('DOMContentLoaded', () => {
-  const modelSelect = document.getElementById('model-select');
-  if (modelSelect) {
-    // Set the dropdown to match the current model from the URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good';
-    modelSelect.value = currentModel;
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        // Set the dropdown to match the current model from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentModel = urlParams.get('model') || 'good';
+        modelSelect.value = currentModel;
 
-    modelSelect.addEventListener('change', function() {
-      const selectedModel = this.value;
-      window.location.search = '?model=' + encodeURIComponent(selectedModel);
-    });
-  }
+        modelSelect.addEventListener('change', function () {
+            const selectedModel = this.value;
+            window.location.search = '?model=' + encodeURIComponent(selectedModel);
+        });
+    }
 });
