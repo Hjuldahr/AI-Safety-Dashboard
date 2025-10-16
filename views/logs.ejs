@@ -1,23 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Model Logs</title>
-    <link rel="stylesheet" href="/css/fullSite.css">
-    <script src="/js/logging.js" defer></script>
-</head>
-<body>
-    <%- include('components/header') %>
-    <%- include('components/nav') %>
 
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Model Logs</title>
+  <link rel="stylesheet" href="/css/fullSite.css">
+  <script src="/js/logging.js" defer></script>
+</head>
+
+<body>
+  <%- include('components/header') %>
+  <%- include('components/nav') %>
+  <main class="content">
+    <%- include('components/notifications') %>
     <div>
-        <!--Horizontal-->
-        <button id="switchToAITable">AI Logs</button>
-        <button id="switchToUserTable">User Logs</button>
+      <!--Horizontal-->
+      <button id="switchToAITable">AI Logs</button>
+      <button id="switchToUserTable">User Logs</button>
     </div>
     <!--Dynamic Table goes here-->
     <div id="logTableContainer">
     </div>
+  </main>
 </body>
+
 </html>
