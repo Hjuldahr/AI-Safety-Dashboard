@@ -5,8 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Alerts</title>
-<link rel="stylesheet" href="/css/fullSite.css">
+  <link rel="stylesheet" href="/css/fullSite.css">
   <link rel="stylesheet" href="css/alerts.css">
+  <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script src="js/alerts.js" defer></script>
 </head>
 
 <body>
@@ -15,18 +17,7 @@
 
   <main class="content">
 
-    <div class="alert-popup-container">
-      <div class="alert-popup">
-        <p>Alerts pop up on screen here.</p>
-        <p class="alert-popup-emphasis">Critical Alerts Make Background Flash Red</p>
-      </div>
-      <button class="notification-bell">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-        </svg>
-      </button>
-    </div>
+    <%- include('components/notifications') %>
 
     <div class="main-container">
       <!-- Alert Builder Section -->
@@ -62,10 +53,13 @@
                 <option value="Accuracy">Accuracy</option>
                 <option value="Usage">Usage</option>
               </select>
-              <div class="operator-buttons">
-                <button class="btn btn-operator">&gt;=</button>
-                <button class="btn btn-operator">&lt;=</button>
-              </div>
+              <select id="operator-type">
+                <option value="">-- select operator --</option>
+                <option value="gt">Greater Than</option>
+                <option value="gte">Greater Than or Equal To</option>
+                <option value="lte">Less Than or Equal To</option>
+                <option value="lt">Less Than</option>
+              </select>
               <input type="text" placeholder="value" class="value-input">
               <span class="rule-builder-note">(add another part to the rule)</span>
               <div class="logical-operators">
@@ -149,89 +143,6 @@
       </div>
   </main>
   </div>
-
-  <script>
-    // The JavaScript remains largely the same as it targets IDs, which haven't changed.
-    document.addEventListener('DOMContentLoaded', function() {
-      const addAlertBtn = document.getElementById('add-alert-btn');
-      const alertLogBody = document.getElementById('alert-log-body');
-      const liveAlertsList = document.getElementById('live-alerts-list');
-
-      addAlertBtn.addEventListener('click', function() {
-        const alertNameInput = document.getElementById('alert-name');
-        const alertLevelSelect = document.getElementById('alert-level');
-        const alertName = alertNameInput.value || 'New Alert';
-        const alertLevel = alertLevelSelect.value || 'Info';
-
-        if (!alertLevelSelect.value) {
-          alert('Please select an alert level.'); // Simple alert for prototype
-          return;
-        }
-
-        // 1. Add to Alert Log
-        const newRow = document.createElement('tr');
-        const now = new Date();
-        const timeString = now.toLocaleString('en-US', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: 'numeric',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true
-        }).replace(',', ':');
-        const levelClass = alertLevel.toLowerCase();
-
-        newRow.innerHTML = `
-                    <td><span class="level-tag ${levelClass}">${alertLevel}</span></td>
-                    <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
-                    <td>${alertName}</td>
-                    <td class="details-cell">"New Rule" > 0</td>
-                `;
-        alertLogBody.prepend(newRow);
-
-        // 2. Add to Live Alerts List
-        const categoryMap = {
-          'Critical': 'Critical Alerts',
-          'High': 'High Alerts',
-          'Medium': 'Medium Alerts',
-          'Info': 'Info Alerts'
-        };
-        const categoryTitle = categoryMap[alertLevel];
-        const h3s = liveAlertsList.getElementsByTagName('h3');
-        let targetUl = null;
-        for (let h3 of h3s) {
-          if (h3.textContent.trim() === categoryTitle) {
-            targetUl = h3.nextElementSibling;
-            break;
-          }
-        }
-
-        if (targetUl) {
-          const newLi = document.createElement('li');
-          newLi.innerHTML = `<span>${alertName}</span><button class="delete-btn">&times;</button>`;
-          targetUl.appendChild(newLi);
-        }
-
-        // 3. Trigger flash effect for critical alerts
-        if (alertLevel === 'Critical') {
-          document.body.classList.add('critical-flash');
-          setTimeout(() => {
-            document.body.classList.remove('critical-flash');
-          }, 1500); // Flash for 1.5 seconds
-        }
-
-        alertNameInput.value = '';
-      });
-
-      // Event delegation for deleting live alerts
-      liveAlertsList.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('delete-btn')) {
-          e.target.parentElement.remove();
-        }
-      });
-    });
-  </script>
 </body>
 
 </html>
