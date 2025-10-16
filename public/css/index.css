@@ -51,6 +51,7 @@ body {
 /* Main Content Wrapper */
 .content {
     max-width: 1400px;
+    width: 100%;
     margin: 20px auto;
     padding: 0 20px;
 }
