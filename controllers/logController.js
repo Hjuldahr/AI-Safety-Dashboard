@@ -3,98 +3,64 @@ import PDFDocument from 'pdfkit';
 import User_Log from '../models/User_Log.js';
 import AI_Log from '../models/AI_Log.js';
 
-// === File Read/Write ===
-export const exportUserLogCSV = async (req, res) => {
-    try {
-        const userID = req.user._id;
-        const startDate = req.startDate || null;
-        const endDate = req.endDate || null;
-
-        const logs = await User_Log.getLogsByUserAndTime(userID, startDate, endDate);
-        if (!logs || logs.length === 0) {
-            return res.status(404).json({ message: 'No logs found.' });
-        }
-
-        // Convert to plain JS objects
-        const data = logs.map(log => log.toObject());
-
-        // Convert JSON → CSV
-        const parser = new Parser();
-        const csv = parser.parse(data);
-
-        // Send CSV directly as download
-        const timestamp = Date.now();
-        const filename = `UserLog_${userID}_${timestamp}.csv`;
-
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', 'text/csv');
-        res.status(200).send(csv);
-
-    } catch (err) {
-        console.error('Export User Log Error:', err);
-        res.status(500).json({ message: 'Failed to export logs', error: err.message });
+// === Helper Query Builders ===
+const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
+    const query = { userID };
+    if (eventType) query.eventType = eventType;
+    if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = startDate;
+        if (endDate) query.createdAt.$lte = endDate;
     }
+    return query;
 };
 
-export const exportAILogCSV = async (req, res) => {
-    try {
-        const modelID = req.model._id;
-        const startDate = req.startDate || null;
-        const endDate = req.endDate || null;
+const buildAILogQuery = ({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate }) => {
+    const query = { modelID };
+    if (policyCompliance !== undefined) query.policyCompliance = policyCompliance;
+    if (responseHelpfulness !== undefined) query.responseHelpfulness = responseHelpfulness;
+    if (responseTime !== undefined) query.responseTime = responseTime;
+    if (energyConsumption !== undefined) query.energyConsumption = energyConsumption;
 
-        const logs = await AI_Log.getLogsByModelAndTime(modelID, startDate, endDate);
-        if (!logs || logs.length === 0) {
-            return res.status(404).json({ message: 'No logs found.' });
-        }
-
-        const data = logs.map(log => log.toObject());
-        const parser = new Parser();
-        const csv = parser.parse(data);
-
-        const timestamp = Date.now();
-        const filename = `AILog_${modelID}_${timestamp}.csv`;
-
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', 'text/csv');
-        res.status(200).send(csv);
-
-    } catch (err) {
-        console.error('Export AI Log Error:', err);
-        res.status(500).json({ message: 'Failed to export logs', error: err.message });
+    if (responseTimestamp) {
+        query.responseTimestamp = {};
+        if (responseTimestamp.start) query.responseTimestamp.$gte = responseTimestamp.start;
+        if (responseTimestamp.end) query.responseTimestamp.$lte = responseTimestamp.end;
     }
+
+    if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) query.createdAt.$gte = startDate;
+        if (endDate) query.createdAt.$lte = endDate;
+    }
+
+    return query;
 };
 
-function streamLogsAsPDF(res, filename, title, logs) {
+// === PDF Streaming Helper ===
+const streamLogsAsPDF = (res, filename, title, logs) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4' });
-
-    // Set headers before piping
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/pdf');
-
-    // Pipe PDF directly to HTTP response
     doc.pipe(res);
 
-    // --- Title ---
     doc.fontSize(20).text(title, { align: 'center' });
     doc.moveDown();
-
-    // --- Table Header ---
     doc.fontSize(12).text('Event Logs', { underline: true });
     doc.moveDown(0.5);
 
-    // --- Table Content ---
     logs.forEach((log, i) => {
         const created = new Date(log.createdAt).toLocaleString();
-        doc
-            .fontSize(10)
+        doc.fontSize(10)
             .text(`• [${i + 1}] ${log.eventType}`, { continued: true })
             .text(` — ${created}`, { align: 'right' });
 
         if (log.details && Object.keys(log.details).length > 0) {
-            doc.moveDown(0.2);
-            doc.fontSize(9).fillColor('gray');
-            doc.text(JSON.stringify(log.details, null, 2), { indent: 20 });
-            doc.fillColor('black');
+            doc.moveDown(0.2)
+                .fontSize(9)
+                .fillColor('gray')
+                .text(JSON.stringify(log.details, null, 2), { indent: 20 })
+                .fillColor('black');
         }
 
         doc.moveDown(0.5);
@@ -102,26 +68,55 @@ function streamLogsAsPDF(res, filename, title, logs) {
         doc.moveDown(0.5);
     });
 
-    // --- Footer ---
     doc.moveDown(2);
     doc.fontSize(9).fillColor('gray');
     doc.text(`Generated at: ${new Date().toLocaleString()}`, { align: 'right' });
     doc.fillColor('black');
 
-    // Finalize document and send
     doc.end();
-}
+};
+
+// === Generic CSV Export Helper ===
+const exportCSV = (res, logs, filename) => {
+    const csv = new Parser().parse(logs.map(log => log.toObject()));
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'text/csv');
+    res.status(200).send(csv);
+};
+
+// === User Log Exports ===
+export const exportUserLogCSV = async (req, res) => {
+    try {
+        const { _id: userID } = req.user;
+        const { eventType, startDate, endDate, page = 1, limit = 100 } = req.body || {};
+
+        const logs = await User_Log.find(buildUserLogQuery({ userID, eventType, startDate, endDate }))
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        if (!logs.length) return res.status(404).json({ message: 'No logs found.' });
+
+        const filename = `UserLog_${userID}_${Date.now()}.csv`;
+        exportCSV(res, logs, filename);
+
+    } catch (err) {
+        console.error('Export User Log CSV Error:', err);
+        res.status(500).json({ message: 'Failed to export logs', error: err.message });
+    }
+};
 
 export const exportUserLogPDF = async (req, res) => {
     try {
-        const userID = req.user._id;
-        const startDate = req.startDate || null;
-        const endDate = req.endDate || null;
+        const { _id: userID } = req.user;
+        const { eventType, startDate, endDate, page = 1, limit = 100 } = req.body || {};
 
-        const logs = await User_Log.getLogsByUserAndTime(userID, startDate, endDate);
-        if (!logs || logs.length === 0) {
-            return res.status(404).json({ message: 'No logs found.' });
-        }
+        const logs = await User_Log.find(buildUserLogQuery({ userID, eventType, startDate, endDate }))
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        if (!logs.length) return res.status(404).json({ message: 'No logs found.' });
 
         const filename = `UserLog_${userID}_${Date.now()}.pdf`;
         streamLogsAsPDF(res, filename, `User Log Report - ${userID}`, logs);
@@ -132,16 +127,39 @@ export const exportUserLogPDF = async (req, res) => {
     }
 };
 
+// === AI Log Exports ===
+export const exportAILogCSV = async (req, res) => {
+    try {
+        const { _id: modelID } = req.model;
+        const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 } = req.body || {};
+
+        const logs = await AI_Log.find(buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate }))
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        if (!logs.length) return res.status(404).json({ message: 'No logs found.' });
+
+        const filename = `AILog_${modelID}_${Date.now()}.csv`;
+        exportCSV(res, logs, filename);
+
+    } catch (err) {
+        console.error('Export AI Log CSV Error:', err);
+        res.status(500).json({ message: 'Failed to export logs', error: err.message });
+    }
+};
+
 export const exportAILogPDF = async (req, res) => {
     try {
-        const modelID = req.model._id;
-        const startDate = req.startDate || null;
-        const endDate = req.endDate || null;
+        const { _id: modelID } = req.model;
+        const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 } = req.body || {};
 
-        const logs = await AI_Log.getLogsByModelAndTime(modelID, startDate, endDate);
-        if (!logs || logs.length === 0) {
-            return res.status(404).json({ message: 'No logs found.' });
-        }
+        const logs = await AI_Log.find(buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate }))
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        if (!logs.length) return res.status(404).json({ message: 'No logs found.' });
 
         const filename = `AILog_${modelID}_${Date.now()}.pdf`;
         streamLogsAsPDF(res, filename, `AI Model Log Report - ${modelID}`, logs);
@@ -152,10 +170,23 @@ export const exportAILogPDF = async (req, res) => {
     }
 };
 
-// === Filtered Pagination ===
-// TODO
-// paginate through db with filter (perhaps cascade UI filter through to exports)
+// === Pagination Helpers ===
+export const getFilteredUserLogs = async ({ userID, eventType, startDate, endDate, page = 1, limit = 100 }) => {
+    const query = buildUserLogQuery({ userID, eventType, startDate, endDate });
+    const skip = (page - 1) * limit;
 
-// === Log Manipulation ===
-// TODO
-// Read, write, etc
+    const logs = await User_Log.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const total = await User_Log.countDocuments(query);
+
+    return { logs, total, page, pages: Math.ceil(total / limit) };
+};
+
+export const getFilteredAILogs = async ({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 }) => {
+    const query = buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate });
+    const skip = (page - 1) * limit;
+
+    const logs = await AI_Log.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const total = await AI_Log.countDocuments(query);
+
+    return { logs, total, page, pages: Math.ceil(total / limit) };
+};
