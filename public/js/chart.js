@@ -229,7 +229,7 @@ async function refreshCharts() {
             data.labels.shift();
             data.datasets[0].data.shift();
         }
-        responseTimeChart.update();
+        responseTimeChart.update('none');
     }
 
     // --- Update Energy Consumption Chart ---
@@ -243,7 +243,7 @@ async function refreshCharts() {
             data.labels.shift();
             data.datasets[0].data.shift();
         }
-        energyConsumptionChart.update();
+        energyConsumptionChart.update('none');
     }
 
     // --- Update Compliance Chart ---
@@ -265,7 +265,7 @@ async function refreshCharts() {
             data.labels.shift();
             data.datasets[0].data.shift();
         }
-        helpfulnessChart.update();
+        helpfulnessChart.update('none');
     }
 }
 
