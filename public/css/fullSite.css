@@ -17,7 +17,10 @@ body {
     margin: 0;
     font-family: system-ui, sans-serif;
     display: flex;
+    flex-direction: row;
+    align-items: flex-start;
     flex-wrap: wrap;
+    /* min-height: 100vh; */
 }
 
 header {
@@ -32,7 +35,7 @@ header {
 }
 
 nav {
-    flex-basis: 15%;
+    flex-basis: 250px;
     max-width: 300px;
     flex-shrink: 0;
 }
