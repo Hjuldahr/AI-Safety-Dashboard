@@ -1,17 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alerts</title>
-    <link rel="stylesheet" href="/css/fullSite.css">
-</head>
-<body>
-    <%- include('components/header') %>
-    <%- include('components/nav') %>
 
-    <main class="content">
-        <h1>Alerts</h1>
-    </main>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerts</title>
+  <link rel="stylesheet" href="/css/fullSite.css">
+  <link rel="stylesheet" href="css/alerts.css">
+  <script src="js/alerts.js" defer></script>
+</head>
+
+<body>
+  <%- include('components/header') %>
+  <%- include('components/nav') %>
+
+  <main class="content">
+
+    <%- include('components/notifications') %>
+
+    <div class="main-container">
+      <!-- Alert Builder Section -->
+      <section class="card alert-builder">
+        <h2 class="card-title">Alert Builder</h2>
+        <div class="alert-builder-grid">
+          <div class="form-group">
+            <label for="alert-name">Alert Name:</label>
+            <input type="text" id="alert-name" name="alert-name" placeholder="Alert 1...">
+          </div>
+
+          <div class="form-group">
+            <label for="alert-level">Alert Level:</label>
+            <select id="alert-level" name="alert-level">
+              <option value="">-- select alert level --</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Info">Info</option>
+            </select>
+          </div>
+
+          <div class="form-group add-alert-button-container">
+            <button id="add-alert-btn" class="btn btn-primary">Add Alert</button>
+          </div>
+
+          <div class="rule-builder form-group">
+            <label>Alert Rule:</label>
+            <div class="rule-builder-inputs" id="rules-container">
+              <div class="rule-row">
+                <select id="data-type" class="data-type">
+                  <option value="">-- select data type --</option>
+                  <option value="Harmful Messages">Harmful Messages</option>
+                  <option value="Accuracy">Accuracy</option>
+                  <option value="Usage">Usage</option>
+                </select>
+                <select id="operator-type" class="operator-type">
+                  <option value="">-- select operator --</option>
+                  <option value="gt">Greater Than</option>
+                  <option value="gte">Greater Than or Equal To</option>
+                  <option value="lte">Less Than or Equal To</option>
+                  <option value="lt">Less Than</option>
+                </select>
+                <input type="text" placeholder="value" class="value-input">
+              </div>
+            </div>
+            <div class="logical-operators-container">
+              <span class="rule-builder-note">(add another part to the rule)</span>
+              <div class="logical-operators">
+                <button class="btn btn-secondary add-rule-btn" data-logic="AND">AND</button>
+                <button class="btn btn-secondary add-rule-btn" data-logic="OR">OR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Content Area with Live Alerts and Log -->
+      <div class="alerts-layout">
+
+        <!-- View and Edit Live Alerts Section -->
+        <aside class="card live-alerts-panel">
+          <h2 class="card-title">View and Edit Live Alerts</h2>
+          <ul id="live-alerts-list" class="live-alerts-list">
+            <li>
+              <h3 class="alert-category critical"><span class="color-dot"></span>Critical Alerts</h3>
+              <ul class="alert-items">
+                <li><span>Alert 1</span><button class="delete-btn">&times;</button></li>
+              </ul>
+            </li>
+            <li>
+              <h3 class="alert-category high"><span class="color-dot"></span>High Alerts</h3>
+              <ul class="alert-items">
+                <li><span>Alert 2</span><button class="delete-btn">&times;</button></li>
+                <li><span>Alert 3</span><button class="delete-btn">&times;</button></li>
+              </ul>
+            </li>
+            <li>
+              <h3 class="alert-category medium"><span class="color-dot"></span>Medium Alerts</h3>
+              <ul class="alert-items"></ul>
+            </li>
+            <li>
+              <h3 class="alert-category info"><span class="color-dot"></span>Info Alerts</h3>
+              <ul class="alert-items">
+                <li><span>Alert 4</span><button class="delete-btn">&times;</button></li>
+              </ul>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- Alert Log Section -->
+        <div class="card alert-log-panel">
+          <h2 class="card-title">Alert Log</h2>
+          <div class="table-container">
+            <table class="alert-log-table">
+              <thead>
+                <tr>
+                  <th>Level</th>
+                  <th>Time</th>
+                  <th>Alert Name</th>
+                  <th>Alert Details</th>
+                </tr>
+              </thead>
+              <tbody id="alert-log-body">
+                <tr>
+                  <td><span class="level-tag critical">Critical</span></td>
+                  <td class="time-cell">2025/09/29: 6:18:58PM <span>Eastern Standard Time</span></td>
+                  <td>Alert 1</td>
+                  <td class="details-cell">"Harmful Messages" greater than 200, and "Accuracy" less than 80%.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-tag high">High</span></td>
+                  <td class="time-cell">2025/09/28: 10:32:12AM <span>Eastern Standard Time</span></td>
+                  <td>Alert 2</td>
+                  <td class="details-cell">"Harmful Messages" greater than 100, and "Accuracy" less than 85%.</td>
+                </tr>
+                <tr>
+                  <td><span class="level-tag info">Info</span></td>
+                  <td class="time-cell">2025/09/27: 11:10:52AM <span>Eastern Standard Time</span></td>
+                  <td>Alert 4</td>
+                  <td class="details-cell">"Usage" greater than 100.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+  </main>
+  </div>
 </body>
+
 </html>
