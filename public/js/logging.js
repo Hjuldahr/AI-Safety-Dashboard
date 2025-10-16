@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 filterPolicyCompliace, 
                 filterResponseHelpfulness, 
                 filterResponseTime, 
-                filterEnergyConsumption, responseTimestamp, startDate, endDate }),
+                filterEnergyConsumption,
+                filterResponseTimestamp, startDate, endDate }),
         });
 
         //TODO generate html
