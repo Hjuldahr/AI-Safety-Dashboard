@@ -78,7 +78,8 @@ function createResponseTimeChart(ctx, initialData) {
             plugins: {
                 legend: { display: true },
                 title: { display: true, text: 'Response Time Over Time' }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
@@ -106,7 +107,8 @@ function createEnergyConsumptionChart(ctx, initialData) {
             plugins: {
                 legend: { display: true },
                 title: { display: true, text: 'Energy Consumption Over Time' }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
@@ -136,7 +138,8 @@ function createComplianceChart(ctx, initialData) {
                     display: true,
                     text: `Overall Compliance Score: ${complianceScore.toFixed(1)}%`
                 }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
@@ -167,20 +170,23 @@ function createHelpfulnessChart(ctx, initialData) {
             plugins: {
                 legend: { display: true, position: 'bottom' },
                 title: { display: true, text: 'Response Helpfulness by Category' }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
 
 // ========== Chart Registry ==========
 
-const chartDefinitions = [
-    { id: 'responseTimeChart', create: createResponseTimeChart },
-    { id: 'energyConsumptionChart', create: createEnergyConsumptionChart },
-    { id: 'complianceChart', create: createComplianceChart },
-    { id: 'helpfulnessChart', create: createHelpfulnessChart },
-    
-];
+const chartDefinitions = {
+    'responseTimeChart': createResponseTimeChart,
+    'energyConsumptionChart': createEnergyConsumptionChart,
+    'complianceChart': createComplianceChart,
+    'helpfulnessChart': createHelpfulnessChart,
+    // Add new charts here (e.g., 'newChartId': createNewChartFunction)
+};
+
+export const CHART_IDS = Object.keys(chartDefinitions);
 
 const charts = {};
 
@@ -189,14 +195,16 @@ const charts = {};
 // Initialize all charts with data from the selected model
 async function initCharts() {
     const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good'; // Default to 'good' if not specified
+    const currentModel = urlParams.get('model') || 'good';
     const initialModelData = currentModel === 'bad' ? await badModel() : await goodModel();
 
-    chartDefinitions.forEach(def => {
-        const ctx = document.getElementById(def.id)?.getContext('2d');
+    // Iterate over the dictionary entries
+    Object.entries(chartDefinitions).forEach(([id, createFunction]) => {
+        const ctx = document.getElementById(id)?.getContext('2d');
         if (ctx) {
-            // Pass the initial data to the creation function
-            charts[def.id] = def.create(ctx, initialModelData);
+            // id is the key (e.g., 'responseTimeChart')
+            // createFunction is the value (e.g., createResponseTimeChart)
+            charts[id] = createFunction(ctx, initialModelData);
         }
     });
 }
@@ -224,7 +232,7 @@ async function refreshCharts() {
         responseTimeChart.update();
     }
 
-            // --- Update Energy Consumption Chart ---
+    // --- Update Energy Consumption Chart ---
     const energyConsumptionChart = charts.energyConsumptionChart;
     if (energyConsumptionChart) {
         const { data } = energyConsumptionChart;
@@ -247,7 +255,7 @@ async function refreshCharts() {
         complianceChart.update();
     }
 
-        // --- Update Helpfulness Chart ---
+    // --- Update Helpfulness Chart ---
     const helpfulnessChart = charts.helpfulnessChart;
     if (helpfulnessChart) {
         const { data } = helpfulnessChart;
@@ -276,16 +284,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Set the dropdown to match the current model from the URL on page load
 document.addEventListener('DOMContentLoaded', () => {
-  const modelSelect = document.getElementById('model-select');
-  if (modelSelect) {
-    // Set the dropdown to match the current model from the URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good';
-    modelSelect.value = currentModel;
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        // Set the dropdown to match the current model from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentModel = urlParams.get('model') || 'good';
+        modelSelect.value = currentModel;
 
-    modelSelect.addEventListener('change', function() {
-      const selectedModel = this.value;
-      window.location.search = '?model=' + encodeURIComponent(selectedModel);
-    });
-  }
+        modelSelect.addEventListener('change', function () {
+            const selectedModel = this.value;
+            window.location.search = '?model=' + encodeURIComponent(selectedModel);
+        });
+    }
 });
