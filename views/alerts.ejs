@@ -46,25 +46,29 @@
 
           <div class="rule-builder form-group">
             <label>Alert Rule:</label>
-            <div class="rule-builder-inputs">
-              <select id="data-type">
-                <option value="">-- select data type --</option>
-                <option value="Harmful Messages">Harmful Messages</option>
-                <option value="Accuracy">Accuracy</option>
-                <option value="Usage">Usage</option>
-              </select>
-              <select id="operator-type">
-                <option value="">-- select operator --</option>
-                <option value="gt">Greater Than</option>
-                <option value="gte">Greater Than or Equal To</option>
-                <option value="lte">Less Than or Equal To</option>
-                <option value="lt">Less Than</option>
-              </select>
-              <input type="text" placeholder="value" class="value-input">
+            <div class="rule-builder-inputs" id="rules-container">
+              <div class="rule-row">
+                <select id="data-type" class="data-type">
+                  <option value="">-- select data type --</option>
+                  <option value="Harmful Messages">Harmful Messages</option>
+                  <option value="Accuracy">Accuracy</option>
+                  <option value="Usage">Usage</option>
+                </select>
+                <select id="operator-type" class="operator-type">
+                  <option value="">-- select operator --</option>
+                  <option value="gt">Greater Than</option>
+                  <option value="gte">Greater Than or Equal To</option>
+                  <option value="lte">Less Than or Equal To</option>
+                  <option value="lt">Less Than</option>
+                </select>
+                <input type="text" placeholder="value" class="value-input">
+              </div>
+            </div>
+            <div class="logical-operators-container">
               <span class="rule-builder-note">(add another part to the rule)</span>
               <div class="logical-operators">
-                <button class="btn btn-secondary">AND</button>
-                <button class="btn btn-secondary">OR</button>
+                <button class="btn btn-secondary add-rule-btn" data-logic="AND">AND</button>
+                <button class="btn btn-secondary add-rule-btn" data-logic="OR">OR</button>
               </div>
             </div>
           </div>
@@ -120,21 +124,21 @@
               <tbody id="alert-log-body">
                 <tr>
                   <td><span class="level-tag critical">Critical</span></td>
-                  <td class="time-cell">2025-09-29: 6:18:58PM <span>Eastern Standard Time</span></td>
+                  <td class="time-cell">2025/09/29: 6:18:58PM <span>Eastern Standard Time</span></td>
                   <td>Alert 1</td>
-                  <td class="details-cell">"Harmful Messages" greater than 200, and "Accuracy" less than 80%</td>
+                  <td class="details-cell">"Harmful Messages" greater than 200, and "Accuracy" less than 80%.</td>
                 </tr>
                 <tr>
                   <td><span class="level-tag high">High</span></td>
-                  <td class="time-cell">2025-09-28: 10:32:12AM <span>Eastern Standard Time</span></td>
+                  <td class="time-cell">2025/09/28: 10:32:12AM <span>Eastern Standard Time</span></td>
                   <td>Alert 2</td>
-                  <td class="details-cell">"Harmful Messages" greater than 100, and "Accuracy" less than 85%</td>
+                  <td class="details-cell">"Harmful Messages" greater than 100, and "Accuracy" less than 85%.</td>
                 </tr>
                 <tr>
                   <td><span class="level-tag info">Info</span></td>
-                  <td class="time-cell">2025-09-27: 11:10:52AM <span>Eastern Standard Time</span></td>
+                  <td class="time-cell">2025/09/27: 11:10:52AM <span>Eastern Standard Time</span></td>
                   <td>Alert 4</td>
-                  <td class="details-cell">"Usage" > 100</td>
+                  <td class="details-cell">"Usage" greater than 100.</td>
                 </tr>
               </tbody>
             </table>
