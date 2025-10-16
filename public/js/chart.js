@@ -174,13 +174,15 @@ function createHelpfulnessChart(ctx, initialData) {
 
 // ========== Chart Registry ==========
 
-const chartDefinitions = [
-    { id: 'responseTimeChart', create: createResponseTimeChart },
-    { id: 'energyConsumptionChart', create: createEnergyConsumptionChart },
-    { id: 'complianceChart', create: createComplianceChart },
-    { id: 'helpfulnessChart', create: createHelpfulnessChart },
-    
-];
+const chartDefinitions = {
+    'responseTimeChart': createResponseTimeChart,
+    'energyConsumptionChart': createEnergyConsumptionChart,
+    'complianceChart': createComplianceChart,
+    'helpfulnessChart': createHelpfulnessChart,
+    // Add new charts here (e.g., 'newChartId': createNewChartFunction)
+};
+
+export const CHART_IDS = Object.keys(chartDefinitions);
 
 const charts = {};
 
@@ -189,14 +191,16 @@ const charts = {};
 // Initialize all charts with data from the selected model
 async function initCharts() {
     const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good'; // Default to 'good' if not specified
+    const currentModel = urlParams.get('model') || 'good';
     const initialModelData = currentModel === 'bad' ? await badModel() : await goodModel();
 
-    chartDefinitions.forEach(def => {
-        const ctx = document.getElementById(def.id)?.getContext('2d');
+    // Iterate over the dictionary entries
+    Object.entries(chartDefinitions).forEach(([id, createFunction]) => {
+        const ctx = document.getElementById(id)?.getContext('2d');
         if (ctx) {
-            // Pass the initial data to the creation function
-            charts[def.id] = def.create(ctx, initialModelData);
+            // id is the key (e.g., 'responseTimeChart')
+            // createFunction is the value (e.g., createResponseTimeChart)
+            charts[id] = createFunction(ctx, initialModelData);
         }
     });
 }
