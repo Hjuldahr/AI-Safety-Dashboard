@@ -56,13 +56,16 @@ async function badModel() {
 
 // Response Time Line Chart
 function createResponseTimeChart(ctx, initialData) {
+    // Set uniform size for chart canvas
+    ctx.canvas.width = 400;
+    ctx.canvas.height = 300;
     return new Chart(ctx, {
         type: 'line',
         data: {
-            labels: [new Date().toLocaleTimeString()], // Start with one label
+            labels: [new Date().toLocaleTimeString()],
             datasets: [{
                 label: 'Average Response Time (ms)',
-                data: [initialData.avgResponseTime], // Use initial data point
+                data: [initialData.avgResponseTime],
                 borderColor: Utils.CHART_COLORS.blue,
                 backgroundColor: Utils.transparentize(Utils.CHART_COLORS.blue, 0.5),
                 fill: true,
@@ -70,7 +73,8 @@ function createResponseTimeChart(ctx, initialData) {
             }]
         },
         options: {
-            responsive: true,
+            responsive: false,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { display: true },
                 title: { display: true, text: 'Response Time Over Time' }
@@ -81,13 +85,15 @@ function createResponseTimeChart(ctx, initialData) {
 
 // Energy Consumption Line Chart
 function createEnergyConsumptionChart(ctx, initialData) {
+    ctx.canvas.width = 400;
+    ctx.canvas.height = 300;
     return new Chart(ctx, {
         type: 'line',
         data: {
-            labels: [new Date().toLocaleTimeString()], // Start with one label
+            labels: [new Date().toLocaleTimeString()],
             datasets: [{
                 label: 'Average Energy Consumption (Wh)',
-                data: [initialData.avgEnergyConsumption], // Use initial data point
+                data: [initialData.avgEnergyConsumption],
                 borderColor: Utils.CHART_COLORS.amber,
                 backgroundColor: Utils.transparentize(Utils.CHART_COLORS.amber, 0.5),
                 fill: true,
@@ -95,7 +101,8 @@ function createEnergyConsumptionChart(ctx, initialData) {
             }]
         },
         options: {
-            responsive: true,
+            responsive: false,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { display: true },
                 title: { display: true, text: 'Energy Consumption Over Time' }
@@ -107,24 +114,26 @@ function createEnergyConsumptionChart(ctx, initialData) {
 // Compliance Doughnut Chart
 function createComplianceChart(ctx, initialData) {
     const complianceScore = initialData.avgCompliance;
+    ctx.canvas.width = 400;
+    ctx.canvas.height = 300;
     return new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['Compliant', 'Non-Compliant'],
             datasets: [{
                 label: 'Compliance',
-                data: [complianceScore, 100 - complianceScore], // Use initial data
+                data: [complianceScore, 100 - complianceScore],
                 backgroundColor: [Utils.CHART_COLORS.teal, Utils.CHART_COLORS.coral],
                 hoverOffset: 4
             }]
         },
         options: {
-            responsive: true,
+            responsive: false,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { display: true, position: 'bottom' },
                 title: {
                     display: true,
-                    // Use initial data in the title
                     text: `Overall Compliance Score: ${complianceScore.toFixed(1)}%`
                 }
             }
@@ -134,13 +143,15 @@ function createComplianceChart(ctx, initialData) {
 
 // Helpfulness Line Chart
 function createHelpfulnessChart(ctx, initialData) {
+    ctx.canvas.width = 400;
+    ctx.canvas.height = 300;
     return new Chart(ctx, {
         type: 'line',
         data: {
-            labels: [new Date().toLocaleTimeString()], // Start with one label
+            labels: [new Date().toLocaleTimeString()],
             datasets: [{
                 label: 'Average Helpfulness Score (out of 5)',
-                data: [initialData.avgHelpfulness], // Use initial data point
+                data: [initialData.avgHelpfulness],
                 borderColor: Utils.CHART_COLORS.purple,
                 backgroundColor: Utils.transparentize(Utils.CHART_COLORS.purple, 0.5),
                 fill: true,
@@ -148,9 +159,10 @@ function createHelpfulnessChart(ctx, initialData) {
             }]
         },
         options: {
-            responsive: true,
+            responsive: false,
+            maintainAspectRatio: false,
             scales: {
-                y: { min: 1, max: 5 } // Fixed y-axis from 1 to 5
+                y: { min: 1, max: 5 }
             },
             plugins: {
                 legend: { display: true, position: 'bottom' },
@@ -162,13 +174,15 @@ function createHelpfulnessChart(ctx, initialData) {
 
 // ========== Chart Registry ==========
 
-const chartDefinitions = [
-    { id: 'responseTimeChart', create: createResponseTimeChart },
-    { id: 'energyConsumptionChart', create: createEnergyConsumptionChart },
-    { id: 'complianceChart', create: createComplianceChart },
-    { id: 'helpfulnessChart', create: createHelpfulnessChart },
-    
-];
+const chartDefinitions = {
+    'responseTimeChart': createResponseTimeChart,
+    'energyConsumptionChart': createEnergyConsumptionChart,
+    'complianceChart': createComplianceChart,
+    'helpfulnessChart': createHelpfulnessChart,
+    // Add new charts here (e.g., 'newChartId': createNewChartFunction)
+};
+
+export const CHART_IDS = Object.keys(chartDefinitions);
 
 const charts = {};
 
@@ -177,14 +191,16 @@ const charts = {};
 // Initialize all charts with data from the selected model
 async function initCharts() {
     const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good'; // Default to 'good' if not specified
+    const currentModel = urlParams.get('model') || 'good';
     const initialModelData = currentModel === 'bad' ? await badModel() : await goodModel();
 
-    chartDefinitions.forEach(def => {
-        const ctx = document.getElementById(def.id)?.getContext('2d');
+    // Iterate over the dictionary entries
+    Object.entries(chartDefinitions).forEach(([id, createFunction]) => {
+        const ctx = document.getElementById(id)?.getContext('2d');
         if (ctx) {
-            // Pass the initial data to the creation function
-            charts[def.id] = def.create(ctx, initialModelData);
+            // id is the key (e.g., 'responseTimeChart')
+            // createFunction is the value (e.g., createResponseTimeChart)
+            charts[id] = createFunction(ctx, initialModelData);
         }
     });
 }
