@@ -4,10 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>AI Safety Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="/js/data_generator_v3.js" defer></script>
     <script type="module" src="/js/chart.js" defer></script>
+    <script type="module" src="/js/chart_injector.js"></script>
     <link rel="stylesheet" href="/css/index.css">
     <link rel="stylesheet" href="/css/fullSite.css">
 
@@ -26,17 +27,25 @@
             <canvas id="energyConsumptionChart"></canvas>
         </div>
 
-        <div style="width:100%; max-width:450px; position: relative;" class="chart-row">
-            <canvas id="complianceChart"></canvas>
-            <canvas id="helpfulnessChart"></canvas>
+        <div class="controls-panel">
+            <h2>Dashboard Controls</h2> 
+            
+            <div>
+                <div class="controls-group">
+                    <button id="refresh-button">Refresh Data</button>
+
+                    <select id="model-select">
+                        <option value="good">Good Model</option>
+                        <option value="bad">Bad Model</option>
+                    </select>
+                </div>
+            </div>
+            
         </div>
 
-        <button id="refresh-button">Refresh</button>
-
-        <select id="model-select">
-            <option value="good">Good Model</option>
-            <option value="bad">Bad Model</option>
-        </select>
+        <!-- Charts -->
+        <div class="charts-container">
+        </div>
 
     </main>
 </body>

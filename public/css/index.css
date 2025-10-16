@@ -1,13 +1,132 @@
-.chart-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
+:root {
+    --primary-color: #4f46e5;
+    --primary-light: #e0e7ff;
+    --green-color: #22c55e;
+    --border-color: #d1d5db;
+    --card-bg: #ffffff;
+    --body-bg: #f3f4f6;
+    --text-dark: #1f2937;
+    --text-light: #6b7280;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
-/* Responsiveness for charts */
-@media (max-width: 768px) {
-  .chart-row {
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--body-bg);
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.charts-container {
+    display: grid;
+    
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    
+    gap: 20px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+.chart-card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease-in-out;
+}
+
+.chart-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.chart-card canvas {
+    /* Remove padding/shadow from canvas itself and ensure it fills the card */
+    width: 100% !important; 
+    height: 310px !important; /* Adjust height based on card padding (350 - 2*20 = 310) */
+    box-sizing: border-box; 
+}
+
+/* Main Content Wrapper */
+.content {
+    max-width: 1400px;
+    margin: 20px auto;
+    padding: 0 20px;
+}
+
+/* Styling for the controls container */
+.content > div:first-child {
+    display: flex;
     flex-direction: column;
+    gap: 15px;
+    margin-bottom: 25px;
+    align-items: flex-start;
+}
+
+/* Styling for the overall controls area */
+.controls-panel {
+    background-color: var(--primary-light); 
+    border-color: #c7d2fe;
+    padding: 20px;
+    margin-bottom: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
+    border-left: 5px solid #007bff; 
+}
+
+/* Styling for the title */
+.controls-panel h2 {
+    color: #333;
+    font-size: 1.5rem;
+    margin-top: 0;
+    /* Increase margin-bottom to create space between title and buttons */
+    margin-bottom: 10px; 
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee; 
+}
+
+/* Grouping for button and select */
+.controls-group {
+    display: flex; /* Keeps button and select side-by-side */
+    gap: 15px;
     align-items: center;
-  }
+    /* Add a small top margin if needed, but the h2 margin should suffice */
+    margin-top: 0;
+}
+
+/* Button Styling */
+#refresh-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    background-color: #007bff;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#refresh-button:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+#refresh-button:active {
+    background-color: #004085;
+    transform: translateY(1px);
+}
+
+/* Select/Dropdown Styling */
+#model-select {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px 35px 10px 15px;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%236b7280' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  appearance: none; /* hides native arrow */
 }
