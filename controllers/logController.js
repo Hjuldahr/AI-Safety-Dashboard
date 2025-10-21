@@ -86,7 +86,7 @@ const exportCSV = (res, logs, filename) => {
 };
 
 // === User Log Exports ===
-export const exportUserLogCSV = async (req, res) => {
+const exportUserLogCSV = async (req, res) => {
     try {
         const { _id: userID } = req.user;
         const { eventType, startDate, endDate, page = 1, limit = 100 } = req.body || {};
@@ -107,7 +107,7 @@ export const exportUserLogCSV = async (req, res) => {
     }
 };
 
-export const exportUserLogPDF = async (req, res) => {
+const exportUserLogPDF = async (req, res) => {
     try {
         const { _id: userID } = req.user;
         const { eventType, startDate, endDate, page = 1, limit = 100 } = req.body || {};
@@ -129,7 +129,7 @@ export const exportUserLogPDF = async (req, res) => {
 };
 
 // === AI Log Exports ===
-export const exportAILogCSV = async (req, res) => {
+const exportAILogCSV = async (req, res) => {
     try {
         const { _id: modelID } = req.model;
         const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 } = req.body || {};
@@ -150,7 +150,7 @@ export const exportAILogCSV = async (req, res) => {
     }
 };
 
-export const exportAILogPDF = async (req, res) => {
+const exportAILogPDF = async (req, res) => {
     try {
         const { _id: modelID } = req.model;
         const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 } = req.body || {};
@@ -172,7 +172,7 @@ export const exportAILogPDF = async (req, res) => {
 };
 
 // === Pagination Helpers ===
-export const getFilteredUserLogs = async ({ userID, eventType, startDate, endDate, page = 1, limit = 100 }) => {
+const getFilteredUserLogs = async ({ userID, eventType, startDate, endDate, page = 1, limit = 100 }) => {
     const query = buildUserLogQuery({ userID, eventType, startDate, endDate });
     const skip = (page - 1) * limit;
 
@@ -182,7 +182,7 @@ export const getFilteredUserLogs = async ({ userID, eventType, startDate, endDat
     return { logs, total, page, pages: Math.ceil(total / limit) };
 };
 
-export const getFilteredAILogs = async ({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 }) => {
+const getFilteredAILogs = async ({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 }) => {
     const query = buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate });
     const skip = (page - 1) * limit;
 
@@ -191,3 +191,24 @@ export const getFilteredAILogs = async ({ modelID, policyCompliance, responseHel
 
     return { logs, total, page, pages: Math.ceil(total / limit) };
 };
+
+// Log Page
+const getPage = async (req, res) => {
+    try{
+        res.render("logs", {
+            user: req.user,
+        }); 
+    }catch (error){
+        console.error("Error fetching logs page:", error);
+    }
+};
+
+export default {
+    getPage,
+    exportUserLogCSV,
+    exportUserLogPDF,
+    exportAILogCSV,
+    exportAILogPDF,
+    getFilteredUserLogs,
+    getFilteredAILogs
+}
