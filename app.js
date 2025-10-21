@@ -11,8 +11,6 @@ import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase } from './config/database.js';
 
-
-
 dotenv.config();
 
 //passport initialization

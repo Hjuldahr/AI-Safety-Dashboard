@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
     const switchToAITable = document.querySelector("#switchToAITable"); //button
-    const switchToUserTable = document.querySelector("#switchToAITable"); //button
+    const switchToUserTable = document.querySelector("#switchToUserTable"); //button
     const logTableContainer = document.querySelector("#logTableContainer"); //div
     const AILogFilter = document.querySelector("#AILogFilter"); //form
 
@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var startDate = 0
     var endDate = -1
 
+    //TODO set min and max for start and stop dates based on available data
+    //TODO set default dates
+
     AILogFilter.addEventListener("submit", event => {
         startDate = new Date(AILogFilter["start"].value).getTime()
         endDate = new Date(AILogFilter["end"].value).getTime()
@@ -22,12 +25,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     switchToAITable.addEventListener('click', () => {
         currentlySelected = "AILogs"
-        refreshCurrentTable()
+        refreshAITable()
     })
 
     switchToUserTable.addEventListener('click', () => {
         currentlySelected = "UserLogs"
-        refreshCurrentTable()
+        refreshUserTable()
     })
 
     async function refreshCurrentTable() {
@@ -40,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function refreshAITable() {
         const response = await fetch('/api/getFilteredAILogs', {
-            method: 'GET',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -52,18 +55,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 filterEnergyConsumption,
                 filterResponseTimestamp, startDate, endDate }),
         });
-
         //TODO generate html
+        logTableContainer.innerHTML = "<p>AI Temp</p>"
     }
 
     async function refreshUserTable() {
         //TODO setup
+        /*
         const response = await fetch('/api/getFilteredUserLogs', {
-            method: 'GET',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ }),
         });
+        */
+       logTableContainer.innerHTML = "<p>User Temp</p>"
     }
 });

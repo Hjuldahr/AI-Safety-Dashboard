@@ -2,6 +2,7 @@ import { Parser } from 'json2csv';
 import PDFDocument from 'pdfkit';
 import User_Log from '../models/User_Log.js';
 import AI_Log from '../models/AI_Log.js';
+import User from '../models/user.js';
 
 // === Helper Query Builders ===
 const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
@@ -171,25 +172,75 @@ const exportAILogPDF = async (req, res) => {
     }
 };
 
-// === Pagination Helpers ===
-const getFilteredUserLogs = async ({ userID, eventType, startDate, endDate, page = 1, limit = 100 }) => {
-    const query = buildUserLogQuery({ userID, eventType, startDate, endDate });
-    const skip = (page - 1) * limit;
+// === Pagination ===
+const getFilteredUserLogs = async (req, res) => {
+    try {
+        const {
+            userID,
+            eventType,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 100
+        } = req.body; 
 
-    const logs = await User_Log.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
-    const total = await User_Log.countDocuments(query);
+        const query = buildUserLogQuery({ userID, eventType, startDate, endDate });
+        const skip = (page - 1) * limit;
 
-    return { logs, total, page, pages: Math.ceil(total / limit) };
+        const logs = await User_Log.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await User_Log.countDocuments(query);
+
+        res.json({ logs, total, page, pages: Math.ceil(total / limit) });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch user logs' });
+    }
 };
 
-const getFilteredAILogs = async ({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 }) => {
-    const query = buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate });
-    const skip = (page - 1) * limit;
+const getFilteredAILogs = async (req, res) => {
+    try {
+        const {
+            modelID,
+            policyCompliance,
+            responseHelpfulness,
+            responseTime,
+            energyConsumption,
+            responseTimestamp,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 100
+        } = req.body; 
 
-    const logs = await AI_Log.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
-    const total = await AI_Log.countDocuments(query);
+        const query = buildAILogQuery({
+            modelID,
+            policyCompliance,
+            responseHelpfulness,
+            responseTime,
+            energyConsumption,
+            responseTimestamp,
+            startDate,
+            endDate
+        });
 
-    return { logs, total, page, pages: Math.ceil(total / limit) };
+        const skip = (page - 1) * limit;
+
+        const logs = await AI_Log.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await AI_Log.countDocuments(query);
+
+        res.json({ logs, total, page, pages: Math.ceil(total / limit) });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch AI logs' });
+    }
 };
 
 // Log Page
