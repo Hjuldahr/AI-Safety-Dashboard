@@ -1,0 +1,1 @@
+export const SSE_INTERVAL = 5000;

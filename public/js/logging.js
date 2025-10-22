@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const switchToAITable = document.querySelector("#switchToAITable"); //button
-    const switchToUserTable = document.querySelector("#switchToUserTable"); //button
+    const selectLog = document.querySelector("#log-select"); //select
     const logTableContainer = document.querySelector("#logTableContainer"); //div
     const AILogFilter = document.querySelector("#AILogFilter"); //form
 

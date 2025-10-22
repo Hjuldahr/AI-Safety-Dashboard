@@ -16,8 +16,10 @@
     <%- include('components/notifications') %>
     <div>
       <!--Horizontal-->
-      <button id="switchToAITable">AI Logs</button>
-      <button id="switchToUserTable">User Logs</button>
+      <select id="log-select">
+          <option value="user">AI Logs</option>
+          <option value="ai">User Logs</option>
+      </select>
     </div>
     <!--Dynamic Table goes here-->
     <div id="logTableContainer">
