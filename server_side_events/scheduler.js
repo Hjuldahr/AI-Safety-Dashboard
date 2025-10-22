@@ -4,6 +4,18 @@ import { SSE_INTERVAL, SCHEDULER_INTERVAL, HEARTBEAT } from '../config/sse.js';
 /**
  * Fetch AI model summary
  */
+async function badModel() {
+    const calls = await pseudoAI("badModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6);
+    const summary = AIGeneralizer("badModel", calls);
+    return {
+        modelName: summary.model,
+        avgCompliance: summary.policyCompliance.mean * 100,
+        avgHelpfulness: summary.responseHelpfulness.mean * 5,
+        avgResponseTime: summary.responseTime.mean,
+        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // Convert kWh to Wh for better readability
+    };
+}
+
 async function goodModel() {
     const calls = await pseudoAI("GoodModel", 2, 5, 10, 0.9, 1.0, 0.9, 1.0);
     const summary = AIGeneralizer("GoodModel", calls);
