@@ -1,6 +1,7 @@
 # Dashboard
-[x] sse support
-[] model switching
+[x] sse support/
+[] model switching/
+[] cache charts so reloading or tab switching doesnt reset them (should only be empty on first run)/
 
 # Alerts
 
