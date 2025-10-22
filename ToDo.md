@@ -1,4 +1,6 @@
 # Dashboard
+[x] sse support
+[] model switching
 
 # Alerts
 
@@ -9,5 +11,5 @@
 # Reports
 
 # Logs
-[] Connect events to log db
+[x] Connect events to log db
 [] setup log html page

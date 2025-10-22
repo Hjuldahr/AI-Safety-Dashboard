@@ -45,7 +45,10 @@ function setupSSE(app) {
         const interval = setInterval(() => sendModelData(res), SSE_INTERVAL);
 
         // Heartbeat to avoid client timeout
-        const heartbeat = setInterval(() => res.write(':\n\n'), HEARTBEAT);
+        const heartbeat = setInterval(() => {
+            //console.log('SSE task running', new Date().toISOString());
+            res.write(':\n\n');
+        }, HEARTBEAT);
 
         req.on('close', () => {
             clearInterval(interval);
