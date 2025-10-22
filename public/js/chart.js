@@ -52,7 +52,7 @@ function createDoughnutChart(ctx, label, value, colors) {
     return new Chart(ctx, {
         type: 'doughnut',
         data: { labels: ['Compliant', 'Non-Compliant'], datasets: [{ label, data: [value, 100 - value], backgroundColor: colors, hoverOffset: 4 }] },
-        options: { responsive: false, maintainAspectRatio: false }
+        options: { responsive: false, maintainAspectRatio: false, devicePixelRatio: 3 }
     });
 }
 
