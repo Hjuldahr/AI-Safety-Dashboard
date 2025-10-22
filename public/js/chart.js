@@ -74,7 +74,8 @@ function createDoughnutChart(ctx, label, value, colors) {
             plugins: {
                 legend: { display: true, position: 'bottom' },
                 title: { display: true, text: label }
-            }
+            },
+            devicePixelRatio: 3
         }
     });
 }
