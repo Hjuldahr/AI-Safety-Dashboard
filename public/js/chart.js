@@ -1,19 +1,14 @@
-import { pseudoAI, AIGeneralizer } from './test_data_generator_v3.js';
+// public/js/chart.js
+// Chart.js is loaded globally via UMD; no imports needed
 
-// ========== Utility Functions ==========
+const CHART_IDS = [
+    'responseTimeChart',
+    'energyConsumptionChart',
+    'complianceChart',
+    'helpfulnessChart'
+];
+
 const Utils = {
-    days({ count }) {
-        return Array.from({ length: count }, (_, i) => `Day ${i + 1}`);
-    },
-    numbers({ count, min, max, precision = 0 }) {
-        return Array.from({ length: count }, () => {
-            const value = Math.random() * (max - min) + min;
-            return parseFloat(value.toFixed(precision));
-        });
-    },
-    rand(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    },
     CHART_COLORS: {
         coral: 'rgb(244, 91, 105)',
         blue: 'rgb(0, 122, 204)',
@@ -22,52 +17,33 @@ const Utils = {
         purple: 'rgb(142, 68, 173)',
     },
     transparentize(color, opacity) {
-        if (!color) return 'rgba(0,0,0,0.1)';
         return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
     }
 };
 
-// ========== Defining Models NOTE: Might need to be moved to a different file ==========
-async function goodModel() {
-    const calls = await pseudoAI("GoodModel", 2, 5, 10, 0.9, 1.0, 0.9, 1.0);
-    const summary = AIGeneralizer("GoodModel", calls);
-    return {
-        modelName: summary.model,
-        avgCompliance: summary.policyCompliance.mean * 100,
-        avgHelpfulness: summary.responseHelpfulness.mean * 5,
-        avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // Convert kWh to Wh for better readability
-    };
+const charts = {};
+
+// ---------- Inject canvases ----------
+function initChartCanvases() {
+    const container = document.querySelector('.charts-container');
+    container.innerHTML = CHART_IDS.map(id => `
+        <div class="chart-card">
+            <canvas id="${id}" width="400" height="300"></canvas>
+        </div>
+    `).join('');
 }
 
-async function badModel() {
-    const calls = await pseudoAI("badModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6);
-    const summary = AIGeneralizer("badModel", calls);
-    return {
-        modelName: summary.model,
-        avgCompliance: summary.policyCompliance.mean * 100,
-        avgHelpfulness: summary.responseHelpfulness.mean * 5,
-        avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // Convert kWh to Wh for better readability
-    };
-}
-
-// ========== Chart Creation Functions ==========
-
-// Response Time Line Chart
-function createResponseTimeChart(ctx, initialData) {
-    // Set uniform size for chart canvas
-    ctx.canvas.width = 400;
-    ctx.canvas.height = 300;
+// ---------- Chart factory functions ----------
+function createLineChart(ctx, label, value, color, yOptions = {}) {
     return new Chart(ctx, {
         type: 'line',
         data: {
             labels: [new Date().toLocaleTimeString()],
             datasets: [{
-                label: 'Average Response Time (ms)',
-                data: [initialData.avgResponseTime],
-                borderColor: Utils.CHART_COLORS.blue,
-                backgroundColor: Utils.transparentize(Utils.CHART_COLORS.blue, 0.5),
+                label,
+                data: [value],
+                borderColor: color,
+                backgroundColor: Utils.transparentize(color, 0.5),
                 fill: true,
                 tension: 0.3
             }]
@@ -75,225 +51,115 @@ function createResponseTimeChart(ctx, initialData) {
         options: {
             responsive: false,
             maintainAspectRatio: false,
+            scales: { y: yOptions },
             plugins: {
                 legend: { display: true },
-                title: { display: true, text: 'Response Time Over Time' }
+                title: { display: true, text: label }
             },
             devicePixelRatio: 3
         }
     });
 }
 
-// Energy Consumption Line Chart
-function createEnergyConsumptionChart(ctx, initialData) {
-    ctx.canvas.width = 400;
-    ctx.canvas.height = 300;
-    return new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [new Date().toLocaleTimeString()],
-            datasets: [{
-                label: 'Average Energy Consumption (Wh)',
-                data: [initialData.avgEnergyConsumption],
-                borderColor: Utils.CHART_COLORS.amber,
-                backgroundColor: Utils.transparentize(Utils.CHART_COLORS.amber, 0.5),
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: false,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: true },
-                title: { display: true, text: 'Energy Consumption Over Time' }
-            },
-            devicePixelRatio: 3
-        }
-    });
-}
-
-// Compliance Doughnut Chart
-function createComplianceChart(ctx, initialData) {
-    const complianceScore = initialData.avgCompliance;
-    ctx.canvas.width = 400;
-    ctx.canvas.height = 300;
+function createDoughnutChart(ctx, label, value, colors) {
     return new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: ['Compliant', 'Non-Compliant'],
-            datasets: [{
-                label: 'Compliance',
-                data: [complianceScore, 100 - complianceScore],
-                backgroundColor: [Utils.CHART_COLORS.teal, Utils.CHART_COLORS.coral],
-                hoverOffset: 4
-            }]
+            datasets: [{ label, data: [value, 100 - value], backgroundColor: colors, hoverOffset: 4 }]
         },
         options: {
             responsive: false,
             maintainAspectRatio: false,
             plugins: {
                 legend: { display: true, position: 'bottom' },
-                title: {
-                    display: true,
-                    text: `Overall Compliance Score: ${complianceScore.toFixed(1)}%`
-                }
-            },
-            devicePixelRatio: 3
+                title: { display: true, text: label }
+            }
         }
     });
 }
 
-// Helpfulness Line Chart
-function createHelpfulnessChart(ctx, initialData) {
-    ctx.canvas.width = 400;
-    ctx.canvas.height = 300;
-    return new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [new Date().toLocaleTimeString()],
-            datasets: [{
-                label: 'Average Helpfulness Score (out of 5)',
-                data: [initialData.avgHelpfulness],
-                borderColor: Utils.CHART_COLORS.purple,
-                backgroundColor: Utils.transparentize(Utils.CHART_COLORS.purple, 0.5),
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: false,
-            maintainAspectRatio: false,
-            scales: {
-                y: { min: 1, max: 5 }
-            },
-            plugins: {
-                legend: { display: true, position: 'bottom' },
-                title: { display: true, text: 'Response Helpfulness by Category' }
-            },
-            devicePixelRatio: 3
-        }
-    });
+// ---------- Initialize charts ----------
+function initCharts() {
+    charts.responseTimeChart = createLineChart(
+        document.getElementById('responseTimeChart').getContext('2d'),
+        'Average Response Time (ms)',
+        0,
+        Utils.CHART_COLORS.blue
+    );
+
+    charts.energyConsumptionChart = createLineChart(
+        document.getElementById('energyConsumptionChart').getContext('2d'),
+        'Average Energy Consumption (Wh)',
+        0,
+        Utils.CHART_COLORS.amber
+    );
+
+    charts.complianceChart = createDoughnutChart(
+        document.getElementById('complianceChart').getContext('2d'),
+        'Compliance Score',
+        0,
+        [Utils.CHART_COLORS.teal, Utils.CHART_COLORS.coral]
+    );
+
+    charts.helpfulnessChart = createLineChart(
+        document.getElementById('helpfulnessChart').getContext('2d'),
+        'Average Helpfulness Score',
+        0,
+        Utils.CHART_COLORS.purple,
+        { min: 1, max: 5 }
+    );
 }
 
-// ========== Chart Registry ==========
+// ---------- SSE updates ----------
+function setupSSE() {
+    const evtSource = new EventSource('/events');
+    evtSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const now = new Date().toLocaleTimeString();
 
-const chartDefinitions = {
-    'responseTimeChart': createResponseTimeChart,
-    'energyConsumptionChart': createEnergyConsumptionChart,
-    'complianceChart': createComplianceChart,
-    'helpfulnessChart': createHelpfulnessChart,
-    // Add new charts here (e.g., 'newChartId': createNewChartFunction)
-};
-
-export const CHART_IDS = Object.keys(chartDefinitions);
-
-const charts = {};
-
-// ========== Chart Initialization ==========
-
-// Initialize all charts with data from the selected model
-async function initCharts() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good';
-    const initialModelData = currentModel === 'bad' ? await badModel() : await goodModel();
-
-    // Iterate over the dictionary entries
-    Object.entries(chartDefinitions).forEach(([id, createFunction]) => {
-        const ctx = document.getElementById(id)?.getContext('2d');
-        if (ctx) {
-            // id is the key (e.g., 'responseTimeChart')
-            // createFunction is the value (e.g., createResponseTimeChart)
-            charts[id] = createFunction(ctx, initialModelData);
+        // Response Time
+        const rt = charts.responseTimeChart;
+        rt.data.labels.push(now);
+        rt.data.datasets[0].data.push(data.avgResponseTime);
+        if (rt.data.labels.length > 15) {
+            rt.data.labels.shift();
+            rt.data.datasets[0].data.shift();
         }
-    });
+        rt.update('none');
+
+        // Energy Consumption
+        const ec = charts.energyConsumptionChart;
+        ec.data.labels.push(now);
+        ec.data.datasets[0].data.push(data.avgEnergyConsumption);
+        if (ec.data.labels.length > 15) {
+            ec.data.labels.shift();
+            ec.data.datasets[0].data.shift();
+        }
+        ec.update('none');
+
+        // Compliance
+        const c = charts.complianceChart;
+        c.data.datasets[0].data = [data.avgCompliance, 100 - data.avgCompliance];
+        c.update();
+
+        // Helpfulness
+        const h = charts.helpfulnessChart;
+        h.data.labels.push(now);
+        h.data.datasets[0].data.push(data.avgHelpfulness);
+        if (h.data.labels.length > 15) {
+            h.data.labels.shift();
+            h.data.datasets[0].data.shift();
+        }
+        h.update('none');
+    };
+
+    evtSource.onerror = (err) => console.error('SSE error:', err);
 }
 
-// ========== Data Refresh Logic ==========
-
-// refresh the charts with new data from the selected model
-async function refreshCharts() {
-    // Determine which model to use based on URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good'; // Default to 'good' if not specified
-    const newData = currentModel === 'bad' ? await badModel() : await goodModel();
-
-    // --- Update Response Time Chart ---
-    const responseTimeChart = charts.responseTimeChart;
-    if (responseTimeChart) {
-        const { data } = responseTimeChart;
-        data.labels.push(new Date().toLocaleTimeString());
-        data.datasets[0].data.push(newData.avgResponseTime);
-        // Keep the chart from getting too crowded
-        if (data.labels.length > 15) {
-            data.labels.shift();
-            data.datasets[0].data.shift();
-        }
-        responseTimeChart.update('none');
-    }
-
-    // --- Update Energy Consumption Chart ---
-    const energyConsumptionChart = charts.energyConsumptionChart;
-    if (energyConsumptionChart) {
-        const { data } = energyConsumptionChart;
-        data.labels.push(new Date().toLocaleTimeString());
-        data.datasets[0].data.push(newData.avgEnergyConsumption);
-        // Keep the chart from getting too crowded
-        if (data.labels.length > 15) {
-            data.labels.shift();
-            data.datasets[0].data.shift();
-        }
-        energyConsumptionChart.update('none');
-    }
-
-    // --- Update Compliance Chart ---
-    const complianceChart = charts.complianceChart;
-    if (complianceChart) {
-        const newScore = newData.avgCompliance;
-        complianceChart.data.datasets[0].data = [newScore, 100 - newScore];
-        complianceChart.options.plugins.title.text = `Overall Compliance Score: ${newScore.toFixed(1)}%`;
-        complianceChart.update();
-    }
-
-    // --- Update Helpfulness Chart ---
-    const helpfulnessChart = charts.helpfulnessChart;
-    if (helpfulnessChart) {
-        const { data } = helpfulnessChart;
-        data.labels.push(new Date().toLocaleTimeString());
-        data.datasets[0].data.push(newData.avgHelpfulness);
-        if (data.labels.length > 15) {
-            data.labels.shift();
-            data.datasets[0].data.shift();
-        }
-        helpfulnessChart.update('none');
-    }
-}
-
-// ========== Event Bindings ==========
-
-// Refresh charts on button click
-document.addEventListener('DOMContentLoaded', async () => {
-    await initCharts();
-    const refreshBtn = document.getElementById('refresh-button');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-            await refreshCharts();
-        });
-    }
-});
-
-// Set the dropdown to match the current model from the URL on page load
+// ---------- DOM Ready ----------
 document.addEventListener('DOMContentLoaded', () => {
-    const modelSelect = document.getElementById('model-select');
-    if (modelSelect) {
-        // Set the dropdown to match the current model from the URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentModel = urlParams.get('model') || 'good';
-        modelSelect.value = currentModel;
-
-        modelSelect.addEventListener('change', function () {
-            const selectedModel = this.value;
-            window.location.search = '?model=' + encodeURIComponent(selectedModel);
-        });
-    }
+    initChartCanvases();
+    initCharts();
+    setupSSE();
 });

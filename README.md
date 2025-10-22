@@ -52,4 +52,4 @@ This command installs all dependencies listed in `package.json`.
 
 ## Step 5 - Run the server
 - You should now be good to go.
-- Run `npm start` in the projects root directory, then head to `localhost:2121` to see the website.
+- Run `npm start` in the projects root directory, then head to `http://localhost:2121` to see the website or click on the hyperlink provided in the terminal.
