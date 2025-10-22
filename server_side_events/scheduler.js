@@ -46,7 +46,6 @@ function setupSSE(app) {
 
         // Heartbeat to avoid client timeout
         const heartbeat = setInterval(() => {
-            //console.log('SSE task running', new Date().toISOString());
             res.write(':\n\n');
         }, HEARTBEAT);
 
