@@ -1,24 +1,25 @@
+// server_side_events/scheduler.js
 import { pseudoAI, AIGeneralizer } from '../data_generator/test_data_generator_v3.js';
-import { SSE_INTERVAL, SCHEDULER_INTERVAL, HEARTBEAT } from '../config/sse.js';
+import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
+import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 
-// Max records to keep in the DB
-const MAX_RECORDS = 100;
-// List of all connected SSE clients (response objects)
+// List of connected SSE clients
 let activeClients = [];
 
-/**
- * Fetch AI model summary
- */
+// Reference to the active scheduler interval
+let schedulerInterval = null;
+
+// ---------- Model Fetching ----------
 async function badModel() {
-    const calls = await pseudoAI("badModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6);
-    const summary = AIGeneralizer("badModel", calls);
+    const calls = await pseudoAI("BadModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6);
+    const summary = AIGeneralizer("BadModel", calls);
     return {
         modelName: summary.model,
         avgCompliance: summary.policyCompliance.mean * 100,
         avgHelpfulness: summary.responseHelpfulness.mean * 5,
         avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // Convert kWh to Wh for better readability
+        avgEnergyConsumption: summary.energyConsumption.mean * 1000
     };
 }
 
@@ -30,76 +31,120 @@ async function goodModel() {
         avgCompliance: summary.policyCompliance.mean * 100,
         avgHelpfulness: summary.responseHelpfulness.mean * 5,
         avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // kWh -> Wh
+        avgEnergyConsumption: summary.energyConsumption.mean * 1000
     };
 }
 
-/**
- * Setup SSE route
- */
+function nullModel() {
+    return {
+        modelName: "NullModel",
+        avgCompliance: 0,
+        avgHelpfulness: 0,
+        avgResponseTime: 0,
+        avgEnergyConsumption: 0
+    };
+}
+
+// ---------- SSE Setup ----------
 function setupSSE(app) {
     app.get('/events', (req, res) => {
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        // Add this client to the active list
         activeClients.push(res);
 
-        // Heartbeat to avoid client timeout
         const heartbeat = setInterval(() => {
             res.write(':\n\n');
         }, HEARTBEAT);
 
         req.on('close', () => {
             clearInterval(heartbeat);
-            // Remove this client from the active list
             activeClients = activeClients.filter(client => client !== res);
         });
     });
 }
 
-/**
- * Setup global server-side scheduled tasks
- */
-function setupScheduler() {
-    // This one interval runs for the entire server
-    setInterval(async () => {
-        try {
-            const data = await goodModel();
+// ---------- Scheduler Tick ----------
+async function schedulerTick() {
+    if (schedulerState.isPaused) return;
 
-            const dataToSave = {
-                modelName: data.modelName,
-                policyCompliance: data.avgCompliance,
-                responseHelpfulness: data.avgHelpfulness,
-                responseTime: data.avgResponseTime,
-                energyConsumption: data.avgEnergyConsumption
-            };
+    let data;
+    switch (schedulerState.activeModel) {
+        case "GoodModel":
+            data = await goodModel();
+            break;
+        case "BadModel":
+            data = await badModel();
+            break;
+        default:
+            data = nullModel();
+            break;
+    }
 
-            //Save to database
-            await AI_Log.addLog(dataToSave);
+    // Save to DB
+    const dataToSave = {
+        modelName: data.modelName,
+        policyCompliance: data.avgCompliance,
+        responseHelpfulness: data.avgHelpfulness,
+        responseTime: data.avgResponseTime,
+        energyConsumption: data.avgEnergyConsumption
+    };
 
-            // Keep only the last 100 records
-            const count = await AI_Log.countDocuments();
-            if (count > MAX_RECORDS) {
-                // Find the oldest document (sort by timestamp ascending) and delete it
-                await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
-            }
+    try {
+        await AI_Log.addLog(dataToSave);
 
-            // Format data and broadcast to ALL active clients
-            const sseData = `data: ${JSON.stringify(data)}\n\n`;
-
-            // Loop over all connected clients and send them the new data
-            activeClients.forEach(client => client.write(sseData));
-
-        } catch (err) {
-            console.error('Global scheduler tick error:', err);
-
-            // Optionally, broadcast the error to clients
-            const errorData = `data: ${JSON.stringify({ error: 'Failed to fetch or save AI logs' })}\n\n`;
-            activeClients.forEach(client => client.write(errorData));
+        // Keep only last MAX_RECORDS
+        const count = await AI_Log.countDocuments();
+        if (count > MAX_RECORDS) {
+            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
         }
-    }, SSE_INTERVAL); // Use the data-sending interval
+
+        // Broadcast to all clients
+        const sseData = `data: ${JSON.stringify(data)}\n\n`;
+        activeClients.forEach(client => client.write(sseData));
+    } catch (err) {
+        console.error('Scheduler tick error:', err);
+        const errorData = `data: ${JSON.stringify({ error: 'Failed to fetch or save AI logs' })}\n\n`;
+        activeClients.forEach(client => client.write(errorData));
+    }
 }
 
-export default { setupScheduler, setupSSE }
+// ---------- Scheduler Control ----------
+function startScheduler() {
+    if (schedulerInterval) clearInterval(schedulerInterval);
+    if (!schedulerState.isPaused) {
+        schedulerInterval = setInterval(schedulerTick, schedulerState.interval);
+        console.log('[Scheduler] Started with interval', schedulerState.interval, 'ms');
+    }
+}
+
+function updateSchedulerSettings({ isPaused, activeModel, interval }) {
+    let restart = false;
+
+    if (typeof isPaused === 'boolean' && isPaused !== schedulerState.isPaused) {
+        schedulerState.isPaused = isPaused;
+        console.log(`[Scheduler] ${isPaused ? 'isPaused' : 'Resumed'}`);
+        restart = true;
+    }
+
+    if (activeModel && activeModel !== schedulerState.activeModel) {
+        schedulerState.activeModel = activeModel;
+        console.log('[Scheduler] Active model changed to', activeModel);
+    }
+
+    if (interval && interval !== schedulerState.interval) {
+        schedulerState.interval = interval;
+        console.log('[Scheduler] Interval updated to', interval, 'ms');
+        restart = true;
+    }
+
+    if (restart) startScheduler();
+}
+
+// ---------- Initialize Scheduler ----------
+function setupScheduler() {
+    startScheduler();
+}
+
+export default { setupSSE, setupScheduler, updateSchedulerSettings };
