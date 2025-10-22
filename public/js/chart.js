@@ -1,19 +1,9 @@
-import { pseudoAI, AIGeneralizer } from './test_data_generator_v3.js';
+// chart.js
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
 
-// ========== Utility Functions ==========
+// ---------- Utils ----------
 const Utils = {
-    days({ count }) {
-        return Array.from({ length: count }, (_, i) => `Day ${i + 1}`);
-    },
-    numbers({ count, min, max, precision = 0 }) {
-        return Array.from({ length: count }, () => {
-            const value = Math.random() * (max - min) + min;
-            return parseFloat(value.toFixed(precision));
-        });
-    },
-    rand(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    },
     CHART_COLORS: {
         coral: 'rgb(244, 91, 105)',
         blue: 'rgb(0, 122, 204)',
@@ -27,36 +17,8 @@ const Utils = {
     }
 };
 
-// ========== Defining Models NOTE: Might need to be moved to a different file ==========
-async function goodModel() {
-    const calls = await pseudoAI("GoodModel", 2, 5, 10, 0.9, 1.0, 0.9, 1.0);
-    const summary = AIGeneralizer("GoodModel", calls);
-    return {
-        modelName: summary.model,
-        avgCompliance: summary.policyCompliance.mean * 100,
-        avgHelpfulness: summary.responseHelpfulness.mean * 5,
-        avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // Convert kWh to Wh for better readability
-    };
-}
-
-async function badModel() {
-    const calls = await pseudoAI("badModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6);
-    const summary = AIGeneralizer("badModel", calls);
-    return {
-        modelName: summary.model,
-        avgCompliance: summary.policyCompliance.mean * 100,
-        avgHelpfulness: summary.responseHelpfulness.mean * 5,
-        avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000 // Convert kWh to Wh for better readability
-    };
-}
-
-// ========== Chart Creation Functions ==========
-
-// Response Time Line Chart
+// ---------- Chart Creation Functions ----------
 function createResponseTimeChart(ctx, initialData) {
-    // Set uniform size for chart canvas
     ctx.canvas.width = 400;
     ctx.canvas.height = 300;
     return new Chart(ctx, {
@@ -84,7 +46,6 @@ function createResponseTimeChart(ctx, initialData) {
     });
 }
 
-// Energy Consumption Line Chart
 function createEnergyConsumptionChart(ctx, initialData) {
     ctx.canvas.width = 400;
     ctx.canvas.height = 300;
@@ -113,7 +74,6 @@ function createEnergyConsumptionChart(ctx, initialData) {
     });
 }
 
-// Compliance Doughnut Chart
 function createComplianceChart(ctx, initialData) {
     const complianceScore = initialData.avgCompliance;
     ctx.canvas.width = 400;
@@ -144,7 +104,6 @@ function createComplianceChart(ctx, initialData) {
     });
 }
 
-// Helpfulness Line Chart
 function createHelpfulnessChart(ctx, initialData) {
     ctx.canvas.width = 400;
     ctx.canvas.height = 300;
@@ -164,9 +123,7 @@ function createHelpfulnessChart(ctx, initialData) {
         options: {
             responsive: false,
             maintainAspectRatio: false,
-            scales: {
-                y: { min: 1, max: 5 }
-            },
+            scales: { y: { min: 1, max: 5 } },
             plugins: {
                 legend: { display: true, position: 'bottom' },
                 title: { display: true, text: 'Response Helpfulness by Category' }
@@ -176,55 +133,55 @@ function createHelpfulnessChart(ctx, initialData) {
     });
 }
 
-// ========== Chart Registry ==========
-
+// ---------- Chart Registry ----------
 const chartDefinitions = {
     'responseTimeChart': createResponseTimeChart,
     'energyConsumptionChart': createEnergyConsumptionChart,
     'complianceChart': createComplianceChart,
     'helpfulnessChart': createHelpfulnessChart,
-    // Add new charts here (e.g., 'newChartId': createNewChartFunction)
 };
-
-export const CHART_IDS = Object.keys(chartDefinitions);
 
 const charts = {};
 
-// ========== Chart Initialization ==========
+// ---------- Chart Initialization ----------
+function initCharts() {
+    const initialData = {
+        avgResponseTime: 0,
+        avgEnergyConsumption: 0,
+        avgCompliance: 0,
+        avgHelpfulness: 0
+    };
 
-// Initialize all charts with data from the selected model
-async function initCharts() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good';
-    const initialModelData = currentModel === 'bad' ? await badModel() : await goodModel();
-
-    // Iterate over the dictionary entries
-    Object.entries(chartDefinitions).forEach(([id, createFunction]) => {
+    Object.entries(chartDefinitions).forEach(([id, createFn]) => {
         const ctx = document.getElementById(id)?.getContext('2d');
-        if (ctx) {
-            // id is the key (e.g., 'responseTimeChart')
-            // createFunction is the value (e.g., createResponseTimeChart)
-            charts[id] = createFunction(ctx, initialModelData);
-        }
+        if (ctx) charts[id] = createFn(ctx, initialData);
     });
 }
 
-// ========== Data Refresh Logic ==========
+// ---------- SSE Connection ----------
+function setupSSEConnection() {
+    const evtSource = new EventSource('/events');
 
-// refresh the charts with new data from the selected model
-async function refreshCharts() {
-    // Determine which model to use based on URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentModel = urlParams.get('model') || 'good'; // Default to 'good' if not specified
-    const newData = currentModel === 'bad' ? await badModel() : await goodModel();
+    evtSource.onmessage = (event) => {
+        const newData = JSON.parse(event.data);
+        updateCharts(newData);
+    };
 
-    // --- Update Response Time Chart ---
+    evtSource.onerror = (err) => {
+        console.error('SSE connection error', err);
+    };
+}
+
+// ---------- Update Charts ----------
+function updateCharts(newData) {
+    const now = new Date().toLocaleTimeString();
+
+    // Response Time
     const responseTimeChart = charts.responseTimeChart;
     if (responseTimeChart) {
         const { data } = responseTimeChart;
-        data.labels.push(new Date().toLocaleTimeString());
+        data.labels.push(now);
         data.datasets[0].data.push(newData.avgResponseTime);
-        // Keep the chart from getting too crowded
         if (data.labels.length > 15) {
             data.labels.shift();
             data.datasets[0].data.shift();
@@ -232,68 +189,44 @@ async function refreshCharts() {
         responseTimeChart.update('none');
     }
 
-    // --- Update Energy Consumption Chart ---
-    const energyConsumptionChart = charts.energyConsumptionChart;
-    if (energyConsumptionChart) {
-        const { data } = energyConsumptionChart;
-        data.labels.push(new Date().toLocaleTimeString());
+    // Energy Consumption
+    const energyChart = charts.energyConsumptionChart;
+    if (energyChart) {
+        const { data } = energyChart;
+        data.labels.push(now);
         data.datasets[0].data.push(newData.avgEnergyConsumption);
-        // Keep the chart from getting too crowded
         if (data.labels.length > 15) {
             data.labels.shift();
             data.datasets[0].data.shift();
         }
-        energyConsumptionChart.update('none');
+        energyChart.update('none');
     }
 
-    // --- Update Compliance Chart ---
+    // Compliance
     const complianceChart = charts.complianceChart;
     if (complianceChart) {
-        const newScore = newData.avgCompliance;
-        complianceChart.data.datasets[0].data = [newScore, 100 - newScore];
-        complianceChart.options.plugins.title.text = `Overall Compliance Score: ${newScore.toFixed(1)}%`;
+        const score = newData.avgCompliance;
+        complianceChart.data.datasets[0].data = [score, 100 - score];
+        complianceChart.options.plugins.title.text = `Overall Compliance Score: ${score.toFixed(1)}%`;
         complianceChart.update();
     }
 
-    // --- Update Helpfulness Chart ---
+    // Helpfulness
     const helpfulnessChart = charts.helpfulnessChart;
-    if (helpfulnessChart) {
-        const { data } = helpfulnessChart;
-        data.labels.push(new Date().toLocaleTimeString());
+    if (charts.helpfulnessChart) {
+        const { data } = charts.helpfulnessChart;
+        data.labels.push(now);
         data.datasets[0].data.push(newData.avgHelpfulness);
         if (data.labels.length > 15) {
             data.labels.shift();
             data.datasets[0].data.shift();
         }
-        helpfulnessChart.update('none');
+        charts.helpfulnessChart.update('none');
     }
 }
 
-// ========== Event Bindings ==========
-
-// Refresh charts on button click
-document.addEventListener('DOMContentLoaded', async () => {
-    await initCharts();
-    const refreshBtn = document.getElementById('refresh-button');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-            await refreshCharts();
-        });
-    }
-});
-
-// Set the dropdown to match the current model from the URL on page load
+// ---------- DOM Ready ----------
 document.addEventListener('DOMContentLoaded', () => {
-    const modelSelect = document.getElementById('model-select');
-    if (modelSelect) {
-        // Set the dropdown to match the current model from the URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentModel = urlParams.get('model') || 'good';
-        modelSelect.value = currentModel;
-
-        modelSelect.addEventListener('change', function () {
-            const selectedModel = this.value;
-            window.location.search = '?model=' + encodeURIComponent(selectedModel);
-        });
-    }
+    initCharts();
+    setupSSEConnection();
 });
