@@ -193,7 +193,7 @@ function setupSSE() {
                 chart.data.labels.shift();
                 chart.data.datasets[0].data.shift();
             }
-            chart.update();
+            chart.update("none");
         }
 
         pushData(charts.responseTimeChart, data.avgResponseTime);
