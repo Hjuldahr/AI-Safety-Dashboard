@@ -2,9 +2,8 @@ import mongoose from 'mongoose';
 
 // === AI_Log Schema ===
 const AI_Log_Schema = new mongoose.Schema({
-    modelID: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'AI_Model',
+    modelName: {
+        type: String,
         required: true
     },
     policyCompliance: {
@@ -74,6 +73,6 @@ AI_Log_Schema.statics.removeLogsByModel = function(modelID) {
 };
 
 // ---------- EXPORT ----------
-const AI_Log_Model = mongoose.model('AI_Log_Model', AI_Log_Schema);
+const AI_Log_Model = mongoose.model('AI_Logs', AI_Log_Schema);
 
 export default AI_Log_Model;
