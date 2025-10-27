@@ -5,4 +5,6 @@ const router = express.Router();
 
 router.get("/", controller.getPage);
 
+router.get("/api/recentData", controller.getRecentData);
+
 export default router;
