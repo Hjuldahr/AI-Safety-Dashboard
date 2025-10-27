@@ -1,4 +1,5 @@
 import express from "express";
+import scheduler from './server_side_events/scheduler.js';
 import dotenv from 'dotenv';
 import path from "path";
 import { fileURLToPath } from 'url';
@@ -10,8 +11,6 @@ import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase } from './config/database.js';
-
-
 
 dotenv.config();
 
@@ -52,6 +51,11 @@ const startServer = async () => {
     app.set("views", path.join(PROJECT_ROOT, "views"));
     app.set("view engine", "ejs");
 
+    // Hook up SSE routes
+    scheduler.setupSSE(app);
+    // Start background tasks
+    scheduler.setupScheduler();
+
     // Connect to the database:
     try {
         await mongoose.connect(process.env.MONGO_URL);
@@ -66,9 +70,9 @@ const startServer = async () => {
 
     const PORT = process.env.PORT || 2121;
     app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+        //console.log(`Server running on port ${PORT}`);
+        console.log(`Server running on http://localhost:${PORT}`);
     });
-
 }
 
 // Connect to the database and then start the server

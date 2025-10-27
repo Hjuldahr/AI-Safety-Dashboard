@@ -5,10 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Safety Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="/js/data_generator_v3.js" defer></script>
-    <script type="module" src="/js/chart.js" defer></script>
-    <script type="module" src="/js/chart_injector.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <script src="/js/chart.js" defer></script>
     <link rel="stylesheet" href="/css/index.css">
     <link rel="stylesheet" href="/css/fullSite.css">
 
@@ -27,7 +25,7 @@
             
             <div>
                 <div class="controls-group">
-                    <button id="refresh-button">Refresh Data</button>
+                    <!-- <button id="refresh-button">Refresh Data</button> -->
 
                     <select id="model-select">
                         <option value="good">Good Model</option>
@@ -39,9 +37,7 @@
         </div>
 
         <!-- Charts -->
-        <div class="charts-container">
-        </div>
-
+        <div class="charts-container"></div>
     </main>
 </body>
 
