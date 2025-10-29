@@ -1,64 +1,57 @@
-// --- MOCK DATA (AI Only) ---
-const MOCK_AI_LOGS = [
-  { modelName: "GoodModel", policyCompliance: 94.8021, responseTimestamp: 1761755680783 },
-  { modelName: "FastModel", policyCompliance: 91.2310, responseTimestamp: 1761755670123 },
-  { modelName: "GoodModel", policyCompliance: 95.1111, responseTimestamp: 1761755660555 }
-];
-
 // --- GLOBAL STATE ---
 let currentLogsPage = 1;
+let currentAiLogsPage = 1;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
-  // Get all required elements
-  const elements = {
-    userLogsBtn: document.getElementById('user-logs-btn'),
-    aiLogsBtn: document.getElementById('ai-logs-btn'),
-    userFilterForm: document.getElementById('user-filter-form'),
-    aiFilterForm: document.getElementById('ai-filter-form'),
-    userLogView: document.getElementById('user-log-view'),
-    aiLogView: document.getElementById('ai-log-view'),
-    userLogTbody: document.getElementById('user-log-tbody'),
-    aiLogAccordion: document.getElementById('ai-log-accordion'),
-    userClearBtn: document.querySelector('#user-filter-form .clear-filters'),
-    aiClearBtn: document.querySelector('#ai-filter-form .clear-filters'),
-    paginationControls: document.getElementById('pagination-controls') // New element
-  };
+    // Get all required elements
+    const elements = {
+        userLogsBtn: document.getElementById('user-logs-btn'),
+        aiLogsBtn: document.getElementById('ai-logs-btn'),
+        userFilterForm: document.getElementById('user-filter-form'),
+        aiFilterForm: document.getElementById('ai-filter-form'),
+        userLogView: document.getElementById('user-log-view'),
+        aiLogView: document.getElementById('ai-log-view'),
+        userLogTbody: document.getElementById('user-log-tbody'),
+        aiLogAccordion: document.getElementById('ai-log-accordion'),
+        userClearBtn: document.querySelector('#user-filter-form .clear-filters'),
+        aiClearBtn: document.querySelector('#ai-filter-form .clear-filters'),
+        paginationControls: document.getElementById('pagination-controls'),
+        aiPaginationControls: document.getElementById('ai-pagination-controls')
+    };
 
-  // --- EVENT LISTENERS ---
+    // --- EVENT LISTENERS ---
 
-  // Tab switching
-  elements.userLogsBtn.addEventListener('click', () => toggleViews('user', elements));
-  elements.aiLogsBtn.addEventListener('click', () => toggleViews('ai', elements));
+    // Tab switching
+    elements.userLogsBtn.addEventListener('click', () => toggleViews('user', elements));
+    elements.aiLogsBtn.addEventListener('click', () => toggleViews('ai', elements));
 
-  // Filter form submission
-  elements.userFilterForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    // Reset to page 1 when applying a new filter
+    // Filter form submission
+    elements.userFilterForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        // Reset to page 1 when applying a new filter
+        handleUserFilter(elements, 1);
+    });
+
+    elements.aiFilterForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleAiFilter(elements); // Stays as-is for now
+    });
+
+    // Clear filters buttons
+    elements.userClearBtn.addEventListener('click', () => {
+        elements.userFilterForm.reset();
+        // Reset to page 1
+        handleUserFilter(elements, 1);
+    });
+    elements.aiClearBtn.addEventListener('click', () => {
+        elements.aiFilterForm.reset();
+        handleAiFilter(elements);
+    });
+
+    // --- INITIAL RENDER ---
     handleUserFilter(elements, 1);
-  });
-
-  elements.aiFilterForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    handleAiFilter(elements); // Stays as-is for now
-  });
-
-  // Clear filters buttons
-  elements.userClearBtn.addEventListener('click', () => {
-    elements.userFilterForm.reset();
-    // Reset to page 1
-    handleUserFilter(elements, 1);
-  });
-  elements.aiClearBtn.addEventListener('click', () => {
-    elements.aiFilterForm.reset();
-    handleAiFilter(elements);
-  });
-
-  // --- INITIAL RENDER ---
-  // Fetch real data on page load
-  handleUserFilter(elements, 1); 
-  // Render mock AI data
-  renderAiLogs(MOCK_AI_LOGS, elements.aiLogAccordion);
+    handleAiFilter(elements, 1);
 });
 
 
@@ -68,13 +61,13 @@ document.addEventListener('DOMContentLoaded', () => {
  * Toggles between 'user' and 'ai' log views
  */
 function toggleViews(viewToShow, elements) {
-  const isUser = viewToShow === 'user';
-  elements.userLogsBtn.classList.toggle('active', isUser);
-  elements.aiLogsBtn.classList.toggle('active', !isUser);
-  elements.userLogView.classList.toggle('hidden', !isUser);
-  elements.aiLogView.classList.toggle('hidden', isUser);
-  elements.userFilterForm.classList.toggle('hidden', !isUser);
-  elements.aiFilterForm.classList.toggle('hidden', isUser);
+    const isUser = viewToShow === 'user';
+    elements.userLogsBtn.classList.toggle('active', isUser);
+    elements.aiLogsBtn.classList.toggle('active', !isUser);
+    elements.userLogView.classList.toggle('hidden', !isUser);
+    elements.aiLogView.classList.toggle('hidden', isUser);
+    elements.userFilterForm.classList.toggle('hidden', !isUser);
+    elements.aiFilterForm.classList.toggle('hidden', isUser);
 }
 
 
@@ -86,104 +79,112 @@ function toggleViews(viewToShow, elements) {
  * @param {HTMLElement} tbody - The table body element to populate
  */
 function renderUserLogs(logs, tbody) {
-  tbody.innerHTML = ''; // Clear existing logs
+    tbody.innerHTML = ''; // Clear existing logs
 
-  if (logs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5">No logs found matching your criteria.</td></tr>';
-    return;
-  }
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">No logs found matching your criteria.</td></tr>';
+        return;
+    }
 
-  logs.forEach(log => {
-    const tr = document.createElement('tr');
-    const timestamp = new Date(log.createdAt).toLocaleString();
-    const dotClass = getDotClass(log.eventType);
-    
-    // **KEY CHANGE**: Access the populated user email.
-    // Use optional chaining (?. ) for safety in case population fails.
-    const userDisplay = log.userID?.email || log.userID || 'N/A';
+    logs.forEach(log => {
+        const tr = document.createElement('tr');
+        const timestamp = new Date(log.createdAt).toLocaleString();
+        const dotClass = getDotClass(log.eventType);
 
-    tr.innerHTML = `
+        // **KEY CHANGE**: Access the populated user email.
+        // Use optional chaining (?. ) for safety in case population fails.
+        const userDisplay = log.userID?.email || log.userID || 'N/A';
+
+        tr.innerHTML = `
       <td><span class="log-dot ${dotClass}"></span></td>
       <td>${timestamp}</td>
       <td>${userDisplay}</td>
       <td>${log.eventType.replace('_', ' ')}</td>
       <td>${log.details}</td>
     `;
-    tbody.appendChild(tr);
-  });
+        tbody.appendChild(tr);
+    });
 }
 
 /**
  * Populates the AI Logs accordion (still uses mock data)
  */
 function renderAiLogs(logs, accordion) {
-  accordion.innerHTML = '';
-  if (logs.length === 0) {
-    accordion.innerHTML = '<p>No AI logs found.</p>';
-    return;
-  }
-  logs.forEach((log) => {
-    const item = document.createElement('div');
-    item.className = 'accordion-item';
-    const timestamp = new Date(log.responseTimestamp).toLocaleString();
-    const header = document.createElement('button');
-    header.className = 'accordion-header';
-    header.innerHTML = `
+    accordion.innerHTML = '';
+    if (logs.length === 0) {
+        accordion.innerHTML = '<p>No AI logs found.</p>';
+        return;
+    }
+    logs.forEach((log) => {
+        const item = document.createElement('div');
+        item.className = 'accordion-item';
+        const timestamp = new Date(log.responseTimestamp).toLocaleString();
+        const header = document.createElement('button');
+        header.className = 'accordion-header';
+        header.innerHTML = `
       <span><strong>Model:</strong> ${log.modelName}</span>
       <span>${timestamp}</span>
     `;
-    const body = document.createElement('div');
-    body.className = 'accordion-body hidden';
-    const pre = document.createElement('pre');
-    pre.textContent = JSON.stringify(log, null, 2);
-    body.appendChild(pre);
-    header.addEventListener('click', () => {
-      header.classList.toggle('active');
-      body.classList.toggle('hidden');
+        const body = document.createElement('div');
+        body.className = 'accordion-body hidden';
+        const pre = document.createElement('pre');
+        // replace fields starting with '_'
+        const replacer = (key, value) => {
+            if (typeof key === 'string' && key.startsWith('_')) {
+                return undefined;
+            }
+            return value;
+        };
+        //use the replacer
+        pre.textContent = JSON.stringify(log, replacer, 2);
+        body.appendChild(pre);
+        header.addEventListener('click', () => {
+            header.classList.toggle('active');
+            body.classList.toggle('hidden');
+        });
+        item.appendChild(header);
+        item.appendChild(body);
+        accordion.appendChild(item);
     });
-    item.appendChild(header);
-    item.appendChild(body);
-    accordion.appendChild(item);
-  });
 }
 
 /**
- * (NEW) Renders pagination buttons
+ * Renders pagination buttons in a specific container
+ * @param {HTMLElement} container - The pagination div to populate
  * @param {number} totalPages - Total number of pages from API
  * @param {number} currentPage - Current page number from API
  * @param {object} elements - The DOM elements
+ * @param {Function} handlerFunction - The fetch handler (handleUserFilter or handleAiFilter)
  */
-function renderPagination(totalPages, currentPage, elements) {
-  const { paginationControls } = elements;
-  paginationControls.innerHTML = ''; // Clear old buttons
+function renderPagination(container, totalPages, currentPage, elements, handlerFunction) {
+    container.innerHTML = ''; // Clear old buttons
 
-  if (totalPages <= 1) return; // No pagination needed
+    if (totalPages <= 1) return;
 
-  // --- "Previous" Button ---
-  const prevBtn = document.createElement('button');
-  prevBtn.textContent = '« Prev';
-  prevBtn.disabled = currentPage === 1;
-  prevBtn.addEventListener('click', () => handleUserFilter(elements, currentPage - 1));
-  paginationControls.appendChild(prevBtn);
+    // "Previous" Button
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '« Prev';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.addEventListener('click', () => handlerFunction(elements, currentPage - 1));
+    container.appendChild(prevBtn);
 
-  // --- Page Number Buttons ---
-  // (Simple version: show all pages)
-  for (let i = 1; i <= totalPages; i++) {
-    const pageBtn = document.createElement('button');
-    pageBtn.textContent = i;
-    if (i === currentPage) {
-      pageBtn.classList.add('active');
+    // Page Number Buttons
+    for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.textContent = i;
+        if (i === currentPage) {
+            pageBtn.classList.add('active');
+        }
+        pageBtn.addEventListener('click', () => handlerFunction(elements, i));
+        container.appendChild(pageBtn);
     }
-    pageBtn.addEventListener('click', () => handleUserFilter(elements, i));
-    paginationControls.appendChild(pageBtn);
-  }
 
-  // --- "Next" Button ---
-  const nextBtn = document.createElement('button');
-  nextBtn.textContent = 'Next »';
-  nextBtn.disabled = currentPage === totalPages;
-  nextBtn.addEventListener('click', () => handleUserFilter(elements, currentPage + 1));
-  paginationControls.appendChild(nextBtn);
+    // "Next" Button
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = 'Next »';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.addEventListener('click', () => handlerFunction(elements, currentPage + 1));
+    container.appendChild(nextBtn);
 }
 
 
@@ -193,14 +194,14 @@ function renderPagination(totalPages, currentPage, elements) {
  * Returns a CSS class name based on the event type
  */
 function getDotClass(eventType) {
-  switch (eventType) {
-    case 'Login': case 'Signup': return 'log-dot-login';
-    case 'Logout': return 'log-dot-logout';
-    case 'Alert_Created': case 'Alert_Modified': return 'log-dot-alert';
-    case 'Report_Created': return 'log-dot-report';
-    case 'Alert_Deleted': case 'Report_Deleted': case 'Failed_Login': return 'log-dot-delete';
-    default: return 'log-dot-default';
-  }
+    switch (eventType) {
+        case 'Login': case 'Signup': return 'log-dot-login';
+        case 'Logout': return 'log-dot-logout';
+        case 'Alert_Created': case 'Alert_Modified': return 'log-dot-alert';
+        case 'Report_Created': return 'log-dot-report';
+        case 'Alert_Deleted': case 'Report_Deleted': case 'Failed_Login': return 'log-dot-delete';
+        default: return 'log-dot-default';
+    }
 }
 
 /**
@@ -209,53 +210,79 @@ function getDotClass(eventType) {
  * @param {number} page - The page number to fetch
  */
 async function handleUserFilter(elements, page = 1) {
-  currentLogsPage = page; // Update global state
-  
-  // 1. Show loading state
-  elements.userLogTbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
-  elements.paginationControls.innerHTML = ''; // Clear pagination
+    currentLogsPage = page; // Update global state
 
-  // 2. Get filter values
-  const startVal = elements.userFilterForm.querySelector('#filter-start-date').value;
-  const endVal = elements.userFilterForm.querySelector('#filter-end-date').value;
-  const eventType = elements.userFilterForm.querySelector('#filter-event-type').value;
+    // Show loading state
+    elements.userLogTbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+    elements.paginationControls.innerHTML = ''; // Clear pagination
 
-  // 3. Build URL query string
-  const params = new URLSearchParams();
-  params.set('page', page);
-  params.set('limit', 20); // Or make this a configurable constant
-  if (startVal) params.set('startDate', startVal);
-  if (endVal) params.set('endDate', endVal);
-  if (eventType && eventType !== 'all') params.set('eventType', eventType);
-  // Note: We're not sending userID, so the backend will (per our design)
-  // fetch logs for *all* users. If you only want the *logged-in* user's logs,
-  // you'd need to get that from the EJS template and add it here.
+    const startVal = elements.userFilterForm.querySelector('#filter-start-date').value;
+    const endVal = elements.userFilterForm.querySelector('#filter-end-date').value;
+    const eventType = elements.userFilterForm.querySelector('#filter-event-type').value;
 
-  try {
-    // 4. Fetch data from the API
-    const response = await fetch(`/logs/api/user?${params.toString()}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+    // Build URL query string
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('limit', 20); // Or make this a configurable constant
+    if (startVal) params.set('startDate', startVal);
+    if (endVal) params.set('endDate', endVal);
+    if (eventType && eventType !== 'all') params.set('eventType', eventType);
+    // Note: We're not sending userID, so the backend will fetch logs for *all* users.
+
+    try {
+        // Fetch data from the API
+        const response = await fetch(`/logs/api/user?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json(); // { logs, total, page, pages }
+
+        // Render data and pagination
+        renderUserLogs(data.logs, elements.userLogTbody);
+        renderPagination(elements.paginationControls, data.pages, data.page, elements, handleUserFilter);
+
+    } catch (error) {
+        console.error('Failed to fetch logs:', error);
+        elements.userLogTbody.innerHTML = `<tr><td colspan="5">Error loading logs. ${error.message}</td></tr>`;
     }
-    const data = await response.json(); // { logs, total, page, pages }
-
-    // 5. Render data and pagination
-    renderUserLogs(data.logs, elements.userLogTbody);
-    renderPagination(data.pages, data.page, elements);
-
-  } catch (error) {
-    console.error('Failed to fetch logs:', error);
-    elements.userLogTbody.innerHTML = `<tr><td colspan="5">Error loading logs. ${error.message}</td></tr>`;
-  }
 }
 
 /**
- * (MOCK) Filters the AI logs based on form input
+ * Fetches and filters AI logs from the API
+ * @param {object} elements - The DOM elements
+ * @param {number} page - The page number to fetch
  */
-function handleAiFilter(elements) {
-  const modelName = elements.aiFilterForm.querySelector('#filter-model').value;
-  const filteredLogs = MOCK_AI_LOGS.filter(log => {
-    return (modelName === 'all' || log.modelName === modelName);
-  });
-  renderAiLogs(filteredLogs, elements.aiLogAccordion);
+async function handleAiFilter(elements, page = 1) {
+    currentAiLogsPage = page; // Set AI page state
+
+    // Show loading state
+    elements.aiLogAccordion.innerHTML = '<p>Loading...</p>';
+    elements.aiPaginationControls.innerHTML = ''; // Clear AI pagination
+
+    const modelName = elements.aiFilterForm.querySelector('#filter-model').value;
+
+    // Build URL query string
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('limit', 20); // Using same limit as user logs
+    if (modelName && modelName !== 'all') {
+        params.set('modelName', modelName);
+    }
+
+    try {
+        // Fetch data from the API
+        const response = await fetch(`/logs/api/ai?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json(); // { logs, total, page, pages }
+
+        // Render data and pagination
+        renderAiLogs(data.logs, elements.aiLogAccordion);
+        renderPagination(elements.aiPaginationControls, data.pages, data.page, elements, handleAiFilter);
+
+    } catch (error) {
+        console.error('Failed to fetch AI logs:', error);
+        elements.aiLogAccordion.innerHTML = `<p>Error loading logs. ${error.message}</p>`;
+    }
 }

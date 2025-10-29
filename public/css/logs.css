@@ -13,6 +13,7 @@
   padding-bottom: 1rem;
   border-bottom: 1px solid #eee;
   gap: 1rem;
+  padding-right: 100px;
 }
 
 .log-tabs {

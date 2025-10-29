@@ -25,6 +25,7 @@
       <div class="filter-container">
 
         <form id="user-filter-form" class="filter-group">
+          <button type="button" class="btn-secondary clear-filters">Clear</button>
           <label for="filter-start-date">From:</label>
           <input type="date" id="filter-start-date" name="start">
 
@@ -40,18 +41,17 @@
             <option value="Alert_Deleted">Alert Deleted</option>
             <option value="Report_Created">Report Created</option>
           </select>
-          <button type="button" class="btn-secondary clear-filters">Clear</button>
           <button type="submit" class="btn-primary">Apply</button>
         </form>
 
         <form id="ai-filter-form" class="filter-group hidden">
+          <button type="button" class="btn-secondary clear-filters">Clear</button>
           <label for="filter-model">Model:</label>
           <select id="filter-model" name="modelName">
             <option value="all" selected>All Models</option>
             <option value="GoodModel">GoodModel</option>
             <option value="FastModel">FastModel</option>
           </select>
-          <button type="button" class="btn-secondary clear-filters">Clear</button>
           <button type="submit" class="btn-primary">Apply</button>
         </form>
 
@@ -75,11 +75,13 @@
           </tbody>
         </table>
         <div id="pagination-controls" class="pagination">
-          </div>
+        </div>
       </div>
 
       <div id="ai-log-view" class="hidden">
         <div id="ai-log-accordion">
+        </div>
+        <div id="ai-pagination-controls" class="pagination">
         </div>
       </div>
 

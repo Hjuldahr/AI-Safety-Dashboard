@@ -14,7 +14,6 @@ const User_Log_Schema = new mongoose.Schema({
             'Login',
             'Logout',
             'Signup',
-            'Failed_Login',
             'Alert_Created',
             'Alert_Modified',
             'Alert_Deleted',
