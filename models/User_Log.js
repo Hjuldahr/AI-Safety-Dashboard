@@ -14,15 +14,19 @@ const User_Log_Schema = new mongoose.Schema({
             'Login',
             'Logout',
             'Signup',
-            'Failed_Login',
+            'Alert_Created',
+            'Alert_Modified',
+            'Alert_Deleted',
+            'Report_Created',
+            'Report_Deleted',
             'Unspecified_Event'
         ],
         required: true,
         default: 'Unspecified_Event'
     },
     details: {
-        type: mongoose.Schema.Types.Mixed, // flexible field for extra context (IP, metadata, etc.)
-        default: {}
+        type: String,
+        required: true,
     }
 }, { timestamps: true });
 
@@ -32,7 +36,7 @@ const User_Log_Schema = new mongoose.Schema({
 /**
  * Add a single log entry.
  */
-User_Log_Schema.statics.addLog = async function (userID, eventType, details = {}) {
+User_Log_Schema.statics.addLog = async function (userID, eventType, details) {
     return this.create({ userID, eventType, details });
 };
 

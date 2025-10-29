@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Model Logs</title>
   <link rel="stylesheet" href="/css/fullSite.css">
+  <link rel="stylesheet" href="/css/logs.css">
   <script src="/js/logging.js" defer></script>
 </head>
 
@@ -14,24 +15,78 @@
   <%- include('components/nav') %>
   <main class="content">
     <%- include('components/notifications') %>
-    <div>
-      <!--Horizontal-->
-      <select id="log-select">
-          <option value="user">AI Logs</option>
-          <option value="ai">User Logs</option>
-      </select>
+
+    <div class="logs-toolbar">
+      <div class="log-tabs">
+        <button id="user-logs-btn" class="log-tab-btn active" data-view="user">User Logs</button>
+        <button id="ai-logs-btn" class="log-tab-btn" data-view="ai">AI Logs</button>
+      </div>
+
+      <div class="filter-container">
+
+        <form id="user-filter-form" class="filter-group">
+          <button type="button" class="btn-secondary clear-filters">Clear</button>
+          <label for="filter-start-date">From:</label>
+          <input type="date" id="filter-start-date" name="start">
+
+          <label for="filter-end-date">To:</label>
+          <input type="date" id="filter-end-date" name="end">
+
+          <label for="filter-event-type">Event:</label>
+          <select id="filter-event-type" name="eventType">
+            <option value="all" selected>All Events</option>
+            <option value="Login">Login</option>
+            <option value="Logout">Logout</option>
+            <option value="Alert_Created">Alert Created</option>
+            <option value="Alert_Deleted">Alert Deleted</option>
+            <option value="Report_Created">Report Created</option>
+          </select>
+          <button type="submit" class="btn-primary">Apply</button>
+        </form>
+
+        <form id="ai-filter-form" class="filter-group hidden">
+          <button type="button" class="btn-secondary clear-filters">Clear</button>
+          <label for="filter-model">Model:</label>
+          <select id="filter-model" name="modelName">
+            <option value="all" selected>All Models</option>
+            <option value="GoodModel">GoodModel</option>
+            <option value="FastModel">FastModel</option>
+          </select>
+          <button type="submit" class="btn-primary">Apply</button>
+        </form>
+
+      </div>
     </div>
-    <!--Dynamic Table goes here-->
-    <div id="logTableContainer">
-      <p>Placeholder for Testing</p>
+
+    <div class="log-view-container">
+
+      <div id="user-log-view">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th class="col-type">Type</th>
+              <th class="col-time">Timestamp</th>
+              <th class="col-user">User</th>
+              <th class="col-action">Action</th>
+              <th class="col-details">Details</th>
+            </tr>
+          </thead>
+          <tbody id="user-log-tbody">
+          </tbody>
+        </table>
+        <div id="pagination-controls" class="pagination">
+        </div>
+      </div>
+
+      <div id="ai-log-view" class="hidden">
+        <div id="ai-log-accordion">
+        </div>
+        <div id="ai-pagination-controls" class="pagination">
+        </div>
+      </div>
+
     </div>
-    <form id="AILogFilter" action="/js/logging.js">
-      <label for="start">Start of Range</label>
-      <input type="date" name="start"><br>
-      <label for="end">End of Range</label>
-      <input type="date" name="end"><br>
-      <input type="submit" value="Apply Filter">
-    </form>
+
   </main>
 </body>
 

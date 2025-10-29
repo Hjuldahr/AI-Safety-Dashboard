@@ -6,34 +6,48 @@ import User from '../models/user.js';
 
 // === Helper Query Builders ===
 const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
-    const query = { userID };
-    if (eventType) query.eventType = eventType;
+    const query = {};
+
+    if (userID) {
+        query.userID = userID;
+    }
+
+    if (eventType && eventType !== 'all') {
+        query.eventType = eventType;
+    }
+
     if (startDate || endDate) {
         query.createdAt = {};
-        if (startDate) query.createdAt.$gte = startDate;
-        if (endDate) query.createdAt.$lte = endDate;
+        if (startDate) {
+            query.createdAt.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            const endOfDay = new Date(endDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            query.createdAt.$lte = endOfDay;
+        }
     }
     return query;
 };
 
-const buildAILogQuery = ({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate }) => {
-    //TODO if start date is 0 and end date is -1 include all entries
-    const query = { modelID };
-    if (policyCompliance !== undefined) query.policyCompliance = policyCompliance;
-    if (responseHelpfulness !== undefined) query.responseHelpfulness = responseHelpfulness;
-    if (responseTime !== undefined) query.responseTime = responseTime;
-    if (energyConsumption !== undefined) query.energyConsumption = energyConsumption;
+const buildAILogQuery = ({ modelName, startDate, endDate }) => {
+    const query = {};
 
-    if (responseTimestamp) {
-        query.responseTimestamp = {};
-        if (responseTimestamp.start) query.responseTimestamp.$gte = responseTimestamp.start;
-        if (responseTimestamp.end) query.responseTimestamp.$lte = responseTimestamp.end;
+    // Add modelName filter if provided and not "all"
+    if (modelName && modelName !== 'all') {
+        query.modelName = modelName;
     }
-    
+
     if (startDate || endDate) {
         query.createdAt = {};
-        if (startDate) query.createdAt.$gte = startDate;
-        if (endDate) query.createdAt.$lte = endDate;
+        if (startDate) {
+            query.createdAt.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            const endOfDay = new Date(endDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            query.createdAt.$lte = endOfDay;
+        }
     }
 
     return query;
@@ -181,20 +195,33 @@ const getFilteredUserLogs = async (req, res) => {
             startDate,
             endDate,
             page = 1,
-            limit = 100
-        } = req.body; 
+            limit = 20
+        } = req.query;
+
+        const pageNum = Number(page);
+        const limitNum = Number(limit);
 
         const query = buildUserLogQuery({ userID, eventType, startDate, endDate });
-        const skip = (page - 1) * limit;
+        const skip = (pageNum - 1) * limitNum;
 
-        const logs = await User_Log.find(query)
+        const logsQuery = User_Log.find(query)
             .sort({ createdAt: -1 })
+            .populate('userID', 'email username')
             .skip(skip)
-            .limit(limit);
+            .limit(limitNum);
 
-        const total = await User_Log.countDocuments(query);
+        const totalQuery = User_Log.countDocuments(query);
 
-        res.json({ logs, total, page, pages: Math.ceil(total / limit) });
+        //Execute both queries in parallel
+        const [logs, total] = await Promise.all([logsQuery, totalQuery]);
+
+        res.json({
+            logs,
+            total,
+            page: pageNum,
+            limit: limitNum,
+            pages: Math.ceil(total / limitNum)
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to fetch user logs' });
@@ -204,39 +231,41 @@ const getFilteredUserLogs = async (req, res) => {
 const getFilteredAILogs = async (req, res) => {
     try {
         const {
-            modelID,
-            policyCompliance,
-            responseHelpfulness,
-            responseTime,
-            energyConsumption,
-            responseTimestamp,
+            modelName,
             startDate,
             endDate,
             page = 1,
-            limit = 100
-        } = req.body; 
+            limit = 20
+        } = req.query;
+
+        const pageNum = Number(page);
+        const limitNum = Number(limit);
 
         const query = buildAILogQuery({
-            modelID,
-            policyCompliance,
-            responseHelpfulness,
-            responseTime,
-            energyConsumption,
-            responseTimestamp,
+            modelName,
             startDate,
             endDate
         });
 
-        const skip = (page - 1) * limit;
+        const skip = (pageNum - 1) * limitNum;
 
-        const logs = await AI_Log.find(query)
-            .sort({ createdAt: -1 })
+        const logsQuery = AI_Log.find(query)
+            .sort({ responseTimestamp: -1 })
             .skip(skip)
-            .limit(limit);
+            .limit(limitNum);
 
-        const total = await AI_Log.countDocuments(query);
+        const totalQuery = AI_Log.countDocuments(query);
 
-        res.json({ logs, total, page, pages: Math.ceil(total / limit) });
+        const [logs, total] = await Promise.all([logsQuery, totalQuery]);
+
+        res.json({
+            logs,
+            total,
+            page: pageNum,
+            limit: limitNum,
+            pages: Math.ceil(total / limitNum)
+        });
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to fetch AI logs' });
@@ -245,11 +274,11 @@ const getFilteredAILogs = async (req, res) => {
 
 // Log Page
 const getPage = async (req, res) => {
-    try{
+    try {
         res.render("logs", {
             user: req.user,
-        }); 
-    }catch (error){
+        });
+    } catch (error) {
         console.error("Error fetching logs page:", error);
     }
 };
