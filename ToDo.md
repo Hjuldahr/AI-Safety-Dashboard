@@ -13,4 +13,5 @@
 
 # Logs
 [x] Connect events to log db
-[] setup log html page
+[X] setup log html page
+[] add csv and pdf export functionality.
