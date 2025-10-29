@@ -56,7 +56,7 @@ const login = (req, res, next) => {
 
 // Handles logging the user out
 const logout = (req, res, next) => {
-    User_Log.addLog(req.user._id, 'Logout', 'User logged out.').catch(err => console.error('Failed to write log:', err));;
+    User_Log.addLog(req.user._id, 'Logout', 'User logged out.').catch(err => console.error('Failed to write log:', err));
     req.logout((err) => {
         if (err) {
             console.error('Logout error:', err);

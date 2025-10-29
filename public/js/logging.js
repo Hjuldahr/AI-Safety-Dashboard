@@ -223,7 +223,7 @@ async function handleUserFilter(elements, page = 1) {
     // Build URL query string
     const params = new URLSearchParams();
     params.set('page', page);
-    params.set('limit', 20); // Or make this a configurable constant
+    params.set('limit', 10); // Or make this a configurable constant
     if (startVal) params.set('startDate', startVal);
     if (endVal) params.set('endDate', endVal);
     if (eventType && eventType !== 'all') params.set('eventType', eventType);
@@ -264,7 +264,7 @@ async function handleAiFilter(elements, page = 1) {
     // Build URL query string
     const params = new URLSearchParams();
     params.set('page', page);
-    params.set('limit', 20); // Using same limit as user logs
+    params.set('limit', 10); // Using same limit as user logs
     if (modelName && modelName !== 'all') {
         params.set('modelName', modelName);
     }
