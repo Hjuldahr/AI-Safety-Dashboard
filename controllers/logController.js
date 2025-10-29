@@ -195,7 +195,7 @@ const getFilteredUserLogs = async (req, res) => {
             startDate,
             endDate,
             page = 1,
-            limit = 20
+            limit = 10
         } = req.query;
 
         const pageNum = Number(page);
@@ -235,7 +235,7 @@ const getFilteredAILogs = async (req, res) => {
             startDate,
             endDate,
             page = 1,
-            limit = 20
+            limit = 10
         } = req.query;
 
         const pageNum = Number(page);
