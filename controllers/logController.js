@@ -6,12 +6,26 @@ import User from '../models/user.js';
 
 // === Helper Query Builders ===
 const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
-    const query = { userID };
-    if (eventType) query.eventType = eventType;
+    const query = {};
+
+    if (userID) {
+        query.userID = userID;
+    }
+
+    if (eventType && eventType !== 'all') {
+        query.eventType = eventType;
+    }
+
     if (startDate || endDate) {
         query.createdAt = {};
-        if (startDate) query.createdAt.$gte = startDate;
-        if (endDate) query.createdAt.$lte = endDate;
+        if (startDate) {
+            query.createdAt.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            const endOfDay = new Date(endDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            query.createdAt.$lte = endOfDay;
+        }
     }
     return query;
 };
@@ -29,7 +43,7 @@ const buildAILogQuery = ({ modelID, policyCompliance, responseHelpfulness, respo
         if (responseTimestamp.start) query.responseTimestamp.$gte = responseTimestamp.start;
         if (responseTimestamp.end) query.responseTimestamp.$lte = responseTimestamp.end;
     }
-    
+
     if (startDate || endDate) {
         query.createdAt = {};
         if (startDate) query.createdAt.$gte = startDate;
@@ -181,20 +195,35 @@ const getFilteredUserLogs = async (req, res) => {
             startDate,
             endDate,
             page = 1,
-            limit = 100
-        } = req.body; 
+            limit = 20
+        } = req.query;
+
+        const pageNum = Number(page);
+        const limitNum = Number(limit);
 
         const query = buildUserLogQuery({ userID, eventType, startDate, endDate });
-        const skip = (page - 1) * limit;
+        const skip = (pageNum - 1) * limitNum;
 
-        const logs = await User_Log.find(query)
+        // queries run in parallel
+        const logsQuery = User_Log.find(query)
             .sort({ createdAt: -1 })
+            .populate('userID', 'email username')
             .skip(skip)
-            .limit(limit);
+            .limit(limitNum);
 
-        const total = await User_Log.countDocuments(query);
+        const totalQuery = User_Log.countDocuments(query);
 
-        res.json({ logs, total, page, pages: Math.ceil(total / limit) });
+        // 7. Execute both queries in parallel
+        const [logs, total] = await Promise.all([logsQuery, totalQuery]);
+
+        // 8. Send back the complete response
+        res.json({
+            logs,
+            total,
+            page: pageNum,
+            limit: limitNum,
+            pages: Math.ceil(total / limitNum)
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to fetch user logs' });
@@ -214,7 +243,7 @@ const getFilteredAILogs = async (req, res) => {
             endDate,
             page = 1,
             limit = 100
-        } = req.body; 
+        } = req.body;
 
         const query = buildAILogQuery({
             modelID,
@@ -245,11 +274,11 @@ const getFilteredAILogs = async (req, res) => {
 
 // Log Page
 const getPage = async (req, res) => {
-    try{
+    try {
         res.render("logs", {
             user: req.user,
-        }); 
-    }catch (error){
+        });
+    } catch (error) {
         console.error("Error fetching logs page:", error);
     }
 };
