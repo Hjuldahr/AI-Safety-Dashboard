@@ -41,15 +41,6 @@ AI_Log_Schema.statics.addLog = function(logData) {
     return log.save();
 };
 
-/**
- * Example usages:
- * await User_Log.addLog(newUser._id, 'Signup', `Successful signup from IP: ${req.ip}`);
- * User_Log.addLog(req.user._id, 'Logout', 'User logged out.').catch(err => console.error('Failed to write log:', err));
- * 
- * First usage waits for the log to complete before continuing (not always needed), second one writes the log in
- *  the background and suppresses any errors caused by this.
- */
-
 // Add multiple logs at once
 AI_Log_Schema.statics.addLogs = function(logsArray) {
     return this.insertMany(logsArray);
