@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const alertNameInput = document.getElementById('alert-name');
     const alertLevelSelect = document.getElementById('alert-level');
 
-    addAlertBtn.addEventListener('click', function () {
+    addAlertBtn.addEventListener('click', async function () {
         const alertName = alertNameInput.value || 'New Alert';
         const alertLevel = alertLevelSelect.value;
 
@@ -16,10 +16,36 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const alertDetails = getAlertDetails();
-        if (!alertDetails) {
-            alert('Please define at least one valid rule for the alert.');
+        // Build the JSON rule for the database
+        const ruleJSON = buildRuleJSON();
+
+        // buildRuleJSON() will show its own alerts and return null if validation fails
+        if (!ruleJSON) {
             return;
+        }
+
+        // Get the human-readable string for the UI log
+        const alertDetails = getAlertDetails();
+
+        const created = Date.now();
+        const lastTrigger = null;
+        const isActive = false;
+
+        //pass alert to post route
+        try {
+            const response = await fetch('/alerts/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({alertName, alertLevel, ruleJSON, created, lastTrigger, isActive})
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                console.error('Failed to create alert:', data.message);
+            }
+        } catch (err) {
+            console.error('Error creating alert:', err);
         }
 
         // 1. Add to Alert Log
@@ -129,6 +155,104 @@ document.addEventListener('DOMContentLoaded', function () {
         return detailsParts.join('').trim() + '.';
     }
 
+    /**
+     * Builds a MongoDB-style query object from the rule builder UI.
+     */
+    function buildRuleJSON() {
+        const ruleRows = rulesContainer.querySelectorAll('.rule-row');
+        const conditions = [];
+
+        // Map UI display names to the database field names
+        const fieldMap = {
+            'Harmful Messages': 'harmfulMessages',
+            'Accuracy': 'accuracy',
+            'Usage': 'usage'
+        };
+
+        // Map UI operator values to MongoDB operator keys
+        const operatorMap = {
+            'gt': '$gt',
+            'gte': '$gte',
+            'lt': '$lt',
+            'lte': '$lte'
+        };
+
+        let firstLogicOperator = null;
+        let hasIncompleteRow = false;
+
+        ruleRows.forEach((row, index) => {
+            const dataTypeSelect = row.querySelector('.data-type');
+            const operatorSelect = row.querySelector('.operator-type');
+            const valueInput = row.querySelector('.value-input');
+            const logicalOperatorSpan = row.querySelector('.logic-separator');
+
+            const dataType = dataTypeSelect.value;
+            const operatorValue = operatorSelect.value;
+            const rawValue = valueInput.value;
+
+            // 1. Determine the top-level operator ($and or $or)
+            // We assume the *first* logical operator found (on the 2nd+ rule)
+            // dictates the wrapper for ALL rules.
+            if (index > 0 && logicalOperatorSpan && !firstLogicOperator) {
+                firstLogicOperator = logicalOperatorSpan.textContent.trim().toLowerCase() === 'and' ? '$and' : '$or';
+            }
+
+            // 2. Validate and build the condition
+            
+            // Only process rows that are fully filled out
+            if (dataType && operatorValue && rawValue) {
+                const dbField = fieldMap[dataType];
+                const mongoOperator = operatorMap[operatorValue];
+                
+                // Try to parse the value as a number
+                const numericValue = parseFloat(rawValue);
+
+                if (!dbField || !mongoOperator || isNaN(numericValue)) {
+                    // This rule is filled but has invalid data (e.g., "abc" for a value)
+                    alert(`Invalid data in rule ${index + 1}. Please ensure value is a number.`);
+                    hasIncompleteRow = true; // Mark as error
+                    return;
+                }
+
+                // Build the individual condition object: e.g., { "usage": { "$gt": 20 } }
+                const condition = {};
+                condition[dbField] = {};
+                condition[dbField][mongoOperator] = numericValue;
+                
+                conditions.push(condition);
+
+            } else if (dataType || operatorValue || rawValue) {
+                // Row is *partially* filled, which is an error
+                hasIncompleteRow = true;
+            }
+        });
+
+        // 3. Check for errors
+        if (hasIncompleteRow) {
+            alert('Please fill out all fields for every rule, or remove incomplete rules.');
+            return null;
+        }
+
+        if (conditions.length === 0) {
+            alert('Please define at least one valid rule for the alert.');
+            return null;
+        }
+
+        // 4. Assemble the final rule object
+        if (conditions.length === 1) {
+            // Only one rule, no top-level $and/$or needed
+            return conditions[0];
+        } else {
+            // More than one rule, wrap them in $and or $or
+            // Default to $and if for some reason firstLogicOperator is still null
+            const topLevelOperator = firstLogicOperator || '$and';
+            
+            const finalRule = {};
+            finalRule[topLevelOperator] = conditions;
+            return finalRule;
+        }
+    }
+
     function resetAlertBuilder() {
         alertNameInput.value = '';
         alertLevelSelect.selectedIndex = 0;
@@ -166,5 +290,4 @@ document.addEventListener('DOMContentLoaded', function () {
             e.target.parentElement.remove();
         }
     });
-
 });
