@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const alertNameInput = document.getElementById('alert-name');
     const alertLevelSelect = document.getElementById('alert-level');
 
+    // Load live alerts from server on page load
+    loadLiveAlerts();
+
     addAlertBtn.addEventListener('click', async function () {
         const alertName = alertNameInput.value || 'New Alert';
         const alertLevel = alertLevelSelect.value;
@@ -38,11 +41,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({alertName, alertLevel, ruleJSON, created, lastTrigger, isActive})
+                body: JSON.stringify({ alertName, alertLevel, alertRule: ruleJSON, created, lastTrigger, isActive })
             });
             const data = await response.json();
             if (!response.ok) {
                 console.error('Failed to create alert:', data.message);
+            } else {
+                // Refresh live alerts from the server
+                loadLiveAlerts();
             }
         } catch (err) {
             console.error('Error creating alert:', err);
@@ -285,9 +291,61 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    liveAlertsList.addEventListener('click', function (e) {
+    // Handle delete clicks for live alerts (delegated)
+    liveAlertsList.addEventListener('click', async function (e) {
         if (e.target && e.target.classList.contains('delete-btn')) {
-            e.target.parentElement.remove();
+            const li = e.target.closest('li[data-id]');
+            if (!li) {
+                // fallback: just remove DOM node
+                e.target.parentElement.remove();
+                return;
+            }
+            const alertId = li.getAttribute('data-id');
+            try {
+                const resp = await fetch(`/alerts/${encodeURIComponent(alertId)}`, { method: 'DELETE' });
+                if (!resp.ok) {
+                    const body = await resp.json().catch(() => ({}));
+                    throw new Error(body.message || 'Failed to delete');
+                }
+                // remove the li from DOM
+                li.remove();
+            } catch (err) {
+                console.error('Failed to delete alert:', err);
+                alert('Failed to delete alert: ' + err.message);
+            }
         }
     });
+
+    // Fetch and render live alerts
+    async function loadLiveAlerts() {
+        try {
+            const resp = await fetch('/alerts/live');
+            if (!resp.ok) {
+                console.error('Failed to load live alerts');
+                return;
+            }
+            const data = await resp.json();
+            const alerts = data.alerts || [];
+
+            const categories = { Critical: [], High: [], Medium: [], Info: [] };
+            alerts.forEach(a => {
+                const lvl = a.alertLevel || 'Info';
+                if (!categories[lvl]) categories[lvl] = [];
+                categories[lvl].push(a);
+            });
+
+            // Build the list HTML
+            const order = ['Critical', 'High', 'Medium', 'Info'];
+            let html = '';
+            order.forEach(level => {
+                const items = (categories[level] || []).map(a => `<li data-id="${a._id}"><span>${a.alertName}</span><button class="delete-btn">&times;</button></li>`).join('');
+                const cls = level.toLowerCase();
+                html += `<li><h3 class="alert-category ${cls}"><span class="color-dot"></span>${level} Alerts</h3><ul class="alert-items">${items}</ul></li>`;
+            });
+
+            liveAlertsList.innerHTML = html;
+        } catch (err) {
+            console.error('Error loading live alerts:', err);
+        }
+    }
 });
