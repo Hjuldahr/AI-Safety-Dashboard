@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
+
+    // --------------------------------------------------
+    // DOM references
+    // --------------------------------------------------
     const addAlertBtn = document.getElementById('add-alert-btn');
     const alertLogBody = document.getElementById('alert-log-body');
     const liveAlertsList = document.getElementById('live-alerts-list');
@@ -7,110 +11,70 @@ document.addEventListener('DOMContentLoaded', function () {
     const alertNameInput = document.getElementById('alert-name');
     const alertLevelSelect = document.getElementById('alert-level');
 
-    // Load live alerts from server on page load
-    loadLiveAlerts();
+    // Buttons used for edit flow (created once)
+    const saveBtn = document.createElement('button');
+    saveBtn.id = 'save-alert-btn';
+    saveBtn.className = 'btn btn-primary';
+    saveBtn.textContent = 'Save';
+    saveBtn.style.display = 'none';
 
-    addAlertBtn.addEventListener('click', async function () {
-        const alertName = alertNameInput.value || 'New Alert';
-        const alertLevel = alertLevelSelect.value;
+    const cancelBtn = document.createElement('button');
+    cancelBtn.id = 'cancel-edit-btn';
+    cancelBtn.className = 'btn btn-secondary';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.display = 'none';
 
-        if (!alertLevel) {
-            alert('Please select an alert level.');
-            return;
-        }
+    if (addAlertBtn && addAlertBtn.parentElement) {
+        const actionWrapper = document.createElement('div');
+        actionWrapper.className = 'alert-action-buttons';
+        actionWrapper.style.display = 'inline-flex';
+        actionWrapper.style.gap = '8px';
+        actionWrapper.appendChild(cancelBtn);
+        actionWrapper.appendChild(saveBtn);
+        addAlertBtn.parentElement.appendChild(actionWrapper);
+    }
 
-        // Build the JSON rule for the database
-        const ruleJSON = buildRuleJSON();
+    // Client-side cache and edit state
+    const liveAlertsCache = {};
+    let currentEditId = null;
 
-        // buildRuleJSON() will show its own alerts and return null if validation fails
-        if (!ruleJSON) {
-            return;
-        }
+    // --------------------------------------------------
+    // Config / constant mappings
+    // --------------------------------------------------
+    const FIELD_MAP = {
+        'Harmful Messages': 'harmfulMessages',
+        'Accuracy': 'accuracy',
+        'Usage': 'usage'
+    };
 
-        // Get the human-readable string for the UI log
-        const alertDetails = getAlertDetails();
+    const REVERSE_FIELD_MAP = {
+        'harmfulMessages': 'Harmful Messages',
+        'accuracy': 'Accuracy',
+        'usage': 'Usage'
+    };
 
-        const created = Date.now();
-        const lastTrigger = null;
-        const isActive = false;
+    const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte' };
+    const OPERATOR_READABLE = { 'gt': 'greater than', 'gte': 'greater than or equal to', 'lt': 'less than', 'lte': 'less than or equal to' };
+    const OP_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte' };
 
-        //pass alert to post route
-        try {
-            const response = await fetch('/alerts/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ alertName, alertLevel, alertRule: ruleJSON, created, lastTrigger, isActive })
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                console.error('Failed to create alert:', data.message);
-            } else {
-                // Refresh live alerts from the server
-                loadLiveAlerts();
-            }
-        } catch (err) {
-            console.error('Error creating alert:', err);
-        }
+    // --------------------------------------------------
+    // Small helpers
+    // --------------------------------------------------
+    function isNumberLike(v) {
+        return !Number.isNaN(Number(v));
+    }
 
-        // 1. Add to Alert Log
-        const newRow = document.createElement('tr');
-        const now = new Date();
-        const timeString = now.toLocaleString('en-CA', { hour12: true }).replace(',', '');
-        const levelClass = alertLevel.toLowerCase();
+    function formatTimeISO(ts) {
+        const d = ts ? new Date(ts) : new Date();
+        return d.toLocaleString('en-CA', { hour12: true }).replace(',', '');
+    }
 
-        newRow.innerHTML = `
-        <td><span class="level-tag ${levelClass}">${alertLevel}</span></td>
-        <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
-        <td>${alertName}</td>
-        <td class="details-cell">${alertDetails}</td>
-    `;
-        alertLogBody.prepend(newRow);
-
-        // 2. Add to Live Alerts List
-        const categoryMap = {
-            'Critical': 'Critical Alerts',
-            'High': 'High Alerts',
-            'Medium': 'Medium Alerts',
-            'Info': 'Info Alerts'
-        };
-        const categoryTitle = categoryMap[alertLevel];
-        const h3s = liveAlertsList.getElementsByTagName('h3');
-        let targetUl = null;
-        for (let h3 of h3s) {
-            if (h3.textContent.trim() === categoryTitle) {
-                targetUl = h3.nextElementSibling;
-                break;
-            }
-        }
-
-        if (targetUl) {
-            const newLi = document.createElement('li');
-            newLi.innerHTML = `<span>${alertName}</span><button class="delete-btn">&times;</button>`;
-            targetUl.appendChild(newLi);
-        }
-
-        // 3. Trigger flash effect for critical alerts
-        if (alertLevel === 'Critical') {
-            document.body.classList.add('critical-flash');
-            setTimeout(() => {
-                document.body.classList.remove('critical-flash');
-            }, 1500);
-        }
-
-        // 4. Reset the form for the next entry
-        resetAlertBuilder();
-    });
-
-    // Event delegation for deleting live alerts
-    liveAlertsList.addEventListener('click', function (e) {
-        if (e.target && e.target.classList.contains('delete-btn')) {
-            e.target.parentElement.remove();
-        }
-    });
-
+    // --------------------------------------------------
+    // Rule-builder helpers
+    // --------------------------------------------------
     function createRuleRowHTML(logicalOperator) {
+        // Only include a delete button for non-first rows (logicalOperator set for 2nd+ rows)
+        const deleteBtn = logicalOperator ? '<button class="delete-rule-btn">&times;</button>' : '';
         return `
       <span class="logic-separator">${logicalOperator}</span>
       <select class="data-type">
@@ -127,61 +91,17 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="lt">Less Than</option>
       </select>
       <input type="text" placeholder="value" class="value-input">
-      <button class="delete-rule-btn">&times;</button>
+      ${deleteBtn}
     `;
     }
 
-    function getAlertDetails() {
-        const ruleRows = rulesContainer.querySelectorAll('.rule-row');
-        let detailsParts = [];
-        const operatorMap = { gt: 'greater than', gte: 'greater than or equal to', lt: 'less than', lte: 'less than or equal to' };
-
-        ruleRows.forEach((row, index) => {
-            const dataTypeSelect = row.querySelector('.data-type');
-            const operatorSelect = row.querySelector('.operator-type');
-            const valueInput = row.querySelector('.value-input');
-            const logicalOperatorSpan = row.querySelector('.logic-separator');
-
-            const dataType = dataTypeSelect.value;
-            const operatorValue = operatorSelect.value;
-            const value = valueInput.value;
-
-            // Only add the rule part if all fields are filled
-            if (dataType && operatorValue && value) {
-                let ruleText = '';
-                // Add the logical operator (AND/OR) if it's not the first rule
-                if (index > 0 && logicalOperatorSpan) {
-                    ruleText += ` ${logicalOperatorSpan.textContent} `;
-                }
-                ruleText += `"${dataType}" ${operatorMap[operatorValue]} ${value}`;
-                detailsParts.push(ruleText);
-            }
-        });
-
-        return detailsParts.join('').trim() + '.';
-    }
-
     /**
-     * Builds a MongoDB-style query object from the rule builder UI.
+     * Build a MongoDB-style rule object from the UI. Returns null and alerts
+     * on validation errors.
      */
     function buildRuleJSON() {
         const ruleRows = rulesContainer.querySelectorAll('.rule-row');
         const conditions = [];
-
-        // Map UI display names to the database field names
-        const fieldMap = {
-            'Harmful Messages': 'harmfulMessages',
-            'Accuracy': 'accuracy',
-            'Usage': 'usage'
-        };
-
-        // Map UI operator values to MongoDB operator keys
-        const operatorMap = {
-            'gt': '$gt',
-            'gte': '$gte',
-            'lt': '$lt',
-            'lte': '$lte'
-        };
 
         let firstLogicOperator = null;
         let hasIncompleteRow = false;
@@ -192,88 +112,233 @@ document.addEventListener('DOMContentLoaded', function () {
             const valueInput = row.querySelector('.value-input');
             const logicalOperatorSpan = row.querySelector('.logic-separator');
 
-            const dataType = dataTypeSelect.value;
-            const operatorValue = operatorSelect.value;
-            const rawValue = valueInput.value;
+            const dataType = dataTypeSelect ? dataTypeSelect.value : '';
+            const operatorValue = operatorSelect ? operatorSelect.value : '';
+            const rawValue = valueInput ? valueInput.value : '';
 
-            // 1. Determine the top-level operator ($and or $or)
-            // We assume the *first* logical operator found (on the 2nd+ rule)
-            // dictates the wrapper for ALL rules.
             if (index > 0 && logicalOperatorSpan && !firstLogicOperator) {
                 firstLogicOperator = logicalOperatorSpan.textContent.trim().toLowerCase() === 'and' ? '$and' : '$or';
             }
 
-            // 2. Validate and build the condition
-            
-            // Only process rows that are fully filled out
             if (dataType && operatorValue && rawValue) {
-                const dbField = fieldMap[dataType];
-                const mongoOperator = operatorMap[operatorValue];
-                
-                // Try to parse the value as a number
+                const dbField = FIELD_MAP[dataType];
+                const mongoOperator = OPERATOR_MAP[operatorValue];
                 const numericValue = parseFloat(rawValue);
-
-                if (!dbField || !mongoOperator || isNaN(numericValue)) {
-                    // This rule is filled but has invalid data (e.g., "abc" for a value)
+                if (!dbField || !mongoOperator || Number.isNaN(numericValue)) {
                     alert(`Invalid data in rule ${index + 1}. Please ensure value is a number.`);
-                    hasIncompleteRow = true; // Mark as error
+                    hasIncompleteRow = true;
                     return;
                 }
-
-                // Build the individual condition object: e.g., { "usage": { "$gt": 20 } }
                 const condition = {};
                 condition[dbField] = {};
                 condition[dbField][mongoOperator] = numericValue;
-                
                 conditions.push(condition);
-
             } else if (dataType || operatorValue || rawValue) {
-                // Row is *partially* filled, which is an error
                 hasIncompleteRow = true;
             }
         });
 
-        // 3. Check for errors
         if (hasIncompleteRow) {
             alert('Please fill out all fields for every rule, or remove incomplete rules.');
             return null;
         }
-
         if (conditions.length === 0) {
             alert('Please define at least one valid rule for the alert.');
             return null;
         }
+        if (conditions.length === 1) return conditions[0];
+        const topLevelOperator = firstLogicOperator || '$and';
+        const finalRule = {};
+        finalRule[topLevelOperator] = conditions;
+        return finalRule;
+    }
 
-        // 4. Assemble the final rule object
-        if (conditions.length === 1) {
-            // Only one rule, no top-level $and/$or needed
-            return conditions[0];
-        } else {
-            // More than one rule, wrap them in $and or $or
-            // Default to $and if for some reason firstLogicOperator is still null
-            const topLevelOperator = firstLogicOperator || '$and';
-            
-            const finalRule = {};
-            finalRule[topLevelOperator] = conditions;
-            return finalRule;
-        }
+    function formatRuleReadableFromUI() {
+        const ruleRows = rulesContainer.querySelectorAll('.rule-row');
+        const parts = [];
+        ruleRows.forEach((row, index) => {
+            const dataTypeSelect = row.querySelector('.data-type');
+            const operatorSelect = row.querySelector('.operator-type');
+            const valueInput = row.querySelector('.value-input');
+            const logicalOperatorSpan = row.querySelector('.logic-separator');
+            const dataType = dataTypeSelect ? dataTypeSelect.value : '';
+            const operatorValue = operatorSelect ? operatorSelect.value : '';
+            const value = valueInput ? valueInput.value : '';
+            if (dataType && operatorValue && value) {
+                const prefix = (index > 0 && logicalOperatorSpan) ? ` ${logicalOperatorSpan.textContent} ` : '';
+                parts.push(prefix + `"${dataType}" ${OPERATOR_READABLE[operatorValue]} ${value}`);
+            }
+        });
+        return parts.join('').trim() + '.';
     }
 
     function resetAlertBuilder() {
         alertNameInput.value = '';
         alertLevelSelect.selectedIndex = 0;
-        // Remove all but the first rule row
-        while (rulesContainer.children.length > 1) {
-            rulesContainer.removeChild(rulesContainer.lastChild);
-        }
-        // Reset the fields in the first rule row
+        while (rulesContainer.children.length > 1) rulesContainer.removeChild(rulesContainer.lastChild);
         const firstRuleRow = rulesContainer.querySelector('.rule-row');
         if (firstRuleRow) {
-            firstRuleRow.querySelector('.data-type').selectedIndex = 0;
-            firstRuleRow.querySelector('.operator-type').selectedIndex = 0;
-            firstRuleRow.querySelector('.value-input').value = '';
+            const dt = firstRuleRow.querySelector('.data-type');
+            const op = firstRuleRow.querySelector('.operator-type');
+            const val = firstRuleRow.querySelector('.value-input');
+            if (dt) dt.selectedIndex = 0;
+            if (op) op.selectedIndex = 0;
+            if (val) val.value = '';
+            const delBtn = firstRuleRow.querySelector('.delete-rule-btn');
+            if (delBtn) delBtn.remove();
         }
     }
+
+    function populateRuleBuilderFromRule(ruleObj) {
+        while (rulesContainer.firstChild) rulesContainer.removeChild(rulesContainer.firstChild);
+        let parts = [];
+        if (ruleObj && typeof ruleObj === 'object') {
+            const keys = Object.keys(ruleObj);
+            if (keys.length === 1 && (keys[0] === '$and' || keys[0] === '$or')) parts = ruleObj[keys[0]];
+            else parts = [ruleObj];
+        }
+        parts.forEach((cond, idx) => {
+            const dbField = Object.keys(cond)[0];
+            const opObj = cond[dbField];
+            const opKey = Object.keys(opObj)[0];
+            const val = opObj[opKey];
+            const displayField = REVERSE_FIELD_MAP[dbField] || dbField;
+            const operator = OP_REVERSE_MAP[opKey] || 'gt';
+            const logic = idx > 0 ? (ruleObj && ruleObj.$or ? 'OR' : 'AND') : '';
+            const newRuleRow = document.createElement('div');
+            newRuleRow.className = 'rule-row';
+            newRuleRow.innerHTML = createRuleRowHTML(logic);
+            rulesContainer.appendChild(newRuleRow);
+            const dataTypeSelect = newRuleRow.querySelector('.data-type');
+            const operatorSelect = newRuleRow.querySelector('.operator-type');
+            const valueInput = newRuleRow.querySelector('.value-input');
+            if (dataTypeSelect) dataTypeSelect.value = displayField;
+            if (operatorSelect) operatorSelect.value = operator;
+            if (valueInput) valueInput.value = val;
+        });
+        if (rulesContainer.children.length === 0) {
+            const firstRow = document.createElement('div');
+            firstRow.className = 'rule-row';
+            firstRow.innerHTML = createRuleRowHTML('');
+            rulesContainer.appendChild(firstRow);
+        }
+    }
+
+    // --------------------------------------------------
+    // Rendering helpers
+    // --------------------------------------------------
+    function renderLiveAlertsList(alerts) {
+        const categories = { Critical: [], High: [], Medium: [], Info: [] };
+        alerts.forEach(alert => {
+            const level = alert.alertLevel || 'Info';
+            if (!categories[level]) categories[level] = [];
+            categories[level].push(alert);
+            liveAlertsCache[alert._id] = alert;
+        });
+        const order = ['Critical', 'High', 'Medium', 'Info'];
+        let html = '';
+        order.forEach(level => {
+            const items = (categories[level] || []).map(a => `<li data-id="${a._id}"><span>${a.alertName}</span><div class="alert-actions"><button class="edit-btn">✎</button><button class="delete-btn">&times;</button></div></li>`).join('');
+            const cls = level.toLowerCase();
+            html += `<li><h3 class="alert-category ${cls}"><span class="color-dot"></span>${level} Alerts</h3><ul class="alert-items">${items}</ul></li>`;
+        });
+        liveAlertsList.innerHTML = html;
+    }
+
+    function prependAlertLogRow(serverAlert, humanRule) {
+        const newRow = document.createElement('tr');
+        const createdTs = serverAlert && serverAlert.created ? new Date(serverAlert.created) : new Date();
+        const timeString = formatTimeISO(createdTs);
+        const level = (serverAlert && serverAlert.alertLevel) || 'Info';
+        const levelClass = level.toLowerCase();
+        newRow.innerHTML = `
+            <td><span class="level-tag ${levelClass}">${(serverAlert && serverAlert.alertLevel) || level}</span></td>
+            <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
+            <td>${(serverAlert && serverAlert.alertName) || ''}</td>
+            <td class="details-cell">${humanRule || ''}</td>
+        `;
+        alertLogBody.prepend(newRow);
+    }
+
+    // --------------------------------------------------
+    // API wrappers
+    // --------------------------------------------------
+    async function apiCreateAlert(payload) {
+        const resp = await fetch('/alerts/create', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to create');
+        return data;
+    }
+
+    async function apiGetLiveAlerts() {
+        const resp = await fetch('/alerts/live');
+        if (!resp.ok) throw new Error('Failed to load live alerts');
+        return resp.json();
+    }
+
+    async function apiDeleteAlert(id) {
+        const resp = await fetch(`/alerts/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'same-origin' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to delete');
+        return data;
+    }
+
+    async function apiUpdateAlert(id, payload) {
+        const resp = await fetch(`/alerts/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to update');
+        return data;
+    }
+
+    // --------------------------------------------------
+    // Event handlers
+    // --------------------------------------------------
+    async function loadLiveAlerts() {
+        try {
+            const data = await apiGetLiveAlerts();
+            const alerts = data.alerts || [];
+            renderLiveAlertsList(alerts);
+        } catch (err) {
+            console.error('Error loading live alerts:', err);
+        }
+    }
+
+    addAlertBtn.addEventListener('click', async function () {
+        const alertName = alertNameInput.value || 'New Alert';
+        const alertLevel = alertLevelSelect.value;
+        if (!alertLevel) { alert('Please select an alert level.'); return; }
+        const ruleJSON = buildRuleJSON();
+        if (!ruleJSON) return;
+        const uiReadable = formatRuleReadableFromUI();
+        const created = Date.now();
+        const lastTrigger = null;
+        const isActive = false;
+        try {
+            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, lastTrigger, isActive });
+            await loadLiveAlerts();
+            const serverAlert = data.alert || {};
+            const serverHuman = data.humanRule || uiReadable || '';
+            prependAlertLogRow(serverAlert, serverHuman);
+            if ((serverAlert.alertLevel || alertLevel) === 'Critical') {
+                document.body.classList.add('critical-flash');
+                setTimeout(() => document.body.classList.remove('critical-flash'), 1500);
+            }
+            resetAlertBuilder();
+        } catch (err) {
+            console.error('Error creating alert:', err);
+            alert('Error creating alert: ' + err.message);
+        }
+    });
 
     logicalOperatorsContainer.addEventListener('click', function (e) {
         if (e.target.classList.contains('add-rule-btn')) {
@@ -287,65 +352,86 @@ document.addEventListener('DOMContentLoaded', function () {
 
     rulesContainer.addEventListener('click', function (e) {
         if (e.target.classList.contains('delete-rule-btn')) {
+            const rows = rulesContainer.querySelectorAll('.rule-row');
+            if (!rows || rows.length <= 1) {
+                // Prevent deleting the last remaining rule
+                alert('At least one rule must remain.');
+                return;
+            }
             e.target.parentElement.remove();
         }
     });
 
-    // Handle delete clicks for live alerts (delegated)
     liveAlertsList.addEventListener('click', async function (e) {
+        // DELETE
         if (e.target && e.target.classList.contains('delete-btn')) {
             const li = e.target.closest('li[data-id]');
-            if (!li) {
-                // fallback: just remove DOM node
-                e.target.parentElement.remove();
-                return;
-            }
+            if (!li) { e.target.parentElement.remove(); return; }
             const alertId = li.getAttribute('data-id');
             try {
-                const resp = await fetch(`/alerts/${encodeURIComponent(alertId)}`, { method: 'DELETE' });
-                if (!resp.ok) {
-                    const body = await resp.json().catch(() => ({}));
-                    throw new Error(body.message || 'Failed to delete');
-                }
-                // remove the li from DOM
+                await apiDeleteAlert(alertId);
                 li.remove();
+                delete liveAlertsCache[alertId];
             } catch (err) {
                 console.error('Failed to delete alert:', err);
                 alert('Failed to delete alert: ' + err.message);
             }
+            return;
+        }
+        // EDIT
+        if (e.target && e.target.classList.contains('edit-btn')) {
+            const li = e.target.closest('li[data-id]');
+            if (!li) return;
+            const alertId = li.getAttribute('data-id');
+            const alertObj = liveAlertsCache[alertId];
+            if (!alertObj) { alert('Alert data not available for editing. Please reload the page.'); return; }
+            startEdit(alertObj);
         }
     });
 
-    // Fetch and render live alerts
-    async function loadLiveAlerts() {
-        try {
-            const resp = await fetch('/alerts/live');
-            if (!resp.ok) {
-                console.error('Failed to load live alerts');
-                return;
-            }
-            const data = await resp.json();
-            const alerts = data.alerts || [];
-
-            const categories = { Critical: [], High: [], Medium: [], Info: [] };
-            alerts.forEach(a => {
-                const lvl = a.alertLevel || 'Info';
-                if (!categories[lvl]) categories[lvl] = [];
-                categories[lvl].push(a);
-            });
-
-            // Build the list HTML
-            const order = ['Critical', 'High', 'Medium', 'Info'];
-            let html = '';
-            order.forEach(level => {
-                const items = (categories[level] || []).map(a => `<li data-id="${a._id}"><span>${a.alertName}</span><button class="delete-btn">&times;</button></li>`).join('');
-                const cls = level.toLowerCase();
-                html += `<li><h3 class="alert-category ${cls}"><span class="color-dot"></span>${level} Alerts</h3><ul class="alert-items">${items}</ul></li>`;
-            });
-
-            liveAlertsList.innerHTML = html;
-        } catch (err) {
-            console.error('Error loading live alerts:', err);
-        }
+    function startEdit(alertObj) {
+        if (!alertObj) return;
+        currentEditId = alertObj._id;
+        alertNameInput.value = alertObj.alertName || '';
+        alertLevelSelect.value = alertObj.alertLevel || 'Info';
+        populateRuleBuilderFromRule(alertObj.alertRule || {});
+        addAlertBtn.style.display = 'none';
+        saveBtn.style.display = '';
+        cancelBtn.style.display = '';
+        const builderEl = document.querySelector('.alert-builder');
+        if (builderEl && typeof builderEl.scrollIntoView === 'function') builderEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    function cancelEdit() {
+        currentEditId = null;
+        resetAlertBuilder();
+        addAlertBtn.style.display = '';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+    }
+
+    saveBtn.addEventListener('click', async function () {
+        if (!currentEditId) return alert('No alert selected for editing');
+        const alertName = alertNameInput.value || 'New Alert';
+        const alertLevel = alertLevelSelect.value;
+        if (!alertLevel) return alert('Please select an alert level.');
+        const ruleJSON = buildRuleJSON();
+        if (!ruleJSON) return;
+        try {
+            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON });
+            await loadLiveAlerts();
+            cancelEdit();
+        } catch (err) {
+            console.error('Failed to save alert edits:', err);
+            alert('Failed to save edits: ' + err.message);
+        }
+    });
+
+    cancelBtn.addEventListener('click', function () { cancelEdit(); });
+
+    // --------------------------------------------------
+    // Initialization
+    // --------------------------------------------------
+    loadLiveAlerts();
 });

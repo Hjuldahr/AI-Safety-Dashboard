@@ -9,5 +9,7 @@ router.post("/create", controller.createAlert);
 router.get("/live", controller.getLiveAlerts);
 // Delete an alert by id
 router.delete("/:id", controller.removeAlertById);
+// Update an alert by id
+router.put("/:id", controller.updateAlertById);
 
 export default router;
