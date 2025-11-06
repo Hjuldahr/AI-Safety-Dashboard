@@ -1,5 +1,6 @@
 import express from "express";
 import controller from "../controllers/indexController.js";
+import { isAuthenticated } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
