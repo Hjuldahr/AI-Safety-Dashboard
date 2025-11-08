@@ -56,3 +56,37 @@ body {
     padding: 0 20px;
     box-sizing: border-box;
 }
+
+
+
+.dynamic-chart-card {
+  width: 100%; /* Or however you size your cards */
+}
+
+/* Specific styles for the "Measure" (KPI) card */
+.kpi-card {
+  padding: 20px;
+  text-align: center;
+  border-radius: 8px;
+  background-color: #2a2a2e; /* Matches your modal style */
+  border: 1px solid #444;
+  height: 300px; /* To match canvas height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box; 
+}
+
+.kpi-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #eee;
+  margin: 0;
+}
+
+.kpi-value {
+  font-size: 4rem;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 10px;
+}

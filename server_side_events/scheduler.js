@@ -16,10 +16,10 @@ async function badModel() {
     const summary = AIGeneralizer("BadModel", calls);
     return {
         modelName: summary.model,
-        avgCompliance: summary.policyCompliance.mean * 100,
-        avgHelpfulness: summary.responseHelpfulness.mean * 5,
-        avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000,
+        policyCompliance: summary.policyCompliance.mean * 100,
+        responseHelpfulness: summary.responseHelpfulness.mean * 5,
+        responseTime: summary.responseTime.mean,
+        energyConsumption: summary.energyConsumption.mean * 1000,
         queryCount: summary.queryCount
     };
 }
@@ -29,10 +29,10 @@ async function goodModel() {
     const summary = AIGeneralizer("GoodModel", calls);
     return {
         modelName: summary.model,
-        avgCompliance: summary.policyCompliance.mean * 100,
-        avgHelpfulness: summary.responseHelpfulness.mean * 5,
-        avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000,
+        policyCompliance: summary.policyCompliance.mean * 100,
+        responseHelpfulness: summary.responseHelpfulness.mean * 5,
+        responseTime: summary.responseTime.mean,
+        energyConsumption: summary.energyConsumption.mean * 1000,
         queryCount: summary.queryCount
     };
 }
@@ -72,35 +72,31 @@ function setupSSE(app) {
 async function schedulerTick() {
     if (schedulerState.isPaused) return;
 
+    let goodData = await goodModel();
+    let badData = await badModel();
+
     let data;
     switch (schedulerState.activeModel) {
         case "GoodModel":
-            data = await goodModel();
+            data = goodData;
             break;
         case "BadModel":
-            data = await badModel();
+            data = badData;
             break;
         default:
             data = nullModel();
             break;
     }
 
-    // Save to DB
-    const dataToSave = {
-        modelName: data.modelName,
-        policyCompliance: data.avgCompliance,
-        responseHelpfulness: data.avgHelpfulness,
-        responseTime: data.avgResponseTime,
-        energyConsumption: data.avgEnergyConsumption,
-        queryCount: data.queryCount
-    };
-
     try {
-        await AI_Log.addLog(dataToSave);
+        await AI_Log.addLog(goodData);
+        await AI_Log.addLog(badData);
 
         // Keep only last MAX_RECORDS
         const count = await AI_Log.countDocuments();
         if (count > MAX_RECORDS) {
+            // ToDo: refactor this lol
+            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
             await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
         }
 
@@ -132,7 +128,7 @@ function updateSchedulerSettings({ isPaused, activeModel, interval }) {
         restart = true;
     }
 
-    if (activeModel && activeModel !== schedulerState.activeModel) {
+    if (activeModel) {
         schedulerState.activeModel = activeModel;
         console.log('[Scheduler] Active model changed to', activeModel);
     }

@@ -108,13 +108,22 @@ function resetCharts() {
 
 async function loadChartsFromDatabase() {
     try {
-        const response = await fetch('/api/recentData');
+        const params = new URLSearchParams();
+        const modelName = getCurrentModel();
+        if (modelName && modelName !== 'all') {
+            params.set('modelName', modelName);
+        }
+        const response = await fetch(`/api/recentData?${params.toString()}`);
         if (!response.ok) {
             console.error('Failed to fetch initial chart data');
             return;
         }
 
-        const logs = await response.json();
+        const data = await response.json();
+        const logs = data.logs;
+        const configs = data.configs;
+
+        console.log("Found configs: " + configs);
         if (logs.length === 0) {
             console.log('No initial data to load.');
             return;
@@ -196,11 +205,11 @@ function setupSSE() {
             chart.update("none");
         }
 
-        pushData(charts.responseTimeChart, data.avgResponseTime);
-        pushData(charts.energyConsumptionChart, data.avgEnergyConsumption);
-        charts.complianceChart.data.datasets[0].data = [data.avgCompliance, 100 - data.avgCompliance];
+        pushData(charts.responseTimeChart, data.responseTime);
+        pushData(charts.energyConsumptionChart, data.energyConsumption);
+        charts.complianceChart.data.datasets[0].data = [data.policyCompliance, 100 - data.policyCompliance];
         charts.complianceChart.update();
-        pushData(charts.helpfulnessChart, data.avgHelpfulness);
+        pushData(charts.helpfulnessChart, data.responseHelpfulness);
 
         // saveChartsToCache(); // persist after each update
     };
