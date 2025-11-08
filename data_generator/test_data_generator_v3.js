@@ -92,6 +92,7 @@ export function AIGeneralizer(modelName, calls) {
         policyCompliance: computeStats(pc),
         responseHelpfulness: computeStats(rh),
         responseTime: computeStats(rt),
-        energyConsumption: computeStats(ec)
+        energyConsumption: computeStats(ec),
+        queryCount: calls.length
     };
 }

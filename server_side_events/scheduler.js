@@ -19,7 +19,8 @@ async function badModel() {
         avgCompliance: summary.policyCompliance.mean * 100,
         avgHelpfulness: summary.responseHelpfulness.mean * 5,
         avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000
+        avgEnergyConsumption: summary.energyConsumption.mean * 1000,
+        queryCount: summary.queryCount
     };
 }
 
@@ -31,7 +32,8 @@ async function goodModel() {
         avgCompliance: summary.policyCompliance.mean * 100,
         avgHelpfulness: summary.responseHelpfulness.mean * 5,
         avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000
+        avgEnergyConsumption: summary.energyConsumption.mean * 1000,
+        queryCount: summary.queryCount
     };
 }
 
@@ -41,7 +43,8 @@ function nullModel() {
         avgCompliance: 0,
         avgHelpfulness: 0,
         avgResponseTime: 0,
-        avgEnergyConsumption: 0
+        avgEnergyConsumption: 0,
+        queryCount: 0
     };
 }
 
@@ -88,7 +91,8 @@ async function schedulerTick() {
         policyCompliance: data.avgCompliance,
         responseHelpfulness: data.avgHelpfulness,
         responseTime: data.avgResponseTime,
-        energyConsumption: data.avgEnergyConsumption
+        energyConsumption: data.avgEnergyConsumption,
+        queryCount: data.queryCount
     };
 
     try {

@@ -26,6 +26,11 @@ const AI_Log_Schema = new mongoose.Schema({
         required: true,
         default: 0
     },
+    queryCount: {
+        type: Number,
+        required: true,
+        default: 1
+    },
     responseTimestamp: {
         type: Number,
         required: true,
