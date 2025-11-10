@@ -20,7 +20,8 @@ async function badModel() {
         responseHelpfulness: summary.responseHelpfulness.mean * 5,
         responseTime: summary.responseTime.mean,
         energyConsumption: summary.energyConsumption.mean * 1000,
-        queryCount: summary.queryCount
+        queryCount: summary.queryCount,
+        responseTimestamp:  summary.responseTimestamp
     };
 }
 
@@ -33,7 +34,8 @@ async function goodModel() {
         responseHelpfulness: summary.responseHelpfulness.mean * 5,
         responseTime: summary.responseTime.mean,
         energyConsumption: summary.energyConsumption.mean * 1000,
-        queryCount: summary.queryCount
+        queryCount: summary.queryCount,
+        responseTimestamp:  summary.responseTimestamp
     };
 }
 

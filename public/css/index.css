@@ -57,12 +57,6 @@ body {
     box-sizing: border-box;
 }
 
-
-
-.dynamic-chart-card {
-  width: 100%; /* Or however you size your cards */
-}
-
 /* Specific styles for the "Measure" (KPI) card */
 .kpi-card {
   padding: 20px;

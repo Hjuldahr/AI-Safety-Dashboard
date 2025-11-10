@@ -4,7 +4,7 @@ import { isAuthenticated } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get("/api/getParams", isAuthenticated, controller.getParams)
+router.get("/api/getParams", controller.getParams)
 
 router.post('/api/updateParams', isAuthenticated, controller.updateParams);
 
