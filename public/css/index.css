@@ -59,16 +59,16 @@ body {
 
 /* Specific styles for the "Measure" (KPI) card */
 .kpi-card {
+  height: 100%;
   padding: 20px;
   text-align: center;
   border-radius: 8px;
   background-color: #2a2a2e; /* Matches your modal style */
   border: 1px solid #444;
-  height: 300px; /* To match canvas height */
   display: flex;
   flex-direction: column;
   justify-content: center;
-  box-sizing: border-box; 
+  box-sizing: border-box;
 }
 
 .kpi-title {
