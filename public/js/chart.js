@@ -18,7 +18,21 @@ const Utils = {
     }
 };
 
+function getHashedColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    const colors = Object.values(Utils.CHART_COLORS);
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+}
+
 const charts = {};
+let allLogs = {};
+let allConfigs = [];
+
 const CACHE_MAX_POINTS = 15; // Maximum points to store in cache
 let isReloadingCharts = false;
 
@@ -123,7 +137,7 @@ function createChartFromConfig(config, ctx) {
         display: true,
         text: config.title,
         font: { size: 16 },
-        color: '#eee'
+        color: 'dimgray'
     };
 
     let data = { labels: [], datasets: [] };
@@ -138,16 +152,26 @@ function createChartFromConfig(config, ctx) {
 function mapLineData(chart, config, logs) {
     const labels = logs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
     const data = logs.map(log => log[config.yAxis]);
+    const color = getHashedColor(config.title);
+    const yField = config.yAxis;
 
     chart.data.labels = labels;
     chart.data.datasets = [{
         label: config.yAxis,
         data: data,
-        borderColor: Utils.CHART_COLORS.purple, //ToDo: generate this based off hash of title
-        backgroundColor: Utils.transparentize(Utils.CHART_COLORS.purple, 0.5),
+        borderColor: color,
+        backgroundColor: Utils.transparentize(color, 0.5),
         fill: true,
         tension: 0.3
     }];
+    chart.options.scales = {
+        y: {
+            title: {
+                display: true,
+                text: yField
+            }
+        }
+    };
     // TODO: Add logic for 'splitBy' here, which would create multiple datasets
 }
 
@@ -155,8 +179,6 @@ function mapBarData(chart, config, logs) {
     const groups = {};
     const xField = config.xAxis;
     const yField = config.yAxis;
-
-    // ToDo: Y-Axis title should display on the left
 
     logs.forEach(log => {
         const key = log[xField];
@@ -167,12 +189,26 @@ function mapBarData(chart, config, logs) {
         groups[key].count += 1; // Use 1, not queryCount, for avg
     });
 
-    chart.data.labels = Object.keys(groups);
+    const labels = Object.keys(groups);
+
+    // Map each label to its own hashed color
+    const colors = labels.map(label => getHashedColor(label));
+    const backgroundColors = colors.map(color => Utils.transparentize(color, 0.7));
+    chart.data.labels = labels;
     chart.data.datasets = [{
         label: `Average ${yField}`,
         data: Object.values(groups).map(g => g.sum / g.count),
-        backgroundColor: Object.values(Utils.CHART_COLORS)
+        backgroundColor: backgroundColors
     }];
+
+    chart.options.scales = {
+        y: {
+            title: {
+                display: true,
+                text: yField
+            }
+        }
+    };
 }
 
 function mapPieData(chart, config, logs) {
@@ -187,16 +223,23 @@ function mapPieData(chart, config, logs) {
         groups[key].sum += log.queryCount;
     });
 
-    chart.data.labels = Object.keys(groups);
+    const labels = Object.keys(groups);
+
+    // Map each label to its own hashed color
+    const colors = labels.map(label => getHashedColor(label));
+
+    chart.data.labels = labels;
     chart.data.datasets = [{
         label: 'Total Queries',
         data: Object.values(groups).map(g => g.sum),
-        backgroundColor: Object.values(Utils.CHART_COLORS)
+        backgroundColor: colors
     }];
 }
 
 function mapMeasureData(element, config, logs) {
     const yField = config.yAxis; // e.g., 'policyCompliance'
+
+    // ToDo: this method always returns the value in the current log so I think its accurate on refresh, but since the SSE only has 1 log then it just displays that value.
 
     // For 'measure', we will average the field over the log window
     const values = logs.map(log => log[yField]);
@@ -214,13 +257,13 @@ function mapMeasureData(element, config, logs) {
 
 // REFACTOR: This function now ONLY loads default chart data
 // The new dynamic charts are handled in loadChartsFromDatabase
-async function loadDefaultChartData(logs) {
-    if (logs.length === 0) return;
+async function loadDefaultChartData(activeModelLogs) {
+    if (!activeModelLogs || activeModelLogs.length === 0) return;
 
-    const labels = logs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
-    const responseTimes = logs.map(log => log.responseTime);
-    const energyConsumptions = logs.map(log => log.energyConsumption);
-    const helpfulnessScores = logs.map(log => log.responseHelpfulness);
+    const labels = activeModelLogs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
+    const responseTimes = activeModelLogs.map(log => log.responseTime);
+    const energyConsumptions = activeModelLogs.map(log => log.energyConsumption);
+    const helpfulnessScores = activeModelLogs.map(log => log.responseHelpfulness)
 
     // Set the line chart data
     charts.responseTimeChart.data.labels = labels;
@@ -233,7 +276,7 @@ async function loadDefaultChartData(logs) {
     charts.helpfulnessChart.data.datasets[0].data = helpfulnessScores;
 
     // Set the doughnut chart from the latest log
-    const latestLog = logs[logs.length - 1];
+    const latestLog = activeModelLogs[activeModelLogs.length - 1];
     charts.complianceChart.data.datasets[0].data = [
         latestLog.policyCompliance,
         100 - latestLog.policyCompliance
@@ -244,26 +287,21 @@ async function loadChartsFromDatabase() {
     if (isReloadingCharts) return; // Don't run if already running
     isReloadingCharts = true;
     try {
-        const params = new URLSearchParams();
-        const modelName = getCurrentModel();
-        if (modelName && modelName !== 'all') {
-            params.set('modelName', modelName);
-        }
-        const response = await fetch(`/api/recentData?${params.toString()}`);
+        const response = await fetch(`/api/recentData`);
         if (!response.ok) {
             console.error('Failed to fetch initial chart data');
             return;
         }
 
         const data = await response.json();
-        const logs = data.logs;
-        const configs = data.configs;
+        allLogs = data.logs;
+        allConfigs = data.configs;
 
         //Clear old dynamic charts and inject new ones
         clearDynamicCharts();
         const container = document.querySelector('.charts-container');
 
-        for (const config of configs) {
+        for (const config of allConfigs) {
             const chartCard = document.createElement('div');
             chartCard.className = 'chart-card dynamic-chart-card';
 
@@ -292,44 +330,60 @@ async function loadChartsFromDatabase() {
             }
         }
 
-        // Load data into the 4 default charts
-        await loadDefaultChartData(logs);
-
-        // Load data into the new dynamic charts
-        if (logs.length > 0) {
-            for (const config of configs) {
-                const chartOrElem = charts[config._id];
-                if (!chartOrElem) continue;
-
-                switch (config.chartType) {
-                    case 'line':
-                        mapLineData(chartOrElem, config, logs);
-                        break;
-                    case 'bar':
-                        mapBarData(chartOrElem, config, logs);
-                        break;
-                    case 'pie':
-                        mapPieData(chartOrElem, config, logs);
-                        break;
-                    case 'measure':
-                        mapMeasureData(chartOrElem, config, logs);
-                        break;
-                }
-            }
-        }
-
-        // Update all charts at once
-        Object.values(charts).forEach(chart => {
-            if (chart instanceof Chart) {
-                chart.update('none');
-            }
-        });
+        populateAllCharts();
 
     } catch (err) {
         console.error('Error loading data from database:', err);
     } finally {
         isReloadingCharts = false; // turn off the lock
     }
+}
+
+function populateAllCharts() {
+    const activeModel = getCurrentModel();
+
+    // Get the logs for the *currently selected* model
+    const activeModelLogs = allLogs[activeModel];
+
+    // If there's no data for this model, skip
+    if (!activeModelLogs) {
+        console.warn(`No log data found for active model: ${activeModel}`);
+        return;
+    }
+
+    // Populate the 4 default charts
+    loadDefaultChartData(activeModelLogs);
+
+    // Loop through configs and populate dynamic charts
+    for (const config of allConfigs) {
+        const chartOrElem = charts[config._id];
+        if (!chartOrElem) continue;
+
+        // --- THIS IS THE 'SINGLE-MODEL' LOGIC ---
+        // ToDo: add `split-by`logic
+
+        switch (config.chartType) {
+            case 'line':
+                mapLineData(chartOrElem, config, activeModelLogs);
+                break;
+            case 'bar':
+                mapBarData(chartOrElem, config, activeModelLogs);
+                break;
+            case 'pie':
+                mapPieData(chartOrElem, config, activeModelLogs);
+                break;
+            case 'measure':
+                mapMeasureData(chartOrElem, config, activeModelLogs);
+                break;
+        }
+    }
+
+    // Update all charts at once
+    Object.values(charts).forEach(chart => {
+        if (chart instanceof Chart) {
+            chart.update('none');
+        }
+    });
 }
 
 // ---------- Initialize charts ----------
@@ -482,7 +536,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupSSE();
 
     const modelSelect = document.getElementById('model-select');
-    modelSelect?.addEventListener('change', async () => {
-        await loadChartsFromDatabase();
+    modelSelect?.addEventListener('change', () => {
+        populateAllCharts();
     });
 });

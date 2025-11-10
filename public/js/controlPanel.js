@@ -16,6 +16,25 @@ document.addEventListener('DOMContentLoaded', function () {
     // toggleButton.innerHTML = pauseText;
     // toggleButton.style.backgroundColor = pauseColour;
 
+    // Logic to hide admin controls for non-admin users:
+    const isAdmin = document.querySelector("#isAdmin");
+    if (!isAdmin) {
+        const toggleButton = document.querySelector("#toggle-button");
+        if (toggleButton) {
+            toggleButton.style.display = 'none';
+        }
+
+        const intervalSelect = document.querySelector("#interval-select");
+        if (intervalSelect) {
+            intervalSelect.style.display = 'none';
+        }
+
+        const addChartBtn = document.getElementById("add_new_chart");
+        if (addChartBtn) {
+            addChartBtn.style.display = 'none';
+        }
+    }
+
     async function updateServerSettings() {
         try {
             const res = await fetch('/api/updateParams', {

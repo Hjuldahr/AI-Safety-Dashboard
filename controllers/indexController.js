@@ -1,9 +1,9 @@
 import AI_Log from "../models/AI_Log.js";
-import {schedulerState} from '../server_side_events/schedulerState.js';
+import { schedulerState } from '../server_side_events/schedulerState.js';
 import ChartConfig from '../models/Chart_Config.js';
 
 // limits how many data points are sent to the frontend on reload (shouldn't be more than charts visible range)
-const RECENT_DATA_LIMIT = 15;
+const RECENT_DATA_LIMIT = 30;
 
 const getPage = async (req, res) => {
     try {
@@ -15,17 +15,40 @@ const getPage = async (req, res) => {
     }
 };
 
+// Updated to send back recent data for all models in the database
 const getRecentData = async (req, res) => {
     try {
-        const recentLogs = await AI_Log.find({modelName: schedulerState.activeModel}).sort({ responseTimestamp: -1 }).limit(RECENT_DATA_LIMIT);
+        // Run an aggregation pipeline to get logs *per model*
+        const aggregatedLogs = await AI_Log.aggregate([
+            { $sort: { responseTimestamp: -1 } },
+            {
+                $group: {
+                    _id: "$modelName",
+                    logs: { $push: "$$ROOT" }
+                }
+            },
+
+            // Reshape the output
+            {
+                $project: {
+                    _id: 0, // We don't need the default _id
+                    modelName: "$_id", // Rename _id to modelName
+                    recentLogs: { $slice: ["$logs", RECENT_DATA_LIMIT] }
+                }
+            }
+        ]);
+
+        const logsByModel = {};
+        for (const group of aggregatedLogs) {
+            const modelKey = group.modelName;
+            const oldestFirstLogs = group.recentLogs.reverse();
+            logsByModel[modelKey] = oldestFirstLogs;
+        }
+
         const configs = await ChartConfig.find();
 
-        // Reverse the array to be oldest-first for the chart
-        const logs = recentLogs.reverse();
-
-        // Send as JSON
         res.status(200).json({
-            logs: logs,
+            logs: logsByModel,
             configs: configs
         });
     } catch (error) {

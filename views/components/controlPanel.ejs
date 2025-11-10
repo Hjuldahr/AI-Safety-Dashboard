@@ -1,8 +1,9 @@
-<link rel="stylesheet" href="/css/controlPanel.css">
-<script src="/js/controlPanel.js" defer></script>
 <div>
   <div id="dashboard-controls">
     <div class="controls-group">
+      <% if (user && user.roles.includes('admin')) { %>
+      <input type="hidden" value="true" id="isAdmin">
+      <% } %>
       <button id="toggle-button">Loading graph state...</button>
       <button id="clear-button">🔃 Reset Graphs</button>
       <select id="model-select">

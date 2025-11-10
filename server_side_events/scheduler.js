@@ -77,19 +77,6 @@ async function schedulerTick() {
     let goodData = await goodModel();
     let badData = await badModel();
 
-    let data;
-    switch (schedulerState.activeModel) {
-        case "GoodModel":
-            data = goodData;
-            break;
-        case "BadModel":
-            data = badData;
-            break;
-        default:
-            data = nullModel();
-            break;
-    }
-
     try {
         await AI_Log.addLog(goodData);
         await AI_Log.addLog(badData);
@@ -101,6 +88,11 @@ async function schedulerTick() {
             await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
             await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
         }
+
+        const dataToSend = {
+            GoodModel: goodData,
+            BadModel: badData
+        };
 
         // Broadcast to all clients
         const sseData = `data: ${JSON.stringify(data)}\n\n`;
