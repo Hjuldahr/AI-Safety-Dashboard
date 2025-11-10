@@ -95,7 +95,7 @@ async function schedulerTick() {
         };
 
         // Broadcast to all clients
-        const sseData = `data: ${JSON.stringify(data)}\n\n`;
+        const sseData = `data: ${JSON.stringify(dataToSend)}\n\n`;
         activeClients.forEach(client => client.write(sseData));
     } catch (err) {
         console.error('Scheduler tick error:', err);

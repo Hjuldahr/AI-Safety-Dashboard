@@ -19,7 +19,7 @@ const Utils = {
 };
 
 function getHashedColor(str) {
-    let hash = 0;
+    let hash = 2;
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
@@ -150,20 +150,89 @@ function createChartFromConfig(config, ctx) {
 }
 
 function mapLineData(chart, config, logs) {
-    const labels = logs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
-    const data = logs.map(log => log[config.yAxis]);
-    const color = getHashedColor(config.title);
     const yField = config.yAxis;
 
-    chart.data.labels = labels;
-    chart.data.datasets = [{
-        label: config.yAxis,
-        data: data,
-        borderColor: color,
-        backgroundColor: Utils.transparentize(color, 0.5),
-        fill: true,
-        tension: 0.3
-    }];
+    // Multi-Model, Split (by modelName)
+    if (config.splitBy === 'modelName') {
+        const allModelLogs = logs;
+        const modelNames = Object.keys(allModelLogs);
+        if (modelNames.length === 0) return;
+
+        const labels = allModelLogs[modelNames[0]].map(log =>
+            new Date(log.responseTimestamp).toLocaleTimeString()
+        );
+
+        const datasets = modelNames.map(modelName => {
+            const modelLogs = allModelLogs[modelName];
+            const color = getHashedColor(modelName);
+            const data = modelLogs.map(log => log[yField]);
+
+            return {
+                label: modelName,
+                data: data,
+                borderColor: color,
+                backgroundColor: Utils.transparentize(color, 0.5),
+                fill: true,
+                tension: 0.3
+            };
+        });
+
+        chart.data.labels = labels;
+        chart.data.datasets = datasets;
+    }
+    // Single-Model, Split (by topic, etc.)
+    else if (config.splitBy) {
+        const splitField = config.splitBy; // e.g., 'topic'
+        const groups = {};
+
+        // Group the logs by the splitField
+        logs.forEach(log => {
+            const key = log[splitField] || 'unknown'; // Get the topic
+            if (!groups[key]) {
+                groups[key] = [];
+            }
+            groups[key].push(log);
+        });
+
+        const labels = logs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
+
+        // Create a dataset for each group
+        const datasets = Object.keys(groups).map(key => {
+            const groupLogs = groups[key];
+            const color = getHashedColor(key); // Color by group
+            const data = groupLogs.map(log => log[yField]);
+
+            return {
+                label: key,
+                data: data,
+                borderColor: color,
+                backgroundColor: Utils.transparentize(color, 0.5),
+                fill: true,
+                tension: 0.3
+            };
+        });
+
+        chart.data.labels = labels;
+        chart.data.datasets = datasets;
+    }
+    // Single-Model, No Split (Default)
+    else {
+        const labels = logs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
+        const data = logs.map(log => log[yField]);
+        const color = getHashedColor(config.title);
+
+        chart.data.labels = labels;
+        chart.data.datasets = [{
+            label: config.yAxis,
+            data: data,
+            borderColor: color,
+            backgroundColor: Utils.transparentize(color, 0.5),
+            fill: true,
+            tension: 0.3
+        }];
+    }
+
+    // Set Y-axis title for all cases
     chart.options.scales = {
         y: {
             title: {
@@ -172,7 +241,6 @@ function mapLineData(chart, config, logs) {
             }
         }
     };
-    // TODO: Add logic for 'splitBy' here, which would create multiple datasets
 }
 
 function mapBarData(chart, config, logs) {
@@ -180,7 +248,9 @@ function mapBarData(chart, config, logs) {
     const xField = config.xAxis;
     const yField = config.yAxis;
 
-    logs.forEach(log => {
+    const allModelLogs = Object.values(logs).flat();
+
+    allModelLogs.forEach(log => {
         const key = log[xField];
         if (!groups[key]) {
             groups[key] = { sum: 0, count: 0 };
@@ -215,7 +285,9 @@ function mapPieData(chart, config, logs) {
     const groups = {};
     const categoryField = config.category;
 
-    logs.forEach(log => {
+    const allModelLogs = Object.values(logs).flat();
+
+    allModelLogs.forEach(log => {
         const key = log[categoryField];
         if (!groups[key]) {
             groups[key] = { sum: 0 };
@@ -342,12 +414,19 @@ async function loadChartsFromDatabase() {
 function populateAllCharts() {
     const activeModel = getCurrentModel();
 
+    // Check if allLogs is populated
+    if (!allLogs || Object.keys(allLogs).length === 0) {
+        console.warn("populateAllCharts called, but allLogs is empty.");
+        return;
+    }
+
     // Get the logs for the *currently selected* model
     const activeModelLogs = allLogs[activeModel];
 
     // If there's no data for this model, skip
     if (!activeModelLogs) {
         console.warn(`No log data found for active model: ${activeModel}`);
+        console.log("Available keys in allLogs:", Object.keys(allLogs));
         return;
     }
 
@@ -359,26 +438,69 @@ function populateAllCharts() {
         const chartOrElem = charts[config._id];
         if (!chartOrElem) continue;
 
-        // --- THIS IS THE 'SINGLE-MODEL' LOGIC ---
-        // ToDo: add `split-by`logic
+        const chartConfig = chartOrElem.customConfig;
 
-        switch (config.chartType) {
-            case 'line':
-                mapLineData(chartOrElem, config, activeModelLogs);
-                break;
-            case 'bar':
-                mapBarData(chartOrElem, config, activeModelLogs);
-                break;
-            case 'pie':
-                mapPieData(chartOrElem, config, activeModelLogs);
-                break;
-            case 'measure':
-                mapMeasureData(chartOrElem, config, activeModelLogs);
-                break;
+
+        // Router Logic
+        // Multi-Model charts
+        if (chartConfig.splitBy === 'modelName' ||
+            chartConfig.xAxis === 'modelName' ||
+            chartConfig.category === 'modelName') {
+            // This is a "Multi-Model" chart. It needs *all* data.
+            switch (chartConfig.chartType) {
+                case 'line':
+                    mapLineData(chartOrElem, chartConfig, allLogs);
+                    break;
+                    break;
+                case 'bar':
+                    // mapBarData needs all logs to group them by model
+                    mapBarData(chartOrElem, chartConfig, allLogs);
+                    break;
+                case 'pie':
+                    // mapPieData needs all logs to group them
+                    mapPieData(chartOrElem, chartConfig, allLogs);
+                    break;
+            }
+            // Single Model Split Charts
+        } else if (chartConfig.splitBy) {
+            const activeModelLogs = allLogs[activeModel];
+            if (!activeModelLogs) continue;
+
+            switch (chartConfig.chartType) {
+                case 'line':
+                    mapLineData(chartOrElem, chartConfig, activeModelLogs);
+                    break;
+                case 'bar':
+                    mapBarData(chartOrElem, chartConfig, activeModelLogs);
+                    break;
+                case 'pie':
+                    mapPieData(chartOrElem, chartConfig, activeModelLogs);
+                    break;
+            }
+        }
+        // Single Model Charts
+        else {
+            const activeModelLogs = allLogs[activeModel];
+            if (!activeModelLogs) continue;
+            // Single Model Logic
+            switch (chartConfig.chartType) {
+                case 'line':
+                    mapLineData(chartOrElem, chartConfig, activeModelLogs);
+                    break;
+                case 'bar':
+                    mapBarData(chartOrElem, chartConfig, activeModelLogs);
+                    break;
+                case 'pie':
+                    mapPieData(chartOrElem, chartConfig, activeModelLogs);
+                    break;
+                case 'measure':
+                    mapMeasureData(chartOrElem, chartConfig, activeModelLogs);
+                    break;
+            }
         }
     }
 
-    // Update all charts at once
+    // 3. Update all charts at once
     Object.values(charts).forEach(chart => {
         if (chart instanceof Chart) {
             chart.update('none');
@@ -435,74 +557,92 @@ function setupSSE() {
     const evtSource = new EventSource('/events');
 
     evtSource.onmessage = (event) => {
-        // --- SAFETY CHECK ---
-        // If charts are reloading, skip this update to prevent a crash
         if (isReloadingCharts) {
             console.log("Skipping SSE update, charts are reloading.");
             return;
         }
 
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data); // data = { GoodModel: {...}, BadModel: {...} }
         const now = new Date().toLocaleTimeString();
+        const activeModel = getCurrentModel();
 
         // --- UNIVERSAL UPDATE LOOP ---
         for (const id in charts) {
             const chartOrElem = charts[id];
-
-            // Get the chart's config tag
             const config = chartOrElem.customConfig;
 
-            if (!config || !config.yAxis) {
-                continue; // Skip if no config or no yAxis defined
-            }
+            if (!config || !config.yAxis) continue;
 
-            const newValue = data[config.yAxis];
-            if (newValue === undefined) {
-                // Skip if SSE data doesn't have this key
-                // (e.g., SSE has 'responseTime', but this chart is 'toxicityScore')
-                continue;
-            }
+            // --- SSE ROUTER LOGIC ---
+            if (config.splitBy === 'modelName' ||
+                config.xAxis === 'modelName' ||
+                config.category === 'modelName') {
+                const chart = chartOrElem;
 
-            // 4. Update the chart based on its type
-            switch (config.chartType) {
-                case 'line':
-                    const chart = chartOrElem;
+                // Bar and Pie are aggregations and will update on refresh/model-change
+                if (config.chartType === 'line') {
+
                     chart.data.labels.push(now);
 
-                    // Failsafe for charts with no dataset yet
-                    if (chart.data.datasets.length > 0) {
-                        chart.data.datasets[0].data.push(newValue);
-                    }
+                    chart.data.datasets.forEach(dataset => {
+                        const modelName = dataset.label; // The label IS the model name
 
-                    // Trim data
+                        const modelData = data[modelName];
+                        if (!modelData) return; // No data for this dataset
+
+                        const newValue = modelData[config.yAxis];
+                        if (newValue === undefined) return;
+
+                        dataset.data.push(newValue);
+
+                        if (dataset.data.length > CACHE_MAX_POINTS) {
+                            dataset.data.shift();
+                        }
+                    });
+
                     if (chart.data.labels.length > CACHE_MAX_POINTS) {
                         chart.data.labels.shift();
-                        chart.data.datasets[0].data.shift();
                     }
+
                     chart.update("none");
-                    break;
+                }
+            } else {
+                // Single Model Chart Logic
 
-                case 'measure':
-                    const element = chartOrElem;
-                    // Failsafe querySelector
-                    const kpiValue = element.querySelector('.kpi-value');
-                    if (kpiValue) {
-                        kpiValue.textContent = newValue.toFixed(1);
-                    }
-                    break;
+                const modelData = data[activeModel];
+                if (!modelData) continue; // No data for this model in the SSE packet
 
-                case 'doughnut_special':
-                    // This handles our one hardcoded compliance chart
-                    const doughnutChart = chartOrElem;
-                    doughnutChart.data.datasets[0].data = [newValue, 100 - newValue];
-                    doughnutChart.update("none");
-                    break;
+                const newValue = modelData[config.yAxis];
+                if (newValue === undefined) continue; // This model's data doesn't have this key
 
-                case 'bar':
-                case 'pie':
-                    // Bar and Pie charts are aggregations,
-                    // so we correctly skip them on live updates.
-                    break;
+                switch (config.chartType) {
+                    case 'line':
+                        const chart = chartOrElem;
+                        chart.data.labels.push(now);
+                        if (chart.data.datasets.length > 0) {
+                            chart.data.datasets[0].data.push(newValue);
+                        }
+                        if (chart.data.labels.length > CACHE_MAX_POINTS) {
+                            chart.data.labels.shift();
+                            chart.data.datasets[0].data.shift();
+                        }
+                        chart.update("none");
+                        break;
+
+                    case 'measure':
+                        const element = chartOrElem;
+                        const kpiValue = element.querySelector('.kpi-value');
+                        if (kpiValue) {
+                            kpiValue.textContent = newValue.toFixed(1);
+                        }
+                        break;
+
+                    case 'doughnut_special':
+                        const doughnutChart = chartOrElem;
+                        doughnutChart.data.datasets[0].data = [newValue, 100 - newValue];
+                        doughnutChart.update("none");
+                        break;
+                }
             }
         }
     };
