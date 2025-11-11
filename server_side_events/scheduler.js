@@ -3,6 +3,7 @@ import { pseudoAI, AIGeneralizer } from '../data_generator/test_data_generator_v
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
+import evaluateAlerts from './alertEvaluator.js';
 
 // List of connected SSE clients
 let activeClients = [];
@@ -93,6 +94,13 @@ async function schedulerTick() {
 
     try {
         await AI_Log.addLog(dataToSave);
+
+        // Evaluate alerts
+        try {
+            await evaluateAlerts(dataToSave, { cooldownMs: 60 * 1000 }); // default cooldown 60s
+        } catch (alertErr) {
+            console.error('Error evaluating alerts:', alertErr);
+        }
 
         // Keep only last MAX_RECORDS
         const count = await AI_Log.countDocuments();

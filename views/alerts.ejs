@@ -122,24 +122,20 @@
                 </tr>
               </thead>
               <tbody id="alert-log-body">
-                <tr>
-                  <td><span class="level-tag critical">Critical</span></td>
-                  <td class="time-cell">2025/09/29: 6:18:58PM <span>Eastern Standard Time</span></td>
-                  <td>Alert 1</td>
-                  <td class="details-cell">"Policy Compliance" less than 80, and "Response Helpfulness" less than 3.</td>
-                </tr>
-                <tr>
-                  <td><span class="level-tag high">High</span></td>
-                  <td class="time-cell">2025/09/28: 10:32:12AM <span>Eastern Standard Time</span></td>
-                  <td>Alert 2</td>
-                  <td class="details-cell">"Policy Compliance" less than 85, and "Response Helpfulness" less than 4.</td>
-                </tr>
-                <tr>
-                  <td><span class="level-tag info">Info</span></td>
-                  <td class="time-cell">2025/09/27: 11:10:52AM <span>Eastern Standard Time</span></td>
-                  <td>Alert 4</td>
-                  <td class="details-cell">"Energy Consumption" greater than 100W.</td>
-                </tr>
+                <% if (typeof alertLogs !== 'undefined' && alertLogs && alertLogs.length) { %>
+                  <% alertLogs.forEach(function(log) { %>
+                    <tr>
+                      <td><span class="level-tag <%= (log.level || 'Info').toLowerCase() %>"><%= log.level || 'Info' %></span></td>
+                      <td class="time-cell"><%= new Date(log.timestamp).toLocaleString('en-CA', { hour12: true }).replace(',', '') %> <span>Eastern Standard Time</span></td>
+                      <td><%= log.alertName %></td>
+                      <td class="details-cell"><%= log.humanRule %></td>
+                    </tr>
+                  <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="4">No alert history available.</td>
+                  </tr>
+                <% } %>
               </tbody>
             </table>
           </div>

@@ -1,12 +1,33 @@
 import Alert from "../models/alert_model.js";
 import User_Log from "../models/User_Log.js";
+import AlertLog from "../models/alert_log.js";
 
 const getPage = async (req, res) => {
     try{
         const alerts = await Alert.find();
+        const rawLogs = await AlertLog.find().sort({ timestamp: -1 }).populate('alert').lean();
+        // Build human readable representation for the view
+        const alertLogs = rawLogs.map(l => {
+            const a = l.alert || l.alertSnapshot || {}; // fallback to snapshot if alert deleted
+            let humanRule = '';
+            try {
+                humanRule = Alert.convertToHumanFormat(a.alertRule);
+            } catch (err) {
+                humanRule = '';
+            }
+            return {
+                _id: l._id,
+                level: a.alertLevel || 'Info',
+                timestamp: l.timestamp,
+                alertName: a.alertName || '',
+                humanRule
+            };
+        });
+
         res.render("alerts", {
             user: req.user,
-            alerts: alerts
+            alerts: alerts,
+            alertLogs: alertLogs
         }); 
     }catch (error){
         console.error("Error fetching alert page:", error);
