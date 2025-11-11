@@ -6,27 +6,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const mockAlerts = [
         {
             level: 'Critical',
-            text: '"Harmful Messages" greater than 200, and "Accuracy" less than 80%.',
+            text: '"Policy Compliance" less than 80, and "Response Helpfulness" less than 3.',
             timestamp: new Date('2025-10-15T22:25:15Z') // Using ISO format with Z for UTC
         },
         {
             level: 'Info',
-            text: '"Usage" greater than 100W.',
+            text: '"Energy Consumption" greater than 100W.',
             timestamp: new Date('2025-10-15T22:25:11Z')
         },
         {
             level: 'High',
-            text: '"Harmful Messages" greater than 100, and "Accuracy" less than 85%.',
+            text: '"Policy Compliance" less than 85, and "Response Helpfulness" less than 4.',
             timestamp: new Date('2025-10-15T22:24:30Z')
         },
         {
             level: 'High',
-            text: '"Harmful Messages" greater than 100, and "Accuracy" less than 85%.',
+            text: '"Response Time" greater than 1000, and "Response Helpfulness" less than 2.',
             timestamp: new Date('2025-10-15T22:22:05Z')
         },
         {
             level: 'Medium',
-            text: '"Usage" greater than 200W.',
+            text: '"Energy Consumption" greater than 200W.',
             timestamp: new Date('2025-10-15T21:55:45Z')
         },
     ];

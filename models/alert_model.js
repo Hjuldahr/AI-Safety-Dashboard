@@ -29,12 +29,11 @@ const alert_model_Schema = new mongoose.Schema({
 });
 
 // ---------- Helper / Statics ----------
-
-// Map display names to DB fields and vice versa
 const displayToDbField = {
-    'Harmful Messages': 'harmfulMessages',
-    'Accuracy': 'accuracy',
-    'Usage': 'usage'
+    'Policy Compliance': 'policyCompliance',
+    'Response Helpfulness': 'responseHelpfulness',
+    'Response Time': 'responseTime',
+    'Energy Consumption': 'energyConsumption'
 };
 const dbToDisplayField = Object.keys(displayToDbField).reduce((acc, k) => {
     acc[displayToDbField[k]] = k;
@@ -74,7 +73,7 @@ function normalizeCondition(cond) {
 
 /**
  * Statics: convert a client-provided rule into a validated Mongo-style rule.
- * Accepts either a single condition (e.g. { Usage: { '$gt': '100' } })
+ * Accepts either a single condition (e.g. { 'Response Time': { '$gt': '100' } })
  * or a wrapper { $and: [ ... ] } / { $or: [ ... ] } where each part is a condition.
  */
 alert_model_Schema.statics.convertToJSONFormat = function (input) {
