@@ -26,18 +26,6 @@ const alert_model_Schema = new mongoose.Schema({
         required: true,
         default: () => new Date().getTime()
     },
-    // Timestamp of when the alert was last triggered.
-    lastTrigger: {
-        type: Date,
-        required: false,
-        default: null
-    },
-    // Boolean true or false for active/inactive
-    isActive: {
-        type: Boolean,
-        required: true,
-        default: false
-    }
 });
 
 // ---------- Helper / Statics ----------

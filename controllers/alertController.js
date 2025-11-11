@@ -16,7 +16,7 @@ const getPage = async (req, res) => {
 // POST /alerts/create - create a new alert
 const createAlert = async (req, res) => {
     try {
-        const { alertName, alertLevel, alertRule, created, lastTrigger, isActive } = req.body;
+        const { alertName, alertLevel, alertRule, created } = req.body;
 
         // Normalize and validate rule using model static
         let normalizedRule;
@@ -26,7 +26,7 @@ const createAlert = async (req, res) => {
             return res.status(400).json({ message: 'Invalid alert rule: ' + err.message });
         }
 
-        const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created, lastTrigger, isActive });
+    const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created });
         await newAlert.save();
         // Add a human readable version for UI/logging
         const humanRule = Alert.convertToHumanFormat(normalizedRule);
@@ -45,9 +45,7 @@ const createAlert = async (req, res) => {
 // GET /alerts/live - return alerts as JSON (optionally filter active=true)
 const getLiveAlerts = async (req, res) => {
     try {
-        const filter = {};
-        if (req.query.active === 'true') filter.isActive = true;
-        const alerts = await Alert.find(filter).sort({ created: -1 }).lean();
+        const alerts = await Alert.find().sort({ created: -1 }).lean();
         return res.status(200).json({ alerts });
     } catch (error) {
         console.error('Error fetching live alerts:', error);
@@ -103,7 +101,7 @@ const updateAlertById = async (req, res) => {
 
         // Build a concise diff of what changed
         try {
-            const fieldsToCheck = ['alertName', 'alertLevel', 'alertRule', 'isActive', 'lastTrigger'];
+            const fieldsToCheck = ['alertName', 'alertLevel', 'alertRule'];
 
             const stableStringify = (obj) => {
                 const seen = new WeakSet();

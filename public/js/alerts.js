@@ -321,10 +321,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!ruleJSON) return;
         const uiReadable = formatRuleReadableFromUI();
         const created = Date.now();
-        const lastTrigger = null;
-        const isActive = false;
         try {
-            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, lastTrigger, isActive });
+            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created });
             await loadLiveAlerts();
             const serverAlert = data.alert || {};
             const serverHuman = data.humanRule || uiReadable || '';
