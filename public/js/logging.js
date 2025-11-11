@@ -197,9 +197,9 @@ function getDotClass(eventType) {
     switch (eventType) {
         case 'Login': case 'Signup': return 'log-dot-login';
         case 'Logout': return 'log-dot-logout';
-        case 'Alert_Created': case 'Alert_Modified': return 'log-dot-alert';
-        case 'Report_Created': return 'log-dot-report';
-        case 'Alert_Deleted': case 'Report_Deleted': case 'Failed_Login': return 'log-dot-delete';
+        case 'Chart_Modified': case 'Alert_Created': case 'Alert_Modified': return 'log-dot-alert';
+        case 'Chart_Created': case 'Report_Created': return 'log-dot-report';
+        case 'Alert_Deleted': case 'Report_Deleted': case 'Failed_Login': case 'Chart_Deleted':  return 'log-dot-delete';
         default: return 'log-dot-default';
     }
 }

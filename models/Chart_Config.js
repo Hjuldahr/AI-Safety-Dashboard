@@ -11,6 +11,17 @@ const chartConfigSchema = new Schema({
         required: true,
         enum: ['line', 'bar', 'pie', 'measure'] 
     },
+    chartSize: {
+        type: String,
+        required: true,
+        enum: ['tiny', 'regular', 'large', 'massive'],
+        default: 'regular'
+    },
+    order: {
+        type: Number,
+        required: true,
+        default: 9999
+    },
     yAxis: { 
         type: String,
         default: null

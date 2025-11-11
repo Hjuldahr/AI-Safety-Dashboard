@@ -214,6 +214,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <div id="chart-form-step-2" class="chart-form-step"></div>
       
       <div id="chart-form-step-3" class="chart-form-step"></div>
+
+      <div id="chart-form-step-4" class="chart-form-step"></div>
     `;
     }
 
@@ -267,17 +269,43 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /**
-     * Renders the final "Add Chart" button
+     * Renders the "Title" input
      */
-    function renderStep3_Submit() {
+    function renderStep3_Title() {
         const step3Container = document.getElementById("chart-form-step-3");
         if (step3Container) {
             step3Container.innerHTML = `
         <label for="chart-title">3. Give it a title:</label>
         <input type="text" id="chart-title" placeholder="e.g. 'Response Time for All Models'" style="width: 100%; padding: 8px; box-sizing: border-box;">
+        <br> 
+       `;
+        }
+    }
+
+    /**
+ * Renders the chart size options and the final "Add Chart" button
+ */
+    function renderStep4_SizeAndSubmit() {
+        const step4Container = document.getElementById("chart-form-step-4");
+        if (step4Container) {
+            step4Container.innerHTML = `
+        <label>4. Select a chart size:</label>
+        <div class="chart-size-selector">
+            <input type="radio" id="size-tiny" name="chartSize" value="tiny">
+            <label for="size-tiny">Tiny</label>
+            
+            <input type="radio" id="size-regular" name="chartSize" value="regular" checked>
+            <label for="size-regular">Regular</label>
+
+            <input type="radio" id="size-large" name="chartSize" value="large">
+            <label for="size-large">Large</label>
+
+            <input type="radio" id="size-massive" name="chartSize" value="massive">
+            <label for="size-massive">Massive</label>
+        </div>
         <br>
         <button id="submit-new-chart">Add Chart</button>
-      `;
+        `;
         }
     }
 
@@ -300,7 +328,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Render the next steps
             renderStep2_Options(selectedChartType);
-            renderStep3_Submit();
+            renderStep3_Title();
+            renderStep4_SizeAndSubmit();
             updateSuggestedTitle();
             return; // Stop event processing
         }
@@ -308,6 +337,8 @@ document.addEventListener('DOMContentLoaded', function () {
         // --- Handle Final "Add Chart" Button Click ---
         const submitBtn = e.target.closest("#submit-new-chart");
         if (submitBtn) {
+            const chartSize = document.querySelector('input[name="chartSize"]:checked')?.value || 'regular';
+
             // Gather all the data from the form
             const config = {
                 title: document.getElementById('chart-title')?.value || 'New Chart',
@@ -316,6 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 xAxis: document.getElementById('select-x-axis')?.value,
                 category: document.getElementById('select-category')?.value,
                 splitBy: document.getElementById('select-split-by')?.value,
+                chartSize: chartSize
             };
 
             try {

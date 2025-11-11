@@ -1,10 +1,3 @@
-const CHART_IDS = [
-    'responseTimeChart',
-    'energyConsumptionChart',
-    'complianceChart',
-    'helpfulnessChart'
-];
-
 const Utils = {
     CHART_COLORS: {
         coral: 'rgb(244, 91, 105)',
@@ -41,49 +34,15 @@ function getCurrentModel() {
     return select?.value || 'good';
 }
 
-// ---------- Inject canvases ----------
-function initChartCanvases() {
-    const container = document.querySelector('.charts-container');
-
-    // This logic is now only for the 4 default charts
-    container.innerHTML = CHART_IDS.map(id => `
-    <div class="chart-card">
-      <canvas id="${id}" width="400" height="300"></canvas>
-    </div>
-  `).join('');
-}
-
-// ---------- Chart factory functions ----------
-function createLineChart(ctx, label, color, yOptions = {}) {
-    return new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{ label, data: [], borderColor: color, backgroundColor: Utils.transparentize(color, 0.5), fill: true, tension: 0.3 }]
-        },
-        options: { responsive: false, maintainAspectRatio: false, scales: { y: yOptions }, plugins: { legend: { display: true } }, devicePixelRatio: 3 }
-    });
-}
-
-function createDoughnutChart(ctx, label, colors) {
-    return new Chart(ctx, {
-        type: 'doughnut',
-        data: { labels: ['Compliant', 'Non-Compliant'], datasets: [{ label, data: [0, 100], backgroundColor: colors, hoverOffset: 4 }] },
-        options: { responsive: false, maintainAspectRatio: false, devicePixelRatio: 3 }
-    });
-}
-
 function clearDynamicCharts() {
-    //Remove the HTML
     document.querySelectorAll('.dynamic-chart-card').forEach(card => card.remove());
 
     for (const id in charts) {
-        if (!CHART_IDS.includes(id)) {
-            if (charts[id] instanceof Chart) {
-                charts[id].destroy();
-            }
-            delete charts[id];
+        // This logic is now safe, as all charts are dynamic
+        if (charts[id] instanceof Chart) {
+            charts[id].destroy();
         }
+        delete charts[id];
     }
 }
 
@@ -125,10 +84,22 @@ function loadChartsFromCache() {
 function createChartFromConfig(config, ctx) {
 
     const options = {
-        responsive: false,
+        responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { display: true }
+            legend: {
+                display: true
+            },
+            title: {
+                display: true,
+                text: config.title,
+                font: { size: 16 },
+                color: 'dimgray'
+            }
+        },
+        scales: {
+            x: { display: true },
+            y: { display: true }
         },
         devicePixelRatio: 3
     };
@@ -140,12 +111,25 @@ function createChartFromConfig(config, ctx) {
         color: 'dimgray'
     };
 
+    if (config.chartSize === 'tiny') {
+        options.plugins.legend.display = false; // Hide legend
+        options.scales = { // Hide all axes
+            x: { display: false },
+            y: { display: false }
+        };
+        options.plugins.title.font = { size: 12 }; // Use a smaller font
+        options.plugins.title.padding = { top: 5, bottom: 5 }; // Give title a little space
+
+        // Remove all padding *inside* the canvas
+        options.layout = { padding: 0 };
+    }
+
     let data = { labels: [], datasets: [] };
 
     return new Chart(ctx, {
         type: (config.chartType === 'pie') ? 'doughnut' : config.chartType,
         data: data,
-        options: options // Use our new, unified options
+        options: options
     });
 }
 
@@ -232,15 +216,17 @@ function mapLineData(chart, config, logs) {
         }];
     }
 
-    // Set Y-axis title for all cases
-    chart.options.scales = {
-        y: {
-            title: {
-                display: true,
-                text: yField
+    // Set Y-axis title if its not tiny
+    if (config.chartSize !== 'tiny') {
+        chart.options.scales = {
+            y: {
+                title: {
+                    display: true,
+                    text: yField
+                }
             }
-        }
-    };
+        };
+    }
 }
 
 function mapBarData(chart, config, logs) {
@@ -258,6 +244,7 @@ function mapBarData(chart, config, logs) {
         groups[key].sum += log[yField];
         groups[key].count += 1; // Use 1, not queryCount, for avg
     });
+
 
     const labels = Object.keys(groups);
 
@@ -300,6 +287,12 @@ function mapPieData(chart, config, logs) {
     // Map each label to its own hashed color
     const colors = labels.map(label => getHashedColor(label));
 
+    chart.options.scales = {
+        y: {
+            display: false,
+        }
+    };
+
     chart.data.labels = labels;
     chart.data.datasets = [{
         label: 'Total Queries',
@@ -320,39 +313,18 @@ function mapMeasureData(element, config, logs) {
         avg = values.reduce((a, b) => a + b, 0) / values.length;
     }
 
+    const contentWrapper = element.querySelector('.kpi-content-wrapper');
+
+    if (!contentWrapper) {
+        console.error("kpi-content-wrapper not found in measure card:", element);
+        return;
+    }
+
     // Inject KPI HTML
-    element.innerHTML = `
+    contentWrapper.innerHTML = `
     <h3 class="kpi-title">${config.title}</h3>
     <div class="kpi-value">${avg.toFixed(1)}</div>
   `;
-}
-
-// REFACTOR: This function now ONLY loads default chart data
-// The new dynamic charts are handled in loadChartsFromDatabase
-async function loadDefaultChartData(activeModelLogs) {
-    if (!activeModelLogs || activeModelLogs.length === 0) return;
-
-    const labels = activeModelLogs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
-    const responseTimes = activeModelLogs.map(log => log.responseTime);
-    const energyConsumptions = activeModelLogs.map(log => log.energyConsumption);
-    const helpfulnessScores = activeModelLogs.map(log => log.responseHelpfulness)
-
-    // Set the line chart data
-    charts.responseTimeChart.data.labels = labels;
-    charts.responseTimeChart.data.datasets[0].data = responseTimes;
-
-    charts.energyConsumptionChart.data.labels = labels;
-    charts.energyConsumptionChart.data.datasets[0].data = energyConsumptions;
-
-    charts.helpfulnessChart.data.labels = labels;
-    charts.helpfulnessChart.data.datasets[0].data = helpfulnessScores;
-
-    // Set the doughnut chart from the latest log
-    const latestLog = activeModelLogs[activeModelLogs.length - 1];
-    charts.complianceChart.data.datasets[0].data = [
-        latestLog.policyCompliance,
-        100 - latestLog.policyCompliance
-    ];
 }
 
 async function loadChartsFromDatabase() {
@@ -373,15 +345,74 @@ async function loadChartsFromDatabase() {
         clearDynamicCharts();
         const container = document.querySelector('.charts-container');
 
+        // This state variable will holds "tiny chart" group
+        // so we can add multiple tiny charts to it in a row.
+        let currentTinyGroup = null;
+
         for (const config of allConfigs) {
+            const chartSize = config.chartSize || 'regular';
+
             const chartCard = document.createElement('div');
-            chartCard.className = 'chart-card dynamic-chart-card';
+            chartCard.className = `chart-card dynamic-chart-card chart-${chartSize}`;
+
+            // Create and append the delete button
+            const isAdmin = document.querySelector("#isAdmin");
+            if (isAdmin) {
+                // Delete Button
+                const deleteBtn = document.createElement('span');
+                deleteBtn.className = 'delete-chart-btn';
+                deleteBtn.innerHTML = '&times;';
+                deleteBtn.setAttribute('data-id', config._id);
+                chartCard.appendChild(deleteBtn);
+
+                // Edit Button
+                const editBtn = document.createElement('span');
+                editBtn.className = 'edit-chart-btn';
+                editBtn.innerHTML = '✏️'; // You can use an icon font later
+                editBtn.setAttribute('data-id', config._id);
+                chartCard.appendChild(editBtn);
+
+            } else {
+                // Non-admin, do nothing
+            }
+
+            const editFormContainer = document.createElement('div');
+            editFormContainer.className = 'edit-chart-form';
+            editFormContainer.id = `edit-form-${config._id}`;
+            chartCard.appendChild(editFormContainer);
+            chartCard.dataset.id = config._id;
+
+            if (chartSize === 'tiny') {
+                if (!currentTinyGroup) {
+                    currentTinyGroup = document.createElement('div');
+                    currentTinyGroup.className = 'chart-card-group tiny-group-wrapper';
+
+                    currentTinyGroup.id = `tiny-wrapper-for-${config._id}`;
+
+                    container.appendChild(currentTinyGroup);
+
+                    new Sortable(currentTinyGroup, {
+                        group: 'tiny-charts',
+                        animation: 150,
+                        preventOnFilter: true,
+                        onEnd: saveNewOrder
+                    });
+                }
+                currentTinyGroup.appendChild(chartCard);
+            } else {
+                currentTinyGroup = null;
+                container.appendChild(chartCard);
+            }
 
             if (config.chartType === 'measure') {
                 // Create a KPI card
                 chartCard.classList.add('kpi-card');
                 chartCard.id = config._id;
-                container.appendChild(chartCard);
+
+                const kpiContentWrapper = document.createElement('div');
+                kpiContentWrapper.className = 'kpi-content-wrapper';
+                chartCard.appendChild(kpiContentWrapper);
+
                 // Store the *HTML element* in charts object
                 chartCard.customConfig = config;
                 charts[config._id] = chartCard;
@@ -389,11 +420,7 @@ async function loadChartsFromDatabase() {
                 // Create a canvas-based chart
                 const canvas = document.createElement('canvas');
                 canvas.id = config._id; // Use DB ID as canvas ID
-                canvas.width = 400;
-                canvas.height = 300;
                 chartCard.appendChild(canvas);
-                container.appendChild(chartCard);
-
                 // Create the chart skeleton and store it
                 const ctx = canvas.getContext('2d');
                 const newChart = createChartFromConfig(config, ctx);
@@ -429,9 +456,6 @@ function populateAllCharts() {
         console.log("Available keys in allLogs:", Object.keys(allLogs));
         return;
     }
-
-    // Populate the 4 default charts
-    loadDefaultChartData(activeModelLogs);
 
     // Loop through configs and populate dynamic charts
     for (const config of allConfigs) {
@@ -506,50 +530,6 @@ function populateAllCharts() {
             chart.update('none');
         }
     });
-}
-
-// ---------- Initialize charts ----------
-// REFACTOR: This function now *only* creates the 4 default chart instances
-async function initCharts() {
-    initChartCanvases();
-
-    charts.responseTimeChart = createLineChart(
-        document.getElementById('responseTimeChart').getContext('2d'),
-        'Average Response Time (ms)',
-        Utils.CHART_COLORS.blue
-    );
-    charts.responseTimeChart.customConfig = {
-        chartType: 'line',
-        yAxis: 'responseTime'
-    };
-    charts.energyConsumptionChart = createLineChart(
-        document.getElementById('energyConsumptionChart').getContext('2d'),
-        'Average Energy Consumption (Wh)',
-        Utils.CHART_COLORS.amber
-    );
-    charts.energyConsumptionChart.customConfig = {
-        chartType: 'line',
-        yAxis: 'energyConsumption'
-    };
-    charts.complianceChart = createDoughnutChart(
-        document.getElementById('complianceChart').getContext('2d'),
-        'Compliance',
-        [Utils.CHART_COLORS.teal, Utils.CHART_COLORS.coral]
-    );
-    charts.complianceChart.customConfig = {
-        chartType: 'doughnut_special', // A special name for our hardcoded chart
-        yAxis: 'policyCompliance'
-    };
-    charts.helpfulnessChart = createLineChart(
-        document.getElementById('helpfulnessChart').getContext('2d'),
-        'Average Helpfulness Score',
-        Utils.CHART_COLORS.purple,
-        { min: 1, max: 5 }
-    );
-    charts.helpfulnessChart.customConfig = {
-        chartType: 'line',
-        yAxis: 'responseHelpfulness'
-    };
 }
 
 // ---------- SSE updates ----------
@@ -650,6 +630,199 @@ function setupSSE() {
     evtSource.onerror = (err) => console.error('SSE error:', err);
 }
 
+async function deleteGraph(id, chartCardElement) {
+    try {
+        const isAdmin = document.querySelector("#isAdmin");
+        if (!isAdmin) {
+            return;
+        }
+        const response = await fetch('/api/deleteGraph', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            // Send the ID in the body as requested
+            body: JSON.stringify({ id: id })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete graph from server');
+        }
+
+
+        // Destroy and remove from the global 'charts' object
+        if (charts[id]) {
+            if (charts[id] instanceof Chart) {
+                charts[id].destroy();
+            }
+            delete charts[id];
+        }
+
+        // Remove the chart card from the DOM
+        chartCardElement.remove();
+
+        if (typeof showNotification === 'function') {
+            showNotification('Chart deleted successfully.', 'success');
+        } else {
+            console.log(`Successfully deleted graph ${id}`);
+        }
+
+    } catch (error) {
+        console.error('Error deleting graph:', error);
+        if (typeof showNotification === 'function') {
+            showNotification(`Error: ${error.message}`, 'error');
+        }
+    }
+}
+
+/**
+ * Fetches chart config and populates/shows the inline edit form.
+ */
+async function openEditForm(id) {
+    const formContainer = document.getElementById(`edit-form-${id}`);
+    if (!formContainer) return;
+
+    const chartCard = formContainer.closest('.chart-card');
+    if (!chartCard) return;
+
+    const canvas = chartCard.querySelector('canvas');
+    const kpiWrapper = chartCard.querySelector('.kpi-content-wrapper');
+
+    // Check if form is already open
+    if (formContainer.innerHTML !== "") {
+        closeEditForm(id); // Already open, so close it
+        return;
+    }
+
+    try {
+        const ALL_SIZE_CLASSES = ['chart-tiny', 'chart-regular', 'chart-large', 'chart-massive'];
+        let originalSize = 'chart-regular'; // Default fallback
+
+        for (const sizeClass of ALL_SIZE_CLASSES) {
+            if (chartCard.classList.contains(sizeClass)) {
+                originalSize = sizeClass;
+                break;
+            }
+        }
+
+        // Store the original size on the element
+        chartCard.dataset.originalSize = originalSize;
+
+        // Force the card to be 'regular' for a standardized edit UI
+        chartCard.classList.remove(...ALL_SIZE_CLASSES);
+        chartCard.classList.add('chart-regular');
+
+        // Hide the chart content
+        if (canvas) canvas.style.display = 'none';
+        if (kpiWrapper) kpiWrapper.style.display = 'none';
+
+        // Fetch the current config
+        const response = await fetch(`/api/getChartConfig/${id}`);
+        if (!response.ok) throw new Error('Failed to fetch config');
+
+        const { config } = await response.json();
+
+        // Build and inject the form HTML
+        formContainer.innerHTML = `
+            <label for="edit-title-${id}">Chart Title:</label>
+            <input type="text" id="edit-title-${id}" value="${config.title}">
+
+            <label>Chart Size:</label>
+            <div class="size-selector">
+                <div>
+                    <input type="radio" id="edit-size-tiny-${id}" name="edit-size-${id}" value="tiny" ${config.chartSize === 'tiny' ? 'checked' : ''}>
+                    <label for="edit-size-tiny-${id}">Tiny</label>
+                </div>
+                <div>
+                    <input type="radio" id="edit-size-regular-${id}" name="edit-size-${id}" value="regular" ${config.chartSize === 'regular' ? 'checked' : ''}>
+                    <label for="edit-size-regular-${id}">Regular</label>
+                </div>
+                <div>
+                    <input type="radio" id="edit-size-large-${id}" name="edit-size-${id}" value="large" ${config.chartSize === 'large' ? 'checked' : ''}>
+                    <label for="edit-size-large-${id}">Large</label>
+                </div>
+                <div>
+                    <input type="radio" id="edit-size-massive-${id}" name="edit-size-${id}" value="massive" ${config.chartSize === 'massive' ? 'checked' : ''}>
+                    <label for="edit-size-massive-${id}">Massive</label>
+                </div>
+             </div>
+
+             <div class="form-actions">
+                <button type="button" class="cancel-edit-btn" data-id="${id}">Cancel</button>
+                <button type="button" class="save-edit-btn" data-id="${id}">Save</button>
+            </div>
+        `;
+
+        // 3. Show the form
+        formContainer.style.display = 'block';
+
+    } catch (error) {
+        console.error('Error opening edit form:', error);
+        formContainer.innerHTML = '<p style="color: red;">Error loading data.</p>';
+        formContainer.style.display = 'block';
+    }
+}
+
+/**
+ * Hides and clears the inline edit form.
+ */
+function closeEditForm(id) {
+    const formContainer = document.getElementById(`edit-form-${id}`);
+    if (!formContainer) return;
+
+    const chartCard = formContainer.closest('.chart-card');
+    if (!chartCard) return;
+
+    const canvas = chartCard.querySelector('canvas');
+    const kpiWrapper = chartCard.querySelector('.kpi-content-wrapper');
+
+    const originalSize = chartCard.dataset.originalSize || 'chart-regular';
+    const ALL_SIZE_CLASSES = ['chart-tiny', 'chart-regular', 'chart-large', 'chart-massive'];
+
+    chartCard.classList.remove(...ALL_SIZE_CLASSES);
+    chartCard.classList.add(originalSize);
+    delete chartCard.dataset.originalSize; // Clean up
+
+    if (canvas) canvas.style.display = 'block';
+    if (kpiWrapper) kpiWrapper.style.display = 'flex'; // KPIs use flex
+
+    // Hide and clear the form
+    formContainer.style.display = 'none';
+    formContainer.innerHTML = ''; // This fixes the edit-cancel-edit bug
+}
+
+/**
+ * Gathers data from form, POSTs to update endpoint, and reloads charts.
+ */
+async function handleSaveEdit(id) {
+    const newTitle = document.getElementById(`edit-title-${id}`).value;
+    const newSize = document.querySelector(`input[name="edit-size-${id}"]:checked`).value;
+
+    try {
+        const response = await fetch('/api/updateGraph', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, newTitle, newSize })
+        });
+
+        if (!response.ok) throw new Error('Failed to save changes.');
+
+        // Success!
+        await loadChartsFromDatabase();
+
+        if (typeof showNotification === 'function') {
+            showNotification('Chart updated!', 'success');
+        }
+
+    } catch (error) {
+        console.error('Error saving chart:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('Error: ' + error.message, 'error');
+        }
+    }
+}
+
 function resetCharts() {
 
     Object.values(charts).forEach(chart => {
@@ -665,13 +838,65 @@ function resetCharts() {
     });
 }
 
+/**
+    * Drag and Drop helper
+    * Walks the DOM, builds a flat array of all chart IDs in their new order,
+    * and sends it to the backend.
+    */
+async function saveNewOrder() {
+    const mainContainer = document.querySelector('.charts-container');
+    if (!mainContainer) return;
+
+    let newOrderArray = [];
+
+    for (const child of mainContainer.children) {
+
+        // If it's a regular/large/massive card, just add its ID.
+        // We check for dataset.id to make sure it's a chart card.
+        if (child.classList.contains('chart-card') && child.dataset.id) {
+            newOrderArray.push({ id: child.dataset.id });
+        }
+
+        // If it's a tiny group wrapper
+        if (child.classList.contains('tiny-group-wrapper')) {
+            for (const tinyCard of child.children) {
+                if (tinyCard.dataset.id) {
+                    newOrderArray.push({ id: tinyCard.dataset.id });
+                }
+            }
+        }
+    }
+
+    try {
+        const response = await fetch('/api/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newOrder: newOrderArray })
+        });
+
+        if (!response.ok) {
+            throw new Error('Server failed to save new order.');
+        }
+
+        console.log('New chart order saved.');
+        if (typeof showNotification === 'function') {
+            showNotification('Chart order saved!', 'success');
+        }
+
+    } catch (error) {
+        console.error('Error saving chart order:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('Error: Could not save chart order.', 'error');
+        }
+    }
+}
+
 // ---------- Setup ----------
 window.myChartUtils = {
     resetCharts
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await initCharts();
     await loadChartsFromDatabase();
     setupSSE();
 
@@ -679,4 +904,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     modelSelect?.addEventListener('change', () => {
         populateAllCharts();
     });
+
+    // Delete / Edit Chart Listener
+    document.querySelector('.charts-container').addEventListener('click', function (event) {
+
+        // --- 1. Handle DELETE Button ---
+        const deleteBtn = event.target.closest('.delete-chart-btn');
+        if (deleteBtn) {
+            const chartId = deleteBtn.dataset.id;
+            const chartCard = deleteBtn.closest('.chart-card');
+            let chartTitle = chartId;
+            const chartInstance = charts[chartId];
+
+            if (chartInstance && chartInstance.customConfig) {
+                chartTitle = chartInstance.customConfig.title;
+            }
+
+            if (confirm(`Are you sure you want to delete the chart "${chartTitle}"?`)) {
+                deleteGraph(chartId, chartCard);
+            }
+            return; // Done
+        }
+
+        // --- 2. Handle EDIT Button ---
+        const editBtn = event.target.closest('.edit-chart-btn');
+        if (editBtn) {
+            const chartId = editBtn.dataset.id;
+            openEditForm(chartId); // This function will fetch data and toggle
+            return; // Done
+        }
+
+        // --- 3. Handle CANCEL Button ---
+        const cancelBtn = event.target.closest('.cancel-edit-btn');
+        if (cancelBtn) {
+            const chartId = cancelBtn.dataset.id;
+            closeEditForm(chartId);
+            return; // Done
+        }
+
+        // --- 4. Handle SAVE Button ---
+        const saveBtn = event.target.closest('.save-edit-btn');
+        if (saveBtn) {
+            const chartId = saveBtn.dataset.id;
+            handleSaveEdit(chartId);
+            return; // Done
+        }
+    });
+
+    const mainContainer = document.querySelector('.charts-container');
+    if (mainContainer) {
+        new Sortable(mainContainer, {
+            group: 'main-charts',
+            animation: 150,  // Smooth animation
+            // Ignore drags starting on forms or buttons
+            preventOnFilter: true,
+            onEnd: saveNewOrder
+        });
+    }
 });

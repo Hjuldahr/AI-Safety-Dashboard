@@ -19,6 +19,9 @@ const User_Log_Schema = new mongoose.Schema({
             'Alert_Deleted',
             'Report_Created',
             'Report_Deleted',
+            'Chart_Created',
+            'Chart_Modified',
+            'Chart_Deleted',
             'Unspecified_Event'
         ],
         required: true,

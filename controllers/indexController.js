@@ -45,7 +45,7 @@ const getRecentData = async (req, res) => {
             logsByModel[modelKey] = oldestFirstLogs;
         }
 
-        const configs = await ChartConfig.find();
+        const configs = await ChartConfig.find().sort({ order: 1 });
 
         res.status(200).json({
             logs: logsByModel,
