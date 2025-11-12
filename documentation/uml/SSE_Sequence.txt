@@ -1,0 +1,27 @@
+@startuml
+participant "Chart.js" as chartjs
+participant "IndexRouter.js" as indexRouter
+participant "indexController.js" as indexController
+participant "Ai_Log" as AI_Log
+participant "Scheduler.js" as Scheduler
+participant "SchedulerState.js" as SchedulerState
+participant "app.js" as app
+
+'on page load
+chartjs -> indexRouter: GET /api/recentData
+indexRouter -> indexController: getRecentData
+indexController -> AI_Log: await AI_Log.find()
+AI_Log -> indexController : recentLogs
+indexController  -> chartjs: const logs = await response.json();
+
+'Server Side Events
+app -> Scheduler: setupSSE(app)
+'setupSSE creates a list of active clients, and on every interval it pushes data to those clients.
+Scheduler -> app: 
+app -> Scheduler : setupScheduler()
+Scheduler -> SchedulerState : check active state
+SchedulerState -> Scheduler : returns state
+Scheduler -> AI_Log: save model data in schedulerTick()
+chartjs -> Scheduler: setupSSE() (connects over /events, which adds user to active client list)
+Scheduler -> chartjs : Sends data to all clients in active client list
+@enduml

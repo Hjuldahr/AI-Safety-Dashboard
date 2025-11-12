@@ -17,6 +17,7 @@
     padding: 2rem 2rem;
     box-sizing: border-box; /* Ensures padding is included in the element's total width */
     background-color: var(--header-bg-color);
+    z-index: 100;
 }
 
 .site-header h1 {

@@ -240,6 +240,32 @@ input[type="text"]:focus, select:focus {
     color: #ef4444;
 }
 
+/* Edit (pencil) button: same style as delete but uses pencil icon and different hover color */
+.edit-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #9ca3af;
+    cursor: pointer;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+    margin-right: 0.5rem;
+}
+.alert-items li:hover .edit-btn {
+    visibility: visible;
+    opacity: 1;
+}
+.edit-btn:hover {
+    color: var(--primary-color);
+}
+
+.alert-actions {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
 
 /* Alert Log Table */
 .table-container {

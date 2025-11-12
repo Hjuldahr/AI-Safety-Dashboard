@@ -14,15 +14,22 @@ const User_Log_Schema = new mongoose.Schema({
             'Login',
             'Logout',
             'Signup',
-            'Failed_Login',
+            'Alert_Created',
+            'Alert_Modified',
+            'Alert_Deleted',
+            'Report_Created',
+            'Report_Deleted',
+            'Chart_Created',
+            'Chart_Modified',
+            'Chart_Deleted',
             'Unspecified_Event'
         ],
         required: true,
         default: 'Unspecified_Event'
     },
     details: {
-        type: mongoose.Schema.Types.Mixed, // flexible field for extra context (IP, metadata, etc.)
-        default: {}
+        type: String,
+        required: true,
     }
 }, { timestamps: true });
 
@@ -31,8 +38,15 @@ const User_Log_Schema = new mongoose.Schema({
 
 /**
  * Add a single log entry.
+ *
+ * Example usages:
+ * await User_Log.addLog(newUser._id, 'Signup', `Successful signup from IP: ${req.ip}`);
+ * User_Log.addLog(req.user._id, 'Logout', 'User logged out.').catch(err => console.error('Failed to write log:', err));
+ * 
+ * First usage waits for the log to complete before continuing (not always needed), second one writes the log in
+ *  the background and suppresses any errors caused by this.
  */
-User_Log_Schema.statics.addLog = async function (userID, eventType, details = {}) {
+User_Log_Schema.statics.addLog = async function (userID, eventType, details) {
     return this.create({ userID, eventType, details });
 };
 

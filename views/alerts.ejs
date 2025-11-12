@@ -5,9 +5,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Alerts</title>
+
+  <!-- CSS -->
   <link rel="stylesheet" href="/css/fullSite.css">
+  <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="css/alerts.css">
+  <link rel="stylesheet" href="/css/nav.css">
+  <link rel="stylesheet" href="/css/notifications.css">
+
+  <!-- Scripts -->
   <script src="js/alerts.js" defer></script>
+  <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script src="/js/notifications.js" defer></script>
 </head>
 
 <body>
@@ -109,15 +118,15 @@
 
         <!-- Alert Log Section -->
         <div class="card alert-log-panel">
-          <h2 class="card-title">Alert Log</h2>
+          <h2 class="card-title">Alert History</h2>
           <div class="table-container">
             <table class="alert-log-table">
               <thead>
                 <tr>
                   <th>Level</th>
                   <th>Time</th>
-                  <th>Alert Name</th>
-                  <th>Alert Details</th>
+                  <th>Alert</th>
+                  <th>Triggered By</th>
                 </tr>
               </thead>
               <tbody id="alert-log-body">
