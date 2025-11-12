@@ -36,9 +36,9 @@ function getCurrentModel() {
 
 function clearDynamicCharts() {
     document.querySelectorAll('.dynamic-chart-card').forEach(card => card.remove());
+    document.querySelectorAll('.tiny-group-wrapper').forEach(wrapper => wrapper.remove());
 
     for (const id in charts) {
-        // This logic is now safe, as all charts are dynamic
         if (charts[id] instanceof Chart) {
             charts[id].destroy();
         }
@@ -383,7 +383,7 @@ async function loadChartsFromDatabase() {
             chartCard.dataset.id = config._id;
 
             if (chartSize === 'tiny') {
-                if (!currentTinyGroup) {
+                if (!currentTinyGroup || currentTinyGroup.childElementCount >= 4) {
                     currentTinyGroup = document.createElement('div');
                     currentTinyGroup.className = 'chart-card-group tiny-group-wrapper';
 
@@ -392,7 +392,12 @@ async function loadChartsFromDatabase() {
                     container.appendChild(currentTinyGroup);
 
                     new Sortable(currentTinyGroup, {
-                        group: 'tiny-charts',
+                        group: {
+                            name: 'tiny-charts',
+                            put: function (to) {
+                                return to.el.children.length < 4;
+                            }
+                        },
                         animation: 150,
                         preventOnFilter: true,
                         onEnd: saveNewOrder
@@ -709,9 +714,24 @@ async function openEditForm(id) {
         // Store the original size on the element
         chartCard.dataset.originalSize = originalSize;
 
-        // Force the card to be 'regular' for a standardized edit UI
-        chartCard.classList.remove(...ALL_SIZE_CLASSES);
-        chartCard.classList.add('chart-regular');
+        if (originalSize === 'tiny') {
+            // "Break out" of the tiny wrapper
+            const wrapper = chartCard.closest('.tiny-group-wrapper');
+            if (wrapper) {
+                chartCard.dataset.wrapperId = wrapper.id;
+                const container = wrapper.closest('.charts-container');
+
+                if (container) {
+                    container.insertBefore(chartCard, wrapper);
+                }
+            }
+            // Force it to be regular size
+            chartCard.classList.remove('chart-tiny');
+            chartCard.classList.add('chart-regular');
+
+        } else if (originalSize === 'large' || originalSize === 'massive') {
+            // Do Nothing
+        }
 
         // Hide the chart content
         if (canvas) canvas.style.display = 'none';
@@ -783,6 +803,15 @@ function closeEditForm(id) {
     chartCard.classList.remove(...ALL_SIZE_CLASSES);
     chartCard.classList.add(originalSize);
     delete chartCard.dataset.originalSize; // Clean up
+
+    // If this card was broken out of a wrapper, put it back.
+    if (chartCard.dataset.wrapperId) {
+        const wrapper = document.getElementById(chartCard.dataset.wrapperId);
+        if (wrapper) {
+            wrapper.appendChild(chartCard);
+        }
+        delete chartCard.dataset.wrapperId; // Clean up
+    }
 
     if (canvas) canvas.style.display = 'block';
     if (kpiWrapper) kpiWrapper.style.display = 'flex'; // KPIs use flex
@@ -883,6 +912,9 @@ async function saveNewOrder() {
             showNotification('Chart order saved!', 'success');
         }
 
+        //Refresh the layout
+        await loadChartsFromDatabase();
+
     } catch (error) {
         console.error('Error saving chart order:', error);
         if (typeof showNotification === 'function') {
@@ -956,7 +988,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         new Sortable(mainContainer, {
             group: 'main-charts',
             animation: 150,  // Smooth animation
-            // Ignore drags starting on forms or buttons
+            filter: 'input, button, .edit-chart-btn, .delete-chart-btn',
             preventOnFilter: true,
             onEnd: saveNewOrder
         });
