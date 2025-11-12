@@ -9,13 +9,13 @@
   "chartSize": "regular"
 },
 {
-  "title": "Second Large Chart can rename",
-  "chartType": "line",
+  "title": "Response Helpfulness by Model Name",
+  "chartType": "bar",
   "chartSize": "large",
-  "yAxis": "responseTime",
-  "xAxis": null,
+  "yAxis": "responseHelpfulness",
+  "xAxis": "modelName",
   "category": null,
-  "splitBy": "modelName",
+  "splitBy": null,
   "order": 11
 },
 {
