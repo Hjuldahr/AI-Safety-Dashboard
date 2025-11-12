@@ -16,10 +16,12 @@ async function badModel() {
     const summary = AIGeneralizer("BadModel", calls);
     return {
         modelName: summary.model,
-        avgCompliance: summary.policyCompliance.mean * 100,
-        avgHelpfulness: summary.responseHelpfulness.mean * 5,
-        avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000
+        policyCompliance: summary.policyCompliance.mean * 100,
+        responseHelpfulness: summary.responseHelpfulness.mean * 5,
+        responseTime: summary.responseTime.mean,
+        energyConsumption: summary.energyConsumption.mean * 1000,
+        queryCount: summary.queryCount,
+        responseTimestamp:  summary.responseTimestamp
     };
 }
 
@@ -28,10 +30,12 @@ async function goodModel() {
     const summary = AIGeneralizer("GoodModel", calls);
     return {
         modelName: summary.model,
-        avgCompliance: summary.policyCompliance.mean * 100,
-        avgHelpfulness: summary.responseHelpfulness.mean * 5,
-        avgResponseTime: summary.responseTime.mean,
-        avgEnergyConsumption: summary.energyConsumption.mean * 1000
+        policyCompliance: summary.policyCompliance.mean * 100,
+        responseHelpfulness: summary.responseHelpfulness.mean * 5,
+        responseTime: summary.responseTime.mean,
+        energyConsumption: summary.energyConsumption.mean * 1000,
+        queryCount: summary.queryCount,
+        responseTimestamp:  summary.responseTimestamp
     };
 }
 
@@ -41,7 +45,8 @@ function nullModel() {
         avgCompliance: 0,
         avgHelpfulness: 0,
         avgResponseTime: 0,
-        avgEnergyConsumption: 0
+        avgEnergyConsumption: 0,
+        queryCount: 0
     };
 }
 
@@ -69,39 +74,28 @@ function setupSSE(app) {
 async function schedulerTick() {
     if (schedulerState.isPaused) return;
 
-    let data;
-    switch (schedulerState.activeModel) {
-        case "GoodModel":
-            data = await goodModel();
-            break;
-        case "BadModel":
-            data = await badModel();
-            break;
-        default:
-            data = nullModel();
-            break;
-    }
-
-    // Save to DB
-    const dataToSave = {
-        modelName: data.modelName,
-        policyCompliance: data.avgCompliance,
-        responseHelpfulness: data.avgHelpfulness,
-        responseTime: data.avgResponseTime,
-        energyConsumption: data.avgEnergyConsumption
-    };
+    let goodData = await goodModel();
+    let badData = await badModel();
 
     try {
-        await AI_Log.addLog(dataToSave);
+        await AI_Log.addLog(goodData);
+        await AI_Log.addLog(badData);
 
         // Keep only last MAX_RECORDS
         const count = await AI_Log.countDocuments();
         if (count > MAX_RECORDS) {
+            // ToDo: refactor this lol
+            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
             await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
         }
 
+        const dataToSend = {
+            GoodModel: goodData,
+            BadModel: badData
+        };
+
         // Broadcast to all clients
-        const sseData = `data: ${JSON.stringify(data)}\n\n`;
+        const sseData = `data: ${JSON.stringify(dataToSend)}\n\n`;
         activeClients.forEach(client => client.write(sseData));
     } catch (err) {
         console.error('Scheduler tick error:', err);
@@ -128,7 +122,7 @@ function updateSchedulerSettings({ isPaused, activeModel, interval }) {
         restart = true;
     }
 
-    if (activeModel && activeModel !== schedulerState.activeModel) {
+    if (activeModel) {
         schedulerState.activeModel = activeModel;
         console.log('[Scheduler] Active model changed to', activeModel);
     }
