@@ -1,5 +1,8 @@
 import User from '../models/user.js';
+import Chart_Config from '../models/Chart_Config.js';
 import mongoose from 'mongoose';
+import defaultCharts from './seed_data/defaultCharts.json' with { type: 'json' };
+
 
 const connectDB = async () => {
     try {
@@ -44,4 +47,22 @@ const seedAdminUser = async () => {
     }
 };
 
-export {connectDB, seedDataBase };
+const seedCharts = async () => {
+    try {
+
+        const count = await Chart_Config.countDocuments();
+
+        if (count > 0) {
+            console.log("-INFO- Chart(s) already exist in DB, no default charts created.");
+            return;
+        }
+
+        await Chart_Config.insertMany(defaultCharts);
+
+        console.log("-INFO- Default charts seeded successfully.");
+    } catch (error) {
+        onsole.error('Error seeding default charts:', error);
+    }
+};
+
+export { connectDB, seedDataBase, seedCharts };
