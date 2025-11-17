@@ -42,15 +42,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // Config / constant mappings
     // --------------------------------------------------
     const FIELD_MAP = {
-        'Harmful Messages': 'harmfulMessages',
-        'Accuracy': 'accuracy',
-        'Usage': 'usage'
+        'Policy Compliance': 'policyCompliance',
+        'Response Helpfulness': 'responseHelpfulness',
+        'Response Time': 'responseTime',
+        'Energy Consumption': 'energyConsumption'
     };
 
     const REVERSE_FIELD_MAP = {
-        'harmfulMessages': 'Harmful Messages',
-        'accuracy': 'Accuracy',
-        'usage': 'Usage'
+        'policyCompliance': 'Policy Compliance',
+        'responseHelpfulness': 'Response Helpfulness',
+        'responseTime': 'Response Time',
+        'energyConsumption': 'Energy Consumption'
     };
 
     const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte' };
@@ -79,9 +81,10 @@ document.addEventListener('DOMContentLoaded', function () {
       <span class="logic-separator">${logicalOperator}</span>
       <select class="data-type">
           <option value="">-- select data type --</option>
-          <option value="Harmful Messages">Harmful Messages</option>
-          <option value="Accuracy">Accuracy</option>
-          <option value="Usage">Usage</option>
+          <option value="Policy Compliance">Policy Compliance</option>
+          <option value="Response Helpfulness">Response Helpfulness</option>
+          <option value="Response Time">Response Time</option>
+          <option value="Energy Consumption">Energy Consumption</option>
       </select>
       <select class="operator-type">
           <option value="">-- select operator --</option>
@@ -321,10 +324,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!ruleJSON) return;
         const uiReadable = formatRuleReadableFromUI();
         const created = Date.now();
-        const lastTrigger = null;
-        const isActive = false;
         try {
-            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, lastTrigger, isActive });
+            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created });
             await loadLiveAlerts();
             const serverAlert = data.alert || {};
             const serverHuman = data.humanRule || uiReadable || '';
