@@ -66,6 +66,16 @@ function setupSSE(app) {
     });
 }
 
+// Broadcast a named SSE event with JSON payload to all connected clients
+function broadcastEvent(eventType, data) {
+    try {
+        const sseData = `event: ${eventType}\n` + `data: ${JSON.stringify(data)}\n\n`;
+        activeClients.forEach(client => client.write(sseData));
+    } catch (e) {
+        console.error('[SSE] Failed to broadcast event', e);
+    }
+}
+
 // ---------- Scheduler Tick ----------
 async function schedulerTick() {
     if (schedulerState.isPaused) return;
@@ -156,3 +166,4 @@ function setupScheduler() {
 }
 
 export default { setupSSE, setupScheduler, updateSchedulerSettings };
+export { broadcastEvent };

@@ -1,5 +1,6 @@
 import Alert from "../models/alert_model.js";
 import AlertLog from "../models/alert_log.js";
+import { broadcastEvent } from './scheduler.js';
 
 export default async function evaluateAlerts(data, options = {}) {
     const { cooldownMs = 60000 } = options;
@@ -42,7 +43,23 @@ export default async function evaluateAlerts(data, options = {}) {
                     alertRule: alert.alertRule,
                     created: alert.created
                 };
-                await AlertLog.create({ alert: alert._id, alertSnapshot: snapshot });
+                try {
+                    const created = await AlertLog.create({ alert: alert._id, alertSnapshot: snapshot });
+                    // Emit SSE 'alert' event with basic info
+                    try {
+                        const payload = {
+                            _id: created._id,
+                            alert: created.alert,
+                            timestamp: created.timestamp,
+                            alertSnapshot: created.alertSnapshot
+                        };
+                        broadcastEvent('alert', payload);
+                    } catch (emitErr) {
+                        console.error('[AlertEvaluator] Failed to broadcast alert SSE:', emitErr);
+                    }
+                } catch (createErr) {
+                    console.error('[AlertEvaluator] Failed to create AlertLog for', alert._id, createErr);
+                }
             } catch (createErr) {
                 console.error('[AlertEvaluator] Failed to create AlertLog for', alert._id, createErr);
             }

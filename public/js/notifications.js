@@ -19,6 +19,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Select DOM Elements
     const bellButton = document.querySelector('.notification-bell');
     const historyContainer = document.getElementById('notification-history');
+    const badgeEl = document.getElementById('notification-badge');
+
+    // Server-driven unread count helpers
+    const fetchUnreadCount = async () => {
+        try {
+            const resp = await fetch('/alerts/unread-count');
+            if (!resp.ok) return 0;
+            const data = await resp.json();
+            return Number(data && data.unread ? data.unread : 0);
+        } catch (e) {
+            console.error('Failed to fetch unread count:', e);
+            return 0;
+        }
+    };
+
+    const updateBadgeFromCount = (unread) => {
+        try {
+            if (!badgeEl) return;
+            if (unread > 0) {
+                badgeEl.textContent = unread > 99 ? '99+' : String(unread);
+                badgeEl.classList.add('show');
+            } else {
+                badgeEl.textContent = '';
+                badgeEl.classList.remove('show');
+            }
+        } catch (e) {
+            console.error('Failed to update notification badge:', e);
+        }
+    };
 
     // Function to populate the alert history list from data
     const populateAlertHistory = async () => {
@@ -33,6 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create the list
         const list = document.createElement('ul');
         const alerts = await fetchRecentAlerts(10);
+
+        // Update badge from server unread count (server authoritative)
+        try {
+            const unread = await fetchUnreadCount();
+            updateBadgeFromCount(unread);
+        } catch (e) {
+            /* ignore */
+        }
+
         alerts.forEach(alert => {
             const listItem = document.createElement('li');
             const level = (alert.level || 'Info').toString().toLowerCase();
@@ -64,10 +102,26 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     //  Event Listener to toggle the history list visibility
-    bellButton.addEventListener('click', (event) => {
+    bellButton.addEventListener('click', async (event) => {
         // Stop the click from bubbling up to the document, which would instantly close the list
         event.stopPropagation();
-        historyContainer.classList.toggle('show');
+
+        const willShow = !historyContainer.classList.contains('show');
+        if (willShow) {
+            // Populate and then mark as read
+            await populateAlertHistory();
+            historyContainer.classList.add('show');
+            // Mark read on server
+            try {
+                await fetch('/alerts/mark-read', { method: 'POST' });
+            } catch (e) {
+                console.error('Failed to mark alerts read on server:', e);
+            }
+            // clear badge UI
+            updateBadgeFromCount(0);
+        } else {
+            historyContainer.classList.remove('show');
+        }
     });
 
     //  Event Listener to close the list when clicking anywhere else on the page
@@ -76,6 +130,33 @@ document.addEventListener('DOMContentLoaded', () => {
             historyContainer.classList.remove('show');
         }
     });
+
+    // Initial badge population on load using server unread count
+    (async () => {
+        try {
+            const unread = await fetchUnreadCount();
+            updateBadgeFromCount(unread);
+        } catch (e) {
+            console.error('Failed initial fetch for unread count:', e);
+        }
+    })();
+
+    // Setup SSE to receive live alert events and refresh unread count
+    try {
+        const evtSource = new EventSource('/events');
+        evtSource.addEventListener('alert', async (ev) => {
+            // When an alert arrives, refresh unread count
+            try {
+                const unread = await fetchUnreadCount();
+                updateBadgeFromCount(unread);
+            } catch (e) {
+                console.error('Failed to refresh unread count after alert event:', e);
+            }
+        });
+        evtSource.onerror = (err) => console.error('SSE error (notifications):', err);
+    } catch (e) {
+        console.error('Failed to setup EventSource for notifications:', e);
+    }
 
     const formatAlertTime = (date) => {
         const year = date.getFullYear();

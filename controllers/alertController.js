@@ -1,6 +1,7 @@
 import Alert from "../models/alert_model.js";
 import User_Log from "../models/User_Log.js";
 import AlertLog from "../models/alert_log.js";
+import User from "../models/user.js";
 
 const getPage = async (req, res) => {
     try{
@@ -209,4 +210,34 @@ const updateAlertById = async (req, res) => {
     }
 };
 
-export default { getPage, createAlert, getLiveAlerts, getRecentAlertLogs, removeAlertById, updateAlertById };
+
+
+// GET /alerts/unread-count - return number of AlertLog entries newer than user's last seen
+const getUnreadCount = async (req, res) => {
+    try {
+        if (!req.user) return res.status(200).json({ unread: 0 });
+        const userId = req.user._id;
+        const user = await User.findById(userId).lean();
+        const lastSeen = user && user.alertsLastSeen ? new Date(user.alertsLastSeen) : new Date(0);
+        const count = await AlertLog.countDocuments({ timestamp: { $gt: lastSeen } });
+        return res.status(200).json({ unread: count });
+    } catch (error) {
+        console.error('Error fetching unread count:', error);
+        return res.status(500).json({ unread: 0 });
+    }
+};
+
+// POST /alerts/mark-read - mark all alerts as read for current user
+const markAlertsRead = async (req, res) => {
+    try {
+        if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+        const userId = req.user._id;
+        await User.findByIdAndUpdate(userId, { alertsLastSeen: new Date() });
+        return res.status(200).json({ message: 'Marked read' });
+    } catch (error) {
+        console.error('Error marking alerts read:', error);
+        return res.status(500).json({ message: 'Failed to mark read' });
+    }
+};
+
+export default { getPage, createAlert, getLiveAlerts, getRecentAlertLogs, removeAlertById, updateAlertById, getUnreadCount, markAlertsRead };
