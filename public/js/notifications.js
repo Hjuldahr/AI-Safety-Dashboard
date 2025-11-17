@@ -142,9 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     // Setup SSE to receive live alert events and refresh unread count
+    // Setup SSE to receive live alert events and refresh unread count
+    let __notificationsEvtSource = null;
     try {
-        const evtSource = new EventSource('/events');
-        evtSource.addEventListener('alert', async (ev) => {
+        __notificationsEvtSource = new EventSource('/events');
+        __notificationsEvtSource.addEventListener('alert', async (ev) => {
             // When an alert arrives, refresh unread count
             try {
                 const unread = await fetchUnreadCount();
@@ -153,10 +155,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Failed to refresh unread count after alert event:', e);
             }
         });
-        evtSource.onerror = (err) => console.error('SSE error (notifications):', err);
+        __notificationsEvtSource.onerror = (err) => console.error('SSE error (notifications):', err);
     } catch (e) {
         console.error('Failed to setup EventSource for notifications:', e);
     }
+
+    // Close SSE when the page unloads to avoid lingering connections
+    window.addEventListener('beforeunload', () => {
+        try {
+            if (__notificationsEvtSource) {
+                __notificationsEvtSource.close();
+                __notificationsEvtSource = null;
+            }
+        } catch (e) { /* ignore */ }
+    });
 
     const formatAlertTime = (date) => {
         const year = date.getFullYear();

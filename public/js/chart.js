@@ -181,7 +181,11 @@ async function initCharts() {
 
 // ---------- SSE updates ----------
 function setupSSE() {
-    const evtSource = new EventSource('/events');
+    // Keep a reference so we can close it on unload
+    if (window.__chartEvtSource) {
+        try { window.__chartEvtSource.close(); } catch (e) { }
+    }
+    window.__chartEvtSource = new EventSource('/events');
     evtSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
         const now = new Date().toLocaleTimeString();
@@ -205,7 +209,7 @@ function setupSSE() {
         // saveChartsToCache(); // persist after each update
     };
 
-    evtSource.onerror = (err) => console.error('SSE error:', err);
+    window.__chartEvtSource.onerror = (err) => console.error('SSE error:', err);
 }
 
 // ---------- Setup ----------
@@ -216,6 +220,11 @@ window.myChartUtils = {
 document.addEventListener('DOMContentLoaded', async () => {
     await initCharts();
     setupSSE();
+
+    // Close EventSource on unload to avoid lingering connections
+    window.addEventListener('beforeunload', () => {
+        try { if (window.__chartEvtSource) { window.__chartEvtSource.close(); window.__chartEvtSource = null; } } catch (e) { }
+    });
 
     const modelSelect = document.getElementById('model-select');
     modelSelect?.addEventListener('change', async () => {
