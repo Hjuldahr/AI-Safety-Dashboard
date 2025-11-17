@@ -2,6 +2,7 @@ import Alert from "../models/alert_model.js";
 import User_Log from "../models/User_Log.js";
 import AlertLog from "../models/alert_log.js";
 import User from "../models/user.js";
+import AI_Log from "../models/AI_Log.js";
 
 const getPage = async (req, res) => {
     try{
@@ -9,7 +10,7 @@ const getPage = async (req, res) => {
         const rawLogs = await AlertLog.find().sort({ timestamp: -1 }).populate('alert').lean();
         // Build human readable representation for the view
         const alertLogs = rawLogs.map(l => {
-            const a = l.alert || l.alertSnapshot || {}; // fallback to snapshot if alert deleted
+            const a = l.alertSnapshot || l.alert || {};
             let humanRule = '';
             try {
                 humanRule = Alert.convertToHumanFormat(a.alertRule);
@@ -21,14 +22,25 @@ const getPage = async (req, res) => {
                 level: a.alertLevel || 'Info',
                 timestamp: l.timestamp,
                 alertName: a.alertName || '',
+                modelName: a.modelName || null,
                 humanRule
             };
         });
 
+        // Also fetch distinct model names from AI logs to populate the UI
+        let modelNames = [];
+        try {
+            modelNames = await AI_Log.distinct('modelName');
+        } catch (mnErr) {
+            console.error('Failed to fetch model names for alerts page:', mnErr);
+            modelNames = [];
+        }
+
         res.render("alerts", {
             user: req.user,
             alerts: alerts,
-            alertLogs: alertLogs
+            alertLogs: alertLogs,
+            models: modelNames
         }); 
     }catch (error){
         console.error("Error fetching alert page:", error);
@@ -38,7 +50,7 @@ const getPage = async (req, res) => {
 // POST /alerts/create - create a new alert
 const createAlert = async (req, res) => {
     try {
-        const { alertName, alertLevel, alertRule, created } = req.body;
+        const { alertName, alertLevel, alertRule, created, modelName } = req.body;
 
         // Normalize and validate rule using model static
         let normalizedRule;
@@ -48,7 +60,7 @@ const createAlert = async (req, res) => {
             return res.status(400).json({ message: 'Invalid alert rule: ' + err.message });
         }
 
-    const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created });
+    const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created, modelName: modelName || null });
         await newAlert.save();
         // Add a human readable version for UI/logging
         const humanRule = Alert.convertToHumanFormat(normalizedRule);
@@ -82,7 +94,7 @@ const getRecentAlertLogs = async (req, res) => {
         const rawLogs = await AlertLog.find().sort({ timestamp: -1 }).limit(limit).populate('alert').lean();
 
         const alertLogs = rawLogs.map(l => {
-            const a = l.alert || l.alertSnapshot || {};
+            const a = l.alertSnapshot || l.alert || {};
             let humanRule = '';
             try {
                 humanRule = Alert.convertToHumanFormat(a.alertRule);
@@ -94,6 +106,7 @@ const getRecentAlertLogs = async (req, res) => {
                 level: a.alertLevel || 'Info',
                 timestamp: l.timestamp,
                 alertName: a.alertName || '',
+                modelName: a.modelName || null,
                 humanRule
             };
         });
@@ -153,7 +166,7 @@ const updateAlertById = async (req, res) => {
 
         // Build a concise diff of what changed
         try {
-            const fieldsToCheck = ['alertName', 'alertLevel', 'alertRule'];
+            const fieldsToCheck = ['alertName', 'alertLevel', 'alertRule', 'modelName'];
 
             const stableStringify = (obj) => {
                 const seen = new WeakSet();

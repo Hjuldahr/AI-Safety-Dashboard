@@ -19,6 +19,42 @@ export default async function evaluateAlerts(data, options = {}) {
     for (const alert of alerts) {
         try {
             if (!alert || !alert.alertRule) continue;
+            if (alert.modelName) {
+                const name = String(alert.modelName);
+                const candidates = new Set();
+                if (data && typeof data === 'object') {
+                    // Common direct fields
+                    if (data.modelName) candidates.add(String(data.modelName));
+                    if (data.model) candidates.add(String(data.model));
+                    if (data.model && typeof data.model === 'object') {
+                        if (data.model.name) candidates.add(String(data.model.name));
+                        if (data.model.modelName) candidates.add(String(data.model.modelName));
+                    }
+
+                    // Check top-level named payloads (e.g. GoodModel, BadModel)
+                    for (const k of Object.keys(data)) {
+                        try {
+                            // include the key name itself as a candidate
+                            candidates.add(String(k));
+                            const candidate = data[k];
+                            if (candidate && typeof candidate === 'object') {
+                                if (candidate.modelName) candidates.add(String(candidate.modelName));
+                                if (candidate.model) candidates.add(String(candidate.model));
+                                if (candidate.model && typeof candidate.model === 'object') {
+                                    if (candidate.model.name) candidates.add(String(candidate.model.name));
+                                    if (candidate.model.modelName) candidates.add(String(candidate.model.modelName));
+                                }
+                            }
+                        } catch (e) {
+                            // ignore malformed payloads
+                        }
+                    }
+                }
+                if (!Array.from(candidates).includes(name)) {
+                    // incoming data is not from the model this alert targets
+                    continue;
+                }
+            }
             const matched = evaluateRule(alert.alertRule, data);
             if (!matched) continue;
 
@@ -40,6 +76,7 @@ export default async function evaluateAlerts(data, options = {}) {
                     _id: alert._id,
                     alertName: alert.alertName,
                     alertLevel: alert.alertLevel,
+                    modelName: alert.modelName || null,
                     alertRule: alert.alertRule,
                     created: alert.created
                 };
@@ -79,25 +116,63 @@ function evaluateRule(rule, data) {
         if (keys[0] === '$and') return arr.every(r => evaluateRule(r, data));
         return arr.some(r => evaluateRule(r, data));
     }
-
     const field = keys[0];
     const opObj = rule[field];
     if (!opObj || typeof opObj !== 'object') return false;
     const op = Object.keys(opObj)[0];
     const val = opObj[op];
 
-    if (data[field] === undefined || data[field] === null) return false;
+    // support nested/dotted field names like "GoodModel.responseTime"
+    function getValueByPath(obj, path) {
+        if (!obj || !path) return undefined;
+        const parts = String(path).split('.');
+        let cur = obj;
+        for (const p of parts) {
+            if (cur === undefined || cur === null) return undefined;
+            cur = cur[p];
+        }
+        return cur;
+    }
 
-    const actual = Number(data[field]);
-    const expected = Number(val);
-    if (Number.isNaN(actual) || Number.isNaN(expected)) return false;
+    let actualRaw = getValueByPath(data, field);
+    // If not found at the top-level path, attempt to locate the field
+    // inside any top-level object (e.g. data = { GoodModel: {...}, BadModel: {...} })
+    if (actualRaw === undefined || actualRaw === null) {
+        if (typeof field === 'string' && !field.includes('.')) {
+            for (const k of Object.keys(data)) {
+                try {
+                    const candidate = data[k];
+                    if (candidate && typeof candidate === 'object' && Object.prototype.hasOwnProperty.call(candidate, field)) {
+                        actualRaw = candidate[field];
+                        break;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+        }
+    }
+    if (actualRaw === undefined || actualRaw === null) return false;
+
+    // Try numeric comparison first; if values are not numeric and op is $eq, fall back to string compare
+    const actualNum = Number(actualRaw);
+    const expectedNum = Number(val);
+    const bothNumeric = !Number.isNaN(actualNum) && !Number.isNaN(expectedNum);
+
+    if (!bothNumeric) {
+        if (op === '$eq') {
+            return String(actualRaw) === String(val);
+        }
+        // other comparison ops require numeric values
+        return false;
+    }
 
     switch (op) {
-        case '$gt': return actual > expected;
-        case '$gte': return actual >= expected;
-        case '$lt': return actual < expected;
-        case '$lte': return actual <= expected;
-        case '$eq': return actual === expected;
+        case '$gt': return actualNum > expectedNum;
+        case '$gte': return actualNum >= expectedNum;
+        case '$lt': return actualNum < expectedNum;
+        case '$lte': return actualNum <= expectedNum;
+        case '$eq': return actualNum === expectedNum;
         default: return false;
     }
 }

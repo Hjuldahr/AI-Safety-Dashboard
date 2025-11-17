@@ -83,7 +83,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Create a span for the alert text: prefer humanRule then alertName
             const alertText = document.createElement('span');
             alertText.className = 'alert-text';
-            alertText.textContent = alert.humanRule || alert.alertName || 'Alert';
+            // Include model name if present to clarify which model triggered the alert
+            const modelPart = alert.modelName ? `[${alert.modelName}] ` : '';
+            alertText.textContent = modelPart + (alert.humanRule || alert.alertName || 'Alert');
 
             // Create a span for the timestamp
             const alertTime = document.createElement('span');

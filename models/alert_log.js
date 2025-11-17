@@ -9,6 +9,8 @@ const AlertSnapshotSchema = new Schema({
     },
     alertName: String,
     alertLevel: String,
+    // Optional model name the alert targets
+    modelName: String,
     alertRule: Schema.Types.Mixed,
     created: Date
 }, { _id: false });

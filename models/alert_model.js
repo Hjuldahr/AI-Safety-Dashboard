@@ -7,6 +7,12 @@ const alert_model_Schema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // Optional name of the model this alert targets
+    modelName: {
+        type: String,
+        required: false,
+        default: null
+    },
     // Alert level (e.g., Critical, High, Medium, Info)
     alertLevel: {
         type: String,
