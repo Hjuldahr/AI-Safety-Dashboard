@@ -74,6 +74,36 @@ const getLiveAlerts = async (req, res) => {
     }
 };
 
+// GET /alerts/recent - return recent AlertLog entries as JSON
+const getRecentAlertLogs = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const rawLogs = await AlertLog.find().sort({ timestamp: -1 }).limit(limit).populate('alert').lean();
+
+        const alertLogs = rawLogs.map(l => {
+            const a = l.alert || l.alertSnapshot || {};
+            let humanRule = '';
+            try {
+                humanRule = Alert.convertToHumanFormat(a.alertRule);
+            } catch (err) {
+                humanRule = '';
+            }
+            return {
+                _id: l._id,
+                level: a.alertLevel || 'Info',
+                timestamp: l.timestamp,
+                alertName: a.alertName || '',
+                humanRule
+            };
+        });
+
+        return res.status(200).json({ alertLogs });
+    } catch (error) {
+        console.error('Error fetching recent alert logs:', error);
+        return res.status(500).json({ message: 'Failed to fetch recent alert logs.' });
+    }
+};
+
 // DELETE /alerts/:id - remove alert by id
 const removeAlertById = async (req, res) => {
     try {
@@ -179,4 +209,4 @@ const updateAlertById = async (req, res) => {
     }
 };
 
-export default { getPage, createAlert, getLiveAlerts, removeAlertById, updateAlertById };
+export default { getPage, createAlert, getLiveAlerts, getRecentAlertLogs, removeAlertById, updateAlertById };

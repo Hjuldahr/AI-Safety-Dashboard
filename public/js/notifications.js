@@ -2,41 +2,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Notification Bell & History Logic
 
-    // Mock Data for recent alerts
-    const mockAlerts = [
-        {
-            level: 'Critical',
-            text: '"Policy Compliance" less than 80, and "Response Helpfulness" less than 3.',
-            timestamp: new Date('2025-10-15T22:25:15Z') // Using ISO format with Z for UTC
-        },
-        {
-            level: 'Info',
-            text: '"Energy Consumption" greater than 100W.',
-            timestamp: new Date('2025-10-15T22:25:11Z')
-        },
-        {
-            level: 'High',
-            text: '"Policy Compliance" less than 85, and "Response Helpfulness" less than 4.',
-            timestamp: new Date('2025-10-15T22:24:30Z')
-        },
-        {
-            level: 'High',
-            text: '"Response Time" greater than 1000, and "Response Helpfulness" less than 2.',
-            timestamp: new Date('2025-10-15T22:22:05Z')
-        },
-        {
-            level: 'Medium',
-            text: '"Energy Consumption" greater than 200W.',
-            timestamp: new Date('2025-10-15T21:55:45Z')
-        },
-    ];
+    // Fetch recent alert logs from server
+    const fetchRecentAlerts = async (limit = 10) => {
+        try {
+            const resp = await fetch(`/alerts/recent?limit=${limit}`);
+            if (!resp.ok) return [];
+            const data = await resp.json();
+            // expect data.alertLogs array with { level, timestamp, alertName, humanRule }
+            return Array.isArray(data.alertLogs) ? data.alertLogs : [];
+        } catch (e) {
+            console.error('Failed to fetch recent alerts for notifications:', e);
+            return [];
+        }
+    };
 
     // Select DOM Elements
     const bellButton = document.querySelector('.notification-bell');
     const historyContainer = document.getElementById('notification-history');
 
     // Function to populate the alert history list from data
-    const populateAlertHistory = () => {
+    const populateAlertHistory = async () => {
         historyContainer.innerHTML = ''; // Clear existing content
 
         // Add a header
@@ -47,23 +32,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Create the list
         const list = document.createElement('ul');
-        mockAlerts.forEach(alert => {
+        const alerts = await fetchRecentAlerts(10);
+        alerts.forEach(alert => {
             const listItem = document.createElement('li');
-            listItem.className = `notification-history-item ${alert.level.toLowerCase()}`;
+            const level = (alert.level || 'Info').toString().toLowerCase();
+            listItem.className = `notification-history-item ${level}`;
 
             // Create the link element
             const link = document.createElement('a');
             link.href = '/alerts';
 
-            // Create a span for the alert text
+            // Create a span for the alert text: prefer humanRule then alertName
             const alertText = document.createElement('span');
             alertText.className = 'alert-text';
-            alertText.textContent = alert.text;
+            alertText.textContent = alert.humanRule || alert.alertName || 'Alert';
 
             // Create a span for the timestamp
             const alertTime = document.createElement('span');
             alertTime.className = 'alert-time';
-            alertTime.textContent = formatAlertTime(alert.timestamp);
+            const ts = alert.timestamp ? new Date(alert.timestamp) : new Date();
+            alertTime.textContent = formatAlertTime(ts);
 
             // Append text and time to the link, then link to the list item
             link.appendChild(alertText);
