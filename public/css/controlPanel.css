@@ -1,5 +1,5 @@
 /* Styling for the controls container */
-.content > div:first-child {
+.content>div:first-child {
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -9,13 +9,13 @@
 
 /* Styling for the overall controls area */
 .controls-panel {
-    background-color: var(--primary-light); 
+    background-color: var(--primary-light);
     border-color: #c7d2fe;
     padding: 20px;
     margin-bottom: 30px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
-    border-left: 5px solid #007bff; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid #007bff;
 }
 
 /* Styling for the title */
@@ -24,14 +24,15 @@
     font-size: 1.5rem;
     margin-top: 0;
     /* Increase margin-bottom to create space between title and buttons */
-    margin-bottom: 10px; 
+    margin-bottom: 10px;
     padding-bottom: 10px;
-    border-bottom: 1px solid #eee; 
+    border-bottom: 1px solid #eee;
 }
 
 /* Grouping for button and select */
 .controls-group {
-    display: flex; /* Keeps button and select side-by-side */
+    display: flex;
+    /* Keeps button and select side-by-side */
     gap: 15px;
     align-items: center;
     /* Add a small top margin if needed, but the h2 margin should suffice */
@@ -50,6 +51,7 @@ button {
     transition: background-color 0.2s, transform 0.1s;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 button:hover {
     background-color: #0056b3;
     transform: translateY(-1px);
@@ -62,13 +64,92 @@ button:active {
 
 /* Select/Dropdown Styling */
 select {
-  background-color: white;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 10px 35px 10px 15px;
-  background-image: url("data:image/svg+xml;utf8,<svg fill='%236b7280' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px;
-  appearance: none; /* hides native arrow */
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 10px 35px 10px 15px;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='%236b7280' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    appearance: none;
+    /* hides native arrow */
+}
+
+#new-chart-modal {
+    display: none;
+    /* Hidden by default */
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+    max-width: 600px;
+}
+
+#new-chart-modal.active {
+    display: block;
+    /* Show it when active */
+}
+
+#new-chart-modal h3 {
+    margin-top: 0;
+    font-weight: 600;
+}
+
+.chart-form-step {
+    margin-top: 20px;
+}
+
+/* Button styles for chart type icons */
+.chart-type-selector {
+    display: flex;
+    gap: 15px;
+}
+
+.chart-type-btn {
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    /* For the emoji icons */
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.chart-type-btn:hover {
+    background-color: #0056b3;
+}
+
+/* Selected chart type */
+.chart-type-btn.selected {
+    background-color: #0056b3;
+}
+
+/* Dynamically added form elements */
+.chart-form-step label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.chart-form-step select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+/* =Final "Add Chart" button */
+#submit-new-chart {
+    background-color: #28a745;
+    /* color: white; */
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+#submit-new-chart:hover {
+    background-color: #218838;
 }

@@ -1,0 +1,190 @@
+[{
+  "title": "Queries by Model",
+  "chartType": "pie",
+  "yAxis": null,
+  "xAxis": null,
+  "category": "modelName",
+  "splitBy": null,
+  "order": 8,
+  "chartSize": "regular"
+},
+{
+  "title": "Response Helpfulness by Model Name",
+  "chartType": "bar",
+  "chartSize": "large",
+  "yAxis": "responseHelpfulness",
+  "xAxis": "modelName",
+  "category": null,
+  "splitBy": null,
+  "order": 11
+},
+{
+  "title": "Avg Response Time",
+  "chartType": "bar",
+  "chartSize": "regular",
+  "yAxis": "responseTime",
+  "xAxis": "modelName",
+  "category": null,
+  "splitBy": null,
+  "order": 2
+},
+{
+  "title": "Energy Usage",
+  "chartType": "line",
+  "chartSize": "tiny",
+  "yAxis": "energyConsumption",
+  "xAxis": null,
+  "category": null,
+  "splitBy": "modelName",
+  "order": 4
+},
+{
+  "title": "TotalQueries",
+  "chartType": "pie",
+  "chartSize": "tiny",
+  "yAxis": null,
+  "xAxis": null,
+  "category": "modelName",
+  "splitBy": null,
+  "order": 6
+},
+{
+  "title": "Energy Usage (Wh)",
+  "chartType": "measure",
+  "chartSize": "tiny",
+  "yAxis": "energyConsumption",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null,
+  "order": 7
+},
+{
+  "title": "Tiny Line",
+  "chartType": "line",
+  "chartSize": "tiny",
+  "yAxis": "responseTime",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null,
+  "order": 12
+},
+{
+  "title": "Tiny Line 2",
+  "chartType": "line",
+  "chartSize": "tiny",
+  "yAxis": "energyConsumption",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null,
+  "order": 13
+},
+{
+  "title": "Tiny Line 3",
+  "chartType": "line",
+  "chartSize": "tiny",
+  "yAxis": "responseHelpfulness",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null,
+  "order": 14
+},
+{
+  "title": "Tiny Line 4",
+  "chartType": "line",
+  "chartSize": "tiny",
+  "yAxis": "policyCompliance",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null,
+  "order": 15
+},
+{
+  "title": "Response Helpfulness by Model Name",
+  "chartType": "line",
+  "chartSize": "large",
+  "order": 17,
+  "yAxis": "responseHelpfulness",
+  "xAxis": null,
+  "category": null,
+  "splitBy": "modelName"
+},
+{
+  "title": "Policy Compliance split by Model Name",
+  "chartType": "line",
+  "chartSize": "large",
+  "order": 18,
+  "yAxis": "policyCompliance",
+  "xAxis": null,
+  "category": null,
+  "splitBy": "modelName"
+},
+{
+  "title": "Response Time (ms) split by Model Name",
+  "chartType": "line",
+  "chartSize": "massive",
+  "order": 16,
+  "yAxis": "responseTime",
+  "xAxis": null,
+  "category": null,
+  "splitBy": "modelName"
+},
+{
+  "title": "Average Response Time (ms)",
+  "chartType": "line",
+  "chartSize": "tiny",
+  "order": 5,
+  "yAxis": "responseTime",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null
+},
+{
+  "title": "Average Energy Consumption",
+  "chartType": "line",
+  "chartSize": "regular",
+  "order": 10,
+  "yAxis": "energyConsumption",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null
+},
+{
+  "title": "Average Response Helpfulness (1-5)",
+  "chartType": "line",
+  "chartSize": "large",
+  "order": 3,
+  "yAxis": "responseHelpfulness",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null
+},
+{
+  "title": "Average Policy Compliance (0 through 100%)",
+  "chartType": "line",
+  "chartSize": "regular",
+  "order": 1,
+  "yAxis": "policyCompliance",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null
+},
+{
+  "title": "Average Response Helpfulness (1-5) by Model Name",
+  "chartType": "bar",
+  "chartSize": "regular",
+  "order": 9,
+  "yAxis": "responseHelpfulness",
+  "xAxis": "modelName",
+  "category": null,
+  "splitBy": null
+},
+{
+  "title": "Average Policy Compliance (0 through 100%)",
+  "chartType": "measure",
+  "chartSize": "regular",
+  "order": 0,
+  "yAxis": "policyCompliance",
+  "xAxis": null,
+  "category": null,
+  "splitBy": null
+}]

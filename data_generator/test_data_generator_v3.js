@@ -86,12 +86,16 @@ export function AIGeneralizer(modelName, calls) {
         ec.push(call.energyConsumption);
     }
 
+    const now = new Date().getTime();
+
     return {
         model: modelName,
         time: computeStats(t),
         policyCompliance: computeStats(pc),
         responseHelpfulness: computeStats(rh),
         responseTime: computeStats(rt),
-        energyConsumption: computeStats(ec)
+        energyConsumption: computeStats(ec),
+        queryCount: calls.length,
+        responseTimestamp:  now
     };
 }

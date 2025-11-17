@@ -14,7 +14,7 @@ const AI_Log_Schema = new mongoose.Schema({
     responseHelpfulness: {
         type: Number,
         required: true,
-        default: 0
+        default: 0,
     },
     responseTime: {
         type: Number,
@@ -25,6 +25,11 @@ const AI_Log_Schema = new mongoose.Schema({
         type: Number,
         required: true,
         default: 0
+    },
+    queryCount: {
+        type: Number,
+        required: true,
+        default: 1
     },
     responseTimestamp: {
         type: Number,
@@ -40,15 +45,6 @@ AI_Log_Schema.statics.addLog = function(logData) {
     const log = new this(logData);
     return log.save();
 };
-
-/**
- * Example usages:
- * await User_Log.addLog(newUser._id, 'Signup', `Successful signup from IP: ${req.ip}`);
- * User_Log.addLog(req.user._id, 'Logout', 'User logged out.').catch(err => console.error('Failed to write log:', err));
- * 
- * First usage waits for the log to complete before continuing (not always needed), second one writes the log in
- *  the background and suppresses any errors caused by this.
- */
 
 // Add multiple logs at once
 AI_Log_Schema.statics.addLogs = function(logsArray) {
