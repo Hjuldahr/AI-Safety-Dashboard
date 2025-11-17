@@ -75,7 +75,7 @@ const getLiveAlerts = async (req, res) => {
     }
 };
 
-// GET /alerts/recent - return recent AlertLog entries as JSON
+// GET /alerts/recent - return recent AlertLog entries as JSON (for notifications)
 const getRecentAlertLogs = async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 10;
@@ -212,7 +212,7 @@ const updateAlertById = async (req, res) => {
 
 
 
-// GET /alerts/unread-count - return number of AlertLog entries newer than user's last seen
+// GET /alerts/unread-count - return number of AlertLog entries newer than user's last seen (for notifications)
 const getUnreadCount = async (req, res) => {
     try {
         if (!req.user) return res.status(200).json({ unread: 0 });
@@ -227,7 +227,7 @@ const getUnreadCount = async (req, res) => {
     }
 };
 
-// POST /alerts/mark-read - mark all alerts as read for current user
+// POST /alerts/mark-read - mark all alerts as read for current user (for notifications)
 const markAlertsRead = async (req, res) => {
     try {
         if (!req.user) return res.status(401).json({ message: 'Not authenticated' });

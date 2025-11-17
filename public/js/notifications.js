@@ -63,12 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.createElement('ul');
         const alerts = await fetchRecentAlerts(10);
 
-        // Update badge from server unread count (server authoritative)
+        // Update badge from server unread count
         try {
             const unread = await fetchUnreadCount();
             updateBadgeFromCount(unread);
         } catch (e) {
-            /* ignore */
+            // ignore
         }
 
         alerts.forEach(alert => {
@@ -142,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     // Setup SSE to receive live alert events and refresh unread count
-    // Setup SSE to receive live alert events and refresh unread count
     let __notificationsEvtSource = null;
     try {
         __notificationsEvtSource = new EventSource('/events');
@@ -167,7 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 __notificationsEvtSource.close();
                 __notificationsEvtSource = null;
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+            // ignore
+         }
     });
 
     const formatAlertTime = (date) => {
