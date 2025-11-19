@@ -564,7 +564,13 @@ function populateAllCharts() {
 
 // ---------- SSE updates ----------
 function setupSSE() {
+    if (window.__chartEvtSource) {
+        try { window.__chartEvtSource.close(); } catch (e) { console.warn('Error closing previous EventSource', e); }
+    }
+
+    // Create new EventSource and keep a reference for future closes
     const evtSource = new EventSource('/events');
+    window.__chartEvtSource = evtSource;
 
     evtSource.onmessage = (event) => {
         if (isReloadingCharts) {
@@ -683,7 +689,9 @@ function setupSSE() {
         }
     };
 
-    evtSource.onerror = (err) => console.error('SSE error:', err);
+    evtSource.onerror = (err) => {
+        console.warn('EventSource error', err);
+    };
 }
 
 async function deleteGraph(id, chartCardElement) {
@@ -971,6 +979,11 @@ window.myChartUtils = {
 document.addEventListener('DOMContentLoaded', async () => {
     await loadChartsFromDatabase();
     setupSSE();
+
+    // Close EventSource on unload to avoid lingering connections
+    window.addEventListener('beforeunload', () => {
+        try { if (window.__chartEvtSource) { window.__chartEvtSource.close(); window.__chartEvtSource = null; } } catch (e) { }
+    });
 
     const modelSelect = document.getElementById('model-select');
     modelSelect?.addEventListener('change', () => {
