@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const logicalOperatorsContainer = document.querySelector('.logical-operators-container');
     const alertNameInput = document.getElementById('alert-name');
     const alertLevelSelect = document.getElementById('alert-level');
+    const modelSelect = document.getElementById('model-name');
 
     // Buttons used for edit flow (created once)
     const saveBtn = document.createElement('button');
@@ -42,15 +43,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // Config / constant mappings
     // --------------------------------------------------
     const FIELD_MAP = {
-        'Harmful Messages': 'harmfulMessages',
-        'Accuracy': 'accuracy',
-        'Usage': 'usage'
+        'Policy Compliance': 'policyCompliance',
+        'Response Helpfulness': 'responseHelpfulness',
+        'Response Time': 'responseTime',
+        'Energy Consumption': 'energyConsumption'
     };
 
     const REVERSE_FIELD_MAP = {
-        'harmfulMessages': 'Harmful Messages',
-        'accuracy': 'Accuracy',
-        'usage': 'Usage'
+        'policyCompliance': 'Policy Compliance',
+        'responseHelpfulness': 'Response Helpfulness',
+        'responseTime': 'Response Time',
+        'energyConsumption': 'Energy Consumption'
     };
 
     const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte' };
@@ -79,9 +82,10 @@ document.addEventListener('DOMContentLoaded', function () {
       <span class="logic-separator">${logicalOperator}</span>
       <select class="data-type">
           <option value="">-- select data type --</option>
-          <option value="Harmful Messages">Harmful Messages</option>
-          <option value="Accuracy">Accuracy</option>
-          <option value="Usage">Usage</option>
+          <option value="Policy Compliance">Policy Compliance</option>
+          <option value="Response Helpfulness">Response Helpfulness</option>
+          <option value="Response Time">Response Time</option>
+          <option value="Energy Consumption">Energy Consumption</option>
       </select>
       <select class="operator-type">
           <option value="">-- select operator --</option>
@@ -175,6 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function resetAlertBuilder() {
         alertNameInput.value = '';
         alertLevelSelect.selectedIndex = 0;
+        if (modelSelect) modelSelect.selectedIndex = 0;
         while (rulesContainer.children.length > 1) rulesContainer.removeChild(rulesContainer.lastChild);
         const firstRuleRow = rulesContainer.querySelector('.rule-row');
         if (firstRuleRow) {
@@ -255,6 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <td><span class="level-tag ${levelClass}">${(serverAlert && serverAlert.alertLevel) || level}</span></td>
             <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
             <td>${(serverAlert && serverAlert.alertName) || ''}</td>
+            <td class="model-cell">${(serverAlert && (serverAlert.modelName || serverAlert.alertSnapshot && serverAlert.alertSnapshot.modelName)) || '-'}</td>
             <td class="details-cell">${humanRule || ''}</td>
         `;
         alertLogBody.prepend(newRow);
@@ -316,20 +322,17 @@ document.addEventListener('DOMContentLoaded', function () {
     addAlertBtn.addEventListener('click', async function () {
         const alertName = alertNameInput.value || 'New Alert';
         const alertLevel = alertLevelSelect.value;
+        const modelName = modelSelect ? (modelSelect.value || null) : null;
         if (!alertLevel) { alert('Please select an alert level.'); return; }
         const ruleJSON = buildRuleJSON();
         if (!ruleJSON) return;
         const uiReadable = formatRuleReadableFromUI();
         const created = Date.now();
-        const lastTrigger = null;
-        const isActive = false;
         try {
-            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, lastTrigger, isActive });
+            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, modelName });
             await loadLiveAlerts();
-            const serverAlert = data.alert || {};
-            const serverHuman = data.humanRule || uiReadable || '';
-            prependAlertLogRow(serverAlert, serverHuman);
-            if ((serverAlert.alertLevel || alertLevel) === 'Critical') {
+            // Visual flash for critical alerts (based on UI selection)
+            if ((data && data.alert && data.alert.alertLevel || alertLevel) === 'Critical') {
                 document.body.classList.add('critical-flash');
                 setTimeout(() => document.body.classList.remove('critical-flash'), 1500);
             }
@@ -394,6 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentEditId = alertObj._id;
         alertNameInput.value = alertObj.alertName || '';
         alertLevelSelect.value = alertObj.alertLevel || 'Info';
+        if (modelSelect) modelSelect.value = alertObj.modelName || '';
         populateRuleBuilderFromRule(alertObj.alertRule || {});
         addAlertBtn.style.display = 'none';
         saveBtn.style.display = '';
@@ -415,11 +419,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!currentEditId) return alert('No alert selected for editing');
         const alertName = alertNameInput.value || 'New Alert';
         const alertLevel = alertLevelSelect.value;
+        const modelName = modelSelect ? (modelSelect.value || null) : null;
         if (!alertLevel) return alert('Please select an alert level.');
         const ruleJSON = buildRuleJSON();
         if (!ruleJSON) return;
         try {
-            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON });
+            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON, modelName });
             await loadLiveAlerts();
             cancelEdit();
         } catch (err) {
