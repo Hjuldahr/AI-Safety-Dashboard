@@ -15,6 +15,7 @@
   <!-- Scripts -->
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script src="/js/notifications.js" defer></script>
+  <script src="/js/reports.js" defer></script>
 </head>
 
 <body>
@@ -23,8 +24,95 @@
   <%- include('components/nav') %>
 
   <main class="content">
-    <%- include('components/notifications') %>
-    <h1>Reports</h1>
+
+    <!-- NOTE: IDs & names tuned to match public/js/reports.js -->
+    <form id="report-form" style="max-width: 700px; margin: 0 auto 24px;">
+      <h2>Generate a Report</h2>
+
+      <label for="reportTitle">Report Title</label>
+      <input 
+          type="text" 
+          id="reportTitle" 
+          name="reportTitle" 
+          placeholder="e.g. Monthly Performance Overview"
+          required
+          style="width: 100%; padding: 8px; margin-bottom: 12px;"
+      />
+
+      <label for="startDate">Start Date</label>
+      <input 
+          type="date" 
+          id="startDate" 
+          name="startDate"
+          required
+          style="width: 100%; padding: 8px; margin-bottom: 12px;"
+      />
+
+      <label for="endDate">End Date</label>
+      <input 
+          type="date" 
+          id="endDate" 
+          name="endDate"
+          required
+          style="width: 100%; padding: 8px; margin-bottom: 12px;"
+      />
+
+      <label for="reportType">Report Type</label>
+      <select 
+          id="reportType" 
+          name="reportType"
+          style="width: 100%; padding: 8px; margin-bottom: 12px;"
+      >
+          <option value="summary">Summary</option>
+          <option value="detailed">Detailed</option>
+          <option value="comparison">Comparison</option>
+      </select>
+
+      <label for="modelName">Model</label>
+      <select
+          id="modelName" 
+          name="modelName"
+          style="width: 100%; padding: 8px; margin-bottom: 12px;"
+      >
+          <option value="GoodModel">Good Model</option>
+          <option value="BadModel">Bad Model</option>
+      </select>
+
+      <label for="notes">Additional Notes (optional)</label>
+      <textarea 
+          id="notes" 
+          name="notes"
+          placeholder="Enter any extra instructions for the report generator..."
+          rows="3"
+          style="width: 100%; padding: 8px; margin-bottom: 12px;"
+      ></textarea>
+
+      <div style="display:flex; gap:12px;">
+        <button 
+            id="report-submit"
+            type="submit"
+            style="flex:1; padding: 10px; background: #4a79e0; color: white; border: none; cursor: pointer;"
+        >
+            Generate Report
+        </button>
+
+        <button
+            id="report-download"
+            type="button"
+            style="flex:1; padding: 10px; background: #2c6f2c; color: white; border: none; cursor: pointer;"
+        >
+            Download Last
+        </button>
+      </div>
+    </form>
+
+    <p id="report-status" style="text-align:center; color:#666;"></p>
+
+    <!-- Inline preview: hidden until a PDF is generated -->
+    <div id="report-preview-wrapper" style="max-width:900px; margin: 16px auto; display:none;">
+      <iframe id="report-preview" style="width:100%; height:800px; border:1px solid #ddd;"></iframe>
+    </div>
+
   </main>
 
 </body>
