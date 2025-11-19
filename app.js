@@ -10,7 +10,7 @@ import MongoStore from 'connect-mongo';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
-import { connectDB, seedDataBase } from './config/database.js';
+import { connectDB, seedDataBase, seedCharts } from './config/database.js';
 
 dotenv.config();
 
@@ -78,5 +78,6 @@ const startServer = async () => {
 // Connect to the database and then start the server
 connectDB().then(async () => {
     await seedDataBase();
+    await seedCharts();
     startServer();
 });

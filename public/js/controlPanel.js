@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (yLabel && xLabel) title = `Average ${yLabel} by ${xLabel}`;
                 break;
             case 'pie':
-                if (cLabel) title = `Breakdown by ${cLabel}`;
+                if (cLabel) title = `Queries by ${cLabel}`;
                 break;
             case 'measure':
                 if (yLabel) title = `Average ${yLabel}`;

@@ -14,7 +14,7 @@ const AI_Log_Schema = new mongoose.Schema({
     responseHelpfulness: {
         type: Number,
         required: true,
-        default: 0
+        default: 0,
     },
     responseTime: {
         type: Number,

@@ -96,7 +96,6 @@ body {
 .chart-card canvas,
 .chart-card .kpi-content-wrapper {
     flex-grow: 1;
-    min-height: 0;
 }
 
 .kpi-content-wrapper {
@@ -104,6 +103,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    min-height: 100px;
 }
 
 
@@ -149,11 +149,18 @@ body {
 .tiny-group-wrapper {
     flex-basis: calc(33.333% - 60px);
     min-width: 300px;
-    height: 150px;
+    min-height: 150px;
+
+    height: 100%;
 
     display: flex;
+    justify-content: center;
     flex-wrap: wrap;
     margin: 10px;
+
+    /* background-color: rgba(0, 122, 204, 0.3); */
+    border: 2px solid rgba(0, 122, 204, 0.3);
+    border-radius: 20px;
 }
 
 /* The tiny charts THEMSELVES */
@@ -162,6 +169,7 @@ body {
     height: calc(100% - 10px);
     margin: 5px;
     min-width: 140px;
+    height: 100%;
     /* min-height: 120px; */
 
     padding: 5px;
@@ -188,78 +196,81 @@ body {
 
 /* Style for the new edit button */
 .edit-chart-btn {
-  position: absolute;
-  top: 8px;
-  /* Position it next to the delete button */
-  right: 45px; 
-  font-size: 15px; 
-  color: #999;
-  cursor: pointer;
-  z-index: 10;
-  line-height: 1;
-  transition: color 0.2s ease;
+    position: absolute;
+    top: 8px;
+    /* Position it next to the delete button */
+    right: 45px;
+    font-size: 15px;
+    color: #999;
+    cursor: pointer;
+    z-index: 10;
+    line-height: 1;
+    transition: color 0.2s ease;
 
-  display: flex;
-  align-items: center;
+    display: flex;
+    align-items: center;
 
-  height: 2em;
-  /* width: 2em; */
-  text-align: center;
+    height: 2em;
+    /* width: 2em; */
+    text-align: center;
 }
 
 .edit-chart-btn:hover {
-  color: #007acc; 
+    color: #007acc;
 }
 
 /* The edit form container */
 .edit-chart-form {
-  display: none; 
-  padding: 10px 0 0 0; 
-  border-top: 1px solid #eee;
-  margin-top: 10px;
+    display: none;
+    padding: 10px 0 0 0;
+    border-top: 1px solid #eee;
+    margin-top: 10px;
 }
 
 .edit-chart-form label {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: #333;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
 }
 
 .edit-chart-form input[type="text"] {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 .edit-chart-form .size-selector {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 15px;
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
 }
 
 .edit-chart-form .size-selector label {
-  font-size: 0.8rem;
-  margin-left: 3px;
+    font-size: 0.8rem;
+    margin-left: 3px;
 }
 
 .edit-chart-form .form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
 
 /* Target the form only inside a tiny card */
 .chart-tiny .edit-chart-form {
-    padding-top: 5px; /* Shrink top padding */
+    padding-top: 5px;
+    /* Shrink top padding */
 }
 
 /* Make the size selector a 2x2 grid */
 .chart-tiny .size-selector {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 columns */
-    gap: 3px; /* Small gap */
+    grid-template-columns: 1fr 1fr;
+    /* 2 columns */
+    gap: 3px;
+    /* Small gap */
     margin-bottom: 10px;
 }
 
@@ -277,16 +288,22 @@ body {
 
 /* Shrink the action buttons */
 .chart-tiny .form-actions button {
-    padding: 4px 8px; /* Less padding */
-    font-size: 0.8rem; /* Smaller font */
+    padding: 4px 8px;
+    /* Less padding */
+    font-size: 0.8rem;
+    /* Smaller font */
     font-weight: 500;
 }
 
 .chart-tiny .form-bottom-row {
-    display: flex; /* Creates the side-by-side layout */
-    justify-content: space-between; /* Pushes grid left, buttons right */
-    align-items: flex-start; /* Aligns them to the top */
-    gap: 8px; /* A small gap between the two columns */
+    display: flex;
+    /* Creates the side-by-side layout */
+    justify-content: space-between;
+    /* Pushes grid left, buttons right */
+    align-items: flex-start;
+    /* Aligns them to the top */
+    gap: 8px;
+    /* A small gap between the two columns */
 }
 
 /* Make the size selector a 2x2 grid */
@@ -294,7 +311,8 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 3px;
-    flex-grow: 1; /* Let it take available space */
+    flex-grow: 1;
+    /* Let it take available space */
 }
 
 /* Shrink the font for the labels inside */
@@ -313,8 +331,10 @@ body {
 .chart-tiny .form-actions {
     display: flex;
     flex-direction: column;
-    gap: 5px; /* Space between the stacked buttons */
-    flex-shrink: 0; /* Don't let this column shrink */
+    gap: 5px;
+    /* Space between the stacked buttons */
+    flex-shrink: 0;
+    /* Don't let this column shrink */
 }
 
 /* Shrink the action buttons */
@@ -322,7 +342,8 @@ body {
     padding: 4px 8px;
     font-size: 0.8rem;
     font-weight: 500;
-    width: 100%; /* Make them fill their column */
+    width: 100%;
+    /* Make them fill their column */
 }
 
 /* Shrink the title input */
@@ -332,9 +353,10 @@ body {
     margin-bottom: 5px;
 }
 
-/* Style for when you drag a chart over a tiny group wrapper */
-.tiny-group-wrapper.sortable-drag-over {
-    border: 2px dashed #007acc; /* Use your --primary-color if you want */
-    background-color: #f4f8ff;
-    box-shadow: inset 0 0 10px rgba(0,122,204,0.1);
-}
+@media (max-width: 1500px) { 
+    
+    .tiny-group-wrapper{
+        min-width: 400px;
+    }
+    
+ }

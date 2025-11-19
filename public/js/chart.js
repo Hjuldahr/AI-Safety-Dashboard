@@ -27,6 +27,7 @@ let allLogs = {};
 let allConfigs = [];
 
 const CACHE_MAX_POINTS = 15; // Maximum points to store in cache
+const TINY_CACHE_MAX_POINTS = 8;
 let isReloadingCharts = false;
 
 function getCurrentModel() {
@@ -36,9 +37,9 @@ function getCurrentModel() {
 
 function clearDynamicCharts() {
     document.querySelectorAll('.dynamic-chart-card').forEach(card => card.remove());
+    document.querySelectorAll('.tiny-group-wrapper').forEach(wrapper => wrapper.remove());
 
     for (const id in charts) {
-        // This logic is now safe, as all charts are dynamic
         if (charts[id] instanceof Chart) {
             charts[id].destroy();
         }
@@ -88,40 +89,64 @@ function createChartFromConfig(config, ctx) {
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                display: true
+                display: true,
+                labels: {
+                    font: {
+                        size: 14 // Default legend font size
+                    }
+                }
             },
             title: {
                 display: true,
                 text: config.title,
-                font: { size: 16 },
+                font: { size: 16 }, // Default title font size
                 color: 'dimgray'
             }
         },
         scales: {
-            x: { display: true },
-            y: { display: true }
+            x: {
+                display: true,
+                ticks: {
+                    font: {
+                        size: 12
+                    }
+                }
+            },
+            y: {
+                display: true,
+                ticks: {
+                    font: {
+                        size: 12
+                    }
+                }
+            }
         },
         devicePixelRatio: 3
-    };
-
-    options.plugins.title = {
-        display: true,
-        text: config.title,
-        font: { size: 16 },
-        color: 'dimgray'
     };
 
     if (config.chartSize === 'tiny') {
         options.plugins.legend.display = false; // Hide legend
         options.scales = { // Hide all axes
             x: { display: false },
-            y: { display: false }
+            y: { display: true }
         };
         options.plugins.title.font = { size: 12 }; // Use a smaller font
         options.plugins.title.padding = { top: 5, bottom: 5 }; // Give title a little space
 
         // Remove all padding *inside* the canvas
         options.layout = { padding: 0 };
+    }
+    else if (config.chartSize === 'regular') {
+        const regularTickSize = 10;
+
+        // Slightly smaller title
+        options.plugins.title.font = { size: 14 };
+
+        // Slightly smaller legend labels
+        options.plugins.legend.labels.font = { size: 10 };
+
+        options.scales.x.ticks.font = { size: regularTickSize };
+        options.scales.y.ticks.font = { size: regularTickSize };
     }
 
     let data = { labels: [], datasets: [] };
@@ -134,6 +159,11 @@ function createChartFromConfig(config, ctx) {
 }
 
 function mapLineData(chart, config, logs) {
+    const maxPoints = (config.chartSize === 'tiny') ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
+
+    // Helper function to get the correct slice of logs
+    const getLogSlice = (logArray) => logArray.slice(-maxPoints);
+
     const yField = config.yAxis;
 
     // Multi-Model, Split (by modelName)
@@ -142,12 +172,13 @@ function mapLineData(chart, config, logs) {
         const modelNames = Object.keys(allModelLogs);
         if (modelNames.length === 0) return;
 
-        const labels = allModelLogs[modelNames[0]].map(log =>
+        const slicedLogs = getLogSlice(allModelLogs[modelNames[0]]);
+        const labels = slicedLogs.map(log =>
             new Date(log.responseTimestamp).toLocaleTimeString()
         );
 
         const datasets = modelNames.map(modelName => {
-            const modelLogs = allModelLogs[modelName];
+            const modelLogs = getLogSlice(allModelLogs[modelName] || []);
             const color = getHashedColor(modelName);
             const data = modelLogs.map(log => log[yField]);
 
@@ -166,19 +197,17 @@ function mapLineData(chart, config, logs) {
     }
     // Single-Model, Split (by topic, etc.)
     else if (config.splitBy) {
+        const slicedLogs = getLogSlice(logs);
         const splitField = config.splitBy; // e.g., 'topic'
         const groups = {};
 
-        // Group the logs by the splitField
-        logs.forEach(log => {
-            const key = log[splitField] || 'unknown'; // Get the topic
-            if (!groups[key]) {
-                groups[key] = [];
-            }
+        slicedLogs.forEach(log => {
+            const key = log[splitField] || 'unknown';
+            if (!groups[key]) groups[key] = [];
             groups[key].push(log);
         });
 
-        const labels = logs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
+        const labels = slicedLogs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
 
         // Create a dataset for each group
         const datasets = Object.keys(groups).map(key => {
@@ -201,8 +230,9 @@ function mapLineData(chart, config, logs) {
     }
     // Single-Model, No Split (Default)
     else {
-        const labels = logs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
-        const data = logs.map(log => log[yField]);
+        const slicedLogs = getLogSlice(logs);
+        const labels = slicedLogs.map(log => new Date(log.responseTimestamp).toLocaleTimeString());
+        const data = slicedLogs.map(log => log[yField]);
         const color = getHashedColor(config.title);
 
         chart.data.labels = labels;
@@ -217,14 +247,11 @@ function mapLineData(chart, config, logs) {
     }
 
     // Set Y-axis title if its not tiny
-    if (config.chartSize !== 'tiny') {
-        chart.options.scales = {
-            y: {
-                title: {
-                    display: true,
-                    text: yField
-                }
-            }
+    if (config.chartSize !== 'tiny' && chart.options.scales.y) {
+        // modify scales dont replace it
+        chart.options.scales.y.title = {
+            display: true,
+            text: yField
         };
     }
 }
@@ -258,14 +285,12 @@ function mapBarData(chart, config, logs) {
         backgroundColor: backgroundColors
     }];
 
-    chart.options.scales = {
-        y: {
-            title: {
-                display: true,
-                text: yField
-            }
-        }
-    };
+    if (config.chartSize !== 'tiny' && chart.options.scales.y) {
+        chart.options.scales.y.title = {
+            display: true,
+            text: yField
+        };
+    }
 }
 
 function mapPieData(chart, config, logs) {
@@ -383,7 +408,7 @@ async function loadChartsFromDatabase() {
             chartCard.dataset.id = config._id;
 
             if (chartSize === 'tiny') {
-                if (!currentTinyGroup) {
+                if (!currentTinyGroup || currentTinyGroup.childElementCount >= 4) {
                     currentTinyGroup = document.createElement('div');
                     currentTinyGroup.className = 'chart-card-group tiny-group-wrapper';
 
@@ -392,7 +417,12 @@ async function loadChartsFromDatabase() {
                     container.appendChild(currentTinyGroup);
 
                     new Sortable(currentTinyGroup, {
-                        group: 'tiny-charts',
+                        group: {
+                            name: 'tiny-charts',
+                            put: function (to) {
+                                return to.el.children.length < 4;
+                            }
+                        },
                         animation: 150,
                         preventOnFilter: true,
                         onEnd: saveNewOrder
@@ -559,6 +589,8 @@ function setupSSE() {
                 config.category === 'modelName') {
                 const chart = chartOrElem;
 
+                const maxPoints = (config.chartSize === 'tiny') ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
+
                 // Bar and Pie are aggregations and will update on refresh/model-change
                 if (config.chartType === 'line') {
 
@@ -566,21 +598,41 @@ function setupSSE() {
 
                     chart.data.datasets.forEach(dataset => {
                         const modelName = dataset.label; // The label IS the model name
-
                         const modelData = data[modelName];
                         if (!modelData) return; // No data for this dataset
 
                         const newValue = modelData[config.yAxis];
+
                         if (newValue === undefined) return;
 
-                        dataset.data.push(newValue);
+                        let dataToPush = newValue;
 
-                        if (dataset.data.length > CACHE_MAX_POINTS) {
+                        if (config.splitBy === 'modelName') {
+                            // This is a multi-model chart, find the right data
+                            const modelData = data[modelName];
+                            if (modelData) {
+                                dataToPush = modelData[config.yAxis];
+                            } else {
+                                dataToPush = null; // No data for this model in this tick
+                            }
+                        }
+
+                        if (dataToPush !== null) {
+                            dataset.data.push(dataToPush);
+                        }
+
+                        // dataset.data.push(newValue);
+
+                        // if (dataset.data.length > CACHE_MAX_POINTS) {
+                        //     dataset.data.shift();
+                        // }
+
+                        if (dataset.data.length > maxPoints) {
                             dataset.data.shift();
                         }
                     });
 
-                    if (chart.data.labels.length > CACHE_MAX_POINTS) {
+                    if (chart.data.labels.length > maxPoints) {
                         chart.data.labels.shift();
                     }
 
@@ -598,11 +650,15 @@ function setupSSE() {
                 switch (config.chartType) {
                     case 'line':
                         const chart = chartOrElem;
+
+                        const maxPoints = (config.chartSize === 'tiny') ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
+
                         chart.data.labels.push(now);
                         if (chart.data.datasets.length > 0) {
                             chart.data.datasets[0].data.push(newValue);
                         }
-                        if (chart.data.labels.length > CACHE_MAX_POINTS) {
+
+                        if (chart.data.labels.length > maxPoints) {
                             chart.data.labels.shift();
                             chart.data.datasets[0].data.shift();
                         }
@@ -709,9 +765,24 @@ async function openEditForm(id) {
         // Store the original size on the element
         chartCard.dataset.originalSize = originalSize;
 
-        // Force the card to be 'regular' for a standardized edit UI
-        chartCard.classList.remove(...ALL_SIZE_CLASSES);
-        chartCard.classList.add('chart-regular');
+        if (originalSize === 'chart-tiny') {
+            // "Break out" of the tiny wrapper
+            const wrapper = chartCard.closest('.tiny-group-wrapper');
+            if (wrapper) {
+                chartCard.dataset.wrapperId = wrapper.id;
+                const container = wrapper.closest('.charts-container');
+
+                if (container) {
+                    container.insertBefore(chartCard, wrapper);
+                }
+            }
+            // Force it to be regular size
+            chartCard.classList.remove('chart-tiny');
+            chartCard.classList.add('chart-regular');
+
+        } else if (originalSize === 'large' || originalSize === 'massive') {
+            // Do Nothing
+        }
 
         // Hide the chart content
         if (canvas) canvas.style.display = 'none';
@@ -784,6 +855,15 @@ function closeEditForm(id) {
     chartCard.classList.add(originalSize);
     delete chartCard.dataset.originalSize; // Clean up
 
+    // If this card was broken out of a wrapper, put it back.
+    if (chartCard.dataset.wrapperId) {
+        const wrapper = document.getElementById(chartCard.dataset.wrapperId);
+        if (wrapper) {
+            wrapper.appendChild(chartCard);
+        }
+        delete chartCard.dataset.wrapperId; // Clean up
+    }
+
     if (canvas) canvas.style.display = 'block';
     if (kpiWrapper) kpiWrapper.style.display = 'flex'; // KPIs use flex
 
@@ -824,18 +904,7 @@ async function handleSaveEdit(id) {
 }
 
 function resetCharts() {
-
-    Object.values(charts).forEach(chart => {
-        if (chart.customConfig.type === 'doughnut') {
-            // Reset doughnut chart values
-            chart.data.datasets[0].data = [0, 0];
-        } else {
-            // Reset line chart values
-            chart.data.labels = [];
-            chart.data.datasets.forEach(ds => ds.data = []);
-        }
-        chart.update('none');
-    });
+    window.location.reload();
 }
 
 /**
@@ -882,6 +951,9 @@ async function saveNewOrder() {
         if (typeof showNotification === 'function') {
             showNotification('Chart order saved!', 'success');
         }
+
+        //Refresh the layout
+        await loadChartsFromDatabase();
 
     } catch (error) {
         console.error('Error saving chart order:', error);
@@ -956,7 +1028,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         new Sortable(mainContainer, {
             group: 'main-charts',
             animation: 150,  // Smooth animation
-            // Ignore drags starting on forms or buttons
             preventOnFilter: true,
             onEnd: saveNewOrder
         });
