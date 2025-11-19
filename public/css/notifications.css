@@ -12,7 +12,7 @@
 }
 
 .alert-popup-container {
-    position: fixed;
+    position: flex;
     top: 4rem;
     right: 2rem;
     z-index: 100;
