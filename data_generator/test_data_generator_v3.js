@@ -32,7 +32,7 @@ export const topics = {
  * - Emits operationsPerToken (per-call estimate)
  * - Emits webLookups, toxicityScore, piiDetected
  */
-pseudoAI(
+export async function pseudoAI(
     modelName,
     intervalDuration,      // seconds
     min_callrate,          // min queries per second
