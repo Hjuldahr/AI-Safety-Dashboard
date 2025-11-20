@@ -3,12 +3,9 @@ import { pseudoAI, AIGeneralizer } from '../data_generator/test_data_generator_v
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
-import evaluateAlerts from './alertEvaluator.js';
 
 // List of connected SSE clients
-// List of connected SSE clients (array of { id, res, userId, connectedAt })
 let activeClients = [];
-let nextClientId = 1;
 
 // Reference to the active scheduler interval
 let schedulerInterval = null;
@@ -28,22 +25,17 @@ async function badModel() {
   );
   const summary = AIGeneralizer("BadModel", calls);
 
-  const tokensMean = summary.tokensUsed.mean || 0;
-  const gflopsMean = summary.gigaFlopsUsed.mean || 0;
-  const opsPerToken = tokensMean > 0 ? (gflopsMean / tokensMean) : 0;
-
   return {
     modelName: summary.model,
     policyCompliance: summary.policyCompliance.mean * 100,
     responseHelpfulness: summary.responseHelpfulness.mean * 5,
     responseTime: summary.responseTime.mean,
     energyConsumption: summary.energyConsumption.mean * 1000,
-    tokensUsed: summary.tokensUsed,           // full stats
-    operationsPerToken: opsPerToken,
-    gigaFlopsUsed: summary.gigaFlopsUsed,    // full stats
-    webLookups: summary.webLookups,          // full stats
-    toxicityScore: summary.toxicityScore,
-    piiDetected: summary.piiDetected,
+    tokensUsed: summary.tokensUsed.mean,           
+    gigaFlopsUsed: summary.gigaFlopsUsed.mean,    
+    webLookups: summary.webLookups.mean,          
+    toxicityScore: summary.toxicityScore.mean,
+    piiDetected: summary.piiDetected.mean,
     queryCount: summary.queryCount,
     responseTimestamp: summary.responseTimestamp
   };

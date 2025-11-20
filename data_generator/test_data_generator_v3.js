@@ -88,16 +88,15 @@ export async function pseudoAI(
     calls.push({
       model: modelName,
       time: getRandomInt(start_time, end_time + 1),
-      tokensUsed,
-      operationsPerToken: opsPerToken,
-      gigaFlopsUsed,
+      tokensUsed: tokensUsed,
+      gigaFlopsUsed: gigaFlopsUsed,
       policyCompliance: getRandomFloat(min_pc, max_pc),
       responseHelpfulness: getRandomFloat(min_rh, max_rh),
-      responseTime,
-      energyConsumption,
-      webLookups,
-      topic,
-      sub_topic,
+      responseTime: responseTime,
+      energyConsumption: energyConsumption,
+      webLookups: webLookups,
+      topic: topic,
+      sub_topic: sub_topic,
       toxicityScore: getRandomFloat(minToxic, maxToxic),
       piiDetected: getRandomFloat(minPII, maxPII)
     });
@@ -135,7 +134,6 @@ export function AIGeneralizer(modelName, calls) {
     rt.push(typeof c.responseTime === 'number' ? c.responseTime : 0);
     ec.push(typeof c.energyConsumption === 'number' ? c.energyConsumption : 0);
     tokens.push(typeof c.tokensUsed === 'number' ? c.tokensUsed : 0);
-    ops.push(typeof c.operationsPerToken === 'number' ? c.operationsPerToken : 0);
     gflops.push(typeof c.gigaFlopsUsed === 'number' ? c.gigaFlopsUsed : 0);
     web.push(typeof c.webLookups === 'number' ? c.webLookups : 0);
     toxic.push(typeof c.toxicityScore === 'number' ? c.toxicityScore : 0);
@@ -152,7 +150,6 @@ export function AIGeneralizer(modelName, calls) {
     responseTime: computeStats(rt),
     energyConsumption: computeStats(ec),
     tokensUsed: computeStats(tokens),
-    operationsPerToken: computeStats(ops),
     gigaFlopsUsed: computeStats(gflops),
     webLookups: computeStats(web),
     toxicityScore: computeStats(toxic),

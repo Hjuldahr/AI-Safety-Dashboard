@@ -19,7 +19,6 @@ const AI_Log_Schema = new mongoose.Schema({
     tokensUsed: { type: Number, required: true, default: 0 },
 
     // Model compute estimates
-    operationsPerToken: { type: Number, required: true, default: 0 },
     gflopsEstimate: { type: Number, required: true, default: 0 },
 
     // Web lookup count
