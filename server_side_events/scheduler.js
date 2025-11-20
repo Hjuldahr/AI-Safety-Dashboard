@@ -3,73 +3,54 @@ import { pseudoAI, AIGeneralizer } from '../data_generator/test_data_generator_v
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
-import evaluateAlerts from "./alertEvaluator.js"
+import evaluateAlerts from "./alertEvaluator.js";
 
-// List of connected SSE clients
+// ---------- SSE Clients ----------
 let activeClients = [];
-
-// Reference to the active scheduler interval
+let nextClientId = 1;
 let schedulerInterval = null;
 
-// ---------- Model Fetching ----------
+// ---------- Model Simulation ----------
 async function badModel() {
-  const calls = await pseudoAI(
-    "BadModel",  // model name
-    2,           // intervalDuration in seconds
-    1, 3,        // min_callrate, max_callrate
-    0.4, 0.7,    // min_pc, max_pc
-    0.3, 0.6,    // min_rh, max_rh
-    0.1, 0.5,    // minToxic, maxToxic
-    0.0, 0.05,   // minPII, maxPII
-    6,           // avgGFlopsPerToken
-    2            // msPerToken
-  );
-  const summary = AIGeneralizer("BadModel", calls);
-
-  return {
-    modelName: summary.model,
-    policyCompliance: summary.policyCompliance.mean * 100,
-    responseHelpfulness: summary.responseHelpfulness.mean * 5,
-    responseTime: summary.responseTime.mean,
-    energyConsumption: summary.energyConsumption.mean * 1000,
-    tokensUsed: summary.tokensUsed.mean,           
-    gigaFlopsUsed: summary.gigaFlopsUsed.mean,    
-    webLookups: summary.webLookups.mean,          
-    toxicityScore: summary.toxicityScore.mean,
-    piiDetected: summary.piiDetected.mean,
-    queryCount: summary.queryCount,
-    responseTimestamp: summary.responseTimestamp
-  };
+    const calls = await pseudoAI(
+        "BadModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6, 0.1, 0.5, 0.0, 0.05, 6, 2
+    );
+    const summary = AIGeneralizer("BadModel", calls);
+    return {
+        modelName: summary.model,
+        policyCompliance: summary.policyCompliance.mean * 100,
+        responseHelpfulness: summary.responseHelpfulness.mean * 5,
+        responseTime: summary.responseTime.mean,
+        energyConsumption: summary.energyConsumption.mean * 1000,
+        tokensUsed: summary.tokensUsed.mean,
+        gigaFlopsUsed: summary.gigaFlopsUsed.mean,
+        webLookups: summary.webLookups.mean,
+        toxicityScore: summary.toxicityScore.mean,
+        piiDetected: summary.piiDetected.mean,
+        queryCount: summary.queryCount,
+        responseTimestamp: summary.responseTimestamp
+    };
 }
 
 async function goodModel() {
-  const calls = await pseudoAI(
-    "GoodModel",  // model name
-    2,            // intervalDuration in seconds
-    5, 10,        // min_callrate, max_callrate (more frequent queries)
-    0.9, 1.0,     // min_pc, max_pc (high policy compliance)
-    0.9, 1.0,     // min_rh, max_rh (high helpfulness)
-    0.0, 0.05,    // minToxic, maxToxic (very low toxicity)
-    0.0, 0.0,     // minPII, maxPII (no PII exposure)
-    6,            // avgGFlopsPerToken (normal compute usage)
-    2             // msPerToken (normal response speed)
-  );
-  const summary = AIGeneralizer("GoodModel", calls);
-
-  return {
-    modelName: summary.model,
-    policyCompliance: summary.policyCompliance.mean * 100,
-    responseHelpfulness: summary.responseHelpfulness.mean * 5,
-    responseTime: summary.responseTime.mean,
-    energyConsumption: summary.energyConsumption.mean * 1000,
-    tokensUsed: summary.tokensUsed.mean,           
-    gigaFlopsUsed: summary.gigaFlopsUsed.mean,    
-    webLookups: summary.webLookups.mean,          
-    toxicityScore: summary.toxicityScore.mean,
-    piiDetected: summary.piiDetected.mean,
-    queryCount: summary.queryCount,
-    responseTimestamp: summary.responseTimestamp
-  };
+    const calls = await pseudoAI(
+        "GoodModel", 2, 5, 10, 0.9, 1.0, 0.9, 1.0, 0.0, 0.05, 0.0, 0.0, 6, 2
+    );
+    const summary = AIGeneralizer("GoodModel", calls);
+    return {
+        modelName: summary.model,
+        policyCompliance: summary.policyCompliance.mean * 100,
+        responseHelpfulness: summary.responseHelpfulness.mean * 5,
+        responseTime: summary.responseTime.mean,
+        energyConsumption: summary.energyConsumption.mean * 1000,
+        tokensUsed: summary.tokensUsed.mean,
+        gigaFlopsUsed: summary.gigaFlopsUsed.mean,
+        webLookups: summary.webLookups.mean,
+        toxicityScore: summary.toxicityScore.mean,
+        piiDetected: summary.piiDetected.mean,
+        queryCount: summary.queryCount,
+        responseTimestamp: summary.responseTimestamp
+    };
 }
 
 // ---------- SSE Setup ----------
@@ -87,6 +68,7 @@ function setupSSE(app) {
         };
         activeClients.push(client);
 
+        // Heartbeat to keep connection alive
         const heartbeat = setInterval(() => {
             res.write(':\n\n');
         }, HEARTBEAT);
@@ -98,72 +80,56 @@ function setupSSE(app) {
     });
 }
 
-// Remove dead/closed clients from activeClients
+// ---------- Client Maintenance ----------
 function pruneDeadClients() {
-    activeClients = activeClients.filter((c) => {
-        const client = c.res;
+    activeClients = activeClients.filter(c => {
         try {
-            if (!client || client.finished) return false;
-            if (client.writableEnded) return false;
-            if (client.socket && client.socket.destroyed) return false;
+            if (!c.res || c.res.finished || c.res.writableEnded) return false;
+            if (c.res.socket && c.res.socket.destroyed) return false;
             return true;
-        } catch (e) {
+        } catch {
             return false;
         }
     });
 
-    // If too many clients are connected, trim oldest to avoid resource exhaustion
     const MAX_CLIENTS = 500;
     if (activeClients.length > MAX_CLIENTS) {
         const excess = activeClients.length - MAX_CLIENTS;
-        const toDrop = activeClients.splice(0, excess);
-        toDrop.forEach(entry => {
-            try {
-                if (entry && entry.res && !entry.res.writableEnded) {
-                    entry.res.end();
-                }
-            } catch (e) { /* ignore */ }
+        const toClose = activeClients.splice(0, excess);
+        toClose.forEach(entry => {
+            try { if (entry.res && !entry.res.writableEnded) entry.res.end(); } catch (e) { }
         });
     }
 }
 
-// Safely write data to all clients; remove any client that errors or signals backpressure
 function safeWriteAll(sseData, targetUserId = null) {
     const toRemoveIds = new Set();
     for (const entry of activeClients) {
-        const client = entry.res;
-        // if a targetUserId is specified, only send to matching clients
         if (targetUserId && entry.userId && String(entry.userId) !== String(targetUserId)) continue;
         try {
-            if (!client || client.finished || client.writableEnded || (client.socket && client.socket.destroyed)) {
+            if (!entry.res || entry.res.finished || entry.res.writableEnded || (entry.res.socket && entry.res.socket.destroyed)) {
                 toRemoveIds.add(entry.id);
                 continue;
             }
-            const ok = client.write(sseData);
-            if (!ok) {
-                // slow client: remove
-                toRemoveIds.add(entry.id);
-            }
-        } catch (e) {
+            const ok = entry.res.write(sseData);
+            if (!ok) toRemoveIds.add(entry.id);
+        } catch {
             toRemoveIds.add(entry.id);
         }
     }
+
     if (toRemoveIds.size) {
         const toClose = activeClients.filter(c => toRemoveIds.has(c.id));
-        toClose.forEach(entry => {
-            try { if (entry.res && !entry.res.writableEnded) entry.res.end(); } catch (e) { }
-        });
+        toClose.forEach(entry => { try { if (entry.res && !entry.res.writableEnded) entry.res.end(); } catch {} });
         activeClients = activeClients.filter(c => !toRemoveIds.has(c.id));
     }
 }
 
-// Broadcast a named SSE event with JSON payload to all connected clients
 function broadcastEvent(eventType, data) {
     try {
         const sseData = `event: ${eventType}\n` + `data: ${JSON.stringify(data)}\n\n`;
         pruneDeadClients();
-        // Allow optional targeting by passing userId on data._targetUser
-        const target = (data && data._targetUser) ? data._targetUser : null;
+        const target = data?._targetUser || null;
         safeWriteAll(sseData, target);
     } catch (e) {
         console.error('[SSE] Failed to broadcast event', e);
@@ -178,17 +144,16 @@ async function schedulerTick() {
         const goodData = await goodModel();
         const badData = await badModel();
 
-        // Structured payload for alerts + SSE
         const dataToSave = {
             GoodModel: goodData,
             BadModel: badData
         };
 
-        // Persist logs
+        // Save logs
         await AI_Log.addLog(goodData);
         await AI_Log.addLog(badData);
 
-        // Evaluate alerts with the combined payload (cooldown 60s)
+        // Evaluate alerts
         try {
             await evaluateAlerts(dataToSave, { cooldownMs: 60 * 1000 });
         } catch (alertErr) {
@@ -198,20 +163,16 @@ async function schedulerTick() {
         // Keep only last MAX_RECORDS
         let count = await AI_Log.countDocuments();
         while (count > MAX_RECORDS) {
-            // remove the oldest record(s)
             await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
             count--;
         }
 
-        // Broadcast to all clients using safe writer
-        const sseData = `data: ${JSON.stringify(dataToSave)}\n\n`;
-        pruneDeadClients();
-        safeWriteAll(sseData);
+        // Broadcast real-time update to clients
+        broadcastEvent('update', dataToSave);
+
     } catch (err) {
         console.error('Scheduler tick error:', err);
-        const errorData = `data: ${JSON.stringify({ error: 'Failed to fetch or save AI logs' })}\n\n`;
-        pruneDeadClients();
-        safeWriteAll(errorData);
+        broadcastEvent('update', { error: 'Failed to fetch or save AI logs' });
     }
 }
 
@@ -229,7 +190,7 @@ function updateSchedulerSettings({ isPaused, activeModel, interval }) {
 
     if (typeof isPaused === 'boolean' && isPaused !== schedulerState.isPaused) {
         schedulerState.isPaused = isPaused;
-        console.log(`[Scheduler] ${isPaused ? 'isPaused' : 'Resumed'}`);
+        console.log(`[Scheduler] ${isPaused ? 'Paused' : 'Resumed'}`);
         restart = true;
     }
 
@@ -247,7 +208,6 @@ function updateSchedulerSettings({ isPaused, activeModel, interval }) {
     if (restart) startScheduler();
 }
 
-// ---------- Initialize Scheduler ----------
 function setupScheduler() {
     startScheduler();
 }
