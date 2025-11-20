@@ -9,7 +9,7 @@ const playColour = "#2ca58dff"
 
 document.addEventListener('DOMContentLoaded', function () {
     const toggleButton = document.querySelector("#toggle-button"); //<button>
-    const clearButton = document.querySelector("#clear-button"); //<button>
+    const refreshButton = document.querySelector("#refresh-button"); //<button>
     const modelSelect = document.querySelector("#model-select"); //<select>
     const intervalSelect = document.querySelector("#interval-select"); //<select>
 
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateServerSettings();
     })
 
-    clearButton.addEventListener('click', () => {
+    refreshButton.addEventListener('click', () => {
         window.myChartUtils.resetCharts();
     })
 
