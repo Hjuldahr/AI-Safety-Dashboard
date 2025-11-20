@@ -12,7 +12,7 @@
 }
 
 .alert-popup-container {
-    position: fixed;
+    position: flex;
     top: 4rem;
     right: 2rem;
     z-index: 100;
@@ -47,6 +47,32 @@
     justify-content: center;
     cursor: pointer;
     box-shadow: var(--shadow);
+}
+
+/* Positioning for badge */
+.notification-bell {
+    position: relative;
+}
+
+.notification-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background-color: #ef4444; /* red */
+    color: #fff;
+    border-radius: 999px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    display: none; /* hidden when zero */
+}
+
+.notification-badge.show {
+    display: inline-block;
 }
 
 .notification-bell i.fa-bell {

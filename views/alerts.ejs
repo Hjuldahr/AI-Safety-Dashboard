@@ -25,8 +25,6 @@
 
   <main class="content">
 
-    <%- include('components/notifications') %>
-
     <div class="main-container">
       <!-- Alert Builder Section -->
       <section class="card alert-builder">
@@ -48,6 +46,18 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label for="model-name">Model (optional):</label>
+            <select id="model-name" name="model-name">
+              <option value="">-- all models --</option>
+              <% if (typeof models !== 'undefined' && models && models.length) { %>
+                <% models.forEach(function(m) { %>
+                  <option value="<%= m %>"><%= m %></option>
+                <% }); %>
+              <% } %>
+            </select>
+          </div>
+
           <div class="form-group add-alert-button-container">
             <button id="add-alert-btn" class="btn btn-primary">Add Alert</button>
           </div>
@@ -58,9 +68,10 @@
               <div class="rule-row">
                 <select id="data-type" class="data-type">
                   <option value="">-- select data type --</option>
-                  <option value="Harmful Messages">Harmful Messages</option>
-                  <option value="Accuracy">Accuracy</option>
-                  <option value="Usage">Usage</option>
+                  <option value="Policy Compliance">Policy Compliance</option>
+                  <option value="Response Helpfulness">Response Helpfulness</option>
+                  <option value="Response Time">Response Time</option>
+                  <option value="Energy Consumption">Energy Consumption</option>
                 </select>
                 <select id="operator-type" class="operator-type">
                   <option value="">-- select operator --</option>
@@ -126,28 +137,26 @@
                   <th>Level</th>
                   <th>Time</th>
                   <th>Alert</th>
+                  <th>Model</th>
                   <th>Triggered By</th>
                 </tr>
               </thead>
               <tbody id="alert-log-body">
-                <tr>
-                  <td><span class="level-tag critical">Critical</span></td>
-                  <td class="time-cell">2025/09/29: 6:18:58PM <span>Eastern Standard Time</span></td>
-                  <td>Alert 1</td>
-                  <td class="details-cell">"Harmful Messages" greater than 200, and "Accuracy" less than 80%.</td>
-                </tr>
-                <tr>
-                  <td><span class="level-tag high">High</span></td>
-                  <td class="time-cell">2025/09/28: 10:32:12AM <span>Eastern Standard Time</span></td>
-                  <td>Alert 2</td>
-                  <td class="details-cell">"Harmful Messages" greater than 100, and "Accuracy" less than 85%.</td>
-                </tr>
-                <tr>
-                  <td><span class="level-tag info">Info</span></td>
-                  <td class="time-cell">2025/09/27: 11:10:52AM <span>Eastern Standard Time</span></td>
-                  <td>Alert 4</td>
-                  <td class="details-cell">"Usage" greater than 100.</td>
-                </tr>
+                <% if (typeof alertLogs !== 'undefined' && alertLogs && alertLogs.length) { %>
+                  <% alertLogs.forEach(function(log) { %>
+                    <tr>
+                      <td><span class="level-tag <%= (log.level || 'Info').toLowerCase() %>"><%= log.level || 'Info' %></span></td>
+                      <td class="time-cell"><%= new Date(log.timestamp).toLocaleString('en-CA', { hour12: true }).replace(',', '') %> <span>Eastern Standard Time</span></td>
+                      <td><%= log.alertName %></td>
+                      <td class="model-cell"><%= log.modelName || '-' %></td>
+                      <td class="details-cell"><%= log.humanRule %></td>
+                    </tr>
+                  <% }); %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="4">No alert history available.</td>
+                  </tr>
+                <% } %>
               </tbody>
             </table>
           </div>

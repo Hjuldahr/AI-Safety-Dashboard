@@ -2,41 +2,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Notification Bell & History Logic
 
-    // Mock Data for recent alerts
-    const mockAlerts = [
-        {
-            level: 'Critical',
-            text: '"Harmful Messages" greater than 200, and "Accuracy" less than 80%.',
-            timestamp: new Date('2025-10-15T22:25:15Z') // Using ISO format with Z for UTC
-        },
-        {
-            level: 'Info',
-            text: '"Usage" greater than 100W.',
-            timestamp: new Date('2025-10-15T22:25:11Z')
-        },
-        {
-            level: 'High',
-            text: '"Harmful Messages" greater than 100, and "Accuracy" less than 85%.',
-            timestamp: new Date('2025-10-15T22:24:30Z')
-        },
-        {
-            level: 'High',
-            text: '"Harmful Messages" greater than 100, and "Accuracy" less than 85%.',
-            timestamp: new Date('2025-10-15T22:22:05Z')
-        },
-        {
-            level: 'Medium',
-            text: '"Usage" greater than 200W.',
-            timestamp: new Date('2025-10-15T21:55:45Z')
-        },
-    ];
+    // Fetch recent alert logs from server
+    const fetchRecentAlerts = async (limit = 10) => {
+        try {
+            const resp = await fetch(`/alerts/recent?limit=${limit}`);
+            if (!resp.ok) return [];
+            const data = await resp.json();
+            // expect data.alertLogs array with { level, timestamp, alertName, humanRule }
+            return Array.isArray(data.alertLogs) ? data.alertLogs : [];
+        } catch (e) {
+            console.error('Failed to fetch recent alerts for notifications:', e);
+            return [];
+        }
+    };
 
     // Select DOM Elements
     const bellButton = document.querySelector('.notification-bell');
     const historyContainer = document.getElementById('notification-history');
+    const badgeEl = document.getElementById('notification-badge');
+
+    // Server-driven unread count helpers
+    const fetchUnreadCount = async () => {
+        try {
+            const resp = await fetch('/alerts/unread-count');
+            if (!resp.ok) return 0;
+            const data = await resp.json();
+            return Number(data && data.unread ? data.unread : 0);
+        } catch (e) {
+            console.error('Failed to fetch unread count:', e);
+            return 0;
+        }
+    };
+
+    const updateBadgeFromCount = (unread) => {
+        try {
+            if (!badgeEl) return;
+            if (unread > 0) {
+                badgeEl.textContent = unread > 99 ? '99+' : String(unread);
+                badgeEl.classList.add('show');
+            } else {
+                badgeEl.textContent = '';
+                badgeEl.classList.remove('show');
+            }
+        } catch (e) {
+            console.error('Failed to update notification badge:', e);
+        }
+    };
 
     // Function to populate the alert history list from data
-    const populateAlertHistory = () => {
+    const populateAlertHistory = async () => {
         historyContainer.innerHTML = ''; // Clear existing content
 
         // Add a header
@@ -47,23 +61,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Create the list
         const list = document.createElement('ul');
-        mockAlerts.forEach(alert => {
+        const alerts = await fetchRecentAlerts(10);
+
+        // Update badge from server unread count
+        try {
+            const unread = await fetchUnreadCount();
+            updateBadgeFromCount(unread);
+        } catch (e) {
+            // ignore
+        }
+
+        alerts.forEach(alert => {
             const listItem = document.createElement('li');
-            listItem.className = `notification-history-item ${alert.level.toLowerCase()}`;
+            const level = (alert.level || 'Info').toString().toLowerCase();
+            listItem.className = `notification-history-item ${level}`;
 
             // Create the link element
             const link = document.createElement('a');
             link.href = '/alerts';
 
-            // Create a span for the alert text
+            // Create a span for the alert text: prefer humanRule then alertName
             const alertText = document.createElement('span');
             alertText.className = 'alert-text';
-            alertText.textContent = alert.text;
+            // Include model name if present to clarify which model triggered the alert
+            const modelPart = alert.modelName ? `[${alert.modelName}] ` : '';
+            alertText.textContent = modelPart + (alert.humanRule || alert.alertName || 'Alert');
 
             // Create a span for the timestamp
             const alertTime = document.createElement('span');
             alertTime.className = 'alert-time';
-            alertTime.textContent = formatAlertTime(alert.timestamp);
+            const ts = alert.timestamp ? new Date(alert.timestamp) : new Date();
+            alertTime.textContent = formatAlertTime(ts);
 
             // Append text and time to the link, then link to the list item
             link.appendChild(alertText);
@@ -76,10 +104,26 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     //  Event Listener to toggle the history list visibility
-    bellButton.addEventListener('click', (event) => {
+    bellButton.addEventListener('click', async (event) => {
         // Stop the click from bubbling up to the document, which would instantly close the list
         event.stopPropagation();
-        historyContainer.classList.toggle('show');
+
+        const willShow = !historyContainer.classList.contains('show');
+        if (willShow) {
+            // Populate and then mark as read
+            await populateAlertHistory();
+            historyContainer.classList.add('show');
+            // Mark read on server
+            try {
+                await fetch('/alerts/mark-read', { method: 'POST' });
+            } catch (e) {
+                console.error('Failed to mark alerts read on server:', e);
+            }
+            // clear badge UI
+            updateBadgeFromCount(0);
+        } else {
+            historyContainer.classList.remove('show');
+        }
     });
 
     //  Event Listener to close the list when clicking anywhere else on the page
@@ -87,6 +131,46 @@ document.addEventListener('DOMContentLoaded', () => {
         if (historyContainer.classList.contains('show')) {
             historyContainer.classList.remove('show');
         }
+    });
+
+    // Initial badge population on load using server unread count
+    (async () => {
+        try {
+            const unread = await fetchUnreadCount();
+            updateBadgeFromCount(unread);
+        } catch (e) {
+            console.error('Failed initial fetch for unread count:', e);
+        }
+    })();
+
+    // Setup SSE to receive live alert events and refresh unread count
+    let __notificationsEvtSource = null;
+    try {
+        __notificationsEvtSource = new EventSource('/events');
+        __notificationsEvtSource.addEventListener('alert', async (ev) => {
+            // When an alert arrives, refresh unread count
+            try {
+                const unread = await fetchUnreadCount();
+                updateBadgeFromCount(unread);
+            } catch (e) {
+                console.error('Failed to refresh unread count after alert event:', e);
+            }
+        });
+        __notificationsEvtSource.onerror = (err) => console.error('SSE error (notifications):', err);
+    } catch (e) {
+        console.error('Failed to setup EventSource for notifications:', e);
+    }
+
+    // Close SSE when the page unloads to avoid lingering connections
+    window.addEventListener('beforeunload', () => {
+        try {
+            if (__notificationsEvtSource) {
+                __notificationsEvtSource.close();
+                __notificationsEvtSource = null;
+            }
+        } catch (e) {
+            // ignore
+         }
     });
 
     const formatAlertTime = (date) => {

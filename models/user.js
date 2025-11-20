@@ -24,6 +24,12 @@ const UserSchema = new mongoose.Schema({
         type: [String],
         default: ['viewer'] // Every new user is a 'viewer' by default
     },
+    // Timestamp of when user last saw notifications (server-side unread tracking)
+    alertsLastSeen: {
+        type: Date,
+        required: false,
+        default: null
+    }
 }, { timestamps: true }); 
 
 // pre-save hook - It runs automatically before a user is saved to the DB to hash the password so we never store plain-text passwords.

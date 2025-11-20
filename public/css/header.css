@@ -5,6 +5,7 @@
     --header-bg-color: #ffffff;
     --button-bg-color: #f0f2f5;
     --button-hover-bg-color: #e4e6e8;
+    --button-text-color: #333;
     --primary-accent-color: #0056b3;
 }
 
@@ -13,7 +14,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 2rem;
+    padding: 2rem 2rem;
     box-sizing: border-box; /* Ensures padding is included in the element's total width */
     background-color: var(--header-bg-color);
     z-index: 100;
@@ -67,11 +68,37 @@
 
 .site-header a {
     color: var(--primary-accent-color);
-    text-decoration: none;
+    /*text-decoration: none;
     font-weight: 600;
+    */
 }
 
 .site-header a:hover {
     text-decoration: underline;
 }
 
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.site-header .login-button {
+    border: 1px solid #ccc;
+    background-color: var(--button-bg-color);
+    color: var(--header-text-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+    text-decoration: none;
+}
+
+.site-header .login-button:hover {
+    background-color: var(--button-hover-bg-color);
+}
+
+.site-header #login-text {
+    color: var(--header-text-color);
+}
