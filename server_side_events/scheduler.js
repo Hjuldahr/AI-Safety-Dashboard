@@ -12,42 +12,73 @@ let schedulerInterval = null;
 
 // ---------- Model Fetching ----------
 async function badModel() {
-    const calls = await pseudoAI("BadModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6);
-    const summary = AIGeneralizer("BadModel", calls);
-    return {
-        modelName: summary.model,
-        policyCompliance: summary.policyCompliance.mean * 100,
-        responseHelpfulness: summary.responseHelpfulness.mean * 5,
-        responseTime: summary.responseTime.mean,
-        energyConsumption: summary.energyConsumption.mean * 1000,
-        queryCount: summary.queryCount,
-        responseTimestamp:  summary.responseTimestamp
-    };
+  const calls = await pseudoAI(
+    "BadModel",  // model name
+    2,           // intervalDuration in seconds
+    1, 3,        // min_callrate, max_callrate
+    0.4, 0.7,    // min_pc, max_pc
+    0.3, 0.6,    // min_rh, max_rh
+    0.1, 0.5,    // minToxic, maxToxic
+    0.0, 0.05,   // minPII, maxPII
+    6,           // avgGFlopsPerToken
+    2            // msPerToken
+  );
+  const summary = AIGeneralizer("BadModel", calls);
+
+  const tokensMean = summary.tokensUsed.mean || 0;
+  const gflopsMean = summary.gigaFlopsUsed.mean || 0;
+  const opsPerToken = tokensMean > 0 ? (gflopsMean / tokensMean) : 0;
+
+  return {
+    modelName: summary.model,
+    policyCompliance: summary.policyCompliance.mean * 100,
+    responseHelpfulness: summary.responseHelpfulness.mean * 5,
+    responseTime: summary.responseTime.mean,
+    energyConsumption: summary.energyConsumption.mean * 1000,
+    tokensUsed: summary.tokensUsed,           // full stats
+    operationsPerToken: opsPerToken,
+    gigaFlopsUsed: summary.gigaFlopsUsed,    // full stats
+    webLookups: summary.webLookups,          // full stats
+    toxicityScore: summary.toxicityScore,
+    piiDetected: summary.piiDetected,
+    queryCount: summary.queryCount,
+    responseTimestamp: summary.responseTimestamp
+  };
 }
 
 async function goodModel() {
-    const calls = await pseudoAI("GoodModel", 2, 5, 10, 0.9, 1.0, 0.9, 1.0);
-    const summary = AIGeneralizer("GoodModel", calls);
-    return {
-        modelName: summary.model,
-        policyCompliance: summary.policyCompliance.mean * 100,
-        responseHelpfulness: summary.responseHelpfulness.mean * 5,
-        responseTime: summary.responseTime.mean,
-        energyConsumption: summary.energyConsumption.mean * 1000,
-        queryCount: summary.queryCount,
-        responseTimestamp:  summary.responseTimestamp
-    };
-}
+  const calls = await pseudoAI(
+    "GoodModel",  // model name
+    2,            // intervalDuration in seconds
+    5, 10,        // min_callrate, max_callrate (more frequent queries)
+    0.9, 1.0,     // min_pc, max_pc (high policy compliance)
+    0.9, 1.0,     // min_rh, max_rh (high helpfulness)
+    0.0, 0.05,    // minToxic, maxToxic (very low toxicity)
+    0.0, 0.0,     // minPII, maxPII (no PII exposure)
+    6,            // avgGFlopsPerToken (normal compute usage)
+    2             // msPerToken (normal response speed)
+  );
+  const summary = AIGeneralizer("GoodModel", calls);
 
-function nullModel() {
-    return {
-        modelName: "NullModel",
-        avgCompliance: 0,
-        avgHelpfulness: 0,
-        avgResponseTime: 0,
-        avgEnergyConsumption: 0,
-        queryCount: 0
-    };
+  const tokensMean = summary.tokensUsed.mean || 0;
+  const gflopsMean = summary.gigaFlopsUsed.mean || 0;
+  const opsPerToken = tokensMean > 0 ? (gflopsMean / tokensMean) : 0;
+
+  return {
+    modelName: summary.model,
+    policyCompliance: summary.policyCompliance.mean * 100,
+    responseHelpfulness: summary.responseHelpfulness.mean * 5,
+    responseTime: summary.responseTime.mean,
+    energyConsumption: summary.energyConsumption.mean * 1000,
+    tokensUsed: summary.tokensUsed,
+    operationsPerToken: opsPerToken,
+    gigaFlopsUsed: summary.gigaFlopsUsed,
+    webLookups: summary.webLookups,
+    toxicityScore: summary.toxicityScore,
+    piiDetected: summary.piiDetected,
+    queryCount: summary.queryCount,
+    responseTimestamp: summary.responseTimestamp
+  };
 }
 
 // ---------- SSE Setup ----------

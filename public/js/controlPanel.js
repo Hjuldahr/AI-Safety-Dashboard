@@ -114,15 +114,30 @@ document.addEventListener('DOMContentLoaded', function () {
             type: 'CATEGORICAL',
             label: 'Model Name'
         },
-        // topic: { 
-        //     type: 'CATEGORICAL', 
-        //     label: 'Topic' 
-        // },
-
+        topic: { 
+            type: 'CATEGORICAL', 
+            label: 'Topic' 
+        },
+        sub_topic: { 
+            type: 'CATEGORICAL', 
+            label: 'Sub Topic' 
+        },
         // Numeric
+        webLookups: {
+            type: 'NUMERIC',
+            label: 'Internet Lookups Performed'
+        },
+        tokensUsed: {
+            type: 'NUMERIC',
+            label: 'LLM Tokens Used'
+        },
         responseTime: {
             type: 'NUMERIC',
             label: 'Response Time (ms)'
+        },
+        gigaFlopsUsed: {
+            type: 'NUMERIC',
+            label: 'Operations Peformed (GFLOPs)'
         },
         energyConsumption: {
             type: 'NUMERIC',
@@ -136,18 +151,16 @@ document.addEventListener('DOMContentLoaded', function () {
             type: 'NUMERIC',
             label: 'Policy Compliance (0 through 100%)',
         },
-        // toxicityScore: { 
-        //     type: 'NUMERIC', 
-        //     label: 'Toxicity Score (0-1)' 
-        // },
-
+        toxicityScore: { 
+            type: 'NUMERIC', 
+            label: 'Toxicity Score (0-1)' 
+        },
         // Special: Numeric fields that can ALSO be treated as categories
-        // piiDetected: { 
-        //     type: 'NUMERIC', 
-        //     label: 'PII Detected (0 through 100%)', 
-        //     useAs: ['CATEGORICAL', 'NUMERIC'] 
-        // },
-
+        piiDetected: { 
+            type: 'NUMERIC', 
+            label: 'PII Detected (0 through 100%)', 
+            useAs: ['CATEGORICAL', 'NUMERIC'] 
+        },
         // Timestamp
         responseTimestamp: { type: 'TIMESTAMP', label: 'Timestamp' }
     };
