@@ -2,29 +2,82 @@ import mongoose from 'mongoose';
 
 // === AI_Log Schema ===
 const AI_Log_Schema = new mongoose.Schema({
+
     modelName: {
         type: String,
         required: true
     },
 
     // Core rating metrics
-    policyCompliance: { type: Number, required: true, default: 0 },
-    responseHelpfulness: { type: Number, required: true, default: 0 },
-    responseTime: { type: Number, required: true, default: 0 },
+    policyCompliance: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    responseHelpfulness: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    responseTime: {
+        type: Number,
+        required: true,
+        default: 0
+    },
 
     // Energy usage (watt-seconds or joules)
-    energyConsumption: { type: Number, required: true, default: 0 },
+    energyConsumption: {
+        type: Number,
+        equired: true,
+        default: 0
+    },
 
     // Token stats
-    tokensUsed: { type: Number, required: true, default: 0 },
+    tokensUsed: {
+        type: Number,
+        required: true,
+        default: 0
+    },
 
     // Model compute estimates
-    gflopsEstimate: { type: Number, required: true, default: 0 },
+    gigaFlopsUsed: {
+        type: Number,
+        required: true,
+        default: 0
+    },
 
     // Web lookup count
-    webLookups: { type: Number, required: true, default: 0 },
+    webLookups: {
+        type: Number,
+        required: true,
+        default: 0
+    },
 
-    queryCount: { type: Number, required: true, default: 1 },
+    // Toxicity Score
+    toxicityScore: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+
+    // Personally Identifiable Information
+    piiDetected: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+
+    // Summaries of Categorical Data, like topic and sub topic
+    breakdown: {
+        type: Object,
+        default: {}
+    },
+
+    queryCount: {
+        type: Number,
+        required: true,
+        default: 1
+    },
 
     responseTimestamp: {
         type: Number,
@@ -37,22 +90,22 @@ const AI_Log_Schema = new mongoose.Schema({
 // ---------- QUERIES ----------
 
 // Add a single log
-AI_Log_Schema.statics.addLog = function(logData) {
+AI_Log_Schema.statics.addLog = function (logData) {
     return new this(logData).save();
 };
 
 // Add multiple logs
-AI_Log_Schema.statics.addLogs = function(logsArray) {
+AI_Log_Schema.statics.addLogs = function (logsArray) {
     return this.insertMany(logsArray);
 };
 
 // Get logs for a model
-AI_Log_Schema.statics.getLogsByModel = function(modelName) {
+AI_Log_Schema.statics.getLogsByModel = function (modelName) {
     return this.find({ modelName });
 };
 
 // Get logs for a model between timestamps
-AI_Log_Schema.statics.getLogsByModelAndTime = function(modelName, start = null, end = null) {
+AI_Log_Schema.statics.getLogsByModelAndTime = function (modelName, start = null, end = null) {
     const query = { modelName };
     if (start !== null || end !== null) {
         query.responseTimestamp = {};
@@ -63,12 +116,12 @@ AI_Log_Schema.statics.getLogsByModelAndTime = function(modelName, start = null, 
 };
 
 // Remove one log
-AI_Log_Schema.statics.removeLogById = function(logID) {
+AI_Log_Schema.statics.removeLogById = function (logID) {
     return this.findByIdAndDelete(logID);
 };
 
 // Remove all logs of a model
-AI_Log_Schema.statics.removeLogsByModel = function(modelName) {
+AI_Log_Schema.statics.removeLogsByModel = function (modelName) {
     return this.deleteMany({ modelName });
 };
 

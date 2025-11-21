@@ -159,7 +159,6 @@ document.addEventListener('DOMContentLoaded', function () {
         piiDetected: { 
             type: 'NUMERIC', 
             label: 'PII Detected (0 through 100%)', 
-            useAs: ['CATEGORICAL', 'NUMERIC'] 
         },
         // Timestamp
         responseTimestamp: { type: 'TIMESTAMP', label: 'Timestamp' }

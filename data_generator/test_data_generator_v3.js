@@ -1,3 +1,5 @@
+import { modeFast, mean } from 'simple-statistics'
+
 // data_generator/test_data_generator_v4.js
 export function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
@@ -16,13 +18,24 @@ export function remap(value, low1, high1, low2, high2) {
 }
 
 export const topics = {
-  "Writing": ["Edit Provided Text","Critique Provided Text","Personal Writing","Translation","Argument Generation","Summary Generation","Write Fiction"],
-  "Practical Guidance": ["How-To Advice","Tutoring","Creative Ideation","Health","Fitness","Beauty","Self-Care"],
-  "Technical Help": ["Mathematical Calculation","Data Analysis","Computer Programming"],
-  "Multimedia": ["Image Generation","Image Analysis","Video Generation","Video Analysis","Media Retrieval"],
-  "Seeking Information": ["Specific Info","Purchasable Products","Cooking Recipes","DIY Projects"],
-  "Self-Expression": ["Greetings","Chitchat","Relationship Advice","Personal Reflection","Games","Roleplay"],
-  "Miscellaneous": ["Model Introspection","Model Policy Discussion","Model Spec Report"]
+  "Customer Support": [
+    "Troubleshooting",
+    "Account Management",
+    "Returns & Refunds"
+  ],
+  "Sales & Inquiry": [
+    "Product Info",
+    "Pricing & Quotes",
+    "Comparison"
+  ],
+  "General Information": [
+    "Logistics & Shipping",
+    "Business Details"
+  ],
+  "Unsupported Use": [
+    "Casual Chat",
+    "Technical / Adversarial"
+  ]
 };
 
 /**
@@ -33,20 +46,20 @@ export const topics = {
  * - Emits webLookups, toxicityScore, piiDetected
  */
 export async function pseudoAI(
-    modelName,
-    intervalDuration,      // seconds
-    min_callrate,          // min queries per second
-    max_callrate,          // max queries per second
-    min_pc,                // min policyCompliance
-    max_pc,                // max policyCompliance
-    min_rh,                // min responseHelpfulness
-    max_rh,                // max responseHelpfulness
-    minToxic = 0.0,        // min toxicityScore
-    maxToxic = 0.1,        // max toxicityScore
-    minPII = 0.0,          // min piiDetected
-    maxPII = 0.01,         // max piiDetected
-    avgGFlopsPerToken = 6, // avg GFLOPs per token
-    msPerToken = 2         // ms per token
+  modelName,
+  intervalDuration,      // seconds
+  min_callrate,          // min queries per second
+  max_callrate,          // max queries per second
+  min_pc,                // min policyCompliance
+  max_pc,                // max policyCompliance
+  min_rh,                // min responseHelpfulness
+  max_rh,                // max responseHelpfulness
+  minToxic = 0.0,        // min toxicityScore
+  maxToxic = 0.1,        // max toxicityScore
+  minPII = 0.0,          // min piiDetected
+  maxPII = 0.01,         // max piiDetected
+  avgGFlopsPerToken = 6, // avg GFLOPs per token
+  msPerToken = 2         // ms per token
 ) {
   const now = new Date();
   const hour = now.getHours() + now.getMinutes() / 60;
@@ -125,7 +138,9 @@ export function AIGeneralizer(modelName, calls) {
     };
   };
 
-  const times = [], pc = [], rh = [], rt = [], ec = [], tokens = [], ops = [], gflops = [], web = [], toxic = [], pii = [];
+  const times = [], pc = [], rh = [], rt = [], ec = [], tokens = [], ops = [], gflops = [], web = [], toxic = [], pii = [], topics = [], sub_topics = [];
+
+  const buckets = {};
 
   for (const c of calls) {
     times.push(c.time || 0);
@@ -138,7 +153,43 @@ export function AIGeneralizer(modelName, calls) {
     web.push(typeof c.webLookups === 'number' ? c.webLookups : 0);
     toxic.push(typeof c.toxicityScore === 'number' ? c.toxicityScore : 0);
     pii.push(typeof c.piiDetected === 'number' ? c.piiDetected : 0);
+    // topics.push(typeof c.topic === 'string' ? c.topic : "No Topic");
+    // sub_topics.push(typeof c.sub_topic === 'string' ? c.sub_topic : "No Sub Topic");
+
+    // Populate Breakdown Buckets
+    const topicKey = c.topic || "Unknown";
+    if (!buckets[topicKey]) buckets[topicKey] = { type: 'topic', calls: [] };
+    buckets[topicKey].calls.push(c);
+
+    const subTopicKey = c.sub_topic || "Unknown";
+    // Edge case prevention: if sub_topic has same name as topic, don't overwrite (unlikely but safe)
+    if (subTopicKey !== topicKey) {
+      if (!buckets[subTopicKey]) buckets[subTopicKey] = { type: 'sub_topic', calls: [] };
+      buckets[subTopicKey].calls.push(c);
+    }
   }
+
+  const breakdownData = {};
+
+  Object.keys(buckets).forEach(key => {
+    const { type, calls: bucketCalls } = buckets[key];
+
+    // Calculate the averages for this specific Topic/Sub-topic
+    breakdownData[key] = {
+      type: type,
+      count: bucketCalls.length, // Useful to know volume per topic
+      responseTime: mean(bucketCalls.map(c => c.responseTime)),
+      tokensUsed: mean(bucketCalls.map(c => c.tokensUsed)),
+      energyConsumption: mean(bucketCalls.map(c => c.energyConsumption)),
+      responseHelpfulness: mean(bucketCalls.map(c => c.responseHelpfulness)),
+      policyCompliance: mean(bucketCalls.map(c => c.policyCompliance)),
+      toxicityScore: mean(bucketCalls.map(c => c.toxicityScore)),
+      piiDetected: mean(bucketCalls.map(c => c.piiDetected)),
+      gigaFlopsUsed: mean(bucketCalls.map(c => c.gigaFlopsUsed)),
+      webLookups: mean(bucketCalls.map(c => c.webLookups))
+    };
+  });
+
 
   const now = Date.now();
 
@@ -154,6 +205,7 @@ export function AIGeneralizer(modelName, calls) {
     webLookups: computeStats(web),
     toxicityScore: computeStats(toxic),
     piiDetected: computeStats(pii),
+    breakdown: breakdownData,
     queryCount: calls.length,
     responseTimestamp: now
   };

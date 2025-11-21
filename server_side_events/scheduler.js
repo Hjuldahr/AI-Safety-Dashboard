@@ -28,7 +28,8 @@ async function badModel() {
         toxicityScore: summary.toxicityScore.mean,
         piiDetected: summary.piiDetected.mean,
         queryCount: summary.queryCount,
-        responseTimestamp: summary.responseTimestamp
+        responseTimestamp: summary.responseTimestamp,
+        breakdown: summary.breakdown
     };
 }
 
@@ -49,7 +50,8 @@ async function goodModel() {
         toxicityScore: summary.toxicityScore.mean,
         piiDetected: summary.piiDetected.mean,
         queryCount: summary.queryCount,
-        responseTimestamp: summary.responseTimestamp
+        responseTimestamp: summary.responseTimestamp,
+        breakdown: summary.breakdown
     };
 }
 

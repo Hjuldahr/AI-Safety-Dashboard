@@ -54,7 +54,7 @@ function createChartFromConfig(config, ctx) {
         },
         scales: {
             x: { display: true, ticks: { font: { size: 12 } } },
-            y: { display: true, ticks: { font: { size: 12 } } }
+            y: { display: true, ticks: { font: { size: 12 }, min: 0 } }
         },
         devicePixelRatio: 3
     };
@@ -84,33 +84,100 @@ function mapLineData(chart, config, logs) {
     const maxPoints = config.chartSize === 'tiny' ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
     const yField = config.yAxis;
 
-    if (config.splitBy === 'modelName') {
-        const modelNames = Object.keys(logs);
-        if (!modelNames.length) return;
+    let flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
-        const labels = (logs[modelNames[0]] || []).slice(-maxPoints).map(l => new Date(l.responseTimestamp).toLocaleTimeString());
-        const datasets = modelNames.map(modelName => {
-            const data = (logs[modelName] || []).slice(-maxPoints).map(l => l[yField]);
-            const color = getHashedColor(modelName);
-            return { label: modelName, data, borderColor: color, backgroundColor: Utils.transparentize(color, 0.5), fill: true, tension: 0.3 };
+    // Sort logs by time once, so we don't have to do it in every block
+    const sortedLogs = flatLogs.slice(-maxPoints);
+    const labels = sortedLogs.map(l => new Date(l.responseTimestamp).toLocaleTimeString());
+
+    // Topic/Sub-topic
+    if (config.splitBy === 'topic' || config.splitBy === 'sub_topic') {
+
+        // Get all unique keys found in the breakdown objects
+        const allTopics = new Set();
+        sortedLogs.forEach(log => {
+            if (log.breakdown) {
+                Object.keys(log.breakdown).forEach(k => {
+                    if (log.breakdown[k].type === config.splitBy) {
+                        allTopics.add(k);
+                    }
+                });
+            }
+        });
+
+        // Create a dataset for each Topic found
+        const datasets = Array.from(allTopics).map(topicName => {
+            const dataPoints = sortedLogs.map(log => {
+                // Look inside the backpack!
+                if (log.breakdown && log.breakdown[topicName]) {
+                    return log.breakdown[topicName][yField] || 0;
+                }
+                return null; // Null allows Chart.js to gap the line if data is missing
+            });
+
+            const color = getHashedColor(topicName);
+
+            return {
+                label: topicName,
+                data: dataPoints,
+                borderColor: color,
+                backgroundColor: Utils.transparentize(color, 0.5),
+                tension: 0.3,
+                spanGaps: true // Connects dots if a topic is missing for one tick
+            };
         });
 
         chart.data.labels = labels;
         chart.data.datasets = datasets;
-    } else {
-        const activeModelLogs = logs || [];
-        const sliced = activeModelLogs.slice(-maxPoints);
-        const labels = sliced.map(l => new Date(l.responseTimestamp).toLocaleTimeString());
-        const data = sliced.map(l => l[yField]);
+    }
+
+    // split by model name
+    else if (config.splitBy === 'modelName') {
+        // For this specific case, we need the original grouped 'logs' object, 
+        // not the flatLogs array, because the keys are the model names.
+        const modelNames = Object.keys(logs);
+        if (!modelNames.length) return;
+
+        const referenceLabels = (logs[modelNames[0]] || []).slice(-maxPoints).map(l => new Date(l.responseTimestamp).toLocaleTimeString());
+
+        const datasets = modelNames.map(modelName => {
+            const data = (logs[modelName] || []).slice(-maxPoints).map(l => l[yField]);
+            const color = getHashedColor(modelName);
+            return {
+                label: modelName,
+                data,
+                borderColor: color,
+                backgroundColor: Utils.transparentize(color, 0.5),
+                fill: true,
+                tension: 0.3
+            };
+        });
+
+        chart.data.labels = referenceLabels;
+        chart.data.datasets = datasets;
+    }
+
+    // No split
+    else {
+        const data = sortedLogs.map(l => l[yField]);
         const color = getHashedColor(config.title);
 
         chart.data.labels = labels;
-        chart.data.datasets = [{ label: yField, data, borderColor: color, backgroundColor: Utils.transparentize(color, 0.5), fill: true, tension: 0.3 }];
+        chart.data.datasets = [{
+            label: yField,
+            data,
+            borderColor: color,
+            backgroundColor: Utils.transparentize(color, 0.5),
+            fill: true,
+            tension: 0.3
+        }];
     }
 
+    // chart options
     if (config.chartSize !== 'tiny' && chart.options.scales.y) {
         chart.options.scales.y.title = { display: true, text: yField };
     }
+    chart.options.scales.y.min = 0;
 }
 
 function mapBarData(chart, config, logs) {
@@ -118,19 +185,58 @@ function mapBarData(chart, config, logs) {
     const yField = config.yAxis;
     const groups = {};
 
-    Object.values(logs).flat().forEach(log => {
-        const key = log[xField] || 'unknown';
-        if (!groups[key]) groups[key] = { sum: 0, count: 0 };
-        groups[key].sum += log[yField];
-        groups[key].count += 1;
+    // Normalize logs to a flat array
+    const flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
+
+    flatLogs.forEach(log => {
+        // Topic/Sub-topic
+        if ((xField === 'topic' || xField === 'sub_topic') && log.breakdown) {
+            Object.keys(log.breakdown).forEach(key => {
+                const item = log.breakdown[key];
+
+                // Only aggregate if the item type matches the chart config (topic vs sub_topic)
+                if (item.type === xField) {
+                    if (!groups[key]) groups[key] = { sum: 0, count: 0 };
+
+                    // Add the specific metric from the breakdown (e.g., responseTime for "Writing")
+                    const val = item[yField];
+                    if (val !== undefined) {
+                        groups[key].sum += val;
+                        groups[key].count += 1;
+                    }
+                }
+            });
+        }
+
+        // Standard Data
+        else {
+            const key = log[xField] || 'unknown';
+            if (!groups[key]) groups[key] = { sum: 0, count: 0 };
+
+            const val = log[yField];
+            if (val !== undefined) {
+                groups[key].sum += val;
+                groups[key].count += 1;
+            }
+        }
     });
 
     const labels = Object.keys(groups);
+
+    // Calculate Averages
+    const data = labels.map(label => {
+        const g = groups[label];
+        return g.count ? (g.sum / g.count) : 0;
+    });
+
+    // Apply to Chart
     chart.data.labels = labels;
     chart.data.datasets = [{
         label: `Average ${yField}`,
-        data: Object.values(groups).map(g => g.sum / g.count),
-        backgroundColor: labels.map(l => Utils.transparentize(getHashedColor(l), 0.7))
+        data: data,
+        backgroundColor: labels.map(l => Utils.transparentize(getHashedColor(l), 0.7)),
+        borderColor: labels.map(l => getHashedColor(l)),
+        borderWidth: 1
     }];
 
     if (config.chartSize !== 'tiny' && chart.options.scales.y) {
@@ -141,26 +247,55 @@ function mapBarData(chart, config, logs) {
 function mapPieData(chart, config, logs) {
     const categoryField = config.category;
     const groups = {};
-    Object.values(logs).flat().forEach(log => {
-        const key = log[categoryField] || 'unknown';
-        if (!groups[key]) groups[key] = { sum: 0 };
-        groups[key].sum += log.queryCount;
+
+    const flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
+
+    flatLogs.forEach(log => {
+        // Topic/Sub-topic
+        if ((categoryField === 'topic' || categoryField === 'sub_topic') && log.breakdown) {
+            Object.keys(log.breakdown).forEach(key => {
+                const item = log.breakdown[key];
+
+                if (item.type === categoryField) {
+                    if (!groups[key]) groups[key] = { sum: 0 };
+
+                    // Use the specific count from the breakdown bucket
+                    groups[key].sum += (item.count || 0);
+                }
+            });
+        }
+
+        // Regular Chart
+        else {
+            const key = log[categoryField] || 'unknown';
+            if (!groups[key]) groups[key] = { sum: 0 };
+
+            // Use the global query count
+            groups[key].sum += (log.queryCount || 1);
+        }
     });
 
-    chart.data.labels = Object.keys(groups);
-    chart.data.datasets = [{ label: 'Total Queries', data: Object.values(groups).map(g => g.sum), backgroundColor: Object.keys(groups).map(k => getHashedColor(k)) }];
+    const labels = Object.keys(groups);
+    const data = Object.values(groups).map(g => g.sum);
 
-    chart.options.scales = { y: { display: false } };
+    chart.data.labels = labels;
+    chart.data.datasets = [{
+        label: 'Total Queries',
+        data: data,
+        backgroundColor: labels.map(k => getHashedColor(k))
+    }];
+
+    chart.options.scales = { y: { display: false }, x: { display: false } };
 }
 
 function mapMeasureData(element, config, logs) {
     const yField = config.yAxis;
     const values = logs.map(l => l[yField]);
-    const avg = values.length ? values.reduce((a,b)=>a+b)/values.length : 0;
+    const avg = values.length ? values.reduce((a, b) => a + b) / values.length : 0;
 
     const wrapper = element.querySelector('.kpi-content-wrapper');
     if (wrapper) {
-    wrapper.innerHTML = `<h3 class="kpi-title">${config.title}</h3><div class="kpi-value">${avg.toFixed(1)}</div>`;
+        wrapper.innerHTML = `<h3 class="kpi-title">${config.title}</h3><div class="kpi-value">${avg.toFixed(1)}</div>`;
     }
 }
 
@@ -213,6 +348,18 @@ async function loadChartsFromDatabase() {
                     container.appendChild(currentTinyGroup);
                 }
                 currentTinyGroup.appendChild(chartCard);
+
+                new Sortable(currentTinyGroup, {
+                    group: {
+                        name: 'tiny-charts',
+                        put: function (to) {
+                            return to.el.children.length < 4;
+                        }
+                    },
+                    animation: 150,
+                    preventOnFilter: true,
+                    onEnd: saveNewOrder
+                });
             } else {
                 currentTinyGroup = null;
                 container.appendChild(chartCard);
@@ -254,8 +401,8 @@ function populateAllCharts() {
         const chartOrElem = charts[config._id];
         if (!chartOrElem) continue;
 
-        switch(config.chartType) {
-            case 'line': mapLineData(chartOrElem, config, config.splitBy==='modelName'?allLogs:activeModelLogs); break;
+        switch (config.chartType) {
+            case 'line': mapLineData(chartOrElem, config, config.splitBy === 'modelName' ? allLogs : activeModelLogs); break;
             case 'bar': mapBarData(chartOrElem, config, allLogs); break;
             case 'pie': mapPieData(chartOrElem, config, allLogs); break;
             case 'measure': mapMeasureData(chartOrElem, config, activeModelLogs); break;
@@ -277,60 +424,131 @@ function setupSSE() {
         pendingUpdates.forEach(({ id, newValue, now }) => {
             const chartOrElem = charts[id];
             const config = chartOrElem?.customConfig;
-            if (!config || !config.yAxis) return;
+            if (!config) return; // Safety check
 
-            const maxPoints = (config.chartSize === 'tiny') ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
+            const modelData = newValue[getCurrentModel()];
+            if (!modelData) return;
 
-            if (config.splitBy === 'modelName') {
+            // Line Charts and Measure
+            if (config.chartType === 'line') {
+                const maxPoints = (config.chartSize === 'tiny') ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
                 const chart = chartOrElem;
-                const datasetMap = {};
-                chart.data.datasets.forEach(ds => datasetMap[ds.label] = ds);
 
-                Object.entries(newValue).forEach(([modelName, modelData]) => {
-                    const dataset = datasetMap[modelName];
-                    if (!dataset) return;
-                    const val = modelData[config.yAxis];
-                    if (val === undefined) return;
-
-                    dataset.data.push(val);
-                    if (dataset.data.length > maxPoints) dataset.data.shift();
-                });
-
+                // Update Time Labels
                 chart.data.labels.push(now);
                 if (chart.data.labels.length > maxPoints) chart.data.labels.shift();
-                chart.update('none');
-            } else {
-                const modelData = newValue[getCurrentModel()];
-                if (!modelData) return;
-                const val = modelData[config.yAxis];
-                if (val === undefined) return;
 
-                switch (config.chartType) {
-                    case 'line': {
-                        const chart = chartOrElem;
-                        chart.data.labels.push(now);
-                        chart.data.datasets[0].data.push(val);
-                        if (chart.data.labels.length > maxPoints) {
-                            chart.data.labels.shift();
-                            chart.data.datasets[0].data.shift();
-                        }
-                        chart.update('none');
-                        break;
-                    }
-                    case 'measure': {
-                        const element = chartOrElem;
-                        const kpiValue = element.querySelector('.kpi-value');
-                        if (kpiValue) kpiValue.textContent = val.toFixed(1);
-                        break;
-                    }
-                    case 'doughnut_special': {
-                        const doughnutChart = chartOrElem;
-                        doughnutChart.data.datasets[0].data = [val, 100 - val];
-                        doughnutChart.update('none');
-                        break;
+                // Split by Topic / Sub-topic
+                if (config.splitBy === 'topic' || config.splitBy === 'sub_topic') {
+                    if (modelData.breakdown) {
+                        chart.data.datasets.forEach(dataset => {
+                            const topicKey = dataset.label;
+                            const metricObj = modelData.breakdown[topicKey];
+                            const val = metricObj ? metricObj[config.yAxis] : null;
+                            dataset.data.push(val);
+                            if (dataset.data.length > maxPoints) dataset.data.shift();
+                        });
                     }
                 }
+                // Split by Model Name (Special case: needs full logs object, not just active model)
+                else if (config.splitBy === 'modelName') {
+                    const chart = chartOrElem;
+                    const datasetMap = {};
+                    chart.data.datasets.forEach(ds => datasetMap[ds.label] = ds);
+                    Object.entries(newValue).forEach(([modelName, modelData]) => {
+                        const dataset = datasetMap[modelName];
+
+                        if (!dataset) return;
+
+                        const val = modelData[config.yAxis];
+
+                        if (val === undefined) return;
+                        dataset.data.push(val);
+
+                        if (dataset.data.length > maxPoints) dataset.data.shift();
+                    });
+                    chart.data.labels.push(now);
+                    if (chart.data.labels.length > maxPoints) chart.data.labels.shift();
+                    chart.update('none');
+                }
+                // 4. Standard Line
+                else {
+                    const val = modelData[config.yAxis];
+                    if (val !== undefined) {
+                        chart.data.datasets[0].data.push(val);
+                        if (chart.data.datasets[0].data.length > maxPoints) chart.data.datasets[0].data.shift();
+                    }
+                }
+                chart.update('none');
             }
+
+            else if (config.chartType === 'measure') {
+                const val = modelData[config.yAxis];
+                if (val !== undefined) {
+                    const kpiValue = chartOrElem.querySelector('.kpi-value');
+                    if (kpiValue) kpiValue.textContent = val.toFixed(1);
+                }
+            }
+
+            // Bar Charts using weighted / moving average
+            else if (config.chartType === 'bar') {
+                const chart = chartOrElem;
+                const xField = config.xAxis;
+                const yField = config.yAxis;
+
+                // Iterate through the existing bars
+                chart.data.labels.forEach((label, index) => {
+                    let newVal = null;
+
+                    // Check Topic/Sub-topic
+                    if ((xField === 'topic' || xField === 'sub_topic') && modelData.breakdown) {
+                        if (modelData.breakdown[label]) {
+                            newVal = modelData.breakdown[label][yField];
+                        }
+                    }
+                    // Check Standard Fields
+                    else if (modelData[xField] === label) {
+                        // If the X-axis is something categorical like "ModelName" 
+                        // and the current log belongs to that category
+                        newVal = modelData[yField];
+                    }
+
+                    if (newVal !== null && newVal !== undefined) {
+                        const currentVal = chart.data.datasets[0].data[index];
+                        const smoothedVal = (currentVal * 0.9) + (newVal * 0.1);
+                        chart.data.datasets[0].data[index] = smoothedVal;
+                    }
+                });
+                chart.update('none');
+            }
+
+            // Pie Charts with Accumulated Counts
+            else if (config.chartType === 'pie') {
+                const chart = chartOrElem;
+                const categoryField = config.category;
+
+                chart.data.labels.forEach((label, index) => {
+                    let countToAdd = 0;
+
+                    // Check Topic / Sub Topic
+                    if ((categoryField === 'topic' || categoryField === 'sub_topic') && modelData.breakdown) {
+                        if (modelData.breakdown[label]) {
+                            countToAdd = modelData.breakdown[label].count || 0;
+                        }
+                    }
+                    // Check Standard
+                    else if (modelData[categoryField] === label) {
+                        countToAdd = modelData.queryCount || 1;
+                    }
+
+                    // Add to Pile
+                    if (countToAdd > 0) {
+                        chart.data.datasets[0].data[index] += countToAdd;
+                    }
+                });
+                chart.update('none');
+            }
+
         });
 
         pendingUpdates = [];
@@ -537,4 +755,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.__chartEvtSource) { window.__chartEvtSource.close(); window.__chartEvtSource = null; }
     });
     document.getElementById('model-select')?.addEventListener('change', populateAllCharts);
+
+    const mainContainer = document.querySelector('.charts-container');
+    if (mainContainer) {
+        new Sortable(mainContainer, {
+            group: 'main-charts',
+            animation: 150,  // Smooth animation
+            preventOnFilter: true,
+            onEnd: saveNewOrder
+        });
+    }
 });

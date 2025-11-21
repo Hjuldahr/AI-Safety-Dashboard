@@ -22,6 +22,7 @@
     "path": "^0.12.7",
     "pdfkit": "^0.17.2",
     "puppeteer": "^24.30.0",
+    "simple-statistics": "^7.8.8",
     "url": "^0.11.4"
   }
 }
