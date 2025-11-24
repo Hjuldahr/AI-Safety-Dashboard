@@ -5,11 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fetch recent alert logs from server
     const fetchRecentAlerts = async (limit = 10) => {
         try {
-            const resp = await fetch(`/alerts/recent?limit=${limit}`);
+            // Use the new paginated history API to fetch the most recent logs
+            const params = new URLSearchParams({ page: '1', limit: String(limit) });
+            const resp = await fetch(`/alerts/api/history?${params.toString()}`);
             if (!resp.ok) return [];
             const data = await resp.json();
-            // expect data.alertLogs array with { level, timestamp, alertName, humanRule }
-            return Array.isArray(data.alertLogs) ? data.alertLogs : [];
+            // data.logs is an array of { level, timestamp, alertName, modelName, humanRule }
+            return Array.isArray(data.logs) ? data.logs : [];
         } catch (e) {
             console.error('Failed to fetch recent alerts for notifications:', e);
             return [];

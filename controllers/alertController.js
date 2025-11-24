@@ -5,10 +5,70 @@ import User from "../models/user.js";
 import AI_Log from "../models/AI_Log.js";
 
 const getPage = async (req, res) => {
-    try{
+    try {
         const alerts = await Alert.find();
-        const rawLogs = await AlertLog.find().sort({ timestamp: -1 }).populate('alert').lean();
-        // Build human readable representation for the view
+        // Fetch distinct model names from AI logs to populate the UI
+        let modelNames = [];
+        try {
+            modelNames = await AI_Log.distinct('modelName');
+        } catch (mnErr) {
+            console.error('Failed to fetch model names for alerts page:', mnErr);
+            modelNames = [];
+        }
+
+        res.render("alerts", {
+            user: req.user,
+            alerts: alerts,
+            alertLogs: [],
+            models: modelNames
+        });
+    } catch (error) {
+        console.error("Error fetching alert page:", error);
+    }
+};
+
+// GET /alerts/api/history - Paginated and Filtered History
+const getAlertHistory = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const level = req.query.level;
+        const modelName = req.query.modelName;
+        const start = req.query.startDate;
+        const end = req.query.endDate;
+        const skip = (page - 1) * limit;
+
+        const query = {};
+
+        // Filter logic: We prioritize 'alertSnapshot' fields as they represent the historical state
+        if (level && level !== 'all') {
+            query['alertSnapshot.alertLevel'] = level;
+        }
+        if (modelName && modelName !== 'all') {
+            query['alertSnapshot.modelName'] = modelName;
+        }
+        if (start || end) query.timestamp = {};
+        if (start) {
+            const sd = new Date(start);
+            if (!Number.isNaN(sd.getTime())) query.timestamp.$gte = sd;
+        }
+        if (end) {
+            const ed = new Date(end);
+            if (!Number.isNaN(ed.getTime())) {
+                // Make end-date inclusive by setting to end of day
+                ed.setHours(23, 59, 59, 999);
+                query.timestamp.$lte = ed;
+            }
+        }
+
+        const total = await AlertLog.countDocuments(query);
+        const rawLogs = await AlertLog.find(query)
+            .sort({ timestamp: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate('alert')
+            .lean();
+
         const alertLogs = rawLogs.map(l => {
             const a = l.alertSnapshot || l.alert || {};
             let humanRule = '';
@@ -23,27 +83,21 @@ const getPage = async (req, res) => {
                 timestamp: l.timestamp,
                 alertName: a.alertName || '',
                 modelName: a.modelName || null,
-                humanRule
+                humanRule,
+                created: l.timestamp // Ensure created exists for frontend sorting/display
             };
         });
 
-        // Also fetch distinct model names from AI logs to populate the UI
-        let modelNames = [];
-        try {
-            modelNames = await AI_Log.distinct('modelName');
-        } catch (mnErr) {
-            console.error('Failed to fetch model names for alerts page:', mnErr);
-            modelNames = [];
-        }
+        res.json({
+            logs: alertLogs,
+            total,
+            page,
+            pages: Math.ceil(total / limit)
+        });
 
-        res.render("alerts", {
-            user: req.user,
-            alerts: alerts,
-            alertLogs: alertLogs,
-            models: modelNames
-        }); 
-    }catch (error){
-        console.error("Error fetching alert page:", error);
+    } catch (error) {
+        console.error("Error fetching alert history:", error);
+        res.status(500).json({ message: 'Error fetching history' });
     }
 };
 
@@ -60,7 +114,7 @@ const createAlert = async (req, res) => {
             return res.status(400).json({ message: 'Invalid alert rule: ' + err.message });
         }
 
-    const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created, modelName: modelName || null });
+        const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created, modelName: modelName || null });
         await newAlert.save();
         // Add a human readable version for UI/logging
         const humanRule = Alert.convertToHumanFormat(normalizedRule);
@@ -84,37 +138,6 @@ const getLiveAlerts = async (req, res) => {
     } catch (error) {
         console.error('Error fetching live alerts:', error);
         return res.status(500).json({ message: 'Failed to fetch alerts.' });
-    }
-};
-
-// GET /alerts/recent - return recent AlertLog entries as JSON (for notifications)
-const getRecentAlertLogs = async (req, res) => {
-    try {
-        const limit = parseInt(req.query.limit, 10) || 10;
-        const rawLogs = await AlertLog.find().sort({ timestamp: -1 }).limit(limit).populate('alert').lean();
-
-        const alertLogs = rawLogs.map(l => {
-            const a = l.alertSnapshot || l.alert || {};
-            let humanRule = '';
-            try {
-                humanRule = Alert.convertToHumanFormat(a.alertRule);
-            } catch (err) {
-                humanRule = '';
-            }
-            return {
-                _id: l._id,
-                level: a.alertLevel || 'Info',
-                timestamp: l.timestamp,
-                alertName: a.alertName || '',
-                modelName: a.modelName || null,
-                humanRule
-            };
-        });
-
-        return res.status(200).json({ alertLogs });
-    } catch (error) {
-        console.error('Error fetching recent alert logs:', error);
-        return res.status(500).json({ message: 'Failed to fetch recent alert logs.' });
     }
 };
 
@@ -223,8 +246,6 @@ const updateAlertById = async (req, res) => {
     }
 };
 
-
-
 // GET /alerts/unread-count - return number of AlertLog entries newer than user's last seen (for notifications)
 const getUnreadCount = async (req, res) => {
     try {
@@ -253,4 +274,13 @@ const markAlertsRead = async (req, res) => {
     }
 };
 
-export default { getPage, createAlert, getLiveAlerts, getRecentAlertLogs, removeAlertById, updateAlertById, getUnreadCount, markAlertsRead };
+export default { 
+    getPage, 
+    createAlert, 
+    getLiveAlerts, 
+    getAlertHistory,
+    removeAlertById, 
+    updateAlertById, 
+    getUnreadCount, 
+    markAlertsRead 
+};

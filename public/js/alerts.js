@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const alertLevelSelect = document.getElementById('alert-level');
     const modelSelect = document.getElementById('model-name');
 
+    // History references
+    const historyFilterForm = document.getElementById('history-filter-form');
+    const historyClearBtn = document.querySelector('#history-filter-form .clear-filters');
+    const historyPagination = document.getElementById('history-pagination');
+
     // Buttons used for edit flow (created once)
     const saveBtn = document.createElement('button');
     saveBtn.id = 'save-alert-btn';
@@ -38,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Client-side cache and edit state
     const liveAlertsCache = {};
     let currentEditId = null;
+    let currentHistoryPage = 1;
 
     // --------------------------------------------------
     // Config / constant mappings
@@ -250,22 +256,6 @@ document.addEventListener('DOMContentLoaded', function () {
         liveAlertsList.innerHTML = html;
     }
 
-    function prependAlertLogRow(serverAlert, humanRule) {
-        const newRow = document.createElement('tr');
-        const createdTs = serverAlert && serverAlert.created ? new Date(serverAlert.created) : new Date();
-        const timeString = formatTimeISO(createdTs);
-        const level = (serverAlert && serverAlert.alertLevel) || 'Info';
-        const levelClass = level.toLowerCase();
-        newRow.innerHTML = `
-            <td><span class="level-tag ${levelClass}">${(serverAlert && serverAlert.alertLevel) || level}</span></td>
-            <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
-            <td>${(serverAlert && serverAlert.alertName) || ''}</td>
-            <td class="model-cell">${(serverAlert && (serverAlert.modelName || serverAlert.alertSnapshot && serverAlert.alertSnapshot.modelName)) || '-'}</td>
-            <td class="details-cell">${humanRule || ''}</td>
-        `;
-        alertLogBody.prepend(newRow);
-    }
-
     // --------------------------------------------------
     // API wrappers
     // --------------------------------------------------
@@ -307,6 +297,98 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --------------------------------------------------
+    // History & Pagination Logic
+    // --------------------------------------------------
+    
+    function renderPagination(container, totalPages, currentPage, handlerFunction) {
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        // Prev Button
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = '« Prev';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.addEventListener('click', () => handlerFunction(currentPage - 1));
+        container.appendChild(prevBtn);
+
+        // Page Numbers
+        for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.textContent = i;
+            if (i === currentPage) pageBtn.classList.add('active');
+            pageBtn.addEventListener('click', () => handlerFunction(i));
+            container.appendChild(pageBtn);
+        }
+
+        // Next Button
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Next »';
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.addEventListener('click', () => handlerFunction(currentPage + 1));
+        container.appendChild(nextBtn);
+    }
+
+    function renderHistoryTable(logs) {
+        alertLogBody.innerHTML = ''; // clear existing
+        if (!logs || logs.length === 0) {
+            alertLogBody.innerHTML = '<tr><td colspan="5">No alert history found.</td></tr>';
+            return;
+        }
+
+        logs.forEach(log => {
+            const newRow = document.createElement('tr');
+            const createdTs = log.created ? new Date(log.created) : new Date();
+            const timeString = createdTs.toLocaleString('en-CA', { hour12: true }).replace(',', '');
+            const level = log.level || 'Info';
+            
+            newRow.innerHTML = `
+                <td><span class="level-tag ${level.toLowerCase()}">${level}</span></td>
+                <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
+                <td>${log.alertName || ''}</td>
+                <td class="model-cell">${log.modelName || '-'}</td>
+                <td class="details-cell">${log.humanRule || ''}</td>
+            `;
+            alertLogBody.appendChild(newRow);
+        });
+    }
+
+    async function loadAlertHistory(page = 1) {
+        currentHistoryPage = page;
+        
+        // UI Loading state
+        alertLogBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+        historyPagination.innerHTML = '';
+
+        // Get filter values
+        const level = document.getElementById('filter-level').value;
+        const model = document.getElementById('filter-model').value;
+        const startDate = document.getElementById('filter-start-date') ? document.getElementById('filter-start-date').value : '';
+        const endDate = document.getElementById('filter-end-date') ? document.getElementById('filter-end-date').value : '';
+
+        // Build Params
+        const params = new URLSearchParams();
+        params.set('page', page);
+        params.set('limit', 10); // Standard limit
+        if (level && level !== 'all') params.set('level', level);
+        if (model && model !== 'all') params.set('modelName', model);
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+
+        try {
+            const resp = await fetch(`/alerts/api/history?${params.toString()}`);
+            if (!resp.ok) throw new Error('Failed to fetch history');
+            
+            const data = await resp.json(); // { logs: [], total: X, pages: Y, page: Z }
+            
+            renderHistoryTable(data.logs);
+            renderPagination(historyPagination, data.pages, data.page, loadAlertHistory);
+        } catch (err) {
+            console.error('History load error:', err);
+            alertLogBody.innerHTML = `<tr><td colspan="5">Error loading history: ${err.message}</td></tr>`;
+        }
+    }
+
+    // --------------------------------------------------
     // Event handlers
     // --------------------------------------------------
     async function loadLiveAlerts() {
@@ -331,6 +413,10 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, modelName });
             await loadLiveAlerts();
+            
+            // Reload history to show the new alert log (if triggered immediately or just to refresh state)
+            await loadAlertHistory(1);
+
             // Visual flash for critical alerts (based on UI selection)
             if ((data && data.alert && data.alert.alertLevel || alertLevel) === 'Critical') {
                 document.body.classList.add('critical-flash');
@@ -436,7 +522,23 @@ document.addEventListener('DOMContentLoaded', function () {
     cancelBtn.addEventListener('click', function () { cancelEdit(); });
 
     // --------------------------------------------------
+    // History Filter Events
+    // --------------------------------------------------
+    if (historyFilterForm) {
+        historyFilterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            loadAlertHistory(1); // Reset to page 1 on filter
+        });
+
+        historyClearBtn.addEventListener('click', () => {
+            historyFilterForm.reset();
+            loadAlertHistory(1);
+        });
+    }
+
+    // --------------------------------------------------
     // Initialization
     // --------------------------------------------------
     loadLiveAlerts();
+    loadAlertHistory(1);
 });

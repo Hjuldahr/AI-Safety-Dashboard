@@ -6,14 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Alerts</title>
 
-  <!-- CSS -->
   <link rel="stylesheet" href="/css/fullSite.css">
   <link rel="stylesheet" href="/css/header.css">
   <link rel="stylesheet" href="css/alerts.css">
   <link rel="stylesheet" href="/css/nav.css">
   <link rel="stylesheet" href="/css/notifications.css">
 
-  <!-- Scripts -->
   <script src="js/alerts.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script src="/js/notifications.js" defer></script>
@@ -26,7 +24,6 @@
   <main class="content">
 
     <div class="main-container">
-      <!-- Alert Builder Section -->
       <section class="card alert-builder">
         <h2 class="card-title">Alert Builder</h2>
         <div class="alert-builder-grid">
@@ -52,7 +49,7 @@
               <option value="">-- all models --</option>
               <% if (typeof models !== 'undefined' && models && models.length) { %>
                 <% models.forEach(function(m) { %>
-                  <option value="<%= m %>"><%= m %></option>
+                <option value="<%= m %>"><%= m %></option>
                 <% }); %>
               <% } %>
             </select>
@@ -94,10 +91,8 @@
         </div>
       </section>
 
-      <!-- Main Content Area with Live Alerts and Log -->
       <div class="alerts-layout">
 
-        <!-- View and Edit Live Alerts Section -->
         <aside class="card live-alerts-panel">
           <h2 class="card-title">View and Edit Live Alerts</h2>
           <ul id="live-alerts-list" class="live-alerts-list">
@@ -127,9 +122,44 @@
           </ul>
         </aside>
 
-        <!-- Alert Log Section -->
         <div class="card alert-log-panel">
-          <h2 class="card-title">Alert History</h2>
+          <div class="card-header-flex">
+            <h2 class="card-title">Alert History</h2>
+          </div>
+
+          <div class="filter-container" style="margin-bottom: 15px;">
+            <form id="history-filter-form" class="filter-group">
+              <button type="button" class="btn-secondary clear-filters">Clear</button>
+              
+              <label for="filter-level">Level:</label>
+              <select id="filter-level" name="level">
+                <option value="all">All Levels</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Info">Info</option>
+              </select>
+
+              <label for="filter-model">Model:</label>
+              <select id="filter-model" name="model">
+                <option value="all">All Models</option>
+                <% if (typeof models !== 'undefined' && models && models.length) { %>
+                    <% models.forEach(function(m) { %>
+                    <option value="<%= m %>"><%= m %></option>
+                    <% }); %>
+                <% } %>
+              </select>
+
+              <label for="filter-start-date">From:</label>
+              <input type="date" id="filter-start-date" name="startDate">
+
+              <label for="filter-end-date">To:</label>
+              <input type="date" id="filter-end-date" name="endDate">
+
+              <button type="submit" class="btn-primary">Apply</button>
+            </form>
+          </div>
+
           <div class="table-container">
             <table class="alert-log-table">
               <thead>
@@ -142,28 +172,15 @@
                 </tr>
               </thead>
               <tbody id="alert-log-body">
-                <% if (typeof alertLogs !== 'undefined' && alertLogs && alertLogs.length) { %>
-                  <% alertLogs.forEach(function(log) { %>
-                    <tr>
-                      <td><span class="level-tag <%= (log.level || 'Info').toLowerCase() %>"><%= log.level || 'Info' %></span></td>
-                      <td class="time-cell"><%= new Date(log.timestamp).toLocaleString('en-CA', { hour12: true }).replace(',', '') %> <span>Eastern Standard Time</span></td>
-                      <td><%= log.alertName %></td>
-                      <td class="model-cell"><%= log.modelName || '-' %></td>
-                      <td class="details-cell"><%= log.humanRule %></td>
-                    </tr>
-                  <% }); %>
-                <% } else { %>
-                  <tr>
-                    <td colspan="4">No alert history available.</td>
-                  </tr>
-                <% } %>
+                <tr><td colspan="5">Loading history...</td></tr>
               </tbody>
             </table>
           </div>
+          
+          <div id="history-pagination" class="pagination"></div>
         </div>
       </div>
   </main>
   </div>
 </body>
-
 </html>
