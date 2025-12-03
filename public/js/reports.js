@@ -2,6 +2,80 @@
 let isGeneratingReport = false;
 let lastPdfUrl = null; // object URL of last generated PDF
 
+// --- HELPER FUNCTION ---
+
+const setButtonState = (elements, disabled, text) => {
+    if (elements.submitBtn) {
+        elements.submitBtn.disabled = disabled;
+        elements.submitBtn.textContent = text;
+    }
+}
+
+const handleReportSubmit = async (elements) => {
+    if (isGeneratingReport) return;
+    isGeneratingReport = true;
+
+    if (elements.statusText) elements.statusText.textContent = 'Generating report... Please wait.';
+    setButtonState(elements, true, 'Generating...');
+    
+    // Clear previous preview
+    if (elements.previewWrapper) elements.previewWrapper.style.display = 'none';
+
+    try {
+        const formData = new FormData(elements.form);
+        const payload = Object.fromEntries(formData.entries());
+
+        const response = await fetch('/reports/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        // FIX: Robust error handling
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            let errorMessage = `HTTP ${response.status} failed.`;
+
+            // Attempt to parse JSON error message from the server
+            try {
+                const errorData = JSON.parse(text);
+                errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch (e) {
+                // Not JSON, use the status text
+                errorMessage = `Server Error (${response.status}): ${text.substring(0, 100)}...`;
+            }
+            throw new Error(errorMessage);
+        }
+
+        const pdfBlob = await response.blob();
+
+        // Clean up previous object URL
+        if (lastPdfUrl) {
+            URL.revokeObjectURL(lastPdfUrl);
+            lastPdfUrl = null;
+        }
+
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        lastPdfUrl = pdfUrl;
+
+        // Show preview iframe
+        if (elements.previewWrapper && elements.previewFrame) {
+            elements.previewFrame.src = pdfUrl;
+            elements.previewWrapper.style.display = 'block';
+        }
+
+        if (elements.statusText) elements.statusText.textContent = 'Report ready. Preview below or click "Download Last".';
+
+    } catch (error) {
+        console.error('Failed to generate report:', error);
+        if (elements.statusText) elements.statusText.textContent = `Error: ${error.message}`;
+        alert('Failed to generate report. Check console for details.');
+    } finally {
+        isGeneratingReport = false;
+        setButtonState(elements, false, 'Generate Report');
+    }
+};
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     const elements = {
@@ -37,82 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
             a.remove();
         });
     }
+
+    // Set initial button state
+    setButtonState(elements, false, 'Generate Report');
 });
-
-
-// --- MAIN HANDLER ---
-
-/**
- * Collects form inputs, sends them to the server (/reports/create),
- * displays inline PDF and caches URL for download.
- * Matches the style of your logs.js: small, clear, explicit error handling.
- */
-async function handleReportSubmit(elements) {
-    if (isGeneratingReport) return;
-
-    isGeneratingReport = true;
-    if (elements.submitBtn) {
-        elements.submitBtn.disabled = true;
-        elements.submitBtn.textContent = 'Generating...';
-    }
-    if (elements.statusText) elements.statusText.textContent = 'Generating report...';
-
-    try {
-        const formEl = elements.form;
-        if (!formEl) throw new Error('Report form not found');
-
-        const formData = new FormData(formEl);
-
-        // Build payload using the same naming as the controller expects
-        const payload = {
-            reportTitle: formData.get('reportTitle'),
-            startDate: formData.get('startDate'),
-            endDate: formData.get('endDate'),
-            reportType: formData.get('reportType'),
-            modelName: formData.get('modelName'),
-            notes: formData.get('notes')
-        };
-
-        // POST to the chosen route
-        const response = await fetch('/reports/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const text = await response.text().catch(() => '');
-            throw new Error(`HTTP ${response.status} ${text}`);
-        }
-
-        const pdfBlob = await response.blob();
-
-        // Clean up previous object URL
-        if (lastPdfUrl) {
-            URL.revokeObjectURL(lastPdfUrl);
-            lastPdfUrl = null;
-        }
-
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        lastPdfUrl = pdfUrl;
-
-        // Show preview iframe
-        if (elements.previewWrapper && elements.previewFrame) {
-            elements.previewFrame.src = pdfUrl;
-            elements.previewWrapper.style.display = 'block';
-        }
-
-        if (elements.statusText) elements.statusText.textContent = 'Report ready. Preview below or click "Download Last".';
-
-    } catch (error) {
-        console.error('Failed to generate report:', error);
-        if (elements.statusText) elements.statusText.textContent = `Error: ${error.message}`;
-        alert('Failed to generate report. Check console for details.');
-    } finally {
-        isGeneratingReport = false;
-        if (elements.submitBtn) {
-            elements.submitBtn.disabled = false;
-            elements.submitBtn.textContent = 'Generate Report';
-        }
-    }
-}
