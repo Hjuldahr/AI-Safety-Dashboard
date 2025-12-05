@@ -1,3 +1,5 @@
+const { DATA_DICTIONARY, CHART_SIZES, KNOWN_MODELS } = window.CONSTANTS;
+
 const Utils = {
     CHART_COLORS: {
         coral: 'rgb(244, 91, 105)',
@@ -6,7 +8,18 @@ const Utils = {
         amber: 'rgb(255, 179, 0)',
         purple: 'rgb(142, 68, 173)',
     },
+    //updated to support HEX
     transparentize(color, opacity) {
+        if (!color) return `rgba(0,0,0,${opacity})`;
+
+        // Handle Hex (e.g. #FF0000)
+        if (color.startsWith('#')) {
+            let c = color.substring(1).split('');
+            if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+            c = '0x' + c.join('');
+            return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + opacity + ')';
+        }
+        // Handle RGB/RGBA
         return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
     }
 };
@@ -16,8 +29,14 @@ function getHashedColor(str) {
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const colors = Object.values(Utils.CHART_COLORS);
-    return colors[Math.abs(hash) % colors.length];
+    const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+    return '#' + "00000".substring(0, 6 - c.length) + c;
+}
+
+// Reads deep paths like "breakdown.topic" or "tokensUsed"
+function getValueFromPath(obj, path) {
+    if (!path) return undefined;
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
 }
 
 const charts = {};
@@ -82,12 +101,17 @@ function createChartFromConfig(config, ctx) {
 // ---------- Data Mappers ----------
 function mapLineData(chart, config, logs) {
     const maxPoints = config.chartSize === 'tiny' ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
-    const yField = config.yAxis;
+    const yConfig = DATA_DICTIONARY[config.yAxis];
+    const splitConfig = config.splitBy ? DATA_DICTIONARY[config.splitBy] : null;
+
+    if (!yConfig) return;
 
     let flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
     // Sort logs by time once, so we don't have to do it in every block
     const sortedLogs = flatLogs.slice(-maxPoints);
+    sortedLogs.sort((a, b) => a.responseTimestamp - b.responseTimestamp);
+    
     const labels = sortedLogs.map(l => new Date(l.responseTimestamp).toLocaleTimeString());
 
     // Topic/Sub-topic
