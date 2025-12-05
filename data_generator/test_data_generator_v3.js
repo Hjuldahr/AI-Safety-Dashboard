@@ -1,4 +1,5 @@
 import { modeFast, mean } from 'simple-statistics'
+import { TOPIC_HIERARCHY } from '../config/constants.js';
 
 // data_generator/test_data_generator_v4.js
 export function getRandomFloat(min, max) {
@@ -17,26 +18,8 @@ export function remap(value, low1, high1, low2, high2) {
   return low2 + (value - low1) * (high2 - low2) / (high1 - low1);
 }
 
-export const topics = {
-  "Customer Support": [
-    "Troubleshooting",
-    "Account Management",
-    "Returns & Refunds"
-  ],
-  "Sales & Inquiry": [
-    "Product Info",
-    "Pricing & Quotes",
-    "Comparison"
-  ],
-  "General Information": [
-    "Logistics & Shipping",
-    "Business Details"
-  ],
-  "Unsupported Use": [
-    "Casual Chat",
-    "Technical / Adversarial"
-  ]
-};
+
+const topics = TOPIC_HIERARCHY;
 
 /**
  * pseudoAI v4

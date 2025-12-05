@@ -1,11 +1,13 @@
 import mongoose from 'mongoose';
+import { KNOWN_MODELS } from '../config/constants.js';
 
 // === AI_Log Schema ===
 const AI_Log_Schema = new mongoose.Schema({
 
     modelName: {
         type: String,
-        required: true
+        required: true,
+        enum: KNOWN_MODELS
     },
 
     // Core rating metrics

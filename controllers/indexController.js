@@ -1,6 +1,7 @@
 import AI_Log from "../models/AI_Log.js";
 import { schedulerState } from '../server_side_events/schedulerState.js';
 import ChartConfig from '../models/Chart_Config.js';
+import constants from "../config/constants.js";
 
 // limits how many data points are sent to the frontend on reload (shouldn't be more than charts visible range)
 const RECENT_DATA_LIMIT = 30;
@@ -49,7 +50,8 @@ const getRecentData = async (req, res) => {
 
         res.status(200).json({
             logs: logsByModel,
-            configs: configs
+            configs: configs,
+            constants: constants
         });
     } catch (error) {
         console.error("Error fetching recent data:", error);
