@@ -10,6 +10,7 @@ const getPage = async (req, res) => {
     try {
         res.render("index", {
             user: req.user,
+            constants: constants
         }); //renders the index.ejs 
     } catch (error) {
         console.error("Error fetching homepage content:", error);
@@ -50,8 +51,7 @@ const getRecentData = async (req, res) => {
 
         res.status(200).json({
             logs: logsByModel,
-            configs: configs,
-            constants: constants
+            configs: configs
         });
     } catch (error) {
         console.error("Error fetching recent data:", error);
