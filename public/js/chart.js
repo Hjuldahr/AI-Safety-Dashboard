@@ -6,7 +6,18 @@ const Utils = {
         amber: 'rgb(255, 179, 0)',
         purple: 'rgb(142, 68, 173)',
     },
+    //updated to support HEX
     transparentize(color, opacity) {
+        if (!color) return `rgba(0,0,0,${opacity})`;
+
+        // Handle Hex (e.g. #FF0000)
+        if (color.startsWith('#')) {
+            let c = color.substring(1).split('');
+            if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+            c = '0x' + c.join('');
+            return 'rgba(' + [(c >> 16) & 255, (c >> 8) & 255, c & 255].join(',') + ',' + opacity + ')';
+        }
+        // Handle RGB/RGBA
         return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
     }
 };
@@ -16,8 +27,14 @@ function getHashedColor(str) {
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const colors = Object.values(Utils.CHART_COLORS);
-    return colors[Math.abs(hash) % colors.length];
+    const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+    return '#' + "00000".substring(0, 6 - c.length) + c;
+}
+
+// Reads deep paths like "breakdown.topic" or "tokensUsed"
+function getValueFromPath(obj, path) {
+    if (!path) return undefined;
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
 }
 
 const charts = {};
@@ -82,138 +99,131 @@ function createChartFromConfig(config, ctx) {
 // ---------- Data Mappers ----------
 function mapLineData(chart, config, logs) {
     const maxPoints = config.chartSize === 'tiny' ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
-    const yField = config.yAxis;
+    const yConfig = DATA_DICTIONARY[config.yAxis];
+    const splitConfig = config.splitBy ? DATA_DICTIONARY[config.splitBy] : null;
+
+    if (!yConfig) return;
 
     let flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
-    // Sort logs by time once, so we don't have to do it in every block
-    const sortedLogs = flatLogs.slice(-maxPoints);
-    const labels = sortedLogs.map(l => new Date(l.responseTimestamp).toLocaleTimeString());
+    // Group logs by Timestamp
+    const logsByTime = {};
+    flatLogs.forEach(log => {
+        const t = log.responseTimestamp;
+        if (!logsByTime[t]) logsByTime[t] = [];
+        logsByTime[t].push(log);
+    });
 
-    // Topic/Sub-topic
-    if (config.splitBy === 'topic' || config.splitBy === 'sub_topic') {
+    // Sort unique timestamps and take the last 'maxPoints' (e.g., 15)
+    // Use timestamp as the Source of Truth for the X-Axis
+    const sortedTimestamps = Object.keys(logsByTime)
+        .map(Number) // Convert string keys back to numbers
+        .sort((a, b) => a - b)
+        .slice(-maxPoints);
 
-        // Get all unique keys found in the breakdown objects
-        const allTopics = new Set();
-        sortedLogs.forEach(log => {
-            if (log.breakdown) {
-                Object.keys(log.breakdown).forEach(k => {
-                    if (log.breakdown[k].type === config.splitBy) {
-                        allTopics.add(k);
-                    }
-                });
-            }
-        });
+    // Generate Labels
+    chart.data.labels = sortedTimestamps.map(ts => new Date(ts).toLocaleTimeString());
 
-        // Create a dataset for each Topic found
-        const datasets = Array.from(allTopics).map(topicName => {
-            const dataPoints = sortedLogs.map(log => {
-                // Look inside the backpack!
-                if (log.breakdown && log.breakdown[topicName]) {
-                    return log.breakdown[topicName][yField] || 0;
+    // Generate Datasets
+    chart.data.datasets = [];
+
+    // --- CASE A: SPLIT CHART ---
+    if (splitConfig && splitConfig.acceptedValues) {
+
+        splitConfig.acceptedValues.forEach(categoryValue => {
+            const dataPoints = [];
+
+            // For every timestamp on the X-axis...
+            sortedTimestamps.forEach(ts => {
+                const logsAtThisTime = logsByTime[ts];
+                let val = null;
+
+                // Find the specific log in this bucket that matches our category
+                if (config.splitBy === 'modelName') {
+                    const match = logsAtThisTime.find(l => l.modelName === categoryValue);
+                    if (match) val = getValueFromPath(match, yConfig.dbPath);
                 }
-                return null; // Null allows Chart.js to gap the line if data is missing
+                else {
+                    const match = logsAtThisTime.find(l => l.breakdown && l.breakdown[categoryValue] && l.breakdown[categoryValue].type === config.splitBy);
+                    if (match) val = match.breakdown[categoryValue][config.yAxis];
+                }
+
+                dataPoints.push(val !== undefined ? val : null);
             });
 
-            const color = getHashedColor(topicName);
-
-            return {
-                label: topicName,
+            const color = getHashedColor(categoryValue);
+            chart.data.datasets.push({
+                label: categoryValue,
                 data: dataPoints,
                 borderColor: color,
                 backgroundColor: Utils.transparentize(color, 0.5),
                 tension: 0.3,
-                spanGaps: true // Connects dots if a topic is missing for one tick
-            };
+                spanGaps: true
+            });
         });
-
-        chart.data.labels = labels;
-        chart.data.datasets = datasets;
     }
 
-    // split by model name
-    else if (config.splitBy === 'modelName') {
-        // For this specific case, we need the original grouped 'logs' object, 
-        // not the flatLogs array, because the keys are the model names.
-        const modelNames = Object.keys(logs);
-        if (!modelNames.length) return;
-
-        const referenceLabels = (logs[modelNames[0]] || []).slice(-maxPoints).map(l => new Date(l.responseTimestamp).toLocaleTimeString());
-
-        const datasets = modelNames.map(modelName => {
-            const data = (logs[modelName] || []).slice(-maxPoints).map(l => l[yField]);
-            const color = getHashedColor(modelName);
-            return {
-                label: modelName,
-                data,
-                borderColor: color,
-                backgroundColor: Utils.transparentize(color, 0.5),
-                fill: true,
-                tension: 0.3
-            };
-        });
-
-        chart.data.labels = referenceLabels;
-        chart.data.datasets = datasets;
-    }
-
-    // No split
+    // --- STANDARD CHART ---
     else {
-        const data = sortedLogs.map(l => l[yField]);
-        const color = getHashedColor(config.title);
+        const dataPoints = sortedTimestamps.map(ts => {
+            const logsAtThisTime = logsByTime[ts];
+            const currentModel = getCurrentModel();
+            const match = logsAtThisTime.find(l => l.modelName === currentModel) || logsAtThisTime[0];
 
-        chart.data.labels = labels;
-        chart.data.datasets = [{
-            label: yField,
-            data,
+            return getValueFromPath(match, yConfig.dbPath);
+        });
+
+        const color = yConfig.color || getHashedColor(config.title);
+        chart.data.datasets.push({
+            label: yConfig.label,
+            data: dataPoints,
             borderColor: color,
             backgroundColor: Utils.transparentize(color, 0.5),
             fill: true,
             tension: 0.3
-        }];
+        });
     }
 
-    // chart options
     if (config.chartSize !== 'tiny' && chart.options.scales.y) {
-        chart.options.scales.y.title = { display: true, text: yField };
+        chart.options.scales.y.title = { display: true, text: yConfig.label };
     }
-    chart.options.scales.y.min = 0;
 }
 
 function mapBarData(chart, config, logs) {
-    const xField = config.xAxis;
-    const yField = config.yAxis;
-    const groups = {};
+    const xConfig = DATA_DICTIONARY[config.xAxis];
+    const yConfig = DATA_DICTIONARY[config.yAxis];
 
-    // Normalize logs to a flat array
+    if (!xConfig || !yConfig) return;
+
+    const groups = {};
     const flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
     flatLogs.forEach(log => {
-        // Topic/Sub-topic
-        if ((xField === 'topic' || xField === 'sub_topic') && log.breakdown) {
-            Object.keys(log.breakdown).forEach(key => {
-                const item = log.breakdown[key];
+        // Handle Categorical Splits (Topic/Subtopic)
+        // These are special because they are arrays/objects inside 'breakdown', not simple fields
+        if (xConfig.dbPath.startsWith('breakdown.')) {
+            if (log.breakdown) {
+                Object.keys(log.breakdown).forEach(key => {
+                    const item = log.breakdown[key];
+                    // Match the type
+                    if (item.type === config.xAxis) {
+                        if (!groups[key]) groups[key] = { sum: 0, count: 0 };
 
-                // Only aggregate if the item type matches the chart config (topic vs sub_topic)
-                if (item.type === xField) {
-                    if (!groups[key]) groups[key] = { sum: 0, count: 0 };
-
-                    // Add the specific metric from the breakdown (e.g., responseTime for "Writing")
-                    const val = item[yField];
-                    if (val !== undefined) {
-                        groups[key].sum += val;
-                        groups[key].count += 1;
+                        const val = item[config.yAxis]; // Value is inside the breakdown object
+                        if (val !== undefined) {
+                            groups[key].sum += val;
+                            groups[key].count += 1;
+                        }
                     }
-                }
-            });
+                });
+            }
         }
-
-        // Standard Data
+        // Handle Standard Fields (e.g. ModelName)
         else {
-            const key = log[xField] || 'unknown';
+            const key = getValueFromPath(log, xConfig.dbPath) || 'unknown';
             if (!groups[key]) groups[key] = { sum: 0, count: 0 };
 
-            const val = log[yField];
+            const val = getValueFromPath(log, yConfig.dbPath);
             if (val !== undefined) {
                 groups[key].sum += val;
                 groups[key].count += 1;
@@ -222,55 +232,58 @@ function mapBarData(chart, config, logs) {
     });
 
     const labels = Object.keys(groups);
-
-    // Calculate Averages
     const data = labels.map(label => {
         const g = groups[label];
         return g.count ? (g.sum / g.count) : 0;
     });
 
-    // Apply to Chart
     chart.data.labels = labels;
     chart.data.datasets = [{
-        label: `Average ${yField}`,
+        label: `Average ${yConfig.label}`,
         data: data,
+        // Use hashed colors for bars so they look distinct
         backgroundColor: labels.map(l => Utils.transparentize(getHashedColor(l), 0.7)),
         borderColor: labels.map(l => getHashedColor(l)),
         borderWidth: 1
     }];
 
     if (config.chartSize !== 'tiny' && chart.options.scales.y) {
-        chart.options.scales.y.title = { display: true, text: yField };
+        chart.options.scales.y.title = { display: true, text: yConfig.label };
     }
 }
 
 function mapPieData(chart, config, logs) {
-    const categoryField = config.category;
-    const groups = {};
+    const catConfig = DATA_DICTIONARY[config.category];
+    if (!catConfig) return;
 
+    const groups = {};
     const flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
     flatLogs.forEach(log => {
-        // Topic/Sub-topic
-        if ((categoryField === 'topic' || categoryField === 'sub_topic') && log.breakdown) {
-            Object.keys(log.breakdown).forEach(key => {
-                const item = log.breakdown[key];
+        // Handle Breakdown Fields (Topic / Subtopic)
+        // We check if the dictionary says this field lives inside "breakdown."
+        if (catConfig.dbPath.startsWith('breakdown.')) {
+            if (log.breakdown) {
+                Object.keys(log.breakdown).forEach(key => {
+                    const item = log.breakdown[key];
 
-                if (item.type === categoryField) {
-                    if (!groups[key]) groups[key] = { sum: 0 };
-
-                    // Use the specific count from the breakdown bucket
-                    groups[key].sum += (item.count || 0);
-                }
-            });
+                    // We check if the item type matches the config ID (e.g. 'topic')
+                    if (item.type === config.category) {
+                        if (!groups[key]) groups[key] = { sum: 0 };
+                        // Add the count from the pre-aggregated log
+                        groups[key].sum += (item.count || 0);
+                    }
+                });
+            }
         }
 
-        // Regular Chart
+        // Handle Standard Fields (e.g. ModelName)
         else {
-            const key = log[categoryField] || 'unknown';
+            // Use the helper to find the category value
+            const key = getValueFromPath(log, catConfig.dbPath) || 'unknown';
             if (!groups[key]) groups[key] = { sum: 0 };
 
-            // Use the global query count
+            // For standard logs, each entry counts as 1 query (or use queryCount if available)
             groups[key].sum += (log.queryCount || 1);
         }
     });
@@ -289,13 +302,19 @@ function mapPieData(chart, config, logs) {
 }
 
 function mapMeasureData(element, config, logs) {
-    const yField = config.yAxis;
-    const values = logs.map(l => l[yField]);
-    const avg = values.length ? values.reduce((a, b) => a + b) / values.length : 0;
+    const yConfig = DATA_DICTIONARY[config.yAxis];
+    if (!yConfig) return;
+    const values = logs.map(l => getValueFromPath(l, yConfig.dbPath));
+    // Filter out undefined/nulls before averaging
+    const validValues = values.filter(v => v !== undefined && v !== null);
+    const avg = validValues.length ? validValues.reduce((a, b) => a + b) / validValues.length : 0;
 
     const wrapper = element.querySelector('.kpi-content-wrapper');
     if (wrapper) {
-        wrapper.innerHTML = `<h3 class="kpi-title">${config.title}</h3><div class="kpi-value">${avg.toFixed(1)}</div>`;
+        wrapper.innerHTML = `
+            <h3 class="kpi-title">${config.title}</h3>
+            <div class="kpi-value">${avg.toFixed(1)}</div>
+        `;
     }
 }
 
@@ -434,46 +453,46 @@ function setupSSE() {
                 const maxPoints = (config.chartSize === 'tiny') ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
                 const chart = chartOrElem;
 
+                let limit = maxPoints;
+
                 // Update Time Labels
                 chart.data.labels.push(now);
-                if (chart.data.labels.length > maxPoints) chart.data.labels.shift();
+                if (chart.data.labels.length > limit) chart.data.labels.shift();
 
-                // Split by Topic / Sub-topic
-                if (config.splitBy === 'topic' || config.splitBy === 'sub_topic') {
+                // Split Logic
+                if (config.splitBy) {
                     if (modelData.breakdown) {
                         chart.data.datasets.forEach(dataset => {
-                            const topicKey = dataset.label;
-                            const metricObj = modelData.breakdown[topicKey];
-                            const val = metricObj ? metricObj[config.yAxis] : null;
-                            dataset.data.push(val);
-                            if (dataset.data.length > maxPoints) dataset.data.shift();
+                            const categoryKey = dataset.label; // e.g., "Customer Support"
+
+                            // Handle Model Name Split
+                            if (config.splitBy === 'modelName') {
+                                // Note: SSE sends data for *all* models keyed by model name
+                                const specificModelData = newValue[categoryKey];
+                                if (specificModelData) {
+                                    const val = getValueFromPath(specificModelData, DATA_DICTIONARY[config.yAxis].dbPath);
+                                    dataset.data.push(val);
+                                } else {
+                                    dataset.data.push(null);
+                                }
+                            }
+                            // Handle Topic Split
+                            else {
+                                const metricObj = modelData.breakdown[categoryKey];
+                                // Note: Since we pre-aggregated, the inner key is the yAxis ID (e.g. "responseTime")
+                                const val = metricObj ? metricObj[config.yAxis] : null;
+                                dataset.data.push(val);
+                            }
+
+                            if (dataset.data.length > limit) dataset.data.shift();
                         });
                     }
                 }
-                // Split by Model Name (Special case: needs full logs object, not just active model)
-                else if (config.splitBy === 'modelName') {
-                    const chart = chartOrElem;
-                    const datasetMap = {};
-                    chart.data.datasets.forEach(ds => datasetMap[ds.label] = ds);
-                    Object.entries(newValue).forEach(([modelName, modelData]) => {
-                        const dataset = datasetMap[modelName];
-
-                        if (!dataset) return;
-
-                        const val = modelData[config.yAxis];
-
-                        if (val === undefined) return;
-                        dataset.data.push(val);
-
-                        if (dataset.data.length > maxPoints) dataset.data.shift();
-                    });
-                    chart.data.labels.push(now);
-                    if (chart.data.labels.length > maxPoints) chart.data.labels.shift();
-                    chart.update('none');
-                }
-                // 4. Standard Line
+                // Standard Line Logic
                 else {
-                    const val = modelData[config.yAxis];
+                    // Use the helper to find the value based on the DB Path
+                    const val = getValueFromPath(modelData, DATA_DICTIONARY[config.yAxis].dbPath);
+
                     if (val !== undefined) {
                         chart.data.datasets[0].data.push(val);
                         if (chart.data.datasets[0].data.length > maxPoints) chart.data.datasets[0].data.shift();

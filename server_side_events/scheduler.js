@@ -13,7 +13,7 @@ let schedulerInterval = null;
 // ---------- Model Simulation ----------
 async function badModel() {
     const calls = await pseudoAI(
-        "BadModel", 2, 1, 3, 0.4, 0.7, 0.3, 0.6, 0.1, 0.5, 0.0, 0.05, 6, 2
+        "BadModel", 2, 10, 30, 0.4, 0.7, 0.3, 0.6, 0.1, 0.5, 0.0, 0.05, 6, 2
     );
     const summary = AIGeneralizer("BadModel", calls);
     return {
@@ -35,7 +35,7 @@ async function badModel() {
 
 async function goodModel() {
     const calls = await pseudoAI(
-        "GoodModel", 2, 5, 10, 0.9, 1.0, 0.9, 1.0, 0.0, 0.05, 0.0, 0.0, 6, 2
+        "GoodModel", 2, 10, 30, 0.9, 1.0, 0.9, 1.0, 0.0, 0.05, 0.0, 0.0, 6, 2
     );
     const summary = AIGeneralizer("GoodModel", calls);
     return {

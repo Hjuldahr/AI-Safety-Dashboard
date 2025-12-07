@@ -26,6 +26,21 @@
 </head>
 
 <body>
+
+  <script>
+    //Grab the constants sent on page load
+    window.CONSTANTS = <%- JSON.stringify(constants) %>;
+
+    // Unpacking the obj
+    const {
+      DATA_DICTIONARY,
+      CHART_TYPES,
+      CHART_SIZES,
+      KNOWN_MODELS,
+      TOPIC_HIERARCHY
+    } = window.CONSTANTS;
+  </script>
+
   <%- include('components/header') %>
 
   <%- include('components/nav') %>

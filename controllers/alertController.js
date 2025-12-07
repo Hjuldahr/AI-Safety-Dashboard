@@ -3,6 +3,8 @@ import User_Log from "../models/User_Log.js";
 import AlertLog from "../models/alert_log.js";
 import User from "../models/user.js";
 import AI_Log from "../models/AI_Log.js";
+import constants from "../config/constants.js";
+
 
 const getPage = async (req, res) => {
     try {
@@ -20,7 +22,8 @@ const getPage = async (req, res) => {
             user: req.user,
             alerts: alerts,
             alertLogs: [],
-            models: modelNames
+            models: modelNames,
+            constants: constants
         });
     } catch (error) {
         console.error("Error fetching alert page:", error);
