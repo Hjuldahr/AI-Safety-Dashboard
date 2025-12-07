@@ -758,14 +758,17 @@ async function deleteGraph(id, chartCardElement) {
 }
 
 // ---------- Event Delegation for Admin Buttons ----------
-document.addEventListener('click', (e) => {
+document.addEventListener('click', async (e) => {
     const id = e.target.dataset.id;
     if (!id) return;
 
     if (e.target.classList.contains('edit-chart-btn')) openEditForm(id);
     if (e.target.classList.contains('delete-chart-btn')) {
         const card = e.target.closest('.chart-card');
-        if (card) deleteGraph(id, card);
+        if (card && confirm(`Are you sure you want to delete this chart?`)) {
+            await deleteGraph(id, card);
+            window.location.reload();
+        }
     }
     if (e.target.classList.contains('cancel-edit-btn')) closeEditForm(id);
     if (e.target.classList.contains('save-edit-btn')) handleSaveEdit(id);
@@ -791,4 +794,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             onEnd: saveNewOrder
         });
     }
+
+    // Scrolling to page location on load
+    var scrollpos = localStorage.getItem('scrollpos');
+    if (scrollpos) window.scrollTo(0, scrollpos);
 });
+
+// Saving scroll position on page unload
+window.onbeforeunload = function (e) {
+    localStorage.setItem('scrollpos', window.scrollY);
+};
