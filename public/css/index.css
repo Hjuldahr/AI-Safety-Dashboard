@@ -221,10 +221,9 @@ body {
 
 /* The edit form container */
 .edit-chart-form {
-    display: none;
-    padding: 10px 0 0 0;
-    border-top: 1px solid #eee;
-    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .edit-chart-form label {
@@ -256,6 +255,17 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+}
+
+
+.card-edit-filter-form{
+    margin: 10px 0; 
+    padding: 10px; 
+    background: #f9f9f9; 
+    border: 1px solid #ddd; 
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 60px;
 }
 
 /* Target the form only inside a tiny card */

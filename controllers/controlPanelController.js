@@ -14,7 +14,7 @@ const updateParams = (req, res) => {
 
 const saveGraph = async (req, res) => {
     try {
-        const { title, chartType, chartSize, yAxis, xAxis, category, splitBy } = req.body;
+        const { title, chartType, chartSize, yAxis, xAxis, category, splitBy, includedValues } = req.body;
 
         // Basic validation
         if (!title || !chartType) {
@@ -32,7 +32,8 @@ const saveGraph = async (req, res) => {
             yAxis: yAxis || null,
             xAxis: xAxis || null,
             category: category || null,
-            splitBy: splitBy || null
+            splitBy: splitBy || null,
+            includedValues: includedValues
         });
 
         const savedChart = await newChartConfig.save();
@@ -80,7 +81,7 @@ const deleteGraph = async (req, res) => {
 // Update only supports title and size for now
 const updateGraph = async (req, res) => {
     try {
-        const { id, newTitle, newSize } = req.body;
+        const { id, newTitle, newSize, includedValues } = req.body;
 
         const itemToUpdate = await ChartConfig.findById(id);
         if (!itemToUpdate) {
@@ -89,6 +90,10 @@ const updateGraph = async (req, res) => {
 
         itemToUpdate.title = newTitle;
         itemToUpdate.chartSize = newSize;
+        
+        if (includedValues !== undefined) {
+            itemToUpdate.includedValues = includedValues;
+        }
 
         await itemToUpdate.save();
 

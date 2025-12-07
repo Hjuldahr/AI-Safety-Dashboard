@@ -37,6 +37,10 @@ const chartConfigSchema = new Schema({
     splitBy: {
         type: String,
         default: null
+    },
+    includedValues: { 
+        type: [String], 
+        default: [] 
     }
 }, { 
     timestamps: true 

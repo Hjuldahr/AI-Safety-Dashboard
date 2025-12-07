@@ -114,13 +114,13 @@ document.addEventListener('DOMContentLoaded', function () {
             type: 'CATEGORICAL',
             label: 'Model Name'
         },
-        topic: { 
-            type: 'CATEGORICAL', 
-            label: 'Topic' 
+        topic: {
+            type: 'CATEGORICAL',
+            label: 'Topic'
         },
-        sub_topic: { 
-            type: 'CATEGORICAL', 
-            label: 'Sub Topic' 
+        sub_topic: {
+            type: 'CATEGORICAL',
+            label: 'Sub Topic'
         },
         // Numeric
         webLookups: {
@@ -151,14 +151,14 @@ document.addEventListener('DOMContentLoaded', function () {
             type: 'NUMERIC',
             label: 'Policy Compliance (0 through 100%)',
         },
-        toxicityScore: { 
-            type: 'NUMERIC', 
-            label: 'Toxicity Score (0-1)' 
+        toxicityScore: {
+            type: 'NUMERIC',
+            label: 'Toxicity Score (0-1)'
         },
         // Special: Numeric fields that can ALSO be treated as categories
-        piiDetected: { 
-            type: 'NUMERIC', 
-            label: 'PII Detected (0 through 100%)', 
+        piiDetected: {
+            type: 'NUMERIC',
+            label: 'PII Detected (0 through 100%)',
         },
         // Timestamp
         responseTimestamp: { type: 'TIMESTAMP', label: 'Timestamp' }
@@ -243,13 +243,17 @@ document.addEventListener('DOMContentLoaded', function () {
         switch (chartType) {
             case 'line':
                 html = `
-          <label>2. Configure Line Chart:</label>
-          ${createSelect('select-y-axis', 'Value to track (Y-Axis)', numericFields)}
-          <br>
-          ${createSelect('select-split-by', 'Split by (Optional)', categoricalFields)}
-        `;
+                  <label>2. Configure Line Chart:</label>
+                  ${createSelect('select-y-axis', 'Value to track (Y-Axis)', numericFields)}
+                  <br>
+                  ${createSelect('select-split-by', 'Split by (Optional)', categoricalFields)}
+                  
+                  <div id="split-filter-container" style="display:none; margin-top:10px; padding:10px; background:#f9f9f9; border:1px solid #ddd; overflow-y: auto;">
+                    <strong>Filter Sub-Items (Optional):</strong>
+                    <div id="split-checkboxes" style="display: flex; flex-direction: column; gap: 5px; margin-top: 5px;"></div>
+                  </div>
+                `;
                 break;
-
             case 'bar':
                 html = `
           <label>2. Configure Bar Chart:</label>
@@ -348,15 +352,45 @@ document.addEventListener('DOMContentLoaded', function () {
         if (submitBtn) {
             const chartSize = document.querySelector('input[name="chartSize"]:checked')?.value || 'regular';
 
-            // Gather all the data from the form
+            // 1. Validation Logic
+            const yAxis = document.getElementById('select-y-axis')?.value;
+            const xAxis = document.getElementById('select-x-axis')?.value;
+            const category = document.getElementById('select-category')?.value;
+
+            if (selectedChartType === 'line' && !yAxis) {
+                alert("Please select a value to track (Y-Axis).");
+                return;
+            }
+            if (selectedChartType === 'bar' && (!yAxis || !xAxis)) {
+                alert("Please select both X and Y axis values.");
+                return;
+            }
+            if (selectedChartType === 'pie' && !category) {
+                alert("Please select a category.");
+                return;
+            }
+            if (selectedChartType === 'measure' && !yAxis) {
+                alert("Please select a value to measure.");
+                return;
+            }
+
+            // 2. Gather Filtered Values (New Feature)
+            const includedValues = [];
+            const checkboxes = document.querySelectorAll('input[name="split-filter-val"]:checked');
+            if (checkboxes.length > 0) {
+                checkboxes.forEach(cb => includedValues.push(cb.value));
+            }
+
+            // Gather all the data
             const config = {
                 title: document.getElementById('chart-title')?.value || 'New Chart',
                 chartType: selectedChartType,
-                yAxis: document.getElementById('select-y-axis')?.value,
-                xAxis: document.getElementById('select-x-axis')?.value,
-                category: document.getElementById('select-category')?.value,
+                yAxis: yAxis,
+                xAxis: xAxis,
+                category: category,
                 splitBy: document.getElementById('select-split-by')?.value,
-                chartSize: chartSize
+                chartSize: chartSize,
+                includedValues: includedValues // <--- Send to backend
             };
 
             try {
@@ -388,8 +422,42 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Title changes
+    // Handle changes in the form (Title updates & Dynamic Checkboxes)
     modalContainer.addEventListener("change", (e) => {
+        const targetId = e.target.id;
+
+        // A. LOGIC: Render Checkboxes if "Split By" changes
+        if (targetId === 'select-split-by') {
+            const splitValue = e.target.value;
+            const container = document.getElementById('split-filter-container');
+            const checkboxArea = document.getElementById('split-checkboxes');
+
+            if (container && checkboxArea) {
+                // 1. Clear previous
+                checkboxArea.innerHTML = '';
+                container.style.display = 'none';
+
+                // 2. Check if we have accepted values in the SSOT
+                if (splitValue && DATA_DICTIONARY[splitValue] && DATA_DICTIONARY[splitValue].acceptedValues) {
+                    const values = DATA_DICTIONARY[splitValue].acceptedValues;
+
+                    // 3. Generate Checkboxes
+                    values.forEach((val, idx) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.innerHTML = `
+                            <input type="checkbox" id="chk-${idx}" name="split-filter-val" value="${val}" checked>
+                            <label for="chk-${idx}">${val}</label>
+                        `;
+                        checkboxArea.appendChild(wrapper);
+                    });
+
+                    // 4. Reveal
+                    container.style.display = 'block';
+                }
+            }
+        }
+
+        // B. LOGIC: Update Title (if it's a select dropdown)
         if (e.target.tagName === 'SELECT') {
             updateSuggestedTitle();
         }
@@ -400,23 +468,22 @@ document.addEventListener('DOMContentLoaded', function () {
     */
     function updateSuggestedTitle() {
         const titleInput = document.getElementById('chart-title');
-        if (!titleInput) return; // Step 3 isn't rendered yet
+        if (!titleInput) return;
 
-        // Helper to get the TEXT of a selected option, not its value
-        const getSelectedText = (elId) => {
+        // Helper: Only get text if a VALID value is selected
+        const getLabel = (elId) => {
             const el = document.getElementById(elId);
-            // Safety check: ensure element exists AND has a selected option
-            if (el && el.selectedIndex !== -1 && el.options[el.selectedIndex]) {
+            if (el && el.value && el.value !== "") { // Check value is not empty string
                 return el.options[el.selectedIndex].text;
             }
-            return '';
+            return null; // Return null if nothing valid selected
         };
 
         let title = '';
-        const yLabel = getSelectedText('select-y-axis');
-        const xLabel = getSelectedText('select-x-axis');
-        const cLabel = getSelectedText('select-category');
-        const sLabel = getSelectedText('select-split-by');
+        const yLabel = getLabel('select-y-axis');
+        const xLabel = getLabel('select-x-axis');
+        const cLabel = getLabel('select-category');
+        const sLabel = getLabel('select-split-by');
 
         switch (selectedChartType) {
             case 'line':
