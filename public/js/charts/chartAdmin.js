@@ -29,12 +29,12 @@
             });
             if (!response.ok) throw new Error('Server failed to save new order.');
             console.log('New chart order saved.');
-            if (typeof showNotification === 'function') showNotification('Chart order saved!', 'success');
+            alert('Chart order saved!');
 
             await loadChartsFromDatabase();
         } catch (error) {
             console.error('Error saving chart order:', error);
-            if (typeof showNotification === 'function') showNotification('Error: Could not save chart order.', 'error');
+            alert('Error: Could not save chart order.');
         }
     }
 
@@ -206,11 +206,10 @@
                 })
             });
             if (!response.ok) throw new Error('Failed to save changes.');
-            await loadChartsFromDatabase();
-            if (typeof showNotification === 'function') showNotification('Chart updated!', 'success');
+            alert("Chart Updated Successfully!")
         } catch (error) {
             console.error('Error saving chart:', error);
-            if (typeof showNotification === 'function') showNotification('Error: ' + error.message, 'error');
+            alert("Error Updating Chart!")
         }
     }
 
@@ -228,10 +227,10 @@
             if (charts[id] instanceof Chart) charts[id].destroy();
             delete charts[id];
             chartCardElement.remove();
-            if (typeof showNotification === 'function') showNotification('Chart deleted successfully.', 'success');
+            alert('Chart deleted successfully.')
         } catch (error) {
-            console.error('Error deleting graph:', error);
-            if (typeof showNotification === 'function') showNotification(`Error: ${error.message}`, 'error');
+            console.error('Error deleting Chart:', error);
+            alert("Error Deleting Chart!");
         }
     }
 
