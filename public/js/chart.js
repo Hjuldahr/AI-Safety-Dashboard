@@ -82,6 +82,7 @@ function createChartFromConfig(config, ctx) {
         options.plugins.title.font.size = 12;
         options.plugins.title.padding = { top: 5, bottom: 5 };
         options.layout = { padding: 0 };
+        options.maintainAspectRatio = true;
     } else if (config.chartSize === 'regular') {
         options.plugins.title.font.size = 14;
         options.plugins.legend.labels.font.size = 10;
@@ -278,7 +279,7 @@ function mapPieData(chart, config, logs) {
                     if (item.type === config.category) {
                         if (!groups[key]) groups[key] = { sum: 0 };
                         // Add the count from the pre-aggregated log
-                        groups[key].sum += (item.count || 0);
+                        groups[key].sum += (item.queryCount || 0);
                     }
                 });
             }
