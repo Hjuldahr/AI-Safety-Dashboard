@@ -160,7 +160,7 @@ export function AIGeneralizer(modelName, calls) {
     // Calculate the averages for this specific Topic/Sub-topic
     breakdownData[key] = {
       type: type,
-      count: bucketCalls.length, // Useful to know volume per topic
+      queryCount: bucketCalls.length, // Useful to know volume per topic
       responseTime: mean(bucketCalls.map(c => c.responseTime)),
       tokensUsed: mean(bucketCalls.map(c => c.tokensUsed)),
       energyConsumption: mean(bucketCalls.map(c => c.energyConsumption)),
