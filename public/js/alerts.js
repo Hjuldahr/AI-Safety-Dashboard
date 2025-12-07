@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
     cancelBtn.textContent = 'Cancel';
     cancelBtn.style.display = 'none';
 
+
     if (addAlertBtn && addAlertBtn.parentElement) {
         const actionWrapper = document.createElement('div');
         actionWrapper.className = 'alert-action-buttons';
@@ -78,20 +79,21 @@ document.addEventListener('DOMContentLoaded', function () {
         return d.toLocaleString('en-CA', { hour12: true }).replace(',', '');
     }
 
+
     // --------------------------------------------------
     // Rule-builder helpers
     // --------------------------------------------------
     function createRuleRowHTML(logicalOperator) {
-        // Only include a delete button for non-first rows (logicalOperator set for 2nd+ rows)
         const deleteBtn = logicalOperator ? '<button class="delete-rule-btn">&times;</button>' : '';
+        
+        // Dynamically insert options
+        const optionsHtml = getDataTypeOptions();
+
         return `
       <span class="logic-separator">${logicalOperator}</span>
       <select class="data-type">
           <option value="">-- select data type --</option>
-          <option value="Policy Compliance">Policy Compliance</option>
-          <option value="Response Helpfulness">Response Helpfulness</option>
-          <option value="Response Time">Response Time</option>
-          <option value="Energy Consumption">Energy Consumption</option>
+          ${optionsHtml}
       </select>
       <select class="operator-type">
           <option value="">-- select operator --</option>
@@ -112,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function buildRuleJSON() {
         const ruleRows = rulesContainer.querySelectorAll('.rule-row');
         const conditions = [];
-
         let firstLogicOperator = null;
         let hasIncompleteRow = false;
 
@@ -122,7 +123,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const valueInput = row.querySelector('.value-input');
             const logicalOperatorSpan = row.querySelector('.logic-separator');
 
-            const dataType = dataTypeSelect ? dataTypeSelect.value : '';
+            // dataType is now the DICTIONARY KEY (e.g., 'responseHelpfulness')
+            const dictKey = dataTypeSelect ? dataTypeSelect.value : '';
             const operatorValue = operatorSelect ? operatorSelect.value : '';
             const rawValue = valueInput ? valueInput.value : '';
 
@@ -130,33 +132,43 @@ document.addEventListener('DOMContentLoaded', function () {
                 firstLogicOperator = logicalOperatorSpan.textContent.trim().toLowerCase() === 'and' ? '$and' : '$or';
             }
 
-            if (dataType && operatorValue && rawValue) {
-                const dbField = FIELD_MAP[dataType];
+            if (dictKey && operatorValue && rawValue) {
+                // LOOKUP: Get the actual DB path from the dictionary
+                const dictEntry = DATA_DICTIONARY[dictKey];
+                if (!dictEntry) {
+                    alert('Invalid data type selected');
+                    return;
+                }
+                const dbField = dictEntry.dbPath;
                 const mongoOperator = OPERATOR_MAP[operatorValue];
                 const numericValue = parseFloat(rawValue);
+
                 if (!dbField || !mongoOperator || Number.isNaN(numericValue)) {
-                    alert(`Invalid data in rule ${index + 1}. Please ensure value is a number.`);
+                    alert(`Invalid data in rule ${index + 1}.`);
                     hasIncompleteRow = true;
                     return;
                 }
+
                 const condition = {};
                 condition[dbField] = {};
                 condition[dbField][mongoOperator] = numericValue;
                 conditions.push(condition);
-            } else if (dataType || operatorValue || rawValue) {
+
+            } else if (dictKey || operatorValue || rawValue) {
                 hasIncompleteRow = true;
             }
         });
 
         if (hasIncompleteRow) {
-            alert('Please fill out all fields for every rule, or remove incomplete rules.');
+            alert('Please fill out all fields for every rule.');
             return null;
         }
         if (conditions.length === 0) {
-            alert('Please define at least one valid rule for the alert.');
+            alert('Please define at least one valid rule.');
             return null;
         }
         if (conditions.length === 1) return conditions[0];
+        
         const topLevelOperator = firstLogicOperator || '$and';
         const finalRule = {};
         finalRule[topLevelOperator] = conditions;
@@ -171,12 +183,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const operatorSelect = row.querySelector('.operator-type');
             const valueInput = row.querySelector('.value-input');
             const logicalOperatorSpan = row.querySelector('.logic-separator');
-            const dataType = dataTypeSelect ? dataTypeSelect.value : '';
+
+            // Use the TEXT of the option (The Label) for readability
+            const dataTypeLabel = dataTypeSelect.options[dataTypeSelect.selectedIndex]?.text;
             const operatorValue = operatorSelect ? operatorSelect.value : '';
             const value = valueInput ? valueInput.value : '';
-            if (dataType && operatorValue && value) {
+
+            if (dataTypeLabel && operatorValue && value) {
                 const prefix = (index > 0 && logicalOperatorSpan) ? ` ${logicalOperatorSpan.textContent} ` : '';
-                parts.push(prefix + `"${dataType}" ${OPERATOR_READABLE[operatorValue]} ${value}`);
+                parts.push(prefix + `"${dataTypeLabel}" ${OPERATOR_READABLE[operatorValue]} ${value}`);
             }
         });
         return parts.join('').trim() + '.';
@@ -185,48 +200,56 @@ document.addEventListener('DOMContentLoaded', function () {
     function resetAlertBuilder() {
         alertNameInput.value = '';
         alertLevelSelect.selectedIndex = 0;
-        if (modelSelect) modelSelect.selectedIndex = 0;
+        if (modelSelect) modelSelect.value = '';
         while (rulesContainer.children.length > 1) rulesContainer.removeChild(rulesContainer.lastChild);
-        const firstRuleRow = rulesContainer.querySelector('.rule-row');
-        if (firstRuleRow) {
-            const dt = firstRuleRow.querySelector('.data-type');
-            const op = firstRuleRow.querySelector('.operator-type');
-            const val = firstRuleRow.querySelector('.value-input');
-            if (dt) dt.selectedIndex = 0;
-            if (op) op.selectedIndex = 0;
-            if (val) val.value = '';
-            const delBtn = firstRuleRow.querySelector('.delete-rule-btn');
-            if (delBtn) delBtn.remove();
-        }
+        
+        // Reset first row
+        const firstRow = rulesContainer.querySelector('.rule-row');
+        if(firstRow) firstRow.remove();
+        
+        const freshRow = document.createElement('div');
+        freshRow.className = 'rule-row';
+        freshRow.innerHTML = createRuleRowHTML('');
+        rulesContainer.appendChild(freshRow);
     }
 
     function populateRuleBuilderFromRule(ruleObj) {
         while (rulesContainer.firstChild) rulesContainer.removeChild(rulesContainer.firstChild);
         let parts = [];
+        // Flatten Mongo Query Structure
         if (ruleObj && typeof ruleObj === 'object') {
             const keys = Object.keys(ruleObj);
             if (keys.length === 1 && (keys[0] === '$and' || keys[0] === '$or')) parts = ruleObj[keys[0]];
             else parts = [ruleObj];
         }
+
         parts.forEach((cond, idx) => {
             const dbField = Object.keys(cond)[0];
             const opObj = cond[dbField];
             const opKey = Object.keys(opObj)[0];
             const val = opObj[opKey];
-            const displayField = REVERSE_FIELD_MAP[dbField] || dbField;
+
+            // REVERSE LOOKUP: Find which dictionary key matches this dbPath
+            const dictKey = Object.keys(DATA_DICTIONARY).find(k => DATA_DICTIONARY[k].dbPath === dbField);
+            
             const operator = OP_REVERSE_MAP[opKey] || 'gt';
             const logic = idx > 0 ? (ruleObj && ruleObj.$or ? 'OR' : 'AND') : '';
+
             const newRuleRow = document.createElement('div');
             newRuleRow.className = 'rule-row';
             newRuleRow.innerHTML = createRuleRowHTML(logic);
             rulesContainer.appendChild(newRuleRow);
+
             const dataTypeSelect = newRuleRow.querySelector('.data-type');
             const operatorSelect = newRuleRow.querySelector('.operator-type');
             const valueInput = newRuleRow.querySelector('.value-input');
-            if (dataTypeSelect) dataTypeSelect.value = displayField;
+
+            if (dataTypeSelect && dictKey) dataTypeSelect.value = dictKey;
             if (operatorSelect) operatorSelect.value = operator;
             if (valueInput) valueInput.value = val;
         });
+
+        // Add empty row if none existed
         if (rulesContainer.children.length === 0) {
             const firstRow = document.createElement('div');
             firstRow.className = 'rule-row';
@@ -254,6 +277,28 @@ document.addEventListener('DOMContentLoaded', function () {
             html += `<li><h3 class="alert-category ${cls}"><span class="color-dot"></span>${level} Alerts</h3><ul class="alert-items">${items}</ul></li>`;
         });
         liveAlertsList.innerHTML = html;
+    }
+
+    function populateModelDropdowns() {
+        // Find all selects marked with our class
+        const selects = document.querySelectorAll('.model-select-dynamic');
+        selects.forEach(sel => {
+            const isFilter = sel.id.includes('filter');
+            let html = isFilter ? '<option value="all">All Models</option>' : '<option value="">-- all models --</option>';
+            
+            KNOWN_MODELS.forEach(m => {
+                html += `<option value="${m}">${m}</option>`;
+            });
+            sel.innerHTML = html;
+        });
+    }
+
+    // Generate <option> tags for Numeric fields only (alerts usually need math)
+    function getDataTypeOptions() {
+        return Object.keys(DATA_DICTIONARY)
+            .filter(key => DATA_DICTIONARY[key].dataType === 'numeric')
+            .map(key => `<option value="${key}">${DATA_DICTIONARY[key].label}</option>`)
+            .join('');
     }
 
     // --------------------------------------------------
@@ -539,6 +584,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // --------------------------------------------------
     // Initialization
     // --------------------------------------------------
+    populateModelDropdowns();
+    resetAlertBuilder();
     loadLiveAlerts();
     loadAlertHistory(1);
 });
