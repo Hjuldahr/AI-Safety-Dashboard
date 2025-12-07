@@ -166,18 +166,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Returns a fields that can be used for a type
     function getFieldsByType(type) {
-        return Object.keys(DATA_FIELDS).filter(key => {
-            if (DATA_FIELDS[key].useAs) {
-                return DATA_FIELDS[key].useAs.includes(type);
-            }
-            return DATA_FIELDS[key].type === type;
+        return Object.keys(DATA_DICTIONARY).filter(key => {
+            return DATA_DICTIONARY[key].dataType === type;
         });
     }
 
     // Create a <select> dropdown
     function createSelect(id, label, fieldKeys) {
         let options = fieldKeys.map(key =>
-            `<option value="${key}">${DATA_FIELDS[key].label}</option>`
+            `<option value="${key}">${DATA_DICTIONARY[key].label}</option>`
         ).join('');
 
         return `
@@ -239,8 +236,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!step2Container) return;
 
         let html = "";
-        const numericFields = getFieldsByType('NUMERIC');
-        const categoricalFields = getFieldsByType('CATEGORICAL');
+        const numericFields = getFieldsByType('numeric');
+        const categoricalFields = getFieldsByType('categorical');
 
         // This switch is the core "lock-out" logic - prevents users from creating non-sensical graphs
         switch (chartType) {
@@ -408,7 +405,8 @@ document.addEventListener('DOMContentLoaded', function () {
         // Helper to get the TEXT of a selected option, not its value
         const getSelectedText = (elId) => {
             const el = document.getElementById(elId);
-            if (el && el.value) {
+            // Safety check: ensure element exists AND has a selected option
+            if (el && el.selectedIndex !== -1 && el.options[el.selectedIndex]) {
                 return el.options[el.selectedIndex].text;
             }
             return '';
