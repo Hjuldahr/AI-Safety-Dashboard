@@ -14,7 +14,7 @@ const updateParams = (req, res) => {
 
 const saveGraph = async (req, res) => {
     try {
-        const { title, chartType, chartSize, yAxis, xAxis, category, splitBy } = req.body;
+        const { title, chartType, chartSize, yAxis, xAxis, category, splitBy, includedValues } = req.body;
 
         // Basic validation
         if (!title || !chartType) {
@@ -32,7 +32,8 @@ const saveGraph = async (req, res) => {
             yAxis: yAxis || null,
             xAxis: xAxis || null,
             category: category || null,
-            splitBy: splitBy || null
+            splitBy: splitBy || null,
+            includedValues: includedValues
         });
 
         const savedChart = await newChartConfig.save();

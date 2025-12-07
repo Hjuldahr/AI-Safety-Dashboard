@@ -130,7 +130,13 @@ function mapLineData(chart, config, logs) {
     // --- CASE A: SPLIT CHART ---
     if (splitConfig && splitConfig.acceptedValues) {
 
-        splitConfig.acceptedValues.forEach(categoryValue => {
+        let valuesToRender = splitConfig.acceptedValues;
+
+        if (config.includedValues && config.includedValues.length > 0) {
+            valuesToRender = splitConfig.acceptedValues.filter(val => config.includedValues.includes(val));
+        }
+
+        valuesToRender.forEach(categoryValue => {
             const dataPoints = [];
 
             // For every timestamp on the X-axis...
