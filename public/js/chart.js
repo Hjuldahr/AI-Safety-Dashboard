@@ -106,7 +106,7 @@ function mapLineData(chart, config, logs) {
 
     let flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
-    // 1. Group logs by Timestamp (The "Bucket" Strategy)
+    // Group logs by Timestamp
     const logsByTime = {};
     flatLogs.forEach(log => {
         const t = log.responseTimestamp;
@@ -114,22 +114,22 @@ function mapLineData(chart, config, logs) {
         logsByTime[t].push(log);
     });
 
-    // 2. Sort unique timestamps and take the last 'maxPoints' (e.g., 15)
-    // We treat the Timestamp as the Source of Truth for the X-Axis
+    // Sort unique timestamps and take the last 'maxPoints' (e.g., 15)
+    // Use timestamp as the Source of Truth for the X-Axis
     const sortedTimestamps = Object.keys(logsByTime)
         .map(Number) // Convert string keys back to numbers
         .sort((a, b) => a - b)
         .slice(-maxPoints);
 
-    // 3. Generate Labels
+    // Generate Labels
     chart.data.labels = sortedTimestamps.map(ts => new Date(ts).toLocaleTimeString());
 
-    // 4. Generate Datasets
+    // Generate Datasets
     chart.data.datasets = [];
 
     // --- CASE A: SPLIT CHART ---
     if (splitConfig && splitConfig.acceptedValues) {
-        
+
         splitConfig.acceptedValues.forEach(categoryValue => {
             const dataPoints = [];
 
@@ -142,12 +142,12 @@ function mapLineData(chart, config, logs) {
                 if (config.splitBy === 'modelName') {
                     const match = logsAtThisTime.find(l => l.modelName === categoryValue);
                     if (match) val = getValueFromPath(match, yConfig.dbPath);
-                } 
+                }
                 else {
                     const match = logsAtThisTime.find(l => l.breakdown && l.breakdown[categoryValue] && l.breakdown[categoryValue].type === config.splitBy);
                     if (match) val = match.breakdown[categoryValue][config.yAxis];
                 }
-                
+
                 dataPoints.push(val !== undefined ? val : null);
             });
 
@@ -161,15 +161,15 @@ function mapLineData(chart, config, logs) {
                 spanGaps: true
             });
         });
-    } 
-    
+    }
+
     // --- STANDARD CHART ---
     else {
         const dataPoints = sortedTimestamps.map(ts => {
             const logsAtThisTime = logsByTime[ts];
             const currentModel = getCurrentModel();
             const match = logsAtThisTime.find(l => l.modelName === currentModel) || logsAtThisTime[0];
-            
+
             return getValueFromPath(match, yConfig.dbPath);
         });
 
@@ -454,12 +454,6 @@ function setupSSE() {
                 const chart = chartOrElem;
 
                 let limit = maxPoints;
-
-                // Check if this chart is using a split
-                // const splitDef = config.splitBy ? window.CONSTANTS.DATA_DICTIONARY[config.splitBy] : null;
-                // if (splitDef && splitDef.acceptedValues) {
-                //     limit = maxPoints * splitDef.acceptedValues.length;
-                // }
 
                 // Update Time Labels
                 chart.data.labels.push(now);
