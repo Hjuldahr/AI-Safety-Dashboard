@@ -81,7 +81,7 @@ const deleteGraph = async (req, res) => {
 // Update only supports title and size for now
 const updateGraph = async (req, res) => {
     try {
-        const { id, newTitle, newSize } = req.body;
+        const { id, newTitle, newSize, includedValues } = req.body;
 
         const itemToUpdate = await ChartConfig.findById(id);
         if (!itemToUpdate) {
@@ -90,6 +90,10 @@ const updateGraph = async (req, res) => {
 
         itemToUpdate.title = newTitle;
         itemToUpdate.chartSize = newSize;
+        
+        if (includedValues !== undefined) {
+            itemToUpdate.includedValues = includedValues;
+        }
 
         await itemToUpdate.save();
 
