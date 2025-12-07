@@ -186,6 +186,7 @@ function mapLineData(chart, config, logs) {
 
     if (config.chartSize !== 'tiny' && chart.options.scales.y) {
         chart.options.scales.y.title = { display: true, text: yConfig.label };
+        chart.options.scales.y.min = 0;
     }
 }
 
