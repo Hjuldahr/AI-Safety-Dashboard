@@ -160,11 +160,11 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         if (hasIncompleteRow) {
-            alert('Please fill out all fields for every rule.');
+            alert('Please fill out all fields for every rule, or remove incomplete rules.');
             return null;
         }
         if (conditions.length === 0) {
-            alert('Please define at least one valid rule.');
+            alert('Please define at least one valid rule for the alert.');
             return null;
         }
         if (conditions.length === 1) return conditions[0];
