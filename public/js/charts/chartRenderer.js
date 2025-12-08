@@ -54,7 +54,8 @@
         // Group logs by Timestamp
         const logsByTime = {};
         flatLogs.forEach(log => {
-            const t = log.responseTimestamp;
+            //groups timestamps that are within 1 second.
+            const t = Math.floor(log.responseTimestamp / 1000) * 1000;
             if (!logsByTime[t]) logsByTime[t] = [];
             logsByTime[t].push(log);
         });
