@@ -39,6 +39,9 @@
             allLogs = data.logs || {};
             allConfigs = data.configs || [];
 
+            window.DashboardApp.logs = data.logs || {};
+            window.DashboardApp.configs = data.configs || [];
+
             clearDynamicCharts();
             const container = document.querySelector('.charts-container');
             let currentTinyGroup = null;
@@ -153,6 +156,22 @@
         let rafScheduled = false;
 
         function processUpdates() {
+            pendingUpdates.forEach(({ newValue }) => {
+                Object.entries(newValue).forEach(([modelName, newLog]) => {
+                    if (!window.DashboardApp.logs[modelName]) {
+                        window.DashboardApp.logs[modelName] = [];
+                    }
+
+                    // Push the new log
+                    window.DashboardApp.logs[modelName].push(newLog);
+
+                    // Optional: Keep memory clean (keep last 50 items so snapshot is always available)
+                    if (window.DashboardApp.logs[modelName].length > 50) {
+                        window.DashboardApp.logs[modelName].shift();
+                    }
+                });
+            });
+
             pendingUpdates.forEach(({ id, newValue, now }) => {
                 const chartOrElem = charts[id];
                 const config = chartOrElem?.customConfig;
@@ -254,33 +273,16 @@
                     chart.update('none');
                 }
 
-                // Pie Charts with Accumulated Counts
+                // Pie Charts
                 else if (config.chartType === 'pie') {
-                    const chart = chartOrElem;
-                    const categoryField = config.category;
+                    window.DashboardApp.renderer.mapPieData(
+                        chartOrElem,
+                        config,
+                        window.DashboardApp.logs // Pass the full global log state
+                    );
 
-                    chart.data.labels.forEach((label, index) => {
-                        let countToAdd = 0;
-
-                        // Check Topic / Sub Topic
-                        if ((categoryField === 'topic' || categoryField === 'sub_topic') && modelData.breakdown) {
-                            if (modelData.breakdown[label]) {
-                                countToAdd = modelData.breakdown[label].count || 0;
-                            }
-                        }
-                        // Check Standard
-                        else if (modelData[categoryField] === label) {
-                            countToAdd = modelData.queryCount || 1;
-                        }
-
-                        // Add to Pile
-                        if (countToAdd > 0) {
-                            chart.data.datasets[0].data[index] += countToAdd;
-                        }
-                    });
-                    chart.update('none');
+                    chartOrElem.update('none');
                 }
-
             });
 
             pendingUpdates = [];

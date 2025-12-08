@@ -54,7 +54,8 @@
         // Group logs by Timestamp
         const logsByTime = {};
         flatLogs.forEach(log => {
-            const t = log.responseTimestamp;
+            //groups timestamps that are within 1 second.
+            const t = Math.floor(log.responseTimestamp / 1000) * 1000;
             if (!logsByTime[t]) logsByTime[t] = [];
             logsByTime[t].push(log);
         });
@@ -208,35 +209,44 @@
         const catConfig = DATA_DICTIONARY[config.category];
         if (!catConfig) return;
 
-        const groups = {};
-        const flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
+        // Only get the very latest log from each model
+        const latestLogs = [];
+        Object.values(logs).forEach(modelLogs => {
+            if (Array.isArray(modelLogs) && modelLogs.length > 0) {
+                // Push the last item in the array
+                latestLogs.push(modelLogs[modelLogs.length - 1]);
+            }
+        });
 
-        flatLogs.forEach(log => {
-            // Handle Breakdown Fields (Topic / Subtopic)
-            // We check if the dictionary says this field lives inside "breakdown."
+        const groups = {};
+
+        latestLogs.forEach(log => {
+            // Breakdown Fields (Topic / Subtopic)
             if (catConfig.dbPath.startsWith('breakdown.')) {
                 if (log.breakdown) {
                     Object.keys(log.breakdown).forEach(key => {
                         const item = log.breakdown[key];
 
-                        // We check if the item type matches the config ID (e.g. 'topic')
-                        if (item.type === config.category) {
+                        // Case-insensitive check + Type check
+                        if (item.type && item.type.toLowerCase() === config.category.toLowerCase()) {
                             if (!groups[key]) groups[key] = { sum: 0 };
-                            // Add the count from the pre-aggregated log
-                            groups[key].sum += (item.queryCount || 0);
+
+                            // Use queryCount (or fallback)
+                            const countVal = (item.count !== undefined) ? item.count : (item.queryCount || 0);
+                            groups[key].sum += countVal;
                         }
                     });
                 }
             }
 
-            // Handle Standard Fields (e.g. ModelName)
+            // Standard Fields (Model Name)
             else {
-                // Use the helper to find the category value
                 const key = getValueFromPath(log, catConfig.dbPath) || 'unknown';
                 if (!groups[key]) groups[key] = { sum: 0 };
 
-                // For standard logs, each entry counts as 1 query (or use queryCount if available)
-                groups[key].sum += (log.queryCount || 1);
+                // For standard fields, we sum the queryCount of the log itself
+                const count = (typeof log.queryCount === 'number') ? log.queryCount : 1;
+                groups[key].sum += count;
             }
         });
 
@@ -250,6 +260,7 @@
             backgroundColor: labels.map(k => getHashedColor(k))
         }];
 
+        // Hide axes for Pie charts
         chart.options.scales = { y: { display: false }, x: { display: false } };
     }
 

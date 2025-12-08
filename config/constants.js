@@ -20,7 +20,9 @@ export const TOPIC_HIERARCHY = {
     ],
     "Unsupported Use": [
         "Casual Chat",
-        "Technical / Adversarial"
+        "Programming",
+        "School Work",
+        "Adversarial"
     ]
 };
 
