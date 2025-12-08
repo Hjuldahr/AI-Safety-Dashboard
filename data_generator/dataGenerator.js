@@ -1,6 +1,76 @@
 import { modeFast, mean } from 'simple-statistics'
 import { TOPIC_HIERARCHY } from '../config/constants.js';
 
+// Probability of a query belonging to a specific Topic
+const TOPIC_WEIGHTS = {
+  "Customer Support": 40,  // The bulk of traffic
+  "Sales & Inquiry": 30,
+  "General Information": 25,
+  "Unsupported Use": 5     // The rare, dangerous stuff
+};
+
+// Defines the User's Prompt characteristics per Topic
+const TOPIC_CHARACTERISTICS = {
+  "Customer Support": {
+    baseTokens: 120,       // Short exchanges
+    tokenVariance: 50,
+    toxicityChance: 0.02,  // Angry customers
+    piiChance: 0.05,       // risk of PII - account numbers, etc
+    webLookupChance: 0.1,
+    complexity: 1.0
+  },
+  "Sales & Inquiry": {
+    baseTokens: 200,
+    tokenVariance: 100,
+    toxicityChance: 0.00,
+    piiChance: 0.01,
+    webLookupChance: 0.6,  // Checking prices/stock
+    complexity: 1.2
+  },
+  "General Information": {
+    baseTokens: 300,
+    tokenVariance: 150,
+    toxicityChance: 0.01,
+    piiChance: 0.0,
+    webLookupChance: 0.3,
+    complexity: 1.0
+  },
+  "Unsupported Use": {
+    baseTokens: 600,       // Creative writing/coding
+    tokenVariance: 400,
+    toxicityChance: 0.60,  // High risk
+    piiChance: 0.0,
+    webLookupChance: 0.0,
+    complexity: 1.5        // Harder to process
+  }
+};
+
+// Subtopic Overrides (Specific scenarios)
+const SUBTOPIC_CHARACTERISTICS_MODIFIERS = {
+  "Adversarial": { toxicityChance: 0.95, complexity: 2.0 }, // Jailbreak attempts
+  "Account Management": { piiChance: 0.40 }, // High risk of PII
+  "Programming": { baseTokens: 800, complexity: 1.8 } // Heavy compute
+};
+
+// "Profiles" define how the AI Model behaves/reacts
+const MODEL_PROFILES = {
+  "GoodModel": {
+    filterStrength: 0.98,      // Blocks 98% of Toxic/PII
+    complianceBase: 1.0,       // Aiming for perfection
+    helpfulnessWhenBlocked: 0.1, // "I cannot answer that"
+    tokensWhenBlocked: 25,     // Short refusal
+    speedMultiplier: 1.0       // Baseline speed
+  },
+  "BadModel": {
+    filterStrength: 0.15,      // Blocks almost nothing
+    complianceBase: 0.4,       // Often breaks rules
+    helpfulnessWhenBlocked: 0.9, // "Sure, here's how to build a bomb..."
+    tokensWhenBlocked: 500,    // Rambles on
+    speedMultiplier: 0.8       // Slower (older architecture)
+  }
+};
+
+
 // data_generator/test_data_generator_v4.js
 export function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
@@ -14,6 +84,19 @@ export function getRandomKey(dict) {
 export function getRandomArrayElement(array) {
   return array[getRandomInt(0, array.length)];
 }
+
+// Selects a key from an object based on integer weights
+export function getWeightedRandomKey(weightsObj) {
+  const totalWeight = Object.values(weightsObj).reduce((a, b) => a + b, 0);
+  let random = Math.random() * totalWeight;
+
+  for (const key in weightsObj) {
+    if (random < weightsObj[key]) return key;
+    random -= weightsObj[key];
+  }
+  return Object.keys(weightsObj)[0]; // Fallback
+}
+
 export function remap(value, low1, high1, low2, high2) {
   return low2 + (value - low1) * (high2 - low2) / (high1 - low1);
 }
@@ -22,83 +105,119 @@ export function remap(value, low1, high1, low2, high2) {
 const topics = TOPIC_HIERARCHY;
 
 /**
- * pseudoAI v4
- * - Emits tokensUsed (single token field)
- * - Emits gigaFlopsUsed
- * - Emits operationsPerToken (per-call estimate)
- * - Emits webLookups, toxicityScore, piiDetected
+ * pseudoAI v5
+ * Updated to take topic and sub topic into effect.
+ * Data is generated sequentially to hopefully give more interplay between the data.
  */
-export async function pseudoAI(
-  modelName,
-  intervalDuration,      // seconds
-  min_callrate,          // min queries per second
-  max_callrate,          // max queries per second
-  min_pc,                // min policyCompliance
-  max_pc,                // max policyCompliance
-  min_rh,                // min responseHelpfulness
-  max_rh,                // max responseHelpfulness
-  minToxic = 0.0,        // min toxicityScore
-  maxToxic = 0.1,        // max toxicityScore
-  minPII = 0.0,          // min piiDetected
-  maxPII = 0.01,         // max piiDetected
-  avgGFlopsPerToken = 6, // avg GFLOPs per token
-  msPerToken = 2         // ms per token
-) {
+export async function pseudoAI(modelName, intervalDuration) {
+  const profile = MODEL_PROFILES[modelName] || MODEL_PROFILES["GoodModel"];
   const now = new Date();
+
+  // --- Determine Volume (Time of Day Context) ---
   const hour = now.getHours() + now.getMinutes() / 60;
   const angle = ((hour - 3) / 24) * 2 * Math.PI;
-  let timeWeight = Math.sin(angle) + 1.5; // ensures positive weight
+  let timeWeight = Math.sin(angle) + 1.5; // 0.5 to 2.5 multiplier
 
-  const queries = Math.max(0, Math.floor(getRandomInt(min_callrate, max_callrate + 1) * intervalDuration * timeWeight));
+  // Base rate: ~30-80 queries per interval, scaled by time
+  const baseQueries = getRandomInt(30, 80);
+  const queries = Math.max(1, Math.floor(baseQueries * timeWeight * intervalDuration / 2));
 
   const start_time = now.getTime();
-  const end_time = start_time + intervalDuration * 1000;
-
   const calls = [];
 
   for (let i = 0; i < queries; i++) {
-    const topic = getRandomKey(topics);
-    const sub_topic = getRandomArrayElement(topics[topic]);
+    // --- Determine Topic - used to determine the rest of the values ---
+    const topic = getWeightedRandomKey(TOPIC_WEIGHTS);
+    const sub_topic = getRandomArrayElement(TOPIC_HIERARCHY[topic]);
 
-    // token distribution: mostly 20-400 with occasional long tails
-    let tokensUsed = Math.max(1, Math.round(getRandomFloat(50, 501) * (getRandomFloat(0.9, 1.1))));
-    if (getRandomFloat(0, 1) < 0.02) tokensUsed = getRandomInt(500, 2000); // 2% chance of long response
+    // Merge characteristics
+    const baseCharacteristics = TOPIC_CHARACTERISTICS[topic];
+    const subMod = SUBTOPIC_CHARACTERISTICS_MODIFIERS[sub_topic] || {};
 
-    // response time: ms per token with jitter; but floor at small value
-    const responseTime = Math.max(1, tokensUsed * msPerToken + getRandomFloat(-10, 20));
+    // --- Roll Prompt Characteristics ---
+    // Chaos Factor: 1% chance the prompt is wildly different than expected
+    const isChaos = Math.random() < 0.01;
 
-    // web lookup: ~10% chance
-    let webLookups = 0;
-    if (getRandomFloat(0, 1) < 0.10) webLookups = getRandomInt(1, 6);
+    const toxicityChance = isChaos ? 0.5 : (subMod.toxicityChance ?? baseCharacteristics.toxicityChance);
+    const piiChance = isChaos ? 0.5 : (subMod.piiChance ?? baseCharacteristics.piiChance);
 
-    // per-call operations per token can vary by topic or randomly
-    const opsPerToken = getRandomFloat(avgGFlopsPerToken - 0.3, avgGFlopsPerToken + 0.3);
+    const isToxic = Math.random() < toxicityChance;
+    const hasPII = Math.random() < piiChance;
+    const needsWeb = Math.random() < baseCharacteristics.webLookupChance;
 
-    // GFLOPs used (approx)
-    const gigaFlopsUsed = tokensUsed * opsPerToken;
+    // --- Model Interaction ---
+    // Does the model catch the bad stuff?
+    const caughtToxic = isToxic && (Math.random() < profile.filterStrength);
+    const caughtPII = hasPII && (Math.random() < profile.filterStrength);
 
-    // energy: loosely correlated to GFLOPs and response time (joules-ish proxy)
-    // scale factor chosen to keep numbers reasonable for a mock dataset
-    const energyConsumption = gigaFlopsUsed * 1e-6 + responseTime * 0.001 + getRandomFloat(0, 0.002);
+    // --- Calculate Metrics ---
+
+    let compliance, helpfulness, tokens, piiScore, toxicityScore;
+
+    // Compliance & Helpfulness
+    if (caughtToxic || caughtPII) {
+      // Blocked
+      compliance = 1.0; // Perfect compliance
+      helpfulness = profile.helpfulnessWhenBlocked; // Low helpfulness
+      tokens = profile.tokensWhenBlocked; // Short refusal
+      piiScore = 0.0; // Redacted
+      toxicityScore = 0.0; // Filtered output is clean
+    } else {
+      // Allowed
+      if (isToxic) {
+        // It was toxic, and we allowed it -> Bad Compliance
+        compliance = 0.0 + getRandomFloat(0, 0.2);
+        toxicityScore = getRandomFloat(0.8, 1.0); // Output is toxic
+      } else {
+        // It was safe -> Good Compliance
+        const perfectScore = 1.0 - getRandomFloat(0, 0.1);
+        compliance = (perfectScore + profile.complianceBase) / 2;
+        toxicityScore = getRandomFloat(0, 0.1);
+      }
+
+      if (hasPII) {
+        // Leaked
+        piiScore = getRandomFloat(0.8, 1.0); // High PII detected
+      } else {
+        piiScore = 0.0;
+      }
+
+      helpfulness = getRandomFloat(0.8, 1.0); // Helpful answer
+      tokens = Math.max(10, Math.floor(
+        (baseCharacteristics.baseTokens + getRandomFloat(-baseCharacteristics.tokenVariance, baseCharacteristics.tokenVariance))
+        * (subMod.complexity || 1)
+      ));
+    }
+
+    // Physics (Time & Energy)
+    const msPerToken = 20 * profile.speedMultiplier; // ~20ms per token base
+    let responseTime = (tokens * msPerToken) + getRandomFloat(0, 50);
+
+    if (needsWeb) responseTime += getRandomFloat(500, 1500); // Web latency
+    if (caughtToxic) responseTime += 50; // Fast rejection
+
+    // Energy = Tokens * Complexity * Jitter
+    const complexity = (baseCharacteristics.complexity || 1) * (subMod.complexity || 1);
+    const gigaFlopsUsed = (tokens * 6 * complexity) / 1000; // Fake math
+    const energyConsumption = gigaFlopsUsed * 0.5; // Joules proxy
 
     calls.push({
       model: modelName,
-      time: getRandomInt(start_time, end_time + 1),
-      tokensUsed: tokensUsed,
+      time: getRandomInt(start_time, start_time + (intervalDuration * 1000)),
+      tokensUsed: tokens,
       gigaFlopsUsed: gigaFlopsUsed,
-      policyCompliance: getRandomFloat(min_pc, max_pc),
-      responseHelpfulness: getRandomFloat(min_rh, max_rh),
+      policyCompliance: compliance,
+      responseHelpfulness: helpfulness,
       responseTime: responseTime,
       energyConsumption: energyConsumption,
-      webLookups: webLookups,
+      webLookups: needsWeb ? getRandomInt(1, 4) : 0,
       topic: topic,
       sub_topic: sub_topic,
-      toxicityScore: getRandomFloat(minToxic, maxToxic),
-      piiDetected: getRandomFloat(minPII, maxPII)
+      toxicityScore: toxicityScore,
+      piiDetected: piiScore
     });
   }
 
-  // sort by time so downstream summarizers can compute intervals correctly
   calls.sort((a, b) => a.time - b.time);
   return calls;
 }
@@ -136,8 +255,6 @@ export function AIGeneralizer(modelName, calls) {
     web.push(typeof c.webLookups === 'number' ? c.webLookups : 0);
     toxic.push(typeof c.toxicityScore === 'number' ? c.toxicityScore : 0);
     pii.push(typeof c.piiDetected === 'number' ? c.piiDetected : 0);
-    // topics.push(typeof c.topic === 'string' ? c.topic : "No Topic");
-    // sub_topics.push(typeof c.sub_topic === 'string' ? c.sub_topic : "No Sub Topic");
 
     // Populate Breakdown Buckets
     const topicKey = c.topic || "Unknown";
@@ -163,11 +280,11 @@ export function AIGeneralizer(modelName, calls) {
       queryCount: bucketCalls.length, // Useful to know volume per topic
       responseTime: mean(bucketCalls.map(c => c.responseTime)),
       tokensUsed: mean(bucketCalls.map(c => c.tokensUsed)),
-      energyConsumption: mean(bucketCalls.map(c => c.energyConsumption)),
-      responseHelpfulness: mean(bucketCalls.map(c => c.responseHelpfulness)),
-      policyCompliance: mean(bucketCalls.map(c => c.policyCompliance)),
+      energyConsumption: mean(bucketCalls.map(c => c.energyConsumption)) * 1000,
+      responseHelpfulness: mean(bucketCalls.map(c => c.responseHelpfulness)) * 5,
+      policyCompliance: mean(bucketCalls.map(c => c.policyCompliance)) * 100,
       toxicityScore: mean(bucketCalls.map(c => c.toxicityScore)),
-      piiDetected: mean(bucketCalls.map(c => c.piiDetected)),
+      piiDetected: mean(bucketCalls.map(c => c.piiDetected)) * 100,
       gigaFlopsUsed: mean(bucketCalls.map(c => c.gigaFlopsUsed)),
       webLookups: mean(bucketCalls.map(c => c.webLookups))
     };

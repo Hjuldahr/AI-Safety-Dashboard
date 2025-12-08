@@ -1,5 +1,5 @@
 // server_side_events/scheduler.js
-import { pseudoAI, AIGeneralizer } from '../data_generator/test_data_generator_v3.js';
+import { pseudoAI, AIGeneralizer } from '../data_generator/dataGenerator.js';
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
@@ -11,33 +11,15 @@ let nextClientId = 1;
 let schedulerInterval = null;
 
 // ---------- Model Simulation ----------
-async function badModel() {
-    const calls = await pseudoAI(
-        "BadModel", 2, 10, 30, 0.4, 0.7, 0.3, 0.6, 0.1, 0.5, 0.0, 0.05, 6, 2
-    );
-    const summary = AIGeneralizer("BadModel", calls);
-    return {
-        modelName: summary.model,
-        policyCompliance: summary.policyCompliance.mean * 100,
-        responseHelpfulness: summary.responseHelpfulness.mean * 5,
-        responseTime: summary.responseTime.mean,
-        energyConsumption: summary.energyConsumption.mean * 1000,
-        tokensUsed: summary.tokensUsed.mean,
-        gigaFlopsUsed: summary.gigaFlopsUsed.mean,
-        webLookups: summary.webLookups.mean,
-        toxicityScore: summary.toxicityScore.mean,
-        piiDetected: summary.piiDetected.mean,
-        queryCount: summary.queryCount,
-        responseTimestamp: summary.responseTimestamp,
-        breakdown: summary.breakdown
-    };
-}
+//One method for both models
+async function generateModelData(modelName) {
+    // Generate Raw Logs based on Model Profile
+    const calls = await pseudoAI(modelName, 5); // Default 5 second interval logic
 
-async function goodModel() {
-    const calls = await pseudoAI(
-        "GoodModel", 2, 10, 30, 0.9, 1.0, 0.9, 1.0, 0.0, 0.05, 0.0, 0.0, 6, 2
-    );
-    const summary = AIGeneralizer("GoodModel", calls);
+    // Aggregate
+    const summary = AIGeneralizer(modelName, calls);
+
+    // Format for DB/SSE
     return {
         modelName: summary.model,
         policyCompliance: summary.policyCompliance.mean * 100,
@@ -48,7 +30,7 @@ async function goodModel() {
         gigaFlopsUsed: summary.gigaFlopsUsed.mean,
         webLookups: summary.webLookups.mean,
         toxicityScore: summary.toxicityScore.mean,
-        piiDetected: summary.piiDetected.mean,
+        piiDetected: summary.piiDetected.mean * 100, // Scale to %
         queryCount: summary.queryCount,
         responseTimestamp: summary.responseTimestamp,
         breakdown: summary.breakdown
@@ -122,7 +104,7 @@ function safeWriteAll(sseData, targetUserId = null) {
 
     if (toRemoveIds.size) {
         const toClose = activeClients.filter(c => toRemoveIds.has(c.id));
-        toClose.forEach(entry => { try { if (entry.res && !entry.res.writableEnded) entry.res.end(); } catch {} });
+        toClose.forEach(entry => { try { if (entry.res && !entry.res.writableEnded) entry.res.end(); } catch { } });
         activeClients = activeClients.filter(c => !toRemoveIds.has(c.id));
     }
 }
@@ -143,8 +125,8 @@ async function schedulerTick() {
     if (schedulerState.isPaused) return;
 
     try {
-        const goodData = await goodModel();
-        const badData = await badModel();
+        const goodData = await generateModelData("GoodModel");
+        const badData = await generateModelData("BadModel");
 
         const dataToSave = {
             GoodModel: goodData,
