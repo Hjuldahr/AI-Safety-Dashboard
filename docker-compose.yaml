@@ -1,0 +1,29 @@
+services:
+  dashboard:
+    build: . 
+    container_name: dashboard-container
+    restart: always
+    environment:
+      - PORT=2121
+      - PUBLIC_URL=/dashboard
+      - MONGO_URL=mongodb://dashboard-mongo:27017/dashboardDB
+    networks:
+      - web-main-net
+    ports: 
+      - "2121:2121"
+
+  dashboard-mongo:
+      image: mongo:7
+      restart: unless-stopped
+      volumes:
+        - mongo_data:/data/db
+      expose:
+        - "27017"
+      networks: [ web-main-net ]
+
+volumes:
+  mongo_data: {}
+
+networks:
+  web-main-net:
+    external: true
