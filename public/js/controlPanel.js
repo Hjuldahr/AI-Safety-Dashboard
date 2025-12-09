@@ -7,6 +7,8 @@ const pauseColour = "#f45b69ff";
 const playText = "▶ Resume Graphs";
 const playColour = "#2ca58dff"
 
+const loadChartsFromDatabase = window.DashboardApp.actions.loadCharts; // get the helper method exposed in the chartDataManager.js file.
+
 document.addEventListener('DOMContentLoaded', function () {
     const toggleButton = document.querySelector("#toggle-button"); //<button>
     const refreshButton = document.querySelector("#refresh-button"); //<button>
