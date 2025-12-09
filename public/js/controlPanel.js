@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function updateServerSettings() {
         try {
-            const res = await fetch('/api/updateParams', {
+            const res = await fetch('api/updateParams', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isPaused, interval, activeModel })
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function updateClientSettings() {
         try {
-            const res = await fetch('/api/getParams');
+            const res = await fetch('api/getParams');
 
             const data = await res.json();
             if (data.success) {
@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
             };
 
             try {
-                const response = await fetch('/api/createGraph', {
+                const response = await fetch('api/createGraph', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)

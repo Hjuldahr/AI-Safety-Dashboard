@@ -5,12 +5,10 @@ services:
     restart: always
     environment:
       - PORT=2121
-      - PUBLIC_URL=/dashboard
+      - PUBLIC_URL=/dashboard/
       - MONGO_URL=mongodb://dashboard-mongo:27017/dashboardDB
     networks:
       - web-main-net
-    ports: 
-      - "2121:2121"
 
   dashboard-mongo:
       image: mongo:7

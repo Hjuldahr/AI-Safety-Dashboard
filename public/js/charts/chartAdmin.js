@@ -22,7 +22,7 @@
         }
 
         try {
-            const response = await fetch('/api/reorder', {
+            const response = await fetch('api/reorder', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ newOrder: newOrderArray })
@@ -85,7 +85,7 @@
             if (canvas) canvas.style.display = 'none';
             if (kpiWrapper) kpiWrapper.style.display = 'none';
 
-            const response = await fetch(`/api/getChartConfig/${id}`);
+            const response = await fetch(`api/getChartConfig/${id}`);
             if (!response.ok) throw new Error('Failed to fetch config');
             const { config } = await response.json();
 
@@ -195,7 +195,7 @@
         }
 
         try {
-            const response = await fetch('/api/updateGraph', {
+            const response = await fetch('api/updateGraph', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -218,7 +218,7 @@
         try {
             const isAdmin = document.querySelector("#isAdmin");
             if (!isAdmin) return;
-            const response = await fetch('/api/deleteGraph', {
+            const response = await fetch('api/deleteGraph', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id })

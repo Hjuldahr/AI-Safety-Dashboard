@@ -74,7 +74,7 @@ async function handleReportSubmit(elements) {
         };
 
         // POST to the chosen route
-        const response = await fetch('/reports/create', {
+        const response = await fetch('reports/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

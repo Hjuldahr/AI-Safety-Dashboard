@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Use the new paginated history API to fetch the most recent logs
             const params = new URLSearchParams({ page: '1', limit: String(limit) });
-            const resp = await fetch(`/alerts/api/history?${params.toString()}`);
+            const resp = await fetch(`alerts/api/history?${params.toString()}`);
             if (!resp.ok) return [];
             const data = await resp.json();
             // data.logs is an array of { level, timestamp, alertName, modelName, humanRule }
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Server-driven unread count helpers
     const fetchUnreadCount = async () => {
         try {
-            const resp = await fetch('/alerts/unread-count');
+            const resp = await fetch('alerts/unread-count');
             if (!resp.ok) return 0;
             const data = await resp.json();
             return Number(data && data.unread ? data.unread : 0);
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Create the link element
             const link = document.createElement('a');
-            link.href = '/alerts';
+            link.href = 'alerts';
 
             // Create a span for the alert text: prefer humanRule then alertName
             const alertText = document.createElement('span');
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
             historyContainer.classList.add('show');
             // Mark read on server
             try {
-                await fetch('/alerts/mark-read', { method: 'POST' });
+                await fetch('alerts/mark-read', { method: 'POST' });
             } catch (e) {
                 console.error('Failed to mark alerts read on server:', e);
             }
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup SSE to receive live alert events and refresh unread count
     let __notificationsEvtSource = null;
     try {
-        __notificationsEvtSource = new EventSource('/events');
+        __notificationsEvtSource = new EventSource('events');
         __notificationsEvtSource.addEventListener('alert', async (ev) => {
             // When an alert arrives, refresh unread count
             try {

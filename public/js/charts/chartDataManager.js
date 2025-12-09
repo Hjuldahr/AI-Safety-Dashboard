@@ -33,7 +33,7 @@
         if (isReloadingCharts) return;
         isReloadingCharts = true;
         try {
-            const response = await fetch(`/api/recentData`);
+            const response = await fetch(`api/recentData`);
             if (!response.ok) throw new Error('Failed to fetch initial chart data');
             const data = await response.json();
             allLogs = data.logs || {};
@@ -149,7 +149,7 @@
 
     // ---------- SSE Updates (batched) ----------
     function setupSSE() {
-        const evtSource = new EventSource('/events');
+        const evtSource = new EventSource('events');
         window.__chartEvtSource = evtSource;
 
         let pendingUpdates = [];

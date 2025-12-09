@@ -33,6 +33,7 @@ const startServer = async () => {
     app.use(cookieParser());
 
     app.use(session({
+        name: 'dashboard.sid',
         secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false,

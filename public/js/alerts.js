@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // API wrappers
     // --------------------------------------------------
     async function apiCreateAlert(payload) {
-        const resp = await fetch('/alerts/create', {
+        const resp = await fetch('alerts/create', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
@@ -317,20 +317,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function apiGetLiveAlerts() {
-        const resp = await fetch('/alerts/live');
+        const resp = await fetch('alerts/live');
         if (!resp.ok) throw new Error('Failed to load live alerts');
         return resp.json();
     }
 
     async function apiDeleteAlert(id) {
-        const resp = await fetch(`/alerts/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'same-origin' });
+        const resp = await fetch(`alerts/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'same-origin' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to delete');
         return data;
     }
 
     async function apiUpdateAlert(id, payload) {
-        const resp = await fetch(`/alerts/${encodeURIComponent(id)}`, {
+        const resp = await fetch(`alerts/${encodeURIComponent(id)}`, {
             method: 'PUT',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (endDate) params.set('endDate', endDate);
 
         try {
-            const resp = await fetch(`/alerts/api/history?${params.toString()}`);
+            const resp = await fetch(`alerts/api/history?${params.toString()}`);
             if (!resp.ok) throw new Error('Failed to fetch history');
             
             const data = await resp.json(); // { logs: [], total: X, pages: Y, page: Z }
