@@ -9,11 +9,14 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Rebuild and Restart
+      - name: Update Code and Redeploy
+        #execute all commands from project's directory
+        working-directory: /home/homeadmin/subApps/CST8414-Applied-Research-Project
         run: |
+          # Pull the latest code from the main branch
+          git fetch origin
+          git reset --hard origin/main
+
           # destroy the current version of the dashboard and wipe the DB
           docker compose down -v
 
