@@ -21,24 +21,56 @@ const seedDataBase = async () => {
 const seedAdminUser = async () => {
     try {
         // Check if an admin user already exists
-        const adminExists = await User.findOne({ roles: 'admin' });
+        const adminExists = await User.findOne({ username: 'admin' });
+
+        // ToDo: Remove after Demo: Add Demo Users:
+        const aliExists = await User.findOne({ username: 'Ali' });
+        const demoExists = await User.findOne({ username: 'Demo' });
 
         // If an admin already exists, do nothing.
         if (adminExists) {
             console.log('-INFO- An Admin user already exists.');
-            return;
+        }
+        else {
+            // If no admin exists, create one from the .env variables
+            const adminUser = new User({
+                username: process.env.DEFAULT_APP_USER,
+                email: process.env.DEFAULT_ADD_EMAIL,
+                password: process.env.DEFAULT_APP_PASSWORD,
+                roles: ['admin'] // Assign admin role
+            });
+
+            await adminUser.save();
+            console.log('-INFO- Default admin user created successfully.');
         }
 
-        // If no admin exists, create one from the .env variables
-        const adminUser = new User({
-            username: process.env.DEFAULT_APP_USER,
-            email: process.env.DEFAULT_ADD_EMAIL,
-            password: process.env.DEFAULT_APP_PASSWORD,
-            roles: ['admin'] // Assign admin role
-        });
+        // ToDo: Remove after Demo: Add Demo Users:
+        if (process.env.ALI_USERNAME && !aliExists) {
+            const aliUser = new User({
+                username: process.env.ALI_USERNAME,
+                email: process.env.ALI_EMAIL,
+                password: process.env.ALI_PASSWORD,
+                roles: ['admin'] // Assign admin role
+            });
 
-        await adminUser.save();
-        console.log('-INFO- Default admin user created successfully.');
+            console.log("-INFO- Creating Ali User.")
+
+            await aliUser.save();
+        }
+
+        // ToDo: Remove after Demo: Add Demo Users:
+        if (process.env.DEMO_USERNAME && !demoExists) {
+            const demoUser = new User({
+                username: process.env.DEMO_USERNAME,
+                email: process.env.DEMO_EMAIL,
+                password: process.env.DEMO_PASSWORD,
+                roles: ['admin'] // Assign admin role
+            });
+
+            console.log("-INFO- Creating Demo User.")
+
+            await demoUser.save();
+        }
 
     } catch (error) {
         console.error('Error seeding admin user:', error);
