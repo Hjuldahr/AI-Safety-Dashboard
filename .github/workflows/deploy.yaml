@@ -17,8 +17,8 @@ jobs:
           git fetch origin
           git reset --hard origin/main
 
-          # destroy the current version of the dashboard and wipe the DB
-          docker compose down -v
+          # destroy the current version of the dashboard without wiping the DB
+          docker compose down
 
           # re-compose the dashboard
           docker compose up -d --build
