@@ -1,0 +1,21 @@
+name: Deploy Dashboard
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Rebuild and Restart
+        run: |
+          # destroy the current version of the dashboard and wipe the DB
+          docker compose down -v
+
+          # re-compose the dashboard
+          docker compose up -d --build
