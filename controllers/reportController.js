@@ -239,6 +239,7 @@ const renderPdfFromTemplate = async (templateName, templateData) => {
         browser = await puppeteer.launch({ 
             // The 'new' headless mode is more modern and reliable
             headless: 'new',
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
             // Flags are required for Puppeteer to run inside Docker (as previously addressed)
             args: ['--no-sandbox', '--disable-setuid-sandbox'] 
         });
