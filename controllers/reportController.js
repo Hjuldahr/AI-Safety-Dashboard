@@ -5,6 +5,7 @@ import puppeteer from 'puppeteer';
 import User_Log from '../models/User_Log.js';
 import AI_Log from '../models/AI_Log.js';
 import User from '../models/user.js';
+import { response } from 'express';
 
 // Resolve __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -19,147 +20,189 @@ const buildReportQuery = ({ modelName, startDate, endDate }) => {
     }
 
     if (startDate || endDate) {
-        query.createdAt = {};
-        if (startDate) query.createdAt.$gte = new Date(startDate);
+        query.responseTimestamp = {}; 
+        
+        if (startDate) {
+            // Create the start boundary (GTE) based on UTC midnight (00:00:00.000Z)
+            const startOfDayUTC = new Date(startDate + 'T00:00:00.000Z');
+            query.responseTimestamp.$gte = startOfDayUTC.getTime();
+        }
+        
         if (endDate) {
-            const endOfDay = new Date(endDate);
-            endOfDay.setHours(23, 59, 59, 999);
-            query.createdAt.$lte = endOfDay;
+            // Create the end boundary (LTE) based on the last millisecond of the day in UTC (23:59:59.999Z)
+            const endDayDate = new Date(endDate + 'T00:00:00.000Z');
+            
+            // Add 24 hours (86,400,000 milliseconds) to get the start of the next day.
+            const nextDayStartUTC = endDayDate.getTime() + 86400000;
+            
+            // Set the upper bound to the last millisecond of the selected day.
+            query.responseTimestamp.$lte = nextDayStartUTC - 1; 
         }
     }
-
     return query;
 };
 
 // === PDF generation via Puppeteer (Chart.js in-template) ===
 const renderPdfFromTemplate = async (templateName, templateData) => {
-    const templatePath = path.join(__dirname, `../views/${templateName}`);
+    const templatePath = path.join(__dirname, `../views/${templateName}.ejs`);
     const html = await ejs.renderFile(templatePath, templateData);
 
-    const browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    // Wait for charts to mark renderComplete
-    await page.waitForFunction(() => window.renderComplete === true).catch(() => {
-        // If the page never sets renderComplete, continue after a timeout
-        return new Promise(resolve => setTimeout(resolve, 800));
-    });
-
-    const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '20mm', bottom: '20mm' }
-    });
-
-    await browser.close();
-    return pdfBuffer;
-};
-
-// === Controller functions ===
-
-/**
- * Renders the reports page.
- */
-const getPage = async (req, res) => {
+    let browser;
     try {
-        res.render('reports', {
-            user: req.user
+        browser = await puppeteer.launch({ 
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox'] 
         });
-    } catch (err) {
-        console.error('Error rendering reports page:', err);
-        res.status(500).send('Error loading reports page.');
+        const page = await browser.newPage();
+        
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+
+        // Wait for JavaScript signal that all charts are rendered
+        await page.waitForFunction(() => window.renderComplete === true, {
+            timeout: 5000
+        }).catch(e => {
+            console.warn('Puppeteer wait for chart render timed out. Proceeding with PDF generation.', e.message);
+        });
+        
+        const pdfOptions = {
+            format: 'A4',
+            printBackground: true,
+            margin: {
+                top: '0.5in',
+                right: '0.5in',
+                bottom: '0.5in',
+                left: '0.5in'
+            }
+        };
+
+        const pdfBuffer = await page.pdf(pdfOptions);
+
+        return pdfBuffer;
+
+    } catch (error) {
+        console.error('Puppeteer PDF Generation Error:', error);
+        throw new Error('PDF generation failed.');
+    } finally {
+        if (browser) {
+            await browser.close();
+        }
     }
 };
 
-/**
- * Creates a report PDF (Puppeteer + Chart.js in the EJS template) and returns it inline.
- * Body fields expected:
- *  - reportTitle, startDate, endDate, reportType, modelName, notes
- */
+
+// === Main Report Generation Handler ===
 const createReport = async (req, res) => {
     try {
-        const {
-            reportTitle = 'Dashboard Report',
-            startDate,
-            endDate,
-            reportType,
-            modelName,
-            notes
+        const { 
+            reportTitle = 'Dashboard Report', 
+            startDate, 
+            endDate, 
+            reportType, 
+            modelName, 
+            notes 
         } = req.body || {};
 
-        // Build query and fetch logs (adjust limit or full scan as needed)
-        const query = buildReportQuery({ modelName, startDate, endDate });
-
-        // For demonstration we aggregate a numeric field named `value` from AI_Log.
-        // Replace `value` with whichever numeric stat your logs record (e.g., responseTime).
+        const query = buildReportQuery({ 
+            modelName, 
+            startDate, 
+            endDate 
+        });
+        
         const matchStage = { $match: query };
-        const groupStage = {
+
+        // --- 1. Time-Series Aggregation Stages (for Line Charts) ---
+        const projectStage = {
+            $project: {
+                date: { $toDate: "$responseTimestamp" }, // Convert numeric timestamp to Date object
+                responseTime: "$responseTime",
+                policyCompliance: "$policyCompliance",
+                responseHelpfulness: "$responseHelpfulness",
+                energyConsumption: "$energyConsumption",
+            }
+        };
+        
+        const groupTimeSeriesStage = {
+            $group: {
+                _id: {
+                    $dateToString: { 
+                        format: "%Y-%m-%d", 
+                        date: "$date" 
+                    }
+                },
+                avgResponseTime: { $avg: '$responseTime' },
+                avgPolicyCompliance: { $avg: '$policyCompliance' },
+                avgResponseHelpfulness: { $avg: '$responseHelpfulness' },
+                avgEnergyConsumption: { $avg: '$energyConsumption' },
+            }
+        };
+        
+        const sortStage = { $sort: { _id: 1 } };
+
+
+        // --- 2. Single Stats Aggregation Pipeline (for Min/Max/Avg/Count) ---
+        const groupSingleStatsStage = {
             $group: {
                 _id: null,
-                minVal: { $min: '$responseTime' },
-                maxVal: { $max: '$responseTime' },
-                avgVal: { $avg: '$responseTime' },
-                totalCount: { $sum: 1 }
+                totalCount: { $sum: 1 },
+                minResponseTime: { $min: '$responseTime' }, 
+                maxResponseTime: { $max: '$responseTime' },
+                avgResponseTime: { $avg: '$responseTime' },
+                minPolicy: { $min: '$policyCompliance' },
+                maxPolicy: { $max: '$policyCompliance' },
+                avgPolicy: { $avg: '$policyCompliance' },
+                minHelpful: { $min: '$responseHelpfulness' },
+                maxHelpful: { $max: '$responseHelpfulness' },
+                avgHelpful: { $avg: '$responseHelpfulness' },
+                minEnergy: { $min: '$energyConsumption' },
+                maxEnergy: { $max: '$energyConsumption' },
+                avgEnergy: { $avg: '$energyConsumption' }
             }
         };
 
-        // Run aggregation on AI_Log as an example.
-        // If you want to aggregate user logs, switch to User_Log accordingly.
-        const agg = await AI_Log.aggregate([matchStage, groupStage]).exec().catch(() => []);
+        // Run both aggregations concurrently for efficiency
+        const [singleStatsAgg, timeSeriesAgg] = await Promise.all([
+            AI_Log.aggregate([matchStage, groupSingleStatsStage]).exec().catch((err) => {
+                console.error("Single Stats Aggregation Error:", err);
+                return [];
+            }),
+            AI_Log.aggregate([matchStage, projectStage, groupTimeSeriesStage, sortStage]).exec().catch((err) => {
+                console.error("Time Series Aggregation Error:", err);
+                return [];
+            })
+        ]);
 
+        const agg = singleStatsAgg;
+        
+        // If agg is empty, the stats will default to 0
         const stats = agg && agg.length ? {
-            min: agg[0].minVal ?? 0,
-            max: agg[0].maxVal ?? 0,
-            avg: Math.round((agg[0].avgVal ?? 0) * 100) / 100,
-            count: agg[0].totalCount ?? 0
-        } : { min: 0, max: 0, avg: 0, count: 0 };
-
-        // Prepare two example Chart.js configs — extend them to match your real chart configs
-        const chartConfig1 = {
-            type: 'line',
-            data: {
-                labels: ['T-4','T-3','T-2','T-1','Now'],
-                datasets: [{
-                    label: 'Example Trend',
-                    data: [
-                        Math.max(0, stats.avg - 10),
-                        Math.max(0, stats.avg - 5),
-                        stats.avg,
-                        Math.max(0, stats.avg + 5),
-                        Math.max(0, stats.avg + 12)
-                    ],
-                    fill: false
-                }]
+            count: agg[0].totalCount ?? 0,
+            responseTime: {
+                min: agg[0].minResponseTime ?? 0,
+                max: agg[0].maxResponseTime ?? 0,
+                avg: Math.round((agg[0].avgResponseTime ?? 0) * 100) / 100,
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false }
-                }
+            policy: {
+                min: agg[0].minPolicy ?? 0,
+                max: agg[0].maxPolicy ?? 0,
+                avg: Math.round((agg[0].avgPolicy ?? 0) * 100) / 100,
+            },
+            helpfulness: {
+                min: agg[0].minHelpful ?? 0,
+                max: agg[0].maxHelpful ?? 0,
+                avg: Math.round((agg[0].avgHelpful ?? 0) * 100) / 100,
+            },
+            energy: {
+                min: agg[0].minEnergy ?? 0,
+                max: agg[0].maxEnergy ?? 0,
+                avg: Math.round((agg[0].avgEnergy ?? 0) * 100) / 100,
             }
+        } : { 
+            min: 0, max: 0, avg: 0, count: 0, 
+            policy: { min: 0, max: 0, avg: 0 },
+            helpfulness: { min: 0, max: 0, avg: 0 },
+            energy: { min: 0, max: 0, avg: 0 }
         };
 
-        const chartConfig2 = {
-            type: 'bar',
-            data: {
-                labels: ['Min','Avg','Max'],
-                datasets: [{
-                    label: 'Range',
-                    data: [stats.min, stats.avg, stats.max]
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false }
-                }
-            }
-        };
 
         // Render template and produce PDF
         const templateData = {
@@ -171,24 +214,97 @@ const createReport = async (req, res) => {
             notes,
             totalLogs: stats.count,
             stats,
-            // embed as raw JS objects for EJS -> template
-            chartConfig1: JSON.stringify(chartConfig1),
-            chartConfig2: JSON.stringify(chartConfig2)
+            timeSeriesData: timeSeriesAgg 
         };
 
-        const pdfBuffer = await renderPdfFromTemplate('reportTemplate.ejs', templateData);
+        const pdfBuffer = await renderPdfFromTemplate('reportTemplate', templateData);
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline; filename="dashboard-report.pdf"');
         return res.send(pdfBuffer);
 
     } catch (err) {
-        console.error('Report creation failed:', err);
-        return res.status(500).json({ message: 'Failed to generate report', error: err.message });
+        console.error('Create Report Error:', err);
+        res.status(500).json({ message: 'Failed to generate report', error: err.message });
     }
 };
 
+const downloadCsv = async (req, res) => {
+    try {
+        // Parameters come from req.query for a GET request
+        const { modelName, startDate, endDate } = req.query;
+
+        const query = buildReportQuery({ modelName, startDate, endDate });
+
+        // --- DEBUGGING LINE 1 ---
+        console.log('CSV Download: Query Built:', JSON.stringify(query));
+        
+        // Fetch all logs matching the query. Use .lean() for faster data retrieval.
+        const logs = await AI_Log.find(query).lean().exec();
+
+        // --- DEBUGGING LINE 2 ---
+        console.log(`CSV Download: Found ${logs.length} logs.`);
+
+        if (logs.length === 0) {
+            // Send a 404/400 to prevent a silent 204 failure
+            return res.status(404).json({ message: 'No logs found for the selected criteria. The date range may be empty.' }); 
+        }
+
+        // Prepare the logs for CSV, adding a readable date field
+        const logsForCsv = logs.map(log => ({
+            _id: log._id.toString(), // Convert ObjectId to string
+            modelName: log.modelName,
+            policyCompliance: log.policyCompliance,
+            responseHelpfulness: log.responseHelpfulness,
+            responseTime: log.responseTime,
+            energyConsumption: log.energyConsumption,
+            queryCount: log.queryCount,
+            responseTimestamp: log.responseTimestamp,
+            responseDate: new Date(log.responseTimestamp).toISOString(),
+        }));
+
+        // Determine CSV headers (in desired order)
+        const headers = [
+            'responseDate', 'modelName', 'policyCompliance', 'responseHelpfulness', 
+            'responseTime', 'energyConsumption', 'queryCount', 'responseTimestamp', '_id'
+        ];
+        const csvRows = [headers.join(',')]; // Header row
+
+        // Simple manual CSV conversion with quote escaping
+        for (const log of logsForCsv) {
+            const values = headers.map(header => {
+                const value = log[header] !== undefined ? log[header] : '';
+                // Escape: Wrap value in quotes, and escape internal double quotes by doubling them (" becomes "")
+                const escaped = ('' + value).replace(/"/g, '""');
+                return `"${escaped}"`;
+            });
+            csvRows.push(values.join(','));
+        }
+        
+        const csvContent = csvRows.join('\n');
+
+        // Set headers for CSV download
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="ai-logs-${startDate || 'all'}-to-${endDate || 'all'}.csv"`);
+        return res.send(csvContent);
+
+    } catch (err) {
+        console.error('Download CSV Error:', err);
+        // Return a 500 status with an error message
+        res.status(500).json({ message: 'Failed to generate CSV due to a server error.', error: err.message });
+    }
+};
+
+const getPage = (req, res) => {
+    res.render('reports', { 
+        title: 'Reports',
+        user: req.user
+    });
+};
+
+
 export default {
+    createReport,
     getPage,
-    createReport
+    downloadCsv
 };
