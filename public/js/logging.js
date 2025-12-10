@@ -231,7 +231,7 @@ async function handleUserFilter(elements, page = 1) {
 
     try {
         // Fetch data from the API
-        const response = await fetch(`/logs/api/user?${params.toString()}`);
+        const response = await fetch(`logs/api/user?${params.toString()}`);
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -271,7 +271,7 @@ async function handleAiFilter(elements, page = 1) {
 
     try {
         // Fetch data from the API
-        const response = await fetch(`/logs/api/ai?${params.toString()}`);
+        const response = await fetch(`logs/api/ai?${params.toString()}`);
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }

@@ -22,10 +22,23 @@ const handleReportSubmit = async (elements) => {
     if (elements.previewWrapper) elements.previewWrapper.style.display = 'none';
 
     try {
-        const formData = new FormData(elements.form);
-        const payload = Object.fromEntries(formData.entries());
+        const formEl = elements.form;
+        if (!formEl) throw new Error('Report form not found');
 
-        const response = await fetch('/reports/create', {
+        const formData = new FormData(formEl);
+
+        // Build payload using the same naming as the controller expects
+        const payload = {
+            reportTitle: formData.get('reportTitle'),
+            startDate: formData.get('startDate'),
+            endDate: formData.get('endDate'),
+            reportType: formData.get('reportType'),
+            modelName: formData.get('modelName'),
+            notes: formData.get('notes')
+        };
+
+        // POST to the chosen route
+        const response = await fetch('reports/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

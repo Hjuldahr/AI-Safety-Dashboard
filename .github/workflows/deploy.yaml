@@ -1,0 +1,24 @@
+name: Deploy Dashboard
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Update Code and Redeploy
+        #execute all commands from project's directory
+        working-directory: /home/homeadmin/subApps/CST8414-Applied-Research-Project
+        run: |
+          # Pull the latest code from the main branch
+          git fetch origin
+          git reset --hard origin/main
+
+          # destroy the current version of the dashboard without wiping the DB
+          docker compose down
+
+          # re-compose the dashboard
+          docker compose up -d --build

@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const logicalOperatorsContainer = document.querySelector('.logical-operators-container');
     const alertNameInput = document.getElementById('alert-name');
     const alertLevelSelect = document.getElementById('alert-level');
+    const modelSelect = document.getElementById('model-name');
+
+    // History references
+    const historyFilterForm = document.getElementById('history-filter-form');
+    const historyClearBtn = document.querySelector('#history-filter-form .clear-filters');
+    const historyPagination = document.getElementById('history-pagination');
 
     // Buttons used for edit flow (created once)
     const saveBtn = document.createElement('button');
@@ -24,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
     cancelBtn.textContent = 'Cancel';
     cancelBtn.style.display = 'none';
 
+
     if (addAlertBtn && addAlertBtn.parentElement) {
         const actionWrapper = document.createElement('div');
         actionWrapper.className = 'alert-action-buttons';
@@ -37,20 +44,23 @@ document.addEventListener('DOMContentLoaded', function () {
     // Client-side cache and edit state
     const liveAlertsCache = {};
     let currentEditId = null;
+    let currentHistoryPage = 1;
 
     // --------------------------------------------------
     // Config / constant mappings
     // --------------------------------------------------
     const FIELD_MAP = {
-        'Harmful Messages': 'harmfulMessages',
-        'Accuracy': 'accuracy',
-        'Usage': 'usage'
+        'Policy Compliance': 'policyCompliance',
+        'Response Helpfulness': 'responseHelpfulness',
+        'Response Time': 'responseTime',
+        'Energy Consumption': 'energyConsumption'
     };
 
     const REVERSE_FIELD_MAP = {
-        'harmfulMessages': 'Harmful Messages',
-        'accuracy': 'Accuracy',
-        'usage': 'Usage'
+        'policyCompliance': 'Policy Compliance',
+        'responseHelpfulness': 'Response Helpfulness',
+        'responseTime': 'Response Time',
+        'energyConsumption': 'Energy Consumption'
     };
 
     const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte' };
@@ -69,19 +79,21 @@ document.addEventListener('DOMContentLoaded', function () {
         return d.toLocaleString('en-CA', { hour12: true }).replace(',', '');
     }
 
+
     // --------------------------------------------------
     // Rule-builder helpers
     // --------------------------------------------------
     function createRuleRowHTML(logicalOperator) {
-        // Only include a delete button for non-first rows (logicalOperator set for 2nd+ rows)
         const deleteBtn = logicalOperator ? '<button class="delete-rule-btn">&times;</button>' : '';
+        
+        // Dynamically insert options
+        const optionsHtml = getDataTypeOptions();
+
         return `
       <span class="logic-separator">${logicalOperator}</span>
       <select class="data-type">
           <option value="">-- select data type --</option>
-          <option value="Harmful Messages">Harmful Messages</option>
-          <option value="Accuracy">Accuracy</option>
-          <option value="Usage">Usage</option>
+          ${optionsHtml}
       </select>
       <select class="operator-type">
           <option value="">-- select operator --</option>
@@ -102,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function buildRuleJSON() {
         const ruleRows = rulesContainer.querySelectorAll('.rule-row');
         const conditions = [];
-
         let firstLogicOperator = null;
         let hasIncompleteRow = false;
 
@@ -112,7 +123,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const valueInput = row.querySelector('.value-input');
             const logicalOperatorSpan = row.querySelector('.logic-separator');
 
-            const dataType = dataTypeSelect ? dataTypeSelect.value : '';
+            // dataType is now the DICTIONARY KEY (e.g., 'responseHelpfulness')
+            const dictKey = dataTypeSelect ? dataTypeSelect.value : '';
             const operatorValue = operatorSelect ? operatorSelect.value : '';
             const rawValue = valueInput ? valueInput.value : '';
 
@@ -120,20 +132,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 firstLogicOperator = logicalOperatorSpan.textContent.trim().toLowerCase() === 'and' ? '$and' : '$or';
             }
 
-            if (dataType && operatorValue && rawValue) {
-                const dbField = FIELD_MAP[dataType];
+            if (dictKey && operatorValue && rawValue) {
+                // LOOKUP: Get the actual DB path from the dictionary
+                const dictEntry = DATA_DICTIONARY[dictKey];
+                if (!dictEntry) {
+                    alert('Invalid data type selected');
+                    return;
+                }
+                const dbField = dictEntry.dbPath;
                 const mongoOperator = OPERATOR_MAP[operatorValue];
                 const numericValue = parseFloat(rawValue);
+
                 if (!dbField || !mongoOperator || Number.isNaN(numericValue)) {
-                    alert(`Invalid data in rule ${index + 1}. Please ensure value is a number.`);
+                    alert(`Invalid data in rule ${index + 1}.`);
                     hasIncompleteRow = true;
                     return;
                 }
+
                 const condition = {};
                 condition[dbField] = {};
                 condition[dbField][mongoOperator] = numericValue;
                 conditions.push(condition);
-            } else if (dataType || operatorValue || rawValue) {
+
+            } else if (dictKey || operatorValue || rawValue) {
                 hasIncompleteRow = true;
             }
         });
@@ -147,6 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return null;
         }
         if (conditions.length === 1) return conditions[0];
+        
         const topLevelOperator = firstLogicOperator || '$and';
         const finalRule = {};
         finalRule[topLevelOperator] = conditions;
@@ -161,12 +183,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const operatorSelect = row.querySelector('.operator-type');
             const valueInput = row.querySelector('.value-input');
             const logicalOperatorSpan = row.querySelector('.logic-separator');
-            const dataType = dataTypeSelect ? dataTypeSelect.value : '';
+
+            // Use the TEXT of the option (The Label) for readability
+            const dataTypeLabel = dataTypeSelect.options[dataTypeSelect.selectedIndex]?.text;
             const operatorValue = operatorSelect ? operatorSelect.value : '';
             const value = valueInput ? valueInput.value : '';
-            if (dataType && operatorValue && value) {
+
+            if (dataTypeLabel && operatorValue && value) {
                 const prefix = (index > 0 && logicalOperatorSpan) ? ` ${logicalOperatorSpan.textContent} ` : '';
-                parts.push(prefix + `"${dataType}" ${OPERATOR_READABLE[operatorValue]} ${value}`);
+                parts.push(prefix + `"${dataTypeLabel}" ${OPERATOR_READABLE[operatorValue]} ${value}`);
             }
         });
         return parts.join('').trim() + '.';
@@ -175,47 +200,56 @@ document.addEventListener('DOMContentLoaded', function () {
     function resetAlertBuilder() {
         alertNameInput.value = '';
         alertLevelSelect.selectedIndex = 0;
+        if (modelSelect) modelSelect.value = '';
         while (rulesContainer.children.length > 1) rulesContainer.removeChild(rulesContainer.lastChild);
-        const firstRuleRow = rulesContainer.querySelector('.rule-row');
-        if (firstRuleRow) {
-            const dt = firstRuleRow.querySelector('.data-type');
-            const op = firstRuleRow.querySelector('.operator-type');
-            const val = firstRuleRow.querySelector('.value-input');
-            if (dt) dt.selectedIndex = 0;
-            if (op) op.selectedIndex = 0;
-            if (val) val.value = '';
-            const delBtn = firstRuleRow.querySelector('.delete-rule-btn');
-            if (delBtn) delBtn.remove();
-        }
+        
+        // Reset first row
+        const firstRow = rulesContainer.querySelector('.rule-row');
+        if(firstRow) firstRow.remove();
+        
+        const freshRow = document.createElement('div');
+        freshRow.className = 'rule-row';
+        freshRow.innerHTML = createRuleRowHTML('');
+        rulesContainer.appendChild(freshRow);
     }
 
     function populateRuleBuilderFromRule(ruleObj) {
         while (rulesContainer.firstChild) rulesContainer.removeChild(rulesContainer.firstChild);
         let parts = [];
+        // Flatten Mongo Query Structure
         if (ruleObj && typeof ruleObj === 'object') {
             const keys = Object.keys(ruleObj);
             if (keys.length === 1 && (keys[0] === '$and' || keys[0] === '$or')) parts = ruleObj[keys[0]];
             else parts = [ruleObj];
         }
+
         parts.forEach((cond, idx) => {
             const dbField = Object.keys(cond)[0];
             const opObj = cond[dbField];
             const opKey = Object.keys(opObj)[0];
             const val = opObj[opKey];
-            const displayField = REVERSE_FIELD_MAP[dbField] || dbField;
+
+            // REVERSE LOOKUP: Find which dictionary key matches this dbPath
+            const dictKey = Object.keys(DATA_DICTIONARY).find(k => DATA_DICTIONARY[k].dbPath === dbField);
+            
             const operator = OP_REVERSE_MAP[opKey] || 'gt';
             const logic = idx > 0 ? (ruleObj && ruleObj.$or ? 'OR' : 'AND') : '';
+
             const newRuleRow = document.createElement('div');
             newRuleRow.className = 'rule-row';
             newRuleRow.innerHTML = createRuleRowHTML(logic);
             rulesContainer.appendChild(newRuleRow);
+
             const dataTypeSelect = newRuleRow.querySelector('.data-type');
             const operatorSelect = newRuleRow.querySelector('.operator-type');
             const valueInput = newRuleRow.querySelector('.value-input');
-            if (dataTypeSelect) dataTypeSelect.value = displayField;
+
+            if (dataTypeSelect && dictKey) dataTypeSelect.value = dictKey;
             if (operatorSelect) operatorSelect.value = operator;
             if (valueInput) valueInput.value = val;
         });
+
+        // Add empty row if none existed
         if (rulesContainer.children.length === 0) {
             const firstRow = document.createElement('div');
             firstRow.className = 'rule-row';
@@ -245,26 +279,33 @@ document.addEventListener('DOMContentLoaded', function () {
         liveAlertsList.innerHTML = html;
     }
 
-    function prependAlertLogRow(serverAlert, humanRule) {
-        const newRow = document.createElement('tr');
-        const createdTs = serverAlert && serverAlert.created ? new Date(serverAlert.created) : new Date();
-        const timeString = formatTimeISO(createdTs);
-        const level = (serverAlert && serverAlert.alertLevel) || 'Info';
-        const levelClass = level.toLowerCase();
-        newRow.innerHTML = `
-            <td><span class="level-tag ${levelClass}">${(serverAlert && serverAlert.alertLevel) || level}</span></td>
-            <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
-            <td>${(serverAlert && serverAlert.alertName) || ''}</td>
-            <td class="details-cell">${humanRule || ''}</td>
-        `;
-        alertLogBody.prepend(newRow);
+    function populateModelDropdowns() {
+        // Find all selects marked with our class
+        const selects = document.querySelectorAll('.model-select-dynamic');
+        selects.forEach(sel => {
+            const isFilter = sel.id.includes('filter');
+            let html = isFilter ? '<option value="all">All Models</option>' : '<option value="">-- all models --</option>';
+            
+            KNOWN_MODELS.forEach(m => {
+                html += `<option value="${m}">${m}</option>`;
+            });
+            sel.innerHTML = html;
+        });
+    }
+
+    // Generate <option> tags for Numeric fields only (alerts usually need math)
+    function getDataTypeOptions() {
+        return Object.keys(DATA_DICTIONARY)
+            .filter(key => DATA_DICTIONARY[key].dataType === 'numeric')
+            .map(key => `<option value="${key}">${DATA_DICTIONARY[key].label}</option>`)
+            .join('');
     }
 
     // --------------------------------------------------
     // API wrappers
     // --------------------------------------------------
     async function apiCreateAlert(payload) {
-        const resp = await fetch('/alerts/create', {
+        const resp = await fetch('alerts/create', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
@@ -276,20 +317,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function apiGetLiveAlerts() {
-        const resp = await fetch('/alerts/live');
+        const resp = await fetch('alerts/live');
         if (!resp.ok) throw new Error('Failed to load live alerts');
         return resp.json();
     }
 
     async function apiDeleteAlert(id) {
-        const resp = await fetch(`/alerts/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'same-origin' });
+        const resp = await fetch(`alerts/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'same-origin' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to delete');
         return data;
     }
 
     async function apiUpdateAlert(id, payload) {
-        const resp = await fetch(`/alerts/${encodeURIComponent(id)}`, {
+        const resp = await fetch(`alerts/${encodeURIComponent(id)}`, {
             method: 'PUT',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
@@ -298,6 +339,98 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to update');
         return data;
+    }
+
+    // --------------------------------------------------
+    // History & Pagination Logic
+    // --------------------------------------------------
+    
+    function renderPagination(container, totalPages, currentPage, handlerFunction) {
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        // Prev Button
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = '« Prev';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.addEventListener('click', () => handlerFunction(currentPage - 1));
+        container.appendChild(prevBtn);
+
+        // Page Numbers
+        for (let i = 1; i <= totalPages; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.textContent = i;
+            if (i === currentPage) pageBtn.classList.add('active');
+            pageBtn.addEventListener('click', () => handlerFunction(i));
+            container.appendChild(pageBtn);
+        }
+
+        // Next Button
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Next »';
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.addEventListener('click', () => handlerFunction(currentPage + 1));
+        container.appendChild(nextBtn);
+    }
+
+    function renderHistoryTable(logs) {
+        alertLogBody.innerHTML = ''; // clear existing
+        if (!logs || logs.length === 0) {
+            alertLogBody.innerHTML = '<tr><td colspan="5">No alert history found.</td></tr>';
+            return;
+        }
+
+        logs.forEach(log => {
+            const newRow = document.createElement('tr');
+            const createdTs = log.created ? new Date(log.created) : new Date();
+            const timeString = createdTs.toLocaleString('en-CA', { hour12: true }).replace(',', '');
+            const level = log.level || 'Info';
+            
+            newRow.innerHTML = `
+                <td><span class="level-tag ${level.toLowerCase()}">${level}</span></td>
+                <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
+                <td>${log.alertName || ''}</td>
+                <td class="model-cell">${log.modelName || '-'}</td>
+                <td class="details-cell">${log.humanRule || ''}</td>
+            `;
+            alertLogBody.appendChild(newRow);
+        });
+    }
+
+    async function loadAlertHistory(page = 1) {
+        currentHistoryPage = page;
+        
+        // UI Loading state
+        alertLogBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+        historyPagination.innerHTML = '';
+
+        // Get filter values
+        const level = document.getElementById('filter-level').value;
+        const model = document.getElementById('filter-model').value;
+        const startDate = document.getElementById('filter-start-date') ? document.getElementById('filter-start-date').value : '';
+        const endDate = document.getElementById('filter-end-date') ? document.getElementById('filter-end-date').value : '';
+
+        // Build Params
+        const params = new URLSearchParams();
+        params.set('page', page);
+        params.set('limit', 10); // Standard limit
+        if (level && level !== 'all') params.set('level', level);
+        if (model && model !== 'all') params.set('modelName', model);
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+
+        try {
+            const resp = await fetch(`alerts/api/history?${params.toString()}`);
+            if (!resp.ok) throw new Error('Failed to fetch history');
+            
+            const data = await resp.json(); // { logs: [], total: X, pages: Y, page: Z }
+            
+            renderHistoryTable(data.logs);
+            renderPagination(historyPagination, data.pages, data.page, loadAlertHistory);
+        } catch (err) {
+            console.error('History load error:', err);
+            alertLogBody.innerHTML = `<tr><td colspan="5">Error loading history: ${err.message}</td></tr>`;
+        }
     }
 
     // --------------------------------------------------
@@ -316,20 +449,21 @@ document.addEventListener('DOMContentLoaded', function () {
     addAlertBtn.addEventListener('click', async function () {
         const alertName = alertNameInput.value || 'New Alert';
         const alertLevel = alertLevelSelect.value;
+        const modelName = modelSelect ? (modelSelect.value || null) : null;
         if (!alertLevel) { alert('Please select an alert level.'); return; }
         const ruleJSON = buildRuleJSON();
         if (!ruleJSON) return;
         const uiReadable = formatRuleReadableFromUI();
         const created = Date.now();
-        const lastTrigger = null;
-        const isActive = false;
         try {
-            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, lastTrigger, isActive });
+            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, modelName });
             await loadLiveAlerts();
-            const serverAlert = data.alert || {};
-            const serverHuman = data.humanRule || uiReadable || '';
-            prependAlertLogRow(serverAlert, serverHuman);
-            if ((serverAlert.alertLevel || alertLevel) === 'Critical') {
+            
+            // Reload history to show the new alert log (if triggered immediately or just to refresh state)
+            await loadAlertHistory(1);
+
+            // Visual flash for critical alerts (based on UI selection)
+            if ((data && data.alert && data.alert.alertLevel || alertLevel) === 'Critical') {
                 document.body.classList.add('critical-flash');
                 setTimeout(() => document.body.classList.remove('critical-flash'), 1500);
             }
@@ -394,6 +528,7 @@ document.addEventListener('DOMContentLoaded', function () {
         currentEditId = alertObj._id;
         alertNameInput.value = alertObj.alertName || '';
         alertLevelSelect.value = alertObj.alertLevel || 'Info';
+        if (modelSelect) modelSelect.value = alertObj.modelName || '';
         populateRuleBuilderFromRule(alertObj.alertRule || {});
         addAlertBtn.style.display = 'none';
         saveBtn.style.display = '';
@@ -415,11 +550,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!currentEditId) return alert('No alert selected for editing');
         const alertName = alertNameInput.value || 'New Alert';
         const alertLevel = alertLevelSelect.value;
+        const modelName = modelSelect ? (modelSelect.value || null) : null;
         if (!alertLevel) return alert('Please select an alert level.');
         const ruleJSON = buildRuleJSON();
         if (!ruleJSON) return;
         try {
-            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON });
+            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON, modelName });
             await loadLiveAlerts();
             cancelEdit();
         } catch (err) {
@@ -431,7 +567,25 @@ document.addEventListener('DOMContentLoaded', function () {
     cancelBtn.addEventListener('click', function () { cancelEdit(); });
 
     // --------------------------------------------------
+    // History Filter Events
+    // --------------------------------------------------
+    if (historyFilterForm) {
+        historyFilterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            loadAlertHistory(1); // Reset to page 1 on filter
+        });
+
+        historyClearBtn.addEventListener('click', () => {
+            historyFilterForm.reset();
+            loadAlertHistory(1);
+        });
+    }
+
+    // --------------------------------------------------
     // Initialization
     // --------------------------------------------------
+    populateModelDropdowns();
+    resetAlertBuilder();
     loadLiveAlerts();
+    loadAlertHistory(1);
 });

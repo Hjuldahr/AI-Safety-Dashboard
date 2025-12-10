@@ -1,11 +1,16 @@
 import mongoose from 'mongoose';
+import { KNOWN_MODELS } from '../config/constants.js';
 
 // === AI_Log Schema ===
 const AI_Log_Schema = new mongoose.Schema({
+
     modelName: {
         type: String,
-        required: true
+        required: true,
+        enum: KNOWN_MODELS
     },
+
+    // Core rating metrics
     policyCompliance: {
         type: Number,
         required: true,
@@ -14,51 +19,96 @@ const AI_Log_Schema = new mongoose.Schema({
     responseHelpfulness: {
         type: Number,
         required: true,
-        default: 0,
+        default: 0
     },
     responseTime: {
         type: Number,
         required: true,
         default: 0
     },
+
+    // Energy usage (watt-seconds or joules)
     energyConsumption: {
+        type: Number,
+        equired: true,
+        default: 0
+    },
+
+    // Token stats
+    tokensUsed: {
         type: Number,
         required: true,
         default: 0
     },
+
+    // Model compute estimates
+    gigaFlopsUsed: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+
+    // Web lookup count
+    webLookups: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+
+    // Toxicity Score
+    toxicityScore: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+
+    // Personally Identifiable Information
+    piiDetected: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+
+    // Summaries of Categorical Data, like topic and sub topic
+    breakdown: {
+        type: Object,
+        default: {}
+    },
+
     queryCount: {
         type: Number,
         required: true,
         default: 1
     },
+
     responseTimestamp: {
         type: Number,
         required: true,
-        default: () => new Date().getTime()
+        default: () => Date.now()
     }
 });
+
 
 // ---------- QUERIES ----------
 
 // Add a single log
-AI_Log_Schema.statics.addLog = function(logData) {
-    const log = new this(logData);
-    return log.save();
+AI_Log_Schema.statics.addLog = function (logData) {
+    return new this(logData).save();
 };
 
-// Add multiple logs at once
-AI_Log_Schema.statics.addLogs = function(logsArray) {
+// Add multiple logs
+AI_Log_Schema.statics.addLogs = function (logsArray) {
     return this.insertMany(logsArray);
 };
 
-// Get all logs by modelID
-AI_Log_Schema.statics.getLogsByModel = function(modelID) {
-    return this.find({ modelID });
+// Get logs for a model
+AI_Log_Schema.statics.getLogsByModel = function (modelName) {
+    return this.find({ modelName });
 };
 
-// Get logs by modelID between two timestamps (start or end can be null)
-AI_Log_Schema.statics.getLogsByModelAndTime = function(modelID, start = null, end = null) {
-    const query = { modelID };
+// Get logs for a model between timestamps
+AI_Log_Schema.statics.getLogsByModelAndTime = function (modelName, start = null, end = null) {
+    const query = { modelName };
     if (start !== null || end !== null) {
         query.responseTimestamp = {};
         if (start !== null) query.responseTimestamp.$gte = start;
@@ -67,17 +117,16 @@ AI_Log_Schema.statics.getLogsByModelAndTime = function(modelID, start = null, en
     return this.find(query);
 };
 
-// Remove a single log by its ID
-AI_Log_Schema.statics.removeLogById = function(logID) {
+// Remove one log
+AI_Log_Schema.statics.removeLogById = function (logID) {
     return this.findByIdAndDelete(logID);
 };
 
-// Remove all logs for a model
-AI_Log_Schema.statics.removeLogsByModel = function(modelID) {
-    return this.deleteMany({ modelID });
+// Remove all logs of a model
+AI_Log_Schema.statics.removeLogsByModel = function (modelName) {
+    return this.deleteMany({ modelName });
 };
 
 // ---------- EXPORT ----------
 const AI_Log_Model = mongoose.model('AI_Logs', AI_Log_Schema);
-
 export default AI_Log_Model;

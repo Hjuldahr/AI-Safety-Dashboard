@@ -49,38 +49,20 @@ const statCard = (title, value, unit, color) => {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= reportTitle %></title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <style>
-        /* Base styles for printing */
-        body { 
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; 
-            margin: 0; padding: 0; 
-            color: #1f2937; /* Gray-800 */
-        }
-        .report-container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-            padding: 40px; 
-        }
-        /* Crucial: Ensure page breaks for multi-page reports */
-        .page-break { page-break-after: always; }
-        .stat-grid {
-            /* Now optimized for 3 columns (Avg, Min, Max) */
-            display: grid;
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 20px;
-        }
-        /* Style for the general KPI (total logs) to stand out */
-        .general-kpi {
-            width: 100%;
-            max-width: 300px; 
-            margin-bottom: 32px;
-        }
-    </style>
+  <base href="<%= process.env.PUBLIC_URL || '/' %>">
+  <meta charset="utf-8" />
+  <title><%= reportTitle %></title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; color: #222; }
+    header { text-align: center; margin-bottom: 10px; }
+    .meta { margin-bottom: 12px; font-size: 12px; color: #333; }
+    .section { margin-top: 18px; }
+    table.stats td { padding: 6px 10px; font-size: 11px; }
+    canvas { width: 100% !important; height: 260px !important; display:block; margin: 8px 0 18px; }
+    hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-50">
     <div class="report-container">

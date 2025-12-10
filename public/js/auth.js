@@ -44,7 +44,7 @@ signUpForm.addEventListener("submit", async (e) => {
     }
 
     try {
-        const response = await fetch('/api/signup', {
+        const response = await fetch('api/signup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -77,7 +77,7 @@ signInForm.addEventListener("submit", async (e) => {
 
 
     try {
-        const response = await fetch('/api/login', {
+        const response = await fetch('api/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ signInForm.addEventListener("submit", async (e) => {
         const data = await response.json();
 
         if (response.ok) {
-            window.location.href = "/";
+            window.location.href = "./";
         } else {
             showError(data.message);
         }

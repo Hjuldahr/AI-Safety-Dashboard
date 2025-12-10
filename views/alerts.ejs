@@ -2,34 +2,46 @@
 <html lang="en">
 
 <head>
+  <base href="<%= process.env.PUBLIC_URL || '/' %>">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Alerts</title>
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="/css/fullSite.css">
-  <link rel="stylesheet" href="/css/header.css">
+  <link rel="stylesheet" href="css/fullSite.css">
+  <link rel="stylesheet" href="css/header.css">
   <link rel="stylesheet" href="css/alerts.css">
-  <link rel="stylesheet" href="/css/nav.css">
-  <link rel="stylesheet" href="/css/notifications.css">
+  <link rel="stylesheet" href="css/nav.css">
+  <link rel="stylesheet" href="css/notifications.css">
 
-  <!-- Scripts -->
   <script src="js/alerts.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
-  <script src="/js/notifications.js" defer></script>
+  <script src="js/notifications.js" defer></script>
 </head>
 
 <body>
+  <script>
+    //Grab the constants sent on page load
+    window.CONSTANTS = <%- JSON.stringify(constants) %>;
+
+    // Unpacking the obj
+    const {
+      DATA_DICTIONARY,
+      CHART_TYPES,
+      CHART_SIZES,
+      KNOWN_MODELS,
+      TOPIC_HIERARCHY
+    } = window.CONSTANTS;
+  </script>
+
   <%- include('components/header') %>
   <%- include('components/nav') %>
 
   <main class="content">
-
     <div class="main-container">
-      <!-- Alert Builder Section -->
       <section class="card alert-builder">
         <h2 class="card-title">Alert Builder</h2>
         <div class="alert-builder-grid">
+
           <div class="form-group">
             <label for="alert-name">Alert Name:</label>
             <input type="text" id="alert-name" name="alert-name" placeholder="Alert 1...">
@@ -46,6 +58,12 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label for="model-name">Model (optional):</label>
+            <select id="model-name" name="model-name" class="model-select-dynamic">
+            </select>
+          </div>
+
           <div class="form-group add-alert-button-container">
             <button id="add-alert-btn" class="btn btn-primary">Add Alert</button>
           </div>
@@ -53,23 +71,8 @@
           <div class="rule-builder form-group">
             <label>Alert Rule:</label>
             <div class="rule-builder-inputs" id="rules-container">
-              <div class="rule-row">
-                <select id="data-type" class="data-type">
-                  <option value="">-- select data type --</option>
-                  <option value="Harmful Messages">Harmful Messages</option>
-                  <option value="Accuracy">Accuracy</option>
-                  <option value="Usage">Usage</option>
-                </select>
-                <select id="operator-type" class="operator-type">
-                  <option value="">-- select operator --</option>
-                  <option value="gt">Greater Than</option>
-                  <option value="gte">Greater Than or Equal To</option>
-                  <option value="lte">Less Than or Equal To</option>
-                  <option value="lt">Less Than</option>
-                </select>
-                <input type="text" placeholder="value" class="value-input">
-              </div>
             </div>
+
             <div class="logical-operators-container">
               <span class="rule-builder-note">(add another part to the rule)</span>
               <div class="logical-operators">
@@ -81,42 +84,45 @@
         </div>
       </section>
 
-      <!-- Main Content Area with Live Alerts and Log -->
       <div class="alerts-layout">
-
-        <!-- View and Edit Live Alerts Section -->
         <aside class="card live-alerts-panel">
           <h2 class="card-title">View and Edit Live Alerts</h2>
           <ul id="live-alerts-list" class="live-alerts-list">
-            <li>
-              <h3 class="alert-category critical"><span class="color-dot"></span>Critical Alerts</h3>
-              <ul class="alert-items">
-                <li><span>Alert 1</span><button class="delete-btn">&times;</button></li>
-              </ul>
-            </li>
-            <li>
-              <h3 class="alert-category high"><span class="color-dot"></span>High Alerts</h3>
-              <ul class="alert-items">
-                <li><span>Alert 2</span><button class="delete-btn">&times;</button></li>
-                <li><span>Alert 3</span><button class="delete-btn">&times;</button></li>
-              </ul>
-            </li>
-            <li>
-              <h3 class="alert-category medium"><span class="color-dot"></span>Medium Alerts</h3>
-              <ul class="alert-items"></ul>
-            </li>
-            <li>
-              <h3 class="alert-category info"><span class="color-dot"></span>Info Alerts</h3>
-              <ul class="alert-items">
-                <li><span>Alert 4</span><button class="delete-btn">&times;</button></li>
-              </ul>
-            </li>
           </ul>
         </aside>
 
-        <!-- Alert Log Section -->
         <div class="card alert-log-panel">
-          <h2 class="card-title">Alert History</h2>
+          <div class="card-header-flex">
+            <h2 class="card-title">Alert History</h2>
+          </div>
+
+          <div class="filter-container" style="margin-bottom: 15px;">
+            <form id="history-filter-form" class="filter-group">
+              <button type="button" class="btn-secondary clear-filters">Clear</button>
+
+              <label for="filter-level">Level:</label>
+              <select id="filter-level" name="level">
+                <option value="all">All Levels</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Info">Info</option>
+              </select>
+
+              <label for="filter-model">Model:</label>
+              <select id="filter-model" name="model" class="model-select-dynamic">
+              </select>
+
+              <label for="filter-start-date">From:</label>
+              <input type="date" id="filter-start-date" name="startDate">
+
+              <label for="filter-end-date">To:</label>
+              <input type="date" id="filter-end-date" name="endDate">
+
+              <button type="submit" class="btn-primary">Apply</button>
+            </form>
+          </div>
+
           <div class="table-container">
             <table class="alert-log-table">
               <thead>
@@ -124,35 +130,22 @@
                   <th>Level</th>
                   <th>Time</th>
                   <th>Alert</th>
+                  <th>Model</th>
                   <th>Triggered By</th>
                 </tr>
               </thead>
               <tbody id="alert-log-body">
                 <tr>
-                  <td><span class="level-tag critical">Critical</span></td>
-                  <td class="time-cell">2025/09/29: 6:18:58PM <span>Eastern Standard Time</span></td>
-                  <td>Alert 1</td>
-                  <td class="details-cell">"Harmful Messages" greater than 200, and "Accuracy" less than 80%.</td>
-                </tr>
-                <tr>
-                  <td><span class="level-tag high">High</span></td>
-                  <td class="time-cell">2025/09/28: 10:32:12AM <span>Eastern Standard Time</span></td>
-                  <td>Alert 2</td>
-                  <td class="details-cell">"Harmful Messages" greater than 100, and "Accuracy" less than 85%.</td>
-                </tr>
-                <tr>
-                  <td><span class="level-tag info">Info</span></td>
-                  <td class="time-cell">2025/09/27: 11:10:52AM <span>Eastern Standard Time</span></td>
-                  <td>Alert 4</td>
-                  <td class="details-cell">"Usage" greater than 100.</td>
+                  <td colspan="5">Loading history...</td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <div id="history-pagination" class="pagination"></div>
         </div>
       </div>
+    </div>
   </main>
-  </div>
 </body>
 
 </html>

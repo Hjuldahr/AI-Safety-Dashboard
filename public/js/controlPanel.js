@@ -7,9 +7,11 @@ const pauseColour = "#f45b69ff";
 const playText = "▶ Resume Graphs";
 const playColour = "#2ca58dff"
 
+const loadChartsFromDatabase = window.DashboardApp.actions.loadCharts; // get the helper method exposed in the chartDataManager.js file.
+
 document.addEventListener('DOMContentLoaded', function () {
     const toggleButton = document.querySelector("#toggle-button"); //<button>
-    const clearButton = document.querySelector("#clear-button"); //<button>
+    const refreshButton = document.querySelector("#refresh-button"); //<button>
     const modelSelect = document.querySelector("#model-select"); //<select>
     const intervalSelect = document.querySelector("#interval-select"); //<select>
 
@@ -37,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function updateServerSettings() {
         try {
-            const res = await fetch('/api/updateParams', {
+            const res = await fetch('api/updateParams', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isPaused, interval, activeModel })
@@ -56,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function updateClientSettings() {
         try {
-            const res = await fetch('/api/getParams');
+            const res = await fetch('api/getParams');
 
             const data = await res.json();
             if (data.success) {
@@ -89,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateServerSettings();
     })
 
-    clearButton.addEventListener('click', () => {
+    refreshButton.addEventListener('click', () => {
         window.myChartUtils.resetCharts();
     })
 
@@ -114,15 +116,30 @@ document.addEventListener('DOMContentLoaded', function () {
             type: 'CATEGORICAL',
             label: 'Model Name'
         },
-        // topic: { 
-        //     type: 'CATEGORICAL', 
-        //     label: 'Topic' 
-        // },
-
+        topic: {
+            type: 'CATEGORICAL',
+            label: 'Topic'
+        },
+        sub_topic: {
+            type: 'CATEGORICAL',
+            label: 'Sub Topic'
+        },
         // Numeric
+        webLookups: {
+            type: 'NUMERIC',
+            label: 'Internet Lookups Performed'
+        },
+        tokensUsed: {
+            type: 'NUMERIC',
+            label: 'LLM Tokens Used'
+        },
         responseTime: {
             type: 'NUMERIC',
             label: 'Response Time (ms)'
+        },
+        gigaFlopsUsed: {
+            type: 'NUMERIC',
+            label: 'Operations Peformed (GFLOPs)'
         },
         energyConsumption: {
             type: 'NUMERIC',
@@ -136,36 +153,30 @@ document.addEventListener('DOMContentLoaded', function () {
             type: 'NUMERIC',
             label: 'Policy Compliance (0 through 100%)',
         },
-        // toxicityScore: { 
-        //     type: 'NUMERIC', 
-        //     label: 'Toxicity Score (0-1)' 
-        // },
-
+        toxicityScore: {
+            type: 'NUMERIC',
+            label: 'Toxicity Score (0-1)'
+        },
         // Special: Numeric fields that can ALSO be treated as categories
-        // piiDetected: { 
-        //     type: 'NUMERIC', 
-        //     label: 'PII Detected (0 through 100%)', 
-        //     useAs: ['CATEGORICAL', 'NUMERIC'] 
-        // },
-
+        piiDetected: {
+            type: 'NUMERIC',
+            label: 'PII Detected (0 through 100%)',
+        },
         // Timestamp
         responseTimestamp: { type: 'TIMESTAMP', label: 'Timestamp' }
     };
 
     // Returns a fields that can be used for a type
     function getFieldsByType(type) {
-        return Object.keys(DATA_FIELDS).filter(key => {
-            if (DATA_FIELDS[key].useAs) {
-                return DATA_FIELDS[key].useAs.includes(type);
-            }
-            return DATA_FIELDS[key].type === type;
+        return Object.keys(DATA_DICTIONARY).filter(key => {
+            return DATA_DICTIONARY[key].dataType === type;
         });
     }
 
     // Create a <select> dropdown
     function createSelect(id, label, fieldKeys) {
         let options = fieldKeys.map(key =>
-            `<option value="${key}">${DATA_FIELDS[key].label}</option>`
+            `<option value="${key}">${DATA_DICTIONARY[key].label}</option>`
         ).join('');
 
         return `
@@ -227,20 +238,24 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!step2Container) return;
 
         let html = "";
-        const numericFields = getFieldsByType('NUMERIC');
-        const categoricalFields = getFieldsByType('CATEGORICAL');
+        const numericFields = getFieldsByType('numeric');
+        const categoricalFields = getFieldsByType('categorical');
 
         // This switch is the core "lock-out" logic - prevents users from creating non-sensical graphs
         switch (chartType) {
             case 'line':
                 html = `
-          <label>2. Configure Line Chart:</label>
-          ${createSelect('select-y-axis', 'Value to track (Y-Axis)', numericFields)}
-          <br>
-          ${createSelect('select-split-by', 'Split by (Optional)', categoricalFields)}
-        `;
+                  <label>2. Configure Line Chart:</label>
+                  ${createSelect('select-y-axis', 'Value to track (Y-Axis)', numericFields)}
+                  <br>
+                  ${createSelect('select-split-by', 'Split by (Optional)', categoricalFields)}
+                  
+                  <div id="split-filter-container" style="display:none; margin-top:10px; padding:10px; background:#f9f9f9; border:1px solid #ddd; overflow-y: auto;">
+                    <strong>Filter Sub-Items (Optional):</strong>
+                    <div id="split-checkboxes" style="display: flex; flex-direction: column; gap: 5px; margin-top: 5px;"></div>
+                  </div>
+                `;
                 break;
-
             case 'bar':
                 html = `
           <label>2. Configure Bar Chart:</label>
@@ -339,19 +354,49 @@ document.addEventListener('DOMContentLoaded', function () {
         if (submitBtn) {
             const chartSize = document.querySelector('input[name="chartSize"]:checked')?.value || 'regular';
 
-            // Gather all the data from the form
+            // 1. Validation Logic
+            const yAxis = document.getElementById('select-y-axis')?.value;
+            const xAxis = document.getElementById('select-x-axis')?.value;
+            const category = document.getElementById('select-category')?.value;
+
+            if (selectedChartType === 'line' && !yAxis) {
+                alert("Please select a value to track (Y-Axis).");
+                return;
+            }
+            if (selectedChartType === 'bar' && (!yAxis || !xAxis)) {
+                alert("Please select both X and Y axis values.");
+                return;
+            }
+            if (selectedChartType === 'pie' && !category) {
+                alert("Please select a category.");
+                return;
+            }
+            if (selectedChartType === 'measure' && !yAxis) {
+                alert("Please select a value to measure.");
+                return;
+            }
+
+            // 2. Gather Filtered Values (New Feature)
+            const includedValues = [];
+            const checkboxes = document.querySelectorAll('input[name="split-filter-val"]:checked');
+            if (checkboxes.length > 0) {
+                checkboxes.forEach(cb => includedValues.push(cb.value));
+            }
+
+            // Gather all the data
             const config = {
                 title: document.getElementById('chart-title')?.value || 'New Chart',
                 chartType: selectedChartType,
-                yAxis: document.getElementById('select-y-axis')?.value,
-                xAxis: document.getElementById('select-x-axis')?.value,
-                category: document.getElementById('select-category')?.value,
+                yAxis: yAxis,
+                xAxis: xAxis,
+                category: category,
                 splitBy: document.getElementById('select-split-by')?.value,
-                chartSize: chartSize
+                chartSize: chartSize,
+                includedValues: includedValues // <--- Send to backend
             };
 
             try {
-                const response = await fetch('/api/createGraph', {
+                const response = await fetch('api/createGraph', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
@@ -379,8 +424,42 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Title changes
+    // Handle changes in the form (Title updates & Dynamic Checkboxes)
     modalContainer.addEventListener("change", (e) => {
+        const targetId = e.target.id;
+
+        // A. LOGIC: Render Checkboxes if "Split By" changes
+        if (targetId === 'select-split-by') {
+            const splitValue = e.target.value;
+            const container = document.getElementById('split-filter-container');
+            const checkboxArea = document.getElementById('split-checkboxes');
+
+            if (container && checkboxArea) {
+                // 1. Clear previous
+                checkboxArea.innerHTML = '';
+                container.style.display = 'none';
+
+                // 2. Check if we have accepted values in the SSOT
+                if (splitValue && DATA_DICTIONARY[splitValue] && DATA_DICTIONARY[splitValue].acceptedValues) {
+                    const values = DATA_DICTIONARY[splitValue].acceptedValues;
+
+                    // 3. Generate Checkboxes
+                    values.forEach((val, idx) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.innerHTML = `
+                            <input type="checkbox" id="chk-${idx}" name="split-filter-val" value="${val}" checked>
+                            <label for="chk-${idx}">${val}</label>
+                        `;
+                        checkboxArea.appendChild(wrapper);
+                    });
+
+                    // 4. Reveal
+                    container.style.display = 'block';
+                }
+            }
+        }
+
+        // B. LOGIC: Update Title (if it's a select dropdown)
         if (e.target.tagName === 'SELECT') {
             updateSuggestedTitle();
         }
@@ -391,22 +470,22 @@ document.addEventListener('DOMContentLoaded', function () {
     */
     function updateSuggestedTitle() {
         const titleInput = document.getElementById('chart-title');
-        if (!titleInput) return; // Step 3 isn't rendered yet
+        if (!titleInput) return;
 
-        // Helper to get the TEXT of a selected option, not its value
-        const getSelectedText = (elId) => {
+        // Helper: Only get text if a VALID value is selected
+        const getLabel = (elId) => {
             const el = document.getElementById(elId);
-            if (el && el.value) {
+            if (el && el.value && el.value !== "") { // Check value is not empty string
                 return el.options[el.selectedIndex].text;
             }
-            return '';
+            return null; // Return null if nothing valid selected
         };
 
         let title = '';
-        const yLabel = getSelectedText('select-y-axis');
-        const xLabel = getSelectedText('select-x-axis');
-        const cLabel = getSelectedText('select-category');
-        const sLabel = getSelectedText('select-split-by');
+        const yLabel = getLabel('select-y-axis');
+        const xLabel = getLabel('select-x-axis');
+        const cLabel = getLabel('select-category');
+        const sLabel = getLabel('select-split-by');
 
         switch (selectedChartType) {
             case 'line':

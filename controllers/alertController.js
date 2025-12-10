@@ -1,22 +1,113 @@
 import Alert from "../models/alert_model.js";
 import User_Log from "../models/User_Log.js";
+import AlertLog from "../models/alert_log.js";
+import User from "../models/user.js";
+import AI_Log from "../models/AI_Log.js";
+import constants from "../config/constants.js";
+
 
 const getPage = async (req, res) => {
-    try{
+    try {
         const alerts = await Alert.find();
+        // Fetch distinct model names from AI logs to populate the UI
+        let modelNames = [];
+        try {
+            modelNames = await AI_Log.distinct('modelName');
+        } catch (mnErr) {
+            console.error('Failed to fetch model names for alerts page:', mnErr);
+            modelNames = [];
+        }
+
         res.render("alerts", {
             user: req.user,
-            alerts: alerts
-        }); 
-    }catch (error){
+            alerts: alerts,
+            alertLogs: [],
+            models: modelNames,
+            constants: constants
+        });
+    } catch (error) {
         console.error("Error fetching alert page:", error);
+    }
+};
+
+// GET /alerts/api/history - Paginated and Filtered History
+const getAlertHistory = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const level = req.query.level;
+        const modelName = req.query.modelName;
+        const start = req.query.startDate;
+        const end = req.query.endDate;
+        const skip = (page - 1) * limit;
+
+        const query = {};
+
+        // Filter logic: We prioritize 'alertSnapshot' fields as they represent the historical state
+        if (level && level !== 'all') {
+            query['alertSnapshot.alertLevel'] = level;
+        }
+        if (modelName && modelName !== 'all') {
+            query['alertSnapshot.modelName'] = modelName;
+        }
+        if (start || end) query.timestamp = {};
+        if (start) {
+            const sd = new Date(start);
+            if (!Number.isNaN(sd.getTime())) query.timestamp.$gte = sd;
+        }
+        if (end) {
+            const ed = new Date(end);
+            if (!Number.isNaN(ed.getTime())) {
+                // Make end-date inclusive by setting to end of day
+                ed.setHours(23, 59, 59, 999);
+                query.timestamp.$lte = ed;
+            }
+        }
+
+        const total = await AlertLog.countDocuments(query);
+        const rawLogs = await AlertLog.find(query)
+            .sort({ timestamp: -1 })
+            .skip(skip)
+            .limit(limit)
+            .populate('alert')
+            .lean();
+
+        const alertLogs = rawLogs.map(l => {
+            const a = l.alertSnapshot || l.alert || {};
+            let humanRule = '';
+            try {
+                humanRule = Alert.convertToHumanFormat(a.alertRule);
+            } catch (err) {
+                humanRule = '';
+            }
+            return {
+                _id: l._id,
+                level: a.alertLevel || 'Info',
+                timestamp: l.timestamp,
+                alertName: a.alertName || '',
+                modelName: a.modelName || null,
+                humanRule,
+                created: l.timestamp // Ensure created exists for frontend sorting/display
+            };
+        });
+
+        res.json({
+            logs: alertLogs,
+            total,
+            page,
+            pages: Math.ceil(total / limit)
+        });
+
+    } catch (error) {
+        console.error("Error fetching alert history:", error);
+        res.status(500).json({ message: 'Error fetching history' });
     }
 };
 
 // POST /alerts/create - create a new alert
 const createAlert = async (req, res) => {
     try {
-        const { alertName, alertLevel, alertRule, created, lastTrigger, isActive } = req.body;
+        const { alertName, alertLevel, alertRule, created, modelName } = req.body;
 
         // Normalize and validate rule using model static
         let normalizedRule;
@@ -26,7 +117,7 @@ const createAlert = async (req, res) => {
             return res.status(400).json({ message: 'Invalid alert rule: ' + err.message });
         }
 
-        const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created, lastTrigger, isActive });
+        const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created, modelName: modelName || null });
         await newAlert.save();
         // Add a human readable version for UI/logging
         const humanRule = Alert.convertToHumanFormat(normalizedRule);
@@ -45,9 +136,7 @@ const createAlert = async (req, res) => {
 // GET /alerts/live - return alerts as JSON (optionally filter active=true)
 const getLiveAlerts = async (req, res) => {
     try {
-        const filter = {};
-        if (req.query.active === 'true') filter.isActive = true;
-        const alerts = await Alert.find(filter).sort({ created: -1 }).lean();
+        const alerts = await Alert.find().sort({ created: -1 }).lean();
         return res.status(200).json({ alerts });
     } catch (error) {
         console.error('Error fetching live alerts:', error);
@@ -103,7 +192,7 @@ const updateAlertById = async (req, res) => {
 
         // Build a concise diff of what changed
         try {
-            const fieldsToCheck = ['alertName', 'alertLevel', 'alertRule', 'isActive', 'lastTrigger'];
+            const fieldsToCheck = ['alertName', 'alertLevel', 'alertRule', 'modelName'];
 
             const stableStringify = (obj) => {
                 const seen = new WeakSet();
@@ -160,4 +249,41 @@ const updateAlertById = async (req, res) => {
     }
 };
 
-export default { getPage, createAlert, getLiveAlerts, removeAlertById, updateAlertById };
+// GET /alerts/unread-count - return number of AlertLog entries newer than user's last seen (for notifications)
+const getUnreadCount = async (req, res) => {
+    try {
+        if (!req.user) return res.status(200).json({ unread: 0 });
+        const userId = req.user._id;
+        const user = await User.findById(userId).lean();
+        const lastSeen = user && user.alertsLastSeen ? new Date(user.alertsLastSeen) : new Date(0);
+        const count = await AlertLog.countDocuments({ timestamp: { $gt: lastSeen } });
+        return res.status(200).json({ unread: count });
+    } catch (error) {
+        console.error('Error fetching unread count:', error);
+        return res.status(500).json({ unread: 0 });
+    }
+};
+
+// POST /alerts/mark-read - mark all alerts as read for current user (for notifications)
+const markAlertsRead = async (req, res) => {
+    try {
+        if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+        const userId = req.user._id;
+        await User.findByIdAndUpdate(userId, { alertsLastSeen: new Date() });
+        return res.status(200).json({ message: 'Marked read' });
+    } catch (error) {
+        console.error('Error marking alerts read:', error);
+        return res.status(500).json({ message: 'Failed to mark read' });
+    }
+};
+
+export default { 
+    getPage, 
+    createAlert, 
+    getLiveAlerts, 
+    getAlertHistory,
+    removeAlertById, 
+    updateAlertById, 
+    getUnreadCount, 
+    markAlertsRead 
+};
