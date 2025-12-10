@@ -34,7 +34,6 @@
             await loadChartsFromDatabase();
         } catch (error) {
             console.error('Error saving chart order:', error);
-            alert('Error: Could not save chart order.');
         }
     }
 
