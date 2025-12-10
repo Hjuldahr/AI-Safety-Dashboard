@@ -477,7 +477,7 @@ const downloadCsv = async (req, res) => {
         const csvContent = csvRows.join('\n');
 
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="ai-logs-${startDate || 'all'}-to-${endDate || 'all'}.csv"`);
+        res.setHeader('Content-Disposition', `attachment; filename="ai-logs-${modelName}-${startDate || 'all'}-to-${endDate || 'all'}.csv"`);
         return res.send(csvContent);
 
     } catch (err) {
@@ -503,7 +503,7 @@ const downloadAggregatesCsv = async (req, res) => {
         const csvContent = generateAggregateCsvRows(stats);
 
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="ai-aggregates-${startDate || 'all'}-to-${endDate || 'all'}.csv"`);
+        res.setHeader('Content-Disposition', `attachment; filename="ai-aggregates-${modelName}-${startDate || 'all'}-to-${endDate || 'all'}.csv"`);
         return res.send(csvContent);
 
     } catch (err) {
