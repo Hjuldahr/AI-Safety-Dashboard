@@ -76,12 +76,36 @@ const handleReportSubmit = async (elements) => {
     }
 };
 
+const handleCsvDownload = (elements) => {
+    // Collect parameters from the form
+    const formData = new FormData(elements.form);
+    const payload = Object.fromEntries(formData.entries());
+
+    // Construct the query string from the form data (startDate, endDate, modelName)
+    const params = new URLSearchParams({
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        modelName: payload.modelName,
+    }).toString();
+    const downloadUrl = `/reports/download-csv?${params}`;
+
+    // Create a temporary anchor element and click it to trigger the download
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    // The server sets the filename, but setting download=true ensures the browser downloads it
+    a.download = true; 
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     const elements = {
         form: document.getElementById('report-form'),
         submitBtn: document.getElementById('report-submit'),
         downloadBtn: document.getElementById('report-download'),
+        downloadCsvBtn: document.getElementById('report-download-csv'),
         previewWrapper: document.getElementById('report-preview-wrapper'),
         previewFrame: document.getElementById('report-preview'),
         statusText: document.getElementById('report-status')
@@ -109,6 +133,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(a);
             a.click();
             a.remove();
+        });
+    }
+
+    if (elements.downloadCsvBtn) {
+        elements.downloadCsvBtn.addEventListener('click', () => {
+            handleCsvDownload(elements);
         });
     }
 

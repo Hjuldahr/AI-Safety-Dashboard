@@ -18,6 +18,33 @@ const formatDisplayDate = (dateString) => {
         return dateString;
     }
 };
+
+/**
+ * Helper function to generate a single metric card.
+ * @param {string} title The title of the card (e.g., 'Average Response Time').
+ * @param {number} value The numerical value of the metric.
+ * @param {string} unit The unit (e.g., 'ms', 'score').
+ * @param {string} color The Tailwind color (e.g., 'blue', 'green', 'red').
+ */
+const statCard = (title, value, unit, color) => {
+    // Determine the border color class based on the input color
+    const borderColorClass = {
+        'blue': 'border-blue-500',
+        'green': 'border-green-500',
+        'red': 'border-red-500',
+        'gray': 'border-gray-500'
+    }[color] || 'border-blue-500';
+
+    return `
+        <div class="bg-white p-4 rounded-xl shadow-md border-l-4 ${borderColorClass}">
+            <p class="text-sm font-medium text-gray-500">${title}</p>
+            <p class="text-3xl font-extrabold mt-1">
+                ${value.toFixed(2)} 
+                <span class="text-base font-normal text-gray-500">${unit}</span>
+            </p>
+        </div>
+    `;
+};
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -42,9 +69,16 @@ const formatDisplayDate = (dateString) => {
         /* Crucial: Ensure page breaks for multi-page reports */
         .page-break { page-break-after: always; }
         .stat-grid {
+            /* Now optimized for 3 columns (Avg, Min, Max) */
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(3, 1fr); 
             gap: 20px;
+        }
+        /* Style for the general KPI (total logs) to stand out */
+        .general-kpi {
+            width: 100%;
+            max-width: 300px; 
+            margin-bottom: 32px;
         }
     </style>
 </head>
@@ -72,34 +106,69 @@ const formatDisplayDate = (dateString) => {
         </div>
 
         <h2 class="text-2xl font-bold text-gray-700 mb-5">Key Performance Indicators</h2>
-        <div class="stat-grid">
-            
-            <% 
-            const metrics = [
-                { title: "Total Logs Analyzed", value: stats.count.toLocaleString(), unit: "logs", color: "bg-blue-100 text-blue-800" },
-                { title: "Average Response Time", value: stats.avg.toFixed(2), unit: "ms", color: "bg-green-100 text-green-800" },
-                { title: "Minimum Response Time", value: stats.min.toFixed(2), unit: "ms", color: "bg-indigo-100 text-indigo-800" },
-                { title: "Maximum Response Time", value: stats.max.toFixed(2), unit: "ms", color: "bg-red-100 text-red-800" }
-            ];
-            
-            metrics.forEach(item => { %>
-                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-blue-500">
-                    <p class="text-sm font-medium text-gray-500"><%= item.title %></p>
-                    <p class="text-3xl font-extrabold mt-1">
-                        <%= item.value %> 
-                        <span class="text-base font-normal text-gray-500"><%= item.unit %></span>
-                    </p>
-                </div>
-            <% }); %>
+        
+        <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-gray-500 general-kpi">
+            <p class="text-sm font-medium text-gray-500">Total Logs Analyzed</p>
+            <p class="text-3xl font-extrabold mt-1">
+                <%= stats.count.toLocaleString() %> 
+                <span class="text-base font-normal text-gray-500">logs</span>
+            </p>
+        </div>
+
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-blue-200">Response Time (ms)</h3>
+        <div class="stat-grid mb-8">
+            <%- statCard("Average Response Time", stats.responseTime.avg, "ms", "blue") %>
+            <%- statCard("Minimum Response Time", stats.responseTime.min, "ms", "green") %>
+            <%- statCard("Maximum Response Time", stats.responseTime.max, "ms", "red") %>
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-green-200">Policy Compliance (Score)</h3>
+        <div class="stat-grid mb-8">
+            <%- statCard("Average Compliance", stats.policy.avg, "score", "blue") %>
+            <%- statCard("Minimum Compliance", stats.policy.min, "score", "green") %>
+            <%- statCard("Maximum Compliance", stats.policy.max, "score", "red") %>
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-pink-200">Response Helpfulness (Score)</h3>
+        <div class="stat-grid mb-8">
+            <%- statCard("Average Helpfulness", stats.helpfulness.avg, "score", "blue") %>
+            <%- statCard("Minimum Helpfulness", stats.helpfulness.min, "score", "green") %>
+            <%- statCard("Maximum Helpfulness", stats.helpfulness.max, "score", "red") %>
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-gray-300">Energy Consumption (Units)</h3>
+        <div class="stat-grid mb-8">
+            <%- statCard("Average Consumption", stats.energy.avg, "units", "blue") %>
+            <%- statCard("Minimum Consumption", stats.energy.min, "units", "green") %>
+            <%- statCard("Maximum Consumption", stats.energy.max, "units", "red") %>
         </div>
 
         <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Response Time Distribution</h2>
+        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Response Time Time-Series</h2>
         
         <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
             <canvas id="responseTimeChart"></canvas>
         </div>
         
+        <div class="page-break"></div> 
+        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Policy Compliance Time-Series</h2>
+        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
+            <canvas id="policyComplianceChart"></canvas>
+        </div>
+
+        <div class="page-break"></div> 
+        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Response Helpfulness Time-Series</h2>
+        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
+            <canvas id="responseHelpfulnessChart"></canvas>
+        </div>
+
+        <div class="page-break"></div> 
+        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Energy Consumption Time-Series</h2>
+        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
+            <canvas id="energyConsumptionChart"></canvas>
+        </div>
+
         <footer class="text-center text-xs text-gray-400 mt-12 pt-4 border-t border-gray-200">
             Generated on <%= new Date().toLocaleString() %>. Data accuracy dependent on log source availability.
         </footer>
@@ -108,52 +177,102 @@ const formatDisplayDate = (dateString) => {
 
     <script>
         // Data passed directly from the EJS template context.
-        const chartStats = {
-            min: stats.min,
-            max: stats.max,
-            avg: stats.avg
-        };
-        const logCount = stats.count ;
+        // Stats are included for future use/debugging, timeSeriesData is essential for the charts.
+        const stats = <%- JSON.stringify(stats) %>; 
+        const timeSeriesData = <%- JSON.stringify(timeSeriesData) %>;
 
-        // Configuration for the Chart
-        const chartConfig = {
-            type: 'bar',
-            data: {
-                labels: ['Minimum', 'Average', 'Maximum'],
-                datasets: [{
-                    label: 'Response Time (ms)',
-                    data: [chartStats.min, chartStats.avg, chartStats.max],
-                    backgroundColor: ['rgba(52, 211, 153, 0.8)', 'rgba(59, 130, 246, 0.8)', 'rgba(239, 68, 68, 0.8)'], // Green, Blue, Red
-                    borderColor: ['rgba(52, 211, 153, 1)', 'rgba(59, 130, 246, 1)', 'rgba(239, 68, 68, 1)'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: `Key Response Time Metrics in Milliseconds (N=${logCount})`
-                    },
-                    legend: { display: false }
+        // Extract Labels (Dates) for the X-axis
+        const dates = timeSeriesData.map(d => d._id); // _id is the YYYY-MM-DD date string
+
+        /**
+         * Generates the configuration object for a time-series line chart.
+         * @param {string} dataKey - The key in timeSeriesData to plot (e.g., 'avgResponseTime').
+         * @param {string} title - The chart title prefix.
+         * @param {string} yAxisText - The Y-axis label.
+         * @param {string} color - The line color (e.g., 'rgb(59, 130, 246)').
+         */
+        const createChartConfig = (dataKey, title, yAxisText, color) => {
+            const dataValues = timeSeriesData.map(d => d[dataKey]);
+
+            return {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: yAxisText,
+                        data: dataValues,
+                        borderColor: color,
+                        backgroundColor: `${color}40`, // Add opacity for fill
+                        fill: true,
+                        tension: 0.2, // Makes the line smooth
+                        pointRadius: 3
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
                         title: {
                             display: true,
-                            text: 'Response Time (ms)'
+                            text: `${title} Daily Average (N=${dates.length} Days)`
+                        },
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Date' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: yAxisText
+                            }
                         }
                     }
                 }
-            }
+            };
         };
-        
-        // Initialize Chart.js - Removed DOMContentLoaded wrapper
-        const ctx = document.getElementById('responseTimeChart').getContext('2d');
-        new Chart(ctx, chartConfig);
+
+        // --- Chart Generation ---
+
+        // 1. Response Time Chart
+        const responseTimeConfig = createChartConfig(
+            'avgResponseTime', 
+            'Response Time', 
+            'Response Time (ms)', 
+            'rgb(59, 130, 246)' // Blue
+        );
+        new Chart(document.getElementById('responseTimeChart').getContext('2d'), responseTimeConfig);
             
+        // 2. Policy Compliance Chart
+        const policyComplianceConfig = createChartConfig(
+            'avgPolicyCompliance', 
+            'Policy Compliance', 
+            'Compliance Score', 
+            'rgb(22, 163, 74)' // Green
+        );
+        new Chart(document.getElementById('policyComplianceChart').getContext('2d'), policyComplianceConfig);
+
+        // 3. Response Helpfulness Chart
+        const helpfulnessConfig = createChartConfig(
+            'avgResponseHelpfulness', 
+            'Response Helpfulness', 
+            'Helpfulness Score', 
+            'rgb(244, 114, 182)' // Pink
+        );
+        new Chart(document.getElementById('responseHelpfulnessChart').getContext('2d'), helpfulnessConfig);
+            
+        // 4. Energy Consumption Chart
+        const energyConfig = createChartConfig(
+            'avgEnergyConsumption', 
+            'Energy Consumption', 
+            'Energy Consumption (units)', 
+            'rgb(107, 114, 128)' // Gray
+        );
+        new Chart(document.getElementById('energyConsumptionChart').getContext('2d'), energyConfig);
+
+
         // Critical step for Puppeteer: Signal that all asynchronous rendering is complete
         window.renderComplete = true; 
     </script>
