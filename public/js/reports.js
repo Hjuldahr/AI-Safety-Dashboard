@@ -100,7 +100,7 @@ const handleCsvDownload = (elements) => {
         endDate: payload.endDate,
         modelName: payload.modelName,
     }).toString();
-    const downloadUrl = `/reports/download-csv?${params}`;
+    const downloadUrl = `reports/download-csv?${params}`;
 
     // Create a temporary anchor element and click it to trigger the download
     const a = document.createElement('a');
