@@ -113,6 +113,59 @@ const handleDownload = (elements, endpoint) => {
     a.remove();
 }
 
+const handlePostDownload = async (elements, path) => {
+    const formEl = elements.form;
+    if (!formEl) return alert('Report form not found.');
+
+    try {
+        const formData = new FormData(formEl);
+        
+        // Build the payload (same structure as PDF generation)
+        const payload = {
+            startDate: formData.get('startDate'),
+            endDate: formData.get('endDate'),
+            modelName: formData.get('modelName')
+            // Only need the filters
+        };
+
+        const response = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload) // Send data in the body
+        });
+
+        if (!response.ok) {
+            // Handle the 404/No data found case gracefully
+            const errorData = await response.json().catch(() => ({ message: 'Server error during download.' }));
+            alert(`Download Failed: ${errorData.message}`);
+            return;
+        }
+
+        // --- Critical step: Force browser to download the streamed response ---
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        
+        // Extract filename from header (e.g., attachment; filename="ai-aggregates-all-to-all.csv")
+        let filename = 'download.csv';
+        if (contentDisposition && contentDisposition.indexOf('filename=') !== -1) {
+            filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url); // Clean up memory
+
+    } catch (e) {
+        console.error("CSV Download Error:", e);
+        alert('An unexpected error occurred during the CSV download.');
+    }
+};
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     const elements = {
@@ -153,13 +206,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (elements.downloadCsvBtn) {
         elements.downloadCsvBtn.addEventListener('click', () => {
-            handleDownload(elements, '/reports/download-csv'); // Now uses generic function
+            handlePostDownload(elements, '/reports/download-csv'); // Now uses generic function
         });
     }
 
     if (elements.downloadAggregatesCsvBtn) {
         elements.downloadAggregatesCsvBtn.addEventListener('click', () => {
-            handleDownload(elements, '/reports/download-aggregates'); // Now uses generic function
+            handlePostDownload(elements, '/reports/download-aggregates'); // Now uses generic function
         });
     }
 
