@@ -161,6 +161,23 @@ function renderPagination(container, totalPages, currentPage, elements, handlerF
 
     if (totalPages <= 1) return;
 
+    // Helper: Creates a clickable page button
+    const createPageBtn = (page) => {
+        const btn = document.createElement('button');
+        btn.textContent = page;
+        if (page === currentPage) btn.classList.add('active');
+        btn.addEventListener('click', () => handlerFunction(elements, page));
+        return btn;
+    };
+
+    // Helper: Creates a non-clickable "..." span/button
+    const createDots = () => {
+        const span = document.createElement('span');
+        span.textContent = '...';
+        span.className = 'pagination-dots'; // Add CSS for styling if needed
+        return span;
+    };
+
     // "Previous" Button
     const prevBtn = document.createElement('button');
     prevBtn.textContent = '« Prev';
@@ -168,15 +185,50 @@ function renderPagination(container, totalPages, currentPage, elements, handlerF
     prevBtn.addEventListener('click', () => handlerFunction(elements, currentPage - 1));
     container.appendChild(prevBtn);
 
-    // Page Number Buttons
-    for (let i = 1; i <= totalPages; i++) {
-        const pageBtn = document.createElement('button');
-        pageBtn.textContent = i;
-        if (i === currentPage) {
-            pageBtn.classList.add('active');
+    // Logic to determine which numbers to show
+    const siblings = 1; 
+    
+    // If total pages is small (e.g., 7 or less), just show them all to avoid complex dot logic
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) {
+            container.appendChild(createPageBtn(i));
         }
-        pageBtn.addEventListener('click', () => handlerFunction(elements, i));
-        container.appendChild(pageBtn);
+    } else {
+        // Complex Logic: Start, End, Current, and Dots
+        const showLeftDots = currentPage > siblings + 2;
+        const showRightDots = currentPage < totalPages - (siblings + 1);
+
+        // Always show Page 1
+        container.appendChild(createPageBtn(1));
+
+        // Logic for Left "..."
+        if (showLeftDots) {
+            container.appendChild(createDots());
+        }
+
+        // Calculate the range of middle buttons
+        let start = Math.max(2, currentPage - siblings);
+        let end = Math.min(totalPages - 1, currentPage + siblings);
+
+        if (currentPage <= siblings + 2) end = siblings + 4; // Extend range if near start
+        if (currentPage >= totalPages - (siblings + 1)) start = totalPages - (siblings + 3); // Extend range if near end
+        
+        // Sanity check to keep bounds within 2 and total-1
+        start = Math.max(2, start);
+        end = Math.min(totalPages - 1, end);
+
+        // Render the middle range
+        for (let i = start; i <= end; i++) {
+            container.appendChild(createPageBtn(i));
+        }
+
+        // Logic for Right "..."
+        if (showRightDots) {
+            container.appendChild(createDots());
+        }
+
+        // Always show Last Page
+        container.appendChild(createPageBtn(totalPages));
     }
 
     // "Next" Button
