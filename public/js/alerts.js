@@ -49,19 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --------------------------------------------------
     // Config / constant mappings
     // --------------------------------------------------
-    const FIELD_MAP = {
-        'Policy Compliance': 'policyCompliance',
-        'Response Helpfulness': 'responseHelpfulness',
-        'Response Time': 'responseTime',
-        'Energy Consumption': 'energyConsumption'
-    };
-
-    const REVERSE_FIELD_MAP = {
-        'policyCompliance': 'Policy Compliance',
-        'responseHelpfulness': 'Response Helpfulness',
-        'responseTime': 'Response Time',
-        'energyConsumption': 'Energy Consumption'
-    };
+    // Field mappings were removed — the rule builder uses `DATA_DICTIONARY` directly.
 
     const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte' };
     const OPERATOR_READABLE = { 'gt': 'greater than', 'gte': 'greater than or equal to', 'lt': 'less than', 'lte': 'less than or equal to' };
