@@ -2,6 +2,8 @@ import passport from "passport";
 import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
 
+const BASE = process.env.PUBLIC_URL || '/';
+
 // --- Sign Up ---
 const signUp = async (req, res) => {
     try {
@@ -62,7 +64,7 @@ const logout = (req, res, next) => {
             console.error('Logout error:', err);
             return res.status(500).json({ message: 'Logout failed.' });
         }
-        res.redirect("/");
+        res.redirect(BASE);
     });
 };
 
