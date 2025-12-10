@@ -206,13 +206,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (elements.downloadCsvBtn) {
         elements.downloadCsvBtn.addEventListener('click', () => {
-            handlePostDownload(elements, '/reports/download-csv'); // Now uses generic function
+            handlePostDownload(elements, 'reports/download-csv'); // Now uses generic function
         });
     }
 
     if (elements.downloadAggregatesCsvBtn) {
         elements.downloadAggregatesCsvBtn.addEventListener('click', () => {
-            handlePostDownload(elements, '/reports/download-aggregates'); // Now uses generic function
+            handlePostDownload(elements, 'reports/download-aggregates'); // Now uses generic function
         });
     }
 
