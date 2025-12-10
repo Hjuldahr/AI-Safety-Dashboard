@@ -1,69 +1,280 @@
-<!doctype html>
-<html>
+<%
+// Define a function to safely parse and display the date from the YYYY-MM-DD string.
+// This uses UTC methods to prevent the server's local timezone from shifting the date back one day.
+const formatDisplayDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+        const dateObj = new Date(dateString); 
+
+        // Use UTC methods to extract the components.
+        const year = dateObj.getUTCFullYear();
+        // getUTCMonth is 0-indexed (0=Jan), so we add 1
+        const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getUTCDate()).padStart(2, '0');
+
+        // Return the date in MM/DD/YYYY format
+        return `${month}/${day}/${year}`;
+    } catch(e) {
+        return dateString;
+    }
+};
+
+/**
+ * Helper function to generate a single metric card.
+ * @param {string} title The title of the card (e.g., 'Average Response Time').
+ * @param {number} value The numerical value of the metric.
+ * @param {string} unit The unit (e.g., 'ms', 'score').
+ * @param {string} color The Tailwind color (e.g., 'blue', 'green', 'red').
+ */
+const statCard = (title, value, unit, color) => {
+    // Determine the border color class based on the input color
+    const borderColorClass = {
+        'blue': 'border-blue-500',
+        'green': 'border-green-500',
+        'red': 'border-red-500',
+        'gray': 'border-gray-500'
+    }[color] || 'border-blue-500';
+
+    return `
+        <div class="bg-white p-4 rounded-xl shadow-md border-l-4 ${borderColorClass}">
+            <p class="text-sm font-medium text-gray-500">${title}</p>
+            <p class="text-3xl font-extrabold mt-1">
+                ${value.toFixed(2)} 
+                <span class="text-base font-normal text-gray-500">${unit}</span>
+            </p>
+        </div>
+    `;
+};
+%>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <base href="<%= process.env.PUBLIC_URL || '/' %>">
-  <meta charset="utf-8" />
-  <title><%= reportTitle %></title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; color: #222; }
-    header { text-align: center; margin-bottom: 10px; }
-    .meta { margin-bottom: 12px; font-size: 12px; color: #333; }
-    .section { margin-top: 18px; }
-    table.stats td { padding: 6px 10px; font-size: 11px; }
-    canvas { width: 100% !important; height: 260px !important; display:block; margin: 8px 0 18px; }
-    hr { border: none; border-top: 1px solid #eee; margin: 16px 0; }
-  </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= reportTitle %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        /* Base styles for printing */
+        body { 
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif; 
+            margin: 0; padding: 0; 
+            color: #1f2937; /* Gray-800 */
+        }
+        .report-container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 40px; 
+        }
+        /* Crucial: Ensure page breaks for multi-page reports */
+        .page-break { page-break-after: always; }
+        .stat-grid {
+            /* Now optimized for 3 columns (Avg, Min, Max) */
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 20px;
+        }
+        /* Style for the general KPI (total logs) to stand out */
+        .general-kpi {
+            width: 100%;
+            max-width: 300px; 
+            margin-bottom: 32px;
+        }
+    </style>
 </head>
-<body>
-  <header>
-    <h1><%= reportTitle %></h1>
-    <div class="meta">
-      <strong>Start:</strong> <%= startDate || '—' %> &nbsp; | &nbsp;
-      <strong>End:</strong> <%= endDate || '—' %> &nbsp; | &nbsp;
-      <strong>Type:</strong> <%= reportType || '—' %> &nbsp; | &nbsp;
-      <strong>Model:</strong> <%= modelName || '—' %>
+<body class="bg-gray-50">
+    <div class="report-container">
+
+        <header class="text-center mb-12 border-b-4 border-blue-600 pb-4">
+            <h1 class="text-4xl font-extrabold text-blue-800 tracking-tight"><%= reportTitle %></h1>
+            <p class="text-md text-gray-600 mt-2">Log Analysis Report for Model: <%= modelName %></p>
+        </header>
+
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-10 border border-gray-200">
+            <h2 class="text-xl font-bold text-gray-700 mb-3 border-b pb-2">Report Context</h2>
+            <div class="grid grid-cols-2 gap-4 text-sm text-gray-700">
+                <div><strong>Model Analyzed:</strong> <span class="text-blue-600"><%= modelName %></span></div>
+                <div><strong>Total Logs Counted:</strong> <span class="text-blue-600"><%= totalLogs.toLocaleString() %></span></div>
+                <div><strong>Start Date:</strong> <%= formatDisplayDate(startDate) %></div>
+                <div><strong>End Date:</strong> <%= formatDisplayDate(endDate) %></div>
+            </div>
+            <% if (notes && notes.trim().length > 0) { %>
+                <div class="mt-4 pt-3 border-t border-gray-100">
+                    <strong>Notes:</strong> <span class="text-gray-600"><%= notes %></span>
+                </div>
+            <% } %>
+        </div>
+
+        <h2 class="text-2xl font-bold text-gray-700 mb-5">Key Performance Indicators</h2>
+        
+        <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-gray-500 general-kpi">
+            <p class="text-sm font-medium text-gray-500">Total Logs Analyzed</p>
+            <p class="text-3xl font-extrabold mt-1">
+                <%= stats.count.toLocaleString() %> 
+                <span class="text-base font-normal text-gray-500">logs</span>
+            </p>
+        </div>
+
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-blue-200">Response Time (ms)</h3>
+        <div class="stat-grid mb-8">
+            <%- statCard("Average Response Time", stats.responseTime.avg, "ms", "blue") %>
+            <%- statCard("Minimum Response Time", stats.responseTime.min, "ms", "green") %>
+            <%- statCard("Maximum Response Time", stats.responseTime.max, "ms", "red") %>
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-green-200">Policy Compliance (Score)</h3>
+        <div class="stat-grid mb-8">
+            <%- statCard("Average Compliance", stats.policy.avg, "score", "blue") %>
+            <%- statCard("Minimum Compliance", stats.policy.min, "score", "green") %>
+            <%- statCard("Maximum Compliance", stats.policy.max, "score", "red") %>
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-pink-200">Response Helpfulness (Score)</h3>
+        <div class="stat-grid mb-8">
+            <%- statCard("Average Helpfulness", stats.helpfulness.avg, "score", "blue") %>
+            <%- statCard("Minimum Helpfulness", stats.helpfulness.min, "score", "green") %>
+            <%- statCard("Maximum Helpfulness", stats.helpfulness.max, "score", "red") %>
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-gray-300">Energy Consumption (Units)</h3>
+        <div class="stat-grid mb-8">
+            <%- statCard("Average Consumption", stats.energy.avg, "units", "blue") %>
+            <%- statCard("Minimum Consumption", stats.energy.min, "units", "green") %>
+            <%- statCard("Maximum Consumption", stats.energy.max, "units", "red") %>
+        </div>
+
+        <div class="page-break"></div> 
+        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Response Time Time-Series</h2>
+        
+        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
+            <canvas id="responseTimeChart"></canvas>
+        </div>
+        
+        <div class="page-break"></div> 
+        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Policy Compliance Time-Series</h2>
+        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
+            <canvas id="policyComplianceChart"></canvas>
+        </div>
+
+        <div class="page-break"></div> 
+        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Response Helpfulness Time-Series</h2>
+        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
+            <canvas id="responseHelpfulnessChart"></canvas>
+        </div>
+
+        <div class="page-break"></div> 
+        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Energy Consumption Time-Series</h2>
+        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
+            <canvas id="energyConsumptionChart"></canvas>
+        </div>
+
+        <footer class="text-center text-xs text-gray-400 mt-12 pt-4 border-t border-gray-200">
+            Generated on <%= new Date().toLocaleString() %>. Data accuracy dependent on log source availability.
+        </footer>
+
     </div>
-    <% if (notes) { %>
-      <div style="font-size:11px; color:#555;"><%= notes %></div>
-    <% } %>
-  </header>
 
-  <hr>
+    <script>
+        // Data passed directly from the EJS template context.
+        // Stats are included for future use/debugging, timeSeriesData is essential for the charts.
+        const stats = <%- JSON.stringify(stats) %>; 
+        const timeSeriesData = <%- JSON.stringify(timeSeriesData) %>;
 
-  <section class="section">
-    <h2>Summary</h2>
-    <table class="stats">
-      <tr><td>Count</td><td><%= totalLogs %></td></tr>
-      <tr><td>Min</td><td><%= stats.min %></td></tr>
-      <tr><td>Avg</td><td><%= stats.avg %></td></tr>
-      <tr><td>Max</td><td><%= stats.max %></td></tr>
-    </table>
-  </section>
+        // Extract Labels (Dates) for the X-axis
+        const dates = timeSeriesData.map(d => d._id); // _id is the YYYY-MM-DD date string
 
-  <section class="section">
-    <h2>Charts</h2>
-    <canvas id="chart1"></canvas>
-    <canvas id="chart2"></canvas>
-  </section>
+        /**
+         * Generates the configuration object for a time-series line chart.
+         * @param {string} dataKey - The key in timeSeriesData to plot (e.g., 'avgResponseTime').
+         * @param {string} title - The chart title prefix.
+         * @param {string} yAxisText - The Y-axis label.
+         * @param {string} color - The line color (e.g., 'rgb(59, 130, 246)').
+         */
+        const createChartConfig = (dataKey, title, yAxisText, color) => {
+            const dataValues = timeSeriesData.map(d => d[dataKey]);
 
-  <footer style="margin-top:24px; font-size:10px; color:#777; text-align:right;">
-    Generated at <%= new Date().toLocaleString() %>
-  </footer>
+            return {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: yAxisText,
+                        data: dataValues,
+                        borderColor: color,
+                        backgroundColor: `${color}40`, // Add opacity for fill
+                        fill: true,
+                        tension: 0.2, // Makes the line smooth
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${title} Daily Average (N=${dates.length} Days)`
+                        },
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Date' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: yAxisText
+                            }
+                        }
+                    }
+                }
+            };
+        };
 
-  <script>
-    (function () {
-      // Chart configs are injected as JSON in controller
-      const cfg1 = JSON.parse(`<%= chartConfig1 %>`);
-      const cfg2 = JSON.parse(`<%= chartConfig2 %>`);
-      // Render charts
-      new Chart(document.getElementById('chart1'), cfg1);
-      new Chart(document.getElementById('chart2'), cfg2);
+        // --- Chart Generation ---
 
-      // Give Chart.js time to render before Puppeteer snapshots
-      setTimeout(() => { window.renderComplete = true; }, 600);
-    })();
-  </script>
+        // 1. Response Time Chart
+        const responseTimeConfig = createChartConfig(
+            'avgResponseTime', 
+            'Response Time', 
+            'Response Time (ms)', 
+            'rgb(59, 130, 246)' // Blue
+        );
+        new Chart(document.getElementById('responseTimeChart').getContext('2d'), responseTimeConfig);
+            
+        // 2. Policy Compliance Chart
+        const policyComplianceConfig = createChartConfig(
+            'avgPolicyCompliance', 
+            'Policy Compliance', 
+            'Compliance Score', 
+            'rgb(22, 163, 74)' // Green
+        );
+        new Chart(document.getElementById('policyComplianceChart').getContext('2d'), policyComplianceConfig);
+
+        // 3. Response Helpfulness Chart
+        const helpfulnessConfig = createChartConfig(
+            'avgResponseHelpfulness', 
+            'Response Helpfulness', 
+            'Helpfulness Score', 
+            'rgb(244, 114, 182)' // Pink
+        );
+        new Chart(document.getElementById('responseHelpfulnessChart').getContext('2d'), helpfulnessConfig);
+            
+        // 4. Energy Consumption Chart
+        const energyConfig = createChartConfig(
+            'avgEnergyConsumption', 
+            'Energy Consumption', 
+            'Energy Consumption (units)', 
+            'rgb(107, 114, 128)' // Gray
+        );
+        new Chart(document.getElementById('energyConsumptionChart').getContext('2d'), energyConfig);
+
+
+        // Critical step for Puppeteer: Signal that all asynchronous rendering is complete
+        window.renderComplete = true; 
+    </script>
 </body>
 </html>
