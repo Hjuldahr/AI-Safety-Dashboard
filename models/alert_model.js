@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import constants from '../config/constants.js';
 
 // === alert_model Schema ===
 const alert_model_Schema = new mongoose.Schema({
@@ -35,12 +36,17 @@ const alert_model_Schema = new mongoose.Schema({
 });
 
 // ---------- Helper / Statics ----------
-const displayToDbField = {
-    'Policy Compliance': 'policyCompliance',
-    'Response Helpfulness': 'responseHelpfulness',
-    'Response Time': 'responseTime',
-    'Energy Consumption': 'energyConsumption'
-};
+// Build display <-> db field mappings from the central DATA_DICTIONARY
+// to avoid duplication and keep server/client in sync.
+const dataDict = (constants && constants.DATA_DICTIONARY) ? constants.DATA_DICTIONARY : {};
+const displayToDbField = Object.keys(dataDict).reduce((acc, key) => {
+    const entry = dataDict[key];
+    if (entry && entry.label && entry.dbPath) {
+        acc[entry.label] = entry.dbPath;
+    }
+    return acc;
+}, {});
+
 const dbToDisplayField = Object.keys(displayToDbField).reduce((acc, k) => {
     acc[displayToDbField[k]] = k;
     return acc;
