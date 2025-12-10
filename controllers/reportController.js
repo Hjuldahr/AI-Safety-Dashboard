@@ -42,6 +42,65 @@ const buildReportQuery = ({ modelName, startDate, endDate }) => {
     return query;
 };
 
+const getAggregatedStats = async (query) => {
+    const matchStage = { $match: query };
+    
+    // --- Aggregation Pipeline for Single Stats (Min/Max/Avg/Count) ---
+    const groupSingleStatsStage = {
+        $group: {
+            _id: null,
+            minVal: { $min: '$responseTime' }, 
+            maxVal: { $max: '$responseTime' },
+            avgVal: { $avg: '$responseTime' },
+            totalCount: { $sum: 1 },
+            minPolicy: { $min: '$policyCompliance' },
+            maxPolicy: { $max: '$policyCompliance' },
+            avgPolicy: { $avg: '$policyCompliance' },
+            minHelpful: { $min: '$responseHelpfulness' },
+            maxHelpful: { $max: '$responseHelpfulness' },
+            avgHelpful: { $avg: '$responseHelpfulness' },
+            minEnergy: { $min: '$energyConsumption' },
+            maxEnergy: { $max: '$energyConsumption' },
+            avgEnergy: { $avg: '$energyConsumption' }
+        }
+    };
+
+    const agg = await AI_Log.aggregate([matchStage, groupSingleStatsStage]).exec().catch((err) => {
+        console.error("Single Stats Aggregation Error:", err);
+        return [];
+    });
+
+    // If agg is empty, the stats will default to 0
+    const stats = agg && agg.length ? {
+        min: agg[0].minVal ?? 0,
+        max: agg[0].maxVal ?? 0,
+        avg: Math.round((agg[0].avgVal ?? 0) * 100) / 100, 
+        count: agg[0].totalCount ?? 0,
+        policy: {
+            min: agg[0].minPolicy ?? 0,
+            max: agg[0].maxPolicy ?? 0,
+            avg: Math.round((agg[0].avgPolicy ?? 0) * 100) / 100,
+        },
+        helpfulness: {
+            min: agg[0].minHelpful ?? 0,
+            max: agg[0].maxHelpful ?? 0,
+            avg: Math.round((agg[0].avgHelpful ?? 0) * 100) / 100,
+        },
+        energy: {
+            min: agg[0].minEnergy ?? 0,
+            max: agg[0].maxEnergy ?? 0,
+            avg: Math.round((agg[0].avgEnergy ?? 0) * 100) / 100,
+        }
+    } : { 
+        min: 0, max: 0, avg: 0, count: 0, 
+        policy: { min: 0, max: 0, avg: 0 },
+        helpfulness: { min: 0, max: 0, avg: 0 },
+        energy: { min: 0, max: 0, avg: 0 }
+    };
+    
+    return stats;
+}
+
 // === PDF generation via Puppeteer (Chart.js in-template) ===
 const renderPdfFromTemplate = async (templateName, templateData) => {
     const templatePath = path.join(__dirname, `../views/${templateName}.ejs`);
@@ -295,6 +354,66 @@ const downloadCsv = async (req, res) => {
     }
 };
 
+const downloadAggregatesCsv = async (req, res) => {
+    try {
+        const { modelName, startDate, endDate } = req.query;
+
+        const query = buildReportQuery({ modelName, startDate, endDate });
+        
+        // Get the normalized aggregate statistics object
+        const stats = await getAggregatedStats(query);
+
+        if (stats.count === 0) {
+            return res.status(404).json({ message: 'No data found to calculate aggregates.' });
+        }
+        
+        // Manually build the CSV content for the key metrics
+        const csvRows = [
+            "Metric,Value,Unit"
+        ];
+        
+        // Helper to add rows to CSV
+        const addRow = (metricName, value, unit) => {
+            const safeValue = value.toFixed(2);
+            csvRows.push(`"${metricName}","${safeValue}","${unit}"`);
+        };
+        
+        // Add all metrics
+        csvRows.push(`"Total Logs Analyzed","${stats.count}","logs"`);
+
+        // Response Time
+        addRow("Response Time - Average", stats.avg, "ms");
+        addRow("Response Time - Minimum", stats.min, "ms");
+        addRow("Response Time - Maximum", stats.max, "ms");
+
+        // Policy Compliance
+        addRow("Policy Compliance - Average", stats.policy.avg, "score");
+        addRow("Policy Compliance - Minimum", stats.policy.min, "score");
+        addRow("Policy Compliance - Maximum", stats.policy.max, "score");
+        
+        // Response Helpfulness
+        addRow("Response Helpfulness - Average", stats.helpfulness.avg, "score");
+        addRow("Response Helpfulness - Minimum", stats.helpfulness.min, "score");
+        addRow("Response Helpfulness - Maximum", stats.helpfulness.max, "score");
+
+        // Energy Consumption
+        addRow("Energy Consumption - Average", stats.energy.avg, "units");
+        addRow("Energy Consumption - Minimum", stats.energy.min, "units");
+        addRow("Energy Consumption - Maximum", stats.energy.max, "units");
+
+        const csvContent = csvRows.join('\n');
+
+        // Set headers for CSV download
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="ai-aggregates-${startDate || 'all'}-to-${endDate || 'all'}.csv"`);
+        return res.send(csvContent);
+
+    } catch (err) {
+        console.error('Download Aggregates CSV Error:', err);
+        res.status(500).json({ message: 'Failed to generate aggregate CSV due to a server error.', error: err.message });
+    }
+};
+
 const getPage = (req, res) => {
     res.render('reports', { 
         title: 'Reports',
@@ -306,5 +425,6 @@ const getPage = (req, res) => {
 export default {
     createReport,
     getPage,
-    downloadCsv
+    downloadCsv,
+    downloadAggregatesCsv
 };

@@ -77,7 +77,7 @@ const handleReportSubmit = async (elements) => {
             elements.previewWrapper.style.display = 'block';
         }
 
-        if (elements.statusText) elements.statusText.textContent = 'Report ready. Preview below or click "Download Last".';
+        if (elements.statusText) elements.statusText.textContent = 'Report ready. Preview below or click "Download PDF".';
 
     } catch (error) {
         console.error('Failed to generate report:', error);
@@ -89,8 +89,8 @@ const handleReportSubmit = async (elements) => {
     }
 };
 
-const handleCsvDownload = (elements) => {
-    // Collect parameters from the form
+
+const handleDownload = (elements, endpoint) => {
     const formData = new FormData(elements.form);
     const payload = Object.fromEntries(formData.entries());
 
@@ -100,13 +100,14 @@ const handleCsvDownload = (elements) => {
         endDate: payload.endDate,
         modelName: payload.modelName,
     }).toString();
-    const downloadUrl = `reports/download-csv?${params}`;
+    
+    // Use the provided endpoint with the query parameters
+    const downloadUrl = `${endpoint}?${params}`;
 
     // Create a temporary anchor element and click it to trigger the download
     const a = document.createElement('a');
     a.href = downloadUrl;
-    // The server sets the filename, but setting download=true ensures the browser downloads it
-    a.download = true; 
+    a.download = true; // Ensures the browser initiates a download
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -119,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn: document.getElementById('report-submit'),
         downloadBtn: document.getElementById('report-download'),
         downloadCsvBtn: document.getElementById('report-download-csv'),
+        downloadAggregatesCsvBtn: document.getElementById('report-download-csv-aggregates'),
         previewWrapper: document.getElementById('report-preview-wrapper'),
         previewFrame: document.getElementById('report-preview'),
         statusText: document.getElementById('report-status')
@@ -151,7 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (elements.downloadCsvBtn) {
         elements.downloadCsvBtn.addEventListener('click', () => {
-            handleCsvDownload(elements);
+            handleDownload(elements, '/reports/download-csv'); // Now uses generic function
+        });
+    }
+
+    if (elements.downloadAggregatesCsvBtn) {
+        elements.downloadAggregatesCsvBtn.addEventListener('click', () => {
+            handleDownload(elements, '/reports/download-aggregates'); // Now uses generic function
         });
     }
 
