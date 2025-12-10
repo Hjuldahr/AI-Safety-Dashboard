@@ -383,9 +383,7 @@ const createReport = async (req, res) => {
             reportTitle = 'Dashboard Report', 
             startDate, 
             endDate, 
-            reportType, 
             modelName, 
-            notes 
         } = req.body || {};
 
         const query = buildReportQuery({ modelName, startDate, endDate });
@@ -402,9 +400,7 @@ const createReport = async (req, res) => {
             reportTitle,
             startDate,
             endDate,
-            reportType,
             modelName,
-            notes,
             totalLogs: stats.count,
             stats,
             timeSeriesData: timeSeriesData 
@@ -427,7 +423,7 @@ const createReport = async (req, res) => {
  */
 const downloadCsv = async (req, res) => {
     try {
-        const { modelName, startDate, endDate } = req.query;
+        const { modelName, startDate, endDate } = req.body;
         const query = buildReportQuery({ modelName, startDate, endDate });
         
         const logs = await AI_Log.find(query).lean().exec();
@@ -495,7 +491,7 @@ const downloadCsv = async (req, res) => {
  */
 const downloadAggregatesCsv = async (req, res) => {
     try {
-        const { modelName, startDate, endDate } = req.query;
+        const { modelName, startDate, endDate } = req.body;
         const query = buildReportQuery({ modelName, startDate, endDate });
         
         const stats = await getAggregatedStats(query);
