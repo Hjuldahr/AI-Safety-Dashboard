@@ -20,32 +20,29 @@ const getPage = async (req, res) => {
 // Updated to send back recent data for all models in the database
 const getRecentData = async (req, res) => {
     try {
-        // Run an aggregation pipeline to get logs *per model*
-        const aggregatedLogs = await AI_Log.aggregate([
-            { $sort: { responseTimestamp: -1 } },
-            {
-                $group: {
-                    _id: "$modelName",
-                    logs: { $push: "$$ROOT" }
-                }
-            },
+        // Get list of distinct models
+        const uniqueModels = await AI_Log.distinct("modelName");
 
-            // Reshape the output
-            {
-                $project: {
-                    _id: 0, // We don't need the default _id
-                    modelName: "$_id", // Rename _id to modelName
-                    recentLogs: { $slice: ["$logs", RECENT_DATA_LIMIT] }
-                }
-            }
-        ]);
+        //  Run parallel queries - one limited query per model
+        const logPromises = uniqueModels.map(async (model) => {
+            const logs = await AI_Log.find({ modelName: model })
+                .sort({ responseTimestamp: -1 })
+                .limit(RECENT_DATA_LIMIT)
+                .lean(); // .lean() makes it a plain JS object (faster)
+            
+            return {
+                modelName: model,
+                logs: logs.reverse() // Flip to oldest-first for the chart
+            };
+        });
 
+        const results = await Promise.all(logPromises);
+
+        // Convert array of results into your mapped object
         const logsByModel = {};
-        for (const group of aggregatedLogs) {
-            const modelKey = group.modelName;
-            const oldestFirstLogs = group.recentLogs.reverse();
-            logsByModel[modelKey] = oldestFirstLogs;
-        }
+        results.forEach(result => {
+            logsByModel[result.modelName] = result.logs;
+        });
 
         const configs = await ChartConfig.find().sort({ order: 1 });
 
@@ -53,6 +50,7 @@ const getRecentData = async (req, res) => {
             logs: logsByModel,
             configs: configs
         });
+
     } catch (error) {
         console.error("Error fetching recent data:", error);
         res.status(500).json({ error: "Failed to fetch recent data" });

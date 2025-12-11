@@ -88,6 +88,10 @@ const AI_Log_Schema = new mongoose.Schema({
     }
 });
 
+// ---------- INDEXES ----------
+AI_Log_Schema.index({ modelName: 1, responseTimestamp: -1 });
+
+
 
 // ---------- QUERIES ----------
 
