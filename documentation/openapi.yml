@@ -307,7 +307,7 @@ paths:
       summary: Main Dashboard homepage
       description: Returns the HTML of the AI Safety Dashboard.
       responses:
-        "200":
+        200:
           description: HTML content for the AI Safety Dashboard.
           content:
             text/html:
