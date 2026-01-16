@@ -82,7 +82,6 @@ const startServer = async () => {
     const swaggerDocument = YAML.load(path.join(__dirname, './documentation/openapi.yml'));
 
     // Serve the Swagger API documentation at /docs
-    console.log("public url: " + publicURL);
     app.use(`${publicURL}docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
     app.listen(PORT, () => {
