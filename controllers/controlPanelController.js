@@ -91,6 +91,7 @@ const updateGraph = async (req, res) => {
         itemToUpdate.title = newTitle;
         itemToUpdate.chartSize = newSize;
         
+
         if (includedValues !== undefined) {
             itemToUpdate.includedValues = includedValues;
         }
@@ -143,6 +144,7 @@ const reorderCharts = async (req, res) => {
     } catch (err) {
         console.error('Error updating chart order:', err);
         res.status(500).json({ error: 'Failed to update order' });
+        res.status(500).json({ error: 'Failed to update order.' });
     }
 };
 
