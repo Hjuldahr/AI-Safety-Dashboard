@@ -6,6 +6,8 @@ info:
 servers:
   - url: http://localhost:2121
     description: AI Dashboard - LocalHost
+  - url: https://danielbierman.ca/dashboard
+    description: AI Dashboard - DanielBierman.ca
 
 components:
   securitySchemes:
