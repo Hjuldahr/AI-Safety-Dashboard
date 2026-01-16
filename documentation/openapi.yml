@@ -356,8 +356,6 @@ paths:
               schema:
                 type: string
               example: "<html>...</html>"
-
-  /alerts/create:
     post:
       tags: [Alerts]
       summary: Create a new alert definition
