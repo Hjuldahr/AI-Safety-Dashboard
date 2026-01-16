@@ -1,0 +1,909 @@
+openapi: 3.0.0
+info:
+  title: AI Safety Dashboard API
+  description: API documentation for the AI Safety Dashboard project.
+  version: 1.0.0
+servers:
+  - url: https://danielbierman.ca/dashboard
+    description: AI Dashboard - DanielBierman.ca
+  - url: http://localhost:2121
+    description: AI Dashboard - LocalHost
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+
+  schemas:
+    # --- Mongoose Model Mirrors ---
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+          default: ["viewer"]
+        alertsLastSeen:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Alert:
+      type: object
+      required:
+        - alertName
+        - alertLevel
+        - alertRule
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        alertName:
+          type: string
+        modelName:
+          type: string
+          nullable: true
+        alertLevel:
+          type: string
+          enum: [Critical, High, Medium, Info]
+        alertRule:
+          type: object
+          description: 'MongoDB style query object (e.g. { "responseTimestamp": { "$gt": 100 } })'
+          additionalProperties: true
+        created:
+          type: string
+          format: date-time
+
+    AlertLog:
+      type: object
+      required:
+        - alert
+        - timestamp
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        alert:
+          type: string
+          description: ObjectId reference to the parent Alert
+        alertSnapshot:
+          type: object
+          description: Snapshot of the alert configuration at the time of triggering
+          properties:
+            _id:
+              type: string
+            alertName:
+              type: string
+            alertLevel:
+              type: string
+            modelName:
+              type: string
+            alertRule:
+              type: object
+            created:
+              type: string
+              format: date-time
+        timestamp:
+          type: string
+          format: date-time
+
+    ChartConfig:
+      type: object
+      required:
+        - title
+        - chartType
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        title:
+          type: string
+        chartType:
+          type: string
+          enum: [line, bar, pie, measure]
+        chartSize:
+          type: string
+          enum: [tiny, regular, large, massive]
+          default: regular
+        order:
+          type: number
+          default: 9999
+        yAxis:
+          type: string
+          nullable: true
+        xAxis:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        splitBy:
+          type: string
+          nullable: true
+        includedValues:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AILog:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        modelName:
+          type: string
+        policyCompliance:
+          type: number
+        responseHelpfulness:
+          type: number
+        responseTime:
+          type: number
+        energyConsumption:
+          type: number
+        tokensUsed:
+          type: number
+        gigaFlopsUsed:
+          type: number
+        webLookups:
+          type: number
+        toxicityScore:
+          type: number
+        piiDetected:
+          type: number
+        breakdown:
+          type: object
+          description: Summaries of Categorical Data
+          additionalProperties: true
+        queryCount:
+          type: number
+          default: 1
+        responseTimestamp:
+          type: number
+          description: Unix timestamp (Number)
+          example: 1709230000000
+
+    UserLog:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        userID:
+          type: string
+          description: ObjectId reference to User
+        eventType:
+          type: string
+          enum:
+            - Login
+            - Logout
+            - Signup
+            - Alert_Created
+            - Alert_Modified
+            - Alert_Deleted
+            - Report_Created
+            - Report_Deleted
+            - Chart_Created
+            - Chart_Modified
+            - Chart_Deleted
+            - Unspecified_Event
+        details:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+security:
+  - cookieAuth: []
+
+paths:
+  # ============================
+  # AUTH ROUTER
+  # ============================
+  /login:
+    get:
+      tags: [Auth, "HTML Page"]
+      summary: Login Page
+      description: Returns the HTML of the Login Page.
+      responses:
+        "200":
+          description: HTML content for the Login Page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
+
+  /api/login:
+    post:
+      tags: [Auth]
+      summary: User Login
+      security: [] # Public endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        200:
+          description: Login successful
+        401:
+          description: Authentication failed
+
+  /api/signup:
+    post:
+      tags: [Auth]
+      summary: User Signup
+      security: [] # Public endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        201:
+          description: "User created"
+        409:
+          description: "User already exists"
+        500:
+          description: "An internal server error occurred."
+
+  /api/logout:
+    post:
+      tags: [Auth]
+      summary: Logout user
+      responses:
+        302:
+          description: "Redirects to login page"
+        500:
+          description: "Logout failed"
+
+  # ============================
+  # INDEX / DASHBOARD ROUTER
+  # ============================
+  /:
+    get:
+      tags: [Dashboard, "HTML Page"]
+      summary: Main Dashboard homepage
+      description: Returns the HTML of the AI Safety Dashboard.
+      responses:
+        "200":
+          description: HTML content for the AI Safety Dashboard.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
+
+  /api/recentData:
+    get:
+      tags: [Dashboard]
+      summary: Get recent AI data and chart configs
+      responses:
+        200:
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/AILog"
+                  configs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ChartConfig"
+        500:
+          description: "Failed to fetch recent data."
+
+  # ============================
+  # ALERTS ROUTER
+  # ============================
+  /alerts:
+    get:
+      tags: [Alerts, "HTML Page"]
+      summary: Alerts Page
+      description: Returns the HTML of the Alerts Page.
+      responses:
+        "200":
+          description: HTML content for the Alerts Page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
+
+  /alerts/create:
+    post:
+      tags: [Alerts]
+      summary: Create a new alert definition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Alert"
+      responses:
+        201:
+          description: Alert created
+        400:
+          description: Invalid alert rule
+        500:
+          description: An internal server error occurred.
+
+  /alerts/live:
+    get:
+      tags: [Alerts]
+      summary: Get all active alert definitions
+      responses:
+        200:
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Alert"
+        500:
+          description: Failed to fetch alerts.
+
+  /alerts/api/history:
+    get:
+      tags: [Alerts]
+      summary: Get paginated alert history logs
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: level
+          schema:
+            type: string
+        - in: query
+          name: modelName
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+      responses:
+        200:
+          description: Paginated history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  pages:
+                    type: integer
+        500:
+          description: "Error fetching history."
+
+  /alerts/unread-count:
+    get:
+      tags: [Alerts]
+      summary: Get unread alert count for current user
+      responses:
+        200:
+          description: Count returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread:
+                    type: integer
+        500:
+          description: Error fetching unread count.
+
+  /alerts/mark-read:
+    post:
+      tags: [Alerts]
+      summary: Mark alerts as read
+      responses:
+        200:
+          description: Marked successfully
+        500:
+          description: Error marking alerts read.
+
+  /alerts/{id}:
+    delete:
+      tags: [Alerts]
+      summary: Delete an alert by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Alert removed.
+        400:
+          description: Missing alert id.
+        404:
+          description: Alert not found.
+        500:
+          description: Failed to remove alert.
+    put:
+      tags: [Alerts]
+      summary: Update an alert by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Alert"
+      responses:
+        200:
+          description: Alert updated
+        400:
+          description: Missing alert id.
+        404:
+          description: Alert not found.
+        500:
+          description: Failed to update alert.
+
+  # ============================
+  # LOG ROUTER
+  # ============================
+  /logs:
+    get:
+      tags: [Logs, "HTML Page"]
+      summary: Logs Page
+      description: Returns the HTML of the Logs Page.
+      responses:
+        "200":
+          description: HTML content for the Logs Page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
+
+  /logs/api/user:
+    get:
+      tags: [Logs]
+      summary: Get filtered user logs
+      parameters:
+        - in: query
+          name: userID
+          schema:
+            type: string
+        - in: query
+          name: eventType
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+        - in: query
+          name: endDate
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Paginated user logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserLog"
+        500:
+          description: Failed to fetch user logs.
+
+  /logs/api/ai:
+    get:
+      tags: [Logs]
+      summary: Get filtered AI logs
+      parameters:
+        - in: query
+          name: modelName
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+        - in: query
+          name: endDate
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Paginated AI logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AILog"
+        500:
+          description: Failed to fetch AI logs.
+
+  /logs/api/user/export/csv:
+    post:
+      tags: [Logs]
+      summary: Export User Logs to CSV
+      responses:
+        200:
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        500:
+          description: Export User Log CSV Error.
+
+  /logs/api/user/export/pdf:
+    post:
+      tags: [Logs]
+      summary: Export User Logs to PDF
+      responses:
+        200:
+          description: PDF file download
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        500:
+          description: Export User Log PDF Error.
+
+  /logs/api/ai/export/csv:
+    post:
+      tags: [Logs]
+      summary: Export AI Logs to CSV
+      responses:
+        200:
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        500:
+          description: Export AI Log CSV Error.
+
+  /logs/api/ai/export/pdf:
+    post:
+      tags: [Logs]
+      summary: Export AI Logs to PDF
+      responses:
+        200:
+          description: PDF file download
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        500:
+          description: Export AI Log PDF Error.
+
+  # ============================
+  # CONTROL PANEL ROUTER
+  # ============================
+  /api/getParams:
+    get:
+      tags: [ControlPanel]
+      summary: Get scheduler state parameters
+      security: []
+      responses:
+        200:
+          description: Scheduler state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  state:
+                    type: object
+        500:
+          description: Error fetching server state.
+
+  /api/updateParams:
+    post:
+      tags: [ControlPanel]
+      summary: Update scheduler parameters
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        200:
+          description: Updated successfully
+        500:
+          description: Error updating server state.
+
+  /api/graph:
+    post:
+      tags: [ControlPanel]
+      summary: Create a new graph configuration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChartConfig"
+      responses:
+        201:
+          description: Chart created
+        400:
+          description: Title and chartType are required.
+        500:
+          description: Failed to save chart config.
+    put:
+      tags: [ControlPanel]
+      summary: Update an existing graph configuration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    id:
+                      type: string
+                    newTitle:
+                      type: string
+                    newSize:
+                      type: string
+                - $ref: "#/components/schemas/ChartConfig"
+      responses:
+        200:
+          description: Chart updated.
+        404:
+          description: Chart config not found.
+        500:
+          description: Server error while updating chart.
+    delete:
+      tags: [ControlPanel]
+      summary: Delete a graph configuration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+      responses:
+        200:
+          description: Chart deleted
+        404:
+          description: Chart not found.
+        500:
+          description: Server error while deleting chart.
+
+  /api/getChartConfig/{id}:
+    get:
+      tags: [ControlPanel]
+      summary: Get specific chart config
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Chart Config.
+        404:
+          description: Config not found.
+        500:
+          description: Server error while fetching config.
+
+  /api/reorder:
+    post:
+      tags: [ControlPanel]
+      summary: Reorder charts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newOrder:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+      responses:
+        200:
+          description: Order updated
+        500:
+          description: Failed to update order.
+
+  # ============================
+  # REPORT ROUTER
+  # ============================
+  /reports:
+    get:
+      tags: [Reports, "HTML Page"]
+      summary: Reports Page
+      description: Returns the HTML of the Reports Page.
+      responses:
+        "200":
+          description: HTML content for the Reports Page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
+
+  /reports/create:
+    post:
+      tags: [Reports]
+      summary: Generate a PDF Report
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reportTitle:
+                  type: string
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+                modelName:
+                  type: string
+      responses:
+        200:
+          description: PDF Report
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        500:
+          description: Failed to generate report.
+
+  /reports/download-csv:
+    post:
+      tags: [Reports]
+      summary: Download raw logs CSV
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelName:
+                  type: string
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+      responses:
+        200:
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: No logs found for the selected criteria. The date range may be empty.
+        500:
+          description: Failed to generate CSV due to a server error.
+
+  /reports/download-aggregates:
+    post:
+      tags: [Reports]
+      summary: Download aggregated stats CSV
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelName:
+                  type: string
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+      responses:
+        200:
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: No data found to calculate aggregates.
+        500:
+          description: Failed to generate aggregate CSV due to a server error.

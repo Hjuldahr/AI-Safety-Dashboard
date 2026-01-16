@@ -4,12 +4,34 @@ import ChartConfig from '../models/Chart_Config.js';
 import User_Log from '../models/User_Log.js';
 
 const getParams = (req, res) => {
-    res.json({ success: true, state: schedulerState })
+    try {
+        if (schedulerState) {
+            res.json({ success: true, state: schedulerState })
+        }
+        else {
+            throw new Error("Cannot find scheduler state.");
+        }
+    }
+    catch (error) {
+        console.error("Error fetching server state:", error);
+        res.status(500).json({ message: "Error fetching server state." });
+    }
 }
 
 const updateParams = (req, res) => {
-    scheduler.updateSchedulerSettings(req.body);
-    res.json({ success: true, state: req.body });
+    try {
+        if (scheduler) {
+            scheduler.updateSchedulerSettings(req.body);
+            res.json({ success: true, state: req.body });
+        }
+        else {
+            throw new Error("Cannot find scheduler.");
+        }
+    }
+    catch (error) {
+        console.error("Error updating server state:", error);
+        res.status(500).json({ message: "Error updating server state." });
+    }
 };
 
 const saveGraph = async (req, res) => {
@@ -52,7 +74,6 @@ const saveGraph = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to save chart config.',
-            error: error.message
         });
     }
 };
@@ -90,7 +111,7 @@ const updateGraph = async (req, res) => {
 
         itemToUpdate.title = newTitle;
         itemToUpdate.chartSize = newSize;
-        
+
         if (includedValues !== undefined) {
             itemToUpdate.includedValues = includedValues;
         }
@@ -142,7 +163,7 @@ const reorderCharts = async (req, res) => {
         await ChartConfig.bulkWrite(operations);
     } catch (err) {
         console.error('Error updating chart order:', err);
-        res.status(500).json({ error: 'Failed to update order' });
+        res.status(500).json({ error: 'Failed to update order.' });
     }
 };
 
