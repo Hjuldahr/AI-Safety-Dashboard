@@ -1,5 +1,16 @@
 # Features
 
+## Auth
+[] User Roles
+    - Owner
+    - Admin
+    - Viewer
+    - User
+    - Guest
+[] User Management Page
+[] Permissions
+    - Permsissions defined based on the above 5 roles.
+
 
 ## Dashboard
 
@@ -58,6 +69,23 @@
     - As another button on top? in the nav bar on the right?
 
 
+## Testing
+[] Unit Testing
+    [] Controllers
+    [] Routers
+    [] Models
+[] Integration Testing
+
+
+## Documentation
+[] API Specification
+    - Discuss OpenAPI implementation and whether it works.
+[] Overall Architechture
+
+## UI
+[] Darkmode
+[] Consistent Theming
+    - All the pages should use the same theme.
 
 
 
