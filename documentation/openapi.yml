@@ -226,6 +226,7 @@ paths:
   # ============================
   /login:
     get:
+      tags: [Auth, "HTML Page"]
       summary: Login Page
       description: Returns the HTML of the Login Page.
       responses:
@@ -301,6 +302,7 @@ paths:
   # ============================
   /:
     get:
+      tags: [Dashboard, "HTML Page"]
       summary: Main Dashboard homepage
       description: Returns the HTML of the AI Safety Dashboard.
       responses:
@@ -343,6 +345,7 @@ paths:
   # ============================
   /alerts:
     get:
+      tags: [Alerts, "HTML Page"]
       summary: Alerts Page
       description: Returns the HTML of the Alerts Page.
       responses:
@@ -516,6 +519,7 @@ paths:
   # ============================
   /logs:
     get:
+      tags: [Logs, "HTML Page"]
       summary: Logs Page
       description: Returns the HTML of the Logs Page.
       responses:
@@ -813,6 +817,7 @@ paths:
   # ============================
   /reports:
     get:
+      tags: [Reports, "HTML Page"]
       summary: Reports Page
       description: Returns the HTML of the Reports Page.
       responses:
