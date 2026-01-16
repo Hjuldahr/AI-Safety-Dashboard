@@ -4,10 +4,10 @@ info:
   description: API documentation for the AI Safety Dashboard project.
   version: 1.0.0
 servers:
-  - url: https://danielbierman.ca/dashboard
-    description: AI Dashboard - DanielBierman.ca
   - url: http://localhost:2121
     description: AI Dashboard - LocalHost
+  - url: https://danielbierman.ca/dashboard
+    description: AI Dashboard - DanielBierman.ca
 
 components:
   securitySchemes:
@@ -356,8 +356,6 @@ paths:
               schema:
                 type: string
               example: "<html>...</html>"
-
-  /alerts/create:
     post:
       tags: [Alerts]
       summary: Create a new alert definition
@@ -668,8 +666,8 @@ paths:
 
   # ============================
   # CONTROL PANEL ROUTER
-  # ============================
-  /api/getParams:
+  # ============================    
+  /api/params:
     get:
       tags: [ControlPanel]
       summary: Get scheduler state parameters
@@ -688,9 +686,7 @@ paths:
                     type: object
         500:
           description: Error fetching server state.
-
-  /api/updateParams:
-    post:
+    patch:
       tags: [ControlPanel]
       summary: Update scheduler parameters
       requestBody:
@@ -703,7 +699,10 @@ paths:
           description: Updated successfully
         500:
           description: Error updating server state.
-
+          
+  # ============================
+  # DASHBOARD
+  # ============================        
   /api/graph:
     post:
       tags: [ControlPanel]
@@ -820,8 +819,6 @@ paths:
               schema:
                 type: string
               example: "<html>...</html>"
-
-  /reports/create:
     post:
       tags: [Reports]
       summary: Generate a PDF Report
