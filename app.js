@@ -85,10 +85,10 @@ const startServer = async () => {
 
     app.use('/docs', (req, res, next) => {
         // If the request is from /docs redirect to /docs/
-        // console.log("Original URL" + req.originalUrl);
+        console.log("Original URL" + req.originalUrl);
         if (!req.originalUrl.endsWith('/')) {
-            // console.log(`Redirecting to ${publicURL}docs/`);
-            let redirectPath = `docs/`;
+            console.log(`Redirecting to ${publicURL}docs/`);
+            let redirectPath = `${publicURL}docs/`;
             return res.redirect(301, redirectPath);
         }
         // If slash exists, proceed to Swagger
