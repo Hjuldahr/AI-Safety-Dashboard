@@ -6,23 +6,18 @@ export const KNOWN_MODELS = [
 export const TOPIC_HIERARCHY = {
     "Customer Support": [
         "Troubleshooting",
-        "Account Management",
         "Returns & Refunds"
     ],
     "Sales & Inquiry": [
         "Product Info",
         "Pricing & Quotes",
-        "Comparison"
-    ],
-    "General Information": [
-        "Logistics & Shipping",
+        "Comparison",
         "Business Details"
     ],
-    "Unsupported Use": [
-        "Casual Chat",
+    "General Use": [
+        "Conversation",
         "Programming",
         "School Work",
-        "Adversarial"
     ]
 };
 

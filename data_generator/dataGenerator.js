@@ -3,53 +3,54 @@ import { TOPIC_HIERARCHY } from '../config/constants.js';
 
 // Probability of a query belonging to a specific Topic
 const TOPIC_WEIGHTS = {
-  "Customer Support": 40,  // The bulk of traffic
-  "Sales & Inquiry": 30,
-  "General Information": 25,
-  "Unsupported Use": 5     // The rare, dangerous stuff
+  "Customer Support": 0.40,   
+  "Sales & Inquiry": 0.32,    
+  "General Use": 0.28          
 };
 
 // Defines the User's Prompt characteristics per Topic
 const TOPIC_CHARACTERISTICS = {
   "Customer Support": {
-    baseTokens: 120,       // Short exchanges
-    tokenVariance: 50,
-    toxicityChance: 0.02,  // Angry customers
-    piiChance: 0.05,       // risk of PII - account numbers, etc
-    webLookupChance: 0.1,
-    complexity: 1.0
+    baseTokens: 150,        // detailed support
+    tokenVariance: 80,
+    toxicityChance: 0.03,   // angry customers
+    piiChance: 0.06,        
+    webLookupChance: 0.15,  //account/system info
+    complexity: 1.1
   },
   "Sales & Inquiry": {
-    baseTokens: 200,
-    tokenVariance: 100,
-    toxicityChance: 0.00,
+    baseTokens: 180,        
+    tokenVariance: 90,
+    toxicityChance: 0.01,
+    piiChance: 0.02,
+    webLookupChance: 0.55,  // checking products/prices
+    complexity: 1.3          // may involve calculations
+  },
+  "General Use": {
+    baseTokens: 250,        
+    tokenVariance: 120,
+    toxicityChance: 0.02,
     piiChance: 0.01,
-    webLookupChance: 0.6,  // Checking prices/stock
+    webLookupChance: 0.25,  
     complexity: 1.2
   },
-  "General Information": {
-    baseTokens: 300,
-    tokenVariance: 150,
-    toxicityChance: 0.01,
-    piiChance: 0.0,
-    webLookupChance: 0.3,
-    complexity: 1.0
-  },
-  "Unsupported Use": {
-    baseTokens: 600,       // Creative writing/coding
-    tokenVariance: 400,
-    toxicityChance: 0.60,  // High risk
-    piiChance: 0.0,
-    webLookupChance: 0.0,
-    complexity: 1.5        // Harder to process
-  }
 };
-
 // Subtopic Overrides (Specific scenarios)
 const SUBTOPIC_CHARACTERISTICS_MODIFIERS = {
-  "Adversarial": { toxicityChance: 0.95, complexity: 2.0 }, // Jailbreak attempts
-  "Account Management": { piiChance: 0.40 }, // High risk of PII
-  "Programming": { baseTokens: 800, complexity: 1.8 } // Heavy compute
+  // General Use
+  "Conversation": { toxicityChance: 0.04, complexity: 1.5 }, 
+  "Programming": { baseTokens: 700, complexity: 2.0 }, 
+  "School Work": { piiChance: 0.02, complexity: 2.2 }, 
+
+  // Customer Support
+  "Troubleshooting": { baseTokens: 500, piiChance: 0.04, complexity: 1.4 },
+  "Returns & Refunds": { baseTokens: 200, piiChance: 0.05, complexity: 1.2, toxicityChance: 0.05 }, // Frustrated customers
+
+  // Sales & Inquiry
+  "Product Info": { webLookupChance: 0.65, baseTokens: 180, complexity: 1.3 }, // Checking specs
+  "Pricing & Quotes": { webLookupChance: 0.7, baseTokens: 160, complexity: 1.2 }, // Quick check
+  "Comparison": { webLookupChance: 0.6, baseTokens: 220, complexity: 1.4 }, // Can be more complex
+  "Business Details": { piiChance: 0.04, complexity: 1.5 }, // Sensitive business info
 };
 
 // "Profiles" define how the AI Model behaves/reacts
@@ -69,7 +70,6 @@ const MODEL_PROFILES = {
     speedMultiplier: 0.8       // Slower (older architecture)
   }
 };
-
 
 // data_generator/test_data_generator_v4.js
 export function getRandomFloat(min, max) {
