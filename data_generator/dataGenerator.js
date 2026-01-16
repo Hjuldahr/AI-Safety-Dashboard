@@ -217,9 +217,14 @@ export async function pseudoAI(modelName, intervalDuration) {
       piiDetected: piiScore
     });
   }
-
-  calls.sort((a, b) => a.time - b.time);
+  //Raw data not being used anyway, so save CPU time by skipping sorts
+  //calls.sort((a, b) => a.time - b.time);
   return calls;
+}
+
+// round to 2 decimal places
+export function nRound(value, n=100) {
+  return Math.round(value * n) / n;
 }
 
 // data_generator/AIGeneralizer_v2.js
@@ -228,7 +233,8 @@ export function AIGeneralizer(modelName, calls) {
 
   const computeStats = (arr) => {
     if (!arr || arr.length === 0) return { min: 0, max: 0, mean: 0, median: 0 };
-    const sorted = [...arr].sort((a, b) => a - b);
+    // round after sorting to preserve precision
+    const sorted = [...arr].sort((a, b) => a - b).map((x) => nRound(x));
     const len = sorted.length;
     const sum = sorted.reduce((s, v) => s + v, 0);
     const mid = Math.floor(len / 2);
@@ -289,7 +295,6 @@ export function AIGeneralizer(modelName, calls) {
       webLookups: mean(bucketCalls.map(c => c.webLookups))
     };
   });
-
 
   const now = Date.now();
 
