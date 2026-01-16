@@ -11,7 +11,7 @@ import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase, seedCharts } from './config/database.js';
-import { swaggerSpec } from "./config/swaggerConfig.js";
+// import { swaggerSpec } from "./config/swaggerConfig.js";
 import swaggerUi from "swagger-ui-express";
 import YAML from 'yamljs';
 
@@ -26,6 +26,7 @@ const __dirname = path.dirname(__filename);
 export const PROJECT_ROOT = __dirname;
 
 const domain = process.env.DOMAIN || "http://localhost:2121/";
+const publicURL = process.env.PUBLIC_URL || "/";
 const PORT = process.env.PORT || 2121;
 
 
@@ -81,7 +82,7 @@ const startServer = async () => {
     const swaggerDocument = YAML.load(path.join(__dirname, './documentation/openapi.yml'));
 
     // Serve the Swagger API documentation at /docs
-    app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    app.use(`${publicURL}docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
     app.listen(PORT, () => {
         //console.log(`Server running on port ${PORT}`);
