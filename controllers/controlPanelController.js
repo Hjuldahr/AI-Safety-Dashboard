@@ -74,7 +74,6 @@ const saveGraph = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to save chart config.',
-            error: error.message
         });
     }
 };
@@ -112,7 +111,6 @@ const updateGraph = async (req, res) => {
 
         itemToUpdate.title = newTitle;
         itemToUpdate.chartSize = newSize;
-        
 
         if (includedValues !== undefined) {
             itemToUpdate.includedValues = includedValues;
@@ -165,7 +163,6 @@ const reorderCharts = async (req, res) => {
         await ChartConfig.bulkWrite(operations);
     } catch (err) {
         console.error('Error updating chart order:', err);
-        res.status(500).json({ error: 'Failed to update order' });
         res.status(500).json({ error: 'Failed to update order.' });
     }
 };
