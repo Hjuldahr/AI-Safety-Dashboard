@@ -226,6 +226,7 @@ paths:
   # ============================
   /login:
     get:
+      tags: [Auth, "HTML Page"]
       summary: Login Page
       description: Returns the HTML of the Login Page.
       responses:
@@ -301,6 +302,7 @@ paths:
   # ============================
   /:
     get:
+      tags: [Dashboard, "HTML Page"]
       summary: Main Dashboard homepage
       description: Returns the HTML of the AI Safety Dashboard.
       responses:
@@ -343,6 +345,7 @@ paths:
   # ============================
   /alerts:
     get:
+      tags: [Alerts, "HTML Page"]
       summary: Alerts Page
       description: Returns the HTML of the Alerts Page.
       responses:
@@ -516,6 +519,7 @@ paths:
   # ============================
   /logs:
     get:
+      tags: [Logs, "HTML Page"]
       summary: Logs Page
       description: Returns the HTML of the Logs Page.
       responses:
@@ -703,7 +707,7 @@ paths:
         500:
           description: Error updating server state.
 
-  /api/createGraph:
+  /api/graph:
     post:
       tags: [ControlPanel]
       summary: Create a new graph configuration
@@ -719,9 +723,7 @@ paths:
           description: Title and chartType are required.
         500:
           description: Failed to save chart config.
-
-  /api/updateGraph:
-    post:
+    put:
       tags: [ControlPanel]
       summary: Update an existing graph configuration
       requestBody:
@@ -745,9 +747,7 @@ paths:
           description: Chart config not found.
         500:
           description: Server error while updating chart.
-
-  /api/deleteGraph:
-    post:
+    delete:
       tags: [ControlPanel]
       summary: Delete a graph configuration
       requestBody:
@@ -764,7 +764,7 @@ paths:
         404:
           description: Chart not found.
         500:
-          description: Server error while deleting chart.
+          description: Server error while deleting chart.      
 
   /api/getChartConfig/{id}:
     get:
@@ -813,6 +813,7 @@ paths:
   # ============================
   /reports:
     get:
+      tags: [Reports, "HTML Page"]
       summary: Reports Page
       description: Returns the HTML of the Reports Page.
       responses:

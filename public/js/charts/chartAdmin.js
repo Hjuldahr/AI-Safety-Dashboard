@@ -194,8 +194,8 @@
         }
 
         try {
-            const response = await fetch('api/updateGraph', {
-                method: 'POST',
+            const response = await fetch('api/graph', {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id,
@@ -217,13 +217,13 @@
         try {
             const isAdmin = document.querySelector("#isAdmin");
             if (!isAdmin) return;
-            const response = await fetch('api/deleteGraph', {
-                method: 'POST',
+            const response = await fetch('api/graph', {
+                method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id })
             });
             if (!response.ok) throw new Error('Failed to delete graph from server');
-            if (charts[id] instanceof Chart) charts[id].destroy();
+            if (charts[id] instanceof Chart) charts[id].destroy();  
             delete charts[id];
             chartCardElement.remove();
             alert('Chart deleted successfully.')
