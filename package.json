@@ -23,6 +23,9 @@
     "pdfkit": "^0.17.2",
     "puppeteer": "^24.30.0",
     "simple-statistics": "^7.8.8",
-    "url": "^0.11.4"
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "url": "^0.11.4",
+    "yamljs": "^0.3.0"
   }
 }

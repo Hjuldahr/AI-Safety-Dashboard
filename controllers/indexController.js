@@ -53,7 +53,7 @@ const getRecentData = async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching recent data:", error);
-        res.status(500).json({ error: "Failed to fetch recent data" });
+        res.status(500).json({ error: "Failed to fetch recent data." });
     }
 };
 
