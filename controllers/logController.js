@@ -224,7 +224,7 @@ const getFilteredUserLogs = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Failed to fetch user logs' });
+        res.status(500).json({ error: 'Failed to fetch user logs.' });
     }
 };
 
@@ -268,7 +268,7 @@ const getFilteredAILogs = async (req, res) => {
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Failed to fetch AI logs' });
+        res.status(500).json({ error: 'Failed to fetch AI logs.' });
     }
 };
 

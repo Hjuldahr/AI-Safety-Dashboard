@@ -100,7 +100,7 @@ const getAlertHistory = async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching alert history:", error);
-        res.status(500).json({ message: 'Error fetching history' });
+        res.status(500).json({ message: 'Error fetching history.' });
     }
 };
 
