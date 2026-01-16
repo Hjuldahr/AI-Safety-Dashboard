@@ -81,14 +81,14 @@ const startServer = async () => {
     const swaggerDocument = YAML.load(path.join(__dirname, './documentation/openapi.yml'));
 
     // Serve the Swagger API documentation at /docs
-    app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    // app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
     app.use('/docs', (req, res, next) => {
         // If the request is from /docs redirect to /docs/
-        console.log("Original URL" + req.originalUrl);
+        // console.log("Original URL" + req.originalUrl);
         if (!req.originalUrl.endsWith('/')) {
-            console.log(`Redirecting to ${publicURL}docs/`);
-            let redirectPath = `${publicURL}docs/`;
+            // console.log(`Redirecting to ${publicURL}docs/`);
+            let redirectPath = `docs/`;
             return res.redirect(301, redirectPath);
         }
         // If slash exists, proceed to Swagger
