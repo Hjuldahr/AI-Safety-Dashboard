@@ -821,8 +821,6 @@ paths:
               schema:
                 type: string
               example: "<html>...</html>"
-
-  /reports/create:
     post:
       tags: [Reports]
       summary: Generate a PDF Report
