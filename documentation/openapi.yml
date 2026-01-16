@@ -4,220 +4,220 @@ info:
   description: API documentation for the AI Safety Dashboard project.
   version: 1.0.0
 servers:
-  - url: http://localhost:2121
-    description: AI Dashboard - LocalHost
   - url: https://danielbierman.ca/dashboard
     description: AI Dashboard - DanielBierman.ca
+  - url: http://localhost:2121
+    description: AI Dashboard - LocalHost
 
 components:
   securitySchemes:
     cookieAuth:
       type: apiKey
       in: cookie
-      name: connect.sid 
+      name: connect.sid
 
   schemas:
-      # --- Mongoose Model Mirrors ---
-      User:
-        type: object
-        properties:
-          _id:
+    # --- Mongoose Model Mirrors ---
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
             type: string
-            description: MongoDB ObjectId
-          username:
-            type: string
-          email:
-            type: string
-            format: email
-          roles:
-            type: array
-            items:
+          default: ["viewer"]
+        alertsLastSeen:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Alert:
+      type: object
+      required:
+        - alertName
+        - alertLevel
+        - alertRule
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        alertName:
+          type: string
+        modelName:
+          type: string
+          nullable: true
+        alertLevel:
+          type: string
+          enum: [Critical, High, Medium, Info]
+        alertRule:
+          type: object
+          description: 'MongoDB style query object (e.g. { "responseTimestamp": { "$gt": 100 } })'
+          additionalProperties: true
+        created:
+          type: string
+          format: date-time
+
+    AlertLog:
+      type: object
+      required:
+        - alert
+        - timestamp
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        alert:
+          type: string
+          description: ObjectId reference to the parent Alert
+        alertSnapshot:
+          type: object
+          description: Snapshot of the alert configuration at the time of triggering
+          properties:
+            _id:
               type: string
-            default: ['viewer']
-          alertsLastSeen:
-            type: string
-            format: date-time
-            nullable: true
-          createdAt:
-            type: string
-            format: date-time
-          updatedAt:
-            type: string
-            format: date-time
-
-      Alert:
-        type: object
-        required:
-          - alertName
-          - alertLevel
-          - alertRule
-        properties:
-          _id:
-            type: string
-            description: MongoDB ObjectId
-          alertName:
-            type: string
-          modelName:
-            type: string
-            nullable: true
-          alertLevel:
-            type: string
-            enum: [Critical, High, Medium, Info]
-          alertRule:
-            type: object
-            description: 'MongoDB style query object (e.g. { "responseTimestamp": { "$gt": 100 } })'
-            additionalProperties: true
-          created:
-            type: string
-            format: date-time
-
-      AlertLog:
-        type: object
-        required:
-          - alert
-          - timestamp
-        properties:
-          _id:
-            type: string
-            description: MongoDB ObjectId
-          alert:
-            type: string
-            description: ObjectId reference to the parent Alert
-          alertSnapshot:
-            type: object
-            description: Snapshot of the alert configuration at the time of triggering
-            properties:
-              _id:
-                type: string
-              alertName:
-                type: string
-              alertLevel:
-                type: string
-              modelName:
-                type: string
-              alertRule:
-                type: object
-              created:
-                type: string
-                format: date-time
-          timestamp:
-            type: string
-            format: date-time
-
-      ChartConfig:
-        type: object
-        required:
-          - title
-          - chartType
-        properties:
-          _id:
-            type: string
-            description: MongoDB ObjectId
-          title:
-            type: string
-          chartType:
-            type: string
-            enum: [line, bar, pie, measure]
-          chartSize:
-            type: string
-            enum: [tiny, regular, large, massive]
-            default: regular
-          order:
-            type: number
-            default: 9999
-          yAxis:
-            type: string
-            nullable: true
-          xAxis:
-            type: string
-            nullable: true
-          category:
-            type: string
-            nullable: true
-          splitBy:
-            type: string
-            nullable: true
-          includedValues:
-            type: array
-            items:
+            alertName:
               type: string
-          createdAt:
-            type: string
-            format: date-time
-          updatedAt:
-            type: string
-            format: date-time
+            alertLevel:
+              type: string
+            modelName:
+              type: string
+            alertRule:
+              type: object
+            created:
+              type: string
+              format: date-time
+        timestamp:
+          type: string
+          format: date-time
 
-      AILog:
-        type: object
-        properties:
-          _id:
+    ChartConfig:
+      type: object
+      required:
+        - title
+        - chartType
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        title:
+          type: string
+        chartType:
+          type: string
+          enum: [line, bar, pie, measure]
+        chartSize:
+          type: string
+          enum: [tiny, regular, large, massive]
+          default: regular
+        order:
+          type: number
+          default: 9999
+        yAxis:
+          type: string
+          nullable: true
+        xAxis:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        splitBy:
+          type: string
+          nullable: true
+        includedValues:
+          type: array
+          items:
             type: string
-            description: MongoDB ObjectId
-          modelName:
-            type: string
-          policyCompliance:
-            type: number
-          responseHelpfulness:
-            type: number
-          responseTime:
-            type: number
-          energyConsumption:
-            type: number
-          tokensUsed:
-            type: number
-          gigaFlopsUsed:
-            type: number
-          webLookups:
-            type: number
-          toxicityScore:
-            type: number
-          piiDetected:
-            type: number
-          breakdown:
-            type: object
-            description: Summaries of Categorical Data
-            additionalProperties: true
-          queryCount:
-            type: number
-            default: 1
-          responseTimestamp:
-            type: number
-            description: Unix timestamp (Number)
-            example: 1709230000000
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
-      UserLog:
-        type: object
-        properties:
-          _id:
-            type: string
-            description: MongoDB ObjectId
-          userID:
-            type: string
-            description: ObjectId reference to User
-          eventType:
-            type: string
-            enum:
-              - Login
-              - Logout
-              - Signup
-              - Alert_Created
-              - Alert_Modified
-              - Alert_Deleted
-              - Report_Created
-              - Report_Deleted
-              - Chart_Created
-              - Chart_Modified
-              - Chart_Deleted
-              - Unspecified_Event
-          details:
-            type: string
-          createdAt:
-            type: string
-            format: date-time
-          updatedAt:
-            type: string
-            format: date-time
+    AILog:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        modelName:
+          type: string
+        policyCompliance:
+          type: number
+        responseHelpfulness:
+          type: number
+        responseTime:
+          type: number
+        energyConsumption:
+          type: number
+        tokensUsed:
+          type: number
+        gigaFlopsUsed:
+          type: number
+        webLookups:
+          type: number
+        toxicityScore:
+          type: number
+        piiDetected:
+          type: number
+        breakdown:
+          type: object
+          description: Summaries of Categorical Data
+          additionalProperties: true
+        queryCount:
+          type: number
+          default: 1
+        responseTimestamp:
+          type: number
+          description: Unix timestamp (Number)
+          example: 1709230000000
+
+    UserLog:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        userID:
+          type: string
+          description: ObjectId reference to User
+        eventType:
+          type: string
+          enum:
+            - Login
+            - Logout
+            - Signup
+            - Alert_Created
+            - Alert_Modified
+            - Alert_Deleted
+            - Report_Created
+            - Report_Deleted
+            - Chart_Created
+            - Chart_Modified
+            - Chart_Deleted
+            - Unspecified_Event
+        details:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
 security:
   - cookieAuth: []
@@ -232,14 +232,13 @@ paths:
       summary: Login Page
       description: Returns the HTML of the Login Page.
       responses:
-        '200':
+        "200":
           description: HTML content for the Login Page.
           content:
             text/html:
               schema:
                 type: string
-              example:
-                "<html>...</html>"
+              example: "<html>...</html>"
 
   /api/login:
     post:
@@ -308,14 +307,13 @@ paths:
       summary: Main Dashboard homepage
       description: Returns the HTML of the AI Safety Dashboard.
       responses:
-        '200':
+        "200":
           description: HTML content for the AI Safety Dashboard.
           content:
             text/html:
               schema:
                 type: string
-              example:
-                "<html>...</html>"
+              example: "<html>...</html>"
 
   /api/recentData:
     get:
@@ -334,11 +332,11 @@ paths:
                     additionalProperties:
                       type: array
                       items:
-                        $ref: '#/components/schemas/AILog'
+                        $ref: "#/components/schemas/AILog"
                   configs:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ChartConfig'
+                      $ref: "#/components/schemas/ChartConfig"
         500:
           description: "Failed to fetch recent data."
 
@@ -351,14 +349,13 @@ paths:
       summary: Alerts Page
       description: Returns the HTML of the Alerts Page.
       responses:
-        '200':
+        "200":
           description: HTML content for the Alerts Page.
           content:
             text/html:
               schema:
                 type: string
-              example:
-                "<html>...</html>"
+              example: "<html>...</html>"
 
   /alerts/create:
     post:
@@ -368,7 +365,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Alert'
+              $ref: "#/components/schemas/Alert"
       responses:
         201:
           description: Alert created
@@ -392,7 +389,7 @@ paths:
                   alerts:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Alert'
+                      $ref: "#/components/schemas/Alert"
         500:
           description: Failed to fetch alerts.
 
@@ -489,7 +486,7 @@ paths:
         400:
           description: Missing alert id.
         404:
-            description: Alert not found.
+          description: Alert not found.
         500:
           description: Failed to remove alert.
     put:
@@ -505,7 +502,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Alert'
+              $ref: "#/components/schemas/Alert"
       responses:
         200:
           description: Alert updated
@@ -525,14 +522,13 @@ paths:
       summary: Logs Page
       description: Returns the HTML of the Logs Page.
       responses:
-        '200':
+        "200":
           description: HTML content for the Logs Page.
           content:
             text/html:
               schema:
                 type: string
-              example:
-                "<html>...</html>"
+              example: "<html>...</html>"
 
   /logs/api/user:
     get:
@@ -570,7 +566,7 @@ paths:
                   logs:
                     type: array
                     items:
-                      $ref: '#/components/schemas/UserLog'
+                      $ref: "#/components/schemas/UserLog"
         500:
           description: Failed to fetch user logs.
 
@@ -606,7 +602,7 @@ paths:
                   logs:
                     type: array
                     items:
-                      $ref: '#/components/schemas/AILog'
+                      $ref: "#/components/schemas/AILog"
         500:
           description: Failed to fetch AI logs.
 
@@ -686,13 +682,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  success: 
+                  success:
                     type: boolean
                   state:
                     type: object
         500:
           description: Error fetching server state.
-
 
   /api/updateParams:
     post:
@@ -717,7 +712,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChartConfig'
+              $ref: "#/components/schemas/ChartConfig"
       responses:
         201:
           description: Chart created
@@ -741,7 +736,7 @@ paths:
                       type: string
                     newSize:
                       type: string
-                - $ref: '#/components/schemas/ChartConfig'
+                - $ref: "#/components/schemas/ChartConfig"
       responses:
         200:
           description: Chart updated.
@@ -766,7 +761,7 @@ paths:
         404:
           description: Chart not found.
         500:
-          description: Server error while deleting chart.      
+          description: Server error while deleting chart.
 
   /api/getChartConfig/{id}:
     get:
@@ -785,7 +780,6 @@ paths:
           description: Config not found.
         500:
           description: Server error while fetching config.
-
 
   /api/reorder:
     post:
@@ -819,14 +813,13 @@ paths:
       summary: Reports Page
       description: Returns the HTML of the Reports Page.
       responses:
-        '200':
+        "200":
           description: HTML content for the Reports Page.
           content:
             text/html:
               schema:
                 type: string
-              example:
-                "<html>...</html>"
+              example: "<html>...</html>"
 
   /reports/create:
     post:
@@ -885,7 +878,6 @@ paths:
           description: No logs found for the selected criteria. The date range may be empty.
         500:
           description: Failed to generate CSV due to a server error.
-
 
   /reports/download-aggregates:
     post:
