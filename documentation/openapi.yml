@@ -668,8 +668,8 @@ paths:
 
   # ============================
   # CONTROL PANEL ROUTER
-  # ============================
-  /api/getParams:
+  # ============================    
+  /api/params:
     get:
       tags: [ControlPanel]
       summary: Get scheduler state parameters
@@ -688,9 +688,7 @@ paths:
                     type: object
         500:
           description: Error fetching server state.
-
-  /api/updateParams:
-    post:
+    patch:
       tags: [ControlPanel]
       summary: Update scheduler parameters
       requestBody:
@@ -703,7 +701,10 @@ paths:
           description: Updated successfully
         500:
           description: Error updating server state.
-
+          
+  # ============================
+  # DASHBOARD
+  # ============================        
   /api/graph:
     post:
       tags: [ControlPanel]

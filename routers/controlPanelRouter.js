@@ -4,9 +4,9 @@ import { isAuthenticated } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get("/api/getParams", controller.getParams)
-
-router.post('/api/updateParams', isAuthenticated, controller.updateParams);
+// Control Panel Parameters (Scheduler Settings)
+router.get("/api/params", controller.getParams)
+router.patch('/api/params', isAuthenticated, controller.updateParams);
 
 // Graph CRUD
 router.post("/api/graph", isAuthenticated, controller.saveGraph);
