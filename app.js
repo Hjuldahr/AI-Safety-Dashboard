@@ -78,11 +78,20 @@ const startServer = async () => {
     //Mount all of the routes to /
     app.use("/", mainRouter);
 
-    // Swagger documentation
     const swaggerDocument = YAML.load(path.join(__dirname, './documentation/openapi.yml'));
 
     // Serve the Swagger API documentation at /docs
     app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+    app.use('/docs', (req, res, next) => {
+        // If the request is from /docs redirect to /docs/
+        if (!req.originalUrl.endsWith('/')) {
+            let redirectPath = `docs/`;
+            return res.redirect(301, redirectPath);
+        }
+        // If slash exists, proceed to Swagger
+        next();
+    }, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
     app.listen(PORT, () => {
         //console.log(`Server running on port ${PORT}`);
