@@ -27,6 +27,7 @@ const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
             query.createdAt.$lte = endOfDay;
         }
     }
+
     return query;
 };
 
