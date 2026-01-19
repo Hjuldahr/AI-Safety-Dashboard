@@ -1,5 +1,6 @@
 // server_side_events/scheduler.js
-import { pseudoAI, AIGeneralizer } from '../data_generator/dataGenerator.js';
+import { AIGeneralizer } from '../data_source/AIGeneralizer.js';
+import { pseudoAI } from '../data_source/pseudoAI.js';
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
