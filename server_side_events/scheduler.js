@@ -14,7 +14,7 @@ let schedulerInterval = null;
 //One method for both models
 async function generateModelData(modelName) {
     // Generate Raw Logs based on Model Profile
-    const calls = await pseudoAI(modelName, 5); // Default 5 second interval logic
+    const calls = await pseudoAI(modelName, schedulerState.interval / 1000); 
 
     // Aggregate
     const summary = AIGeneralizer(modelName, calls);
