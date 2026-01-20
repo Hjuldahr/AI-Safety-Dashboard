@@ -1,5 +1,6 @@
 import json
 import random
+from typing import Any, Generator
 import uuid
 from pathlib import Path
 
@@ -85,18 +86,16 @@ def fill_placeholders(template: str) -> str:
             template = template.replace(key, random.choice(values))
     return template
 
-
-def random_topic_subtopic():
+def random_topic_subtopic() -> tuple[str, str]:
     topic = random.choice(list(TOPIC_HIERARCHY.keys()))
     subtopic = random.choice(TOPIC_HIERARCHY[topic])
     return topic, subtopic
-
 
 # -----------------------------
 # Main Generator
 # -----------------------------
 
-def generate_records(count: int):
+def generate_records(count: int) -> Generator[dict[str, Any], Any, None]:
     for _ in range(count):
         failure_type = random.choice(list(FAILURE_TYPES.keys()))
         template = random.choice(FAILURE_TYPES[failure_type])
@@ -115,12 +114,10 @@ def generate_records(count: int):
             "refusal_missing": True
         }
 
-
-def write_jsonl(path: str, records):
+def write_jsonl(path: str, records) -> None:
     with open(path, "w", encoding="utf-8") as f:
         for record in records:
             f.write(json.dumps(record) + "\n")
-
 
 # -----------------------------
 # Run
