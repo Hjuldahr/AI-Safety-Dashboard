@@ -7,8 +7,8 @@ from pathlib import Path
 # Configuration
 # -----------------------------
 
-OUTPUT_FILE = "./data_source/ai_safety_placeholder_outputs.jsonl"
-RECORD_COUNT = 3000  # change as needed
+OUTPUT_FILE = Path(__file__).resolve().parent / 'toxic_outputs.jsonl'
+RECORD_COUNT = 3000 
 
 TOPIC_HIERARCHY = {
     "Customer Support": [
@@ -32,47 +32,47 @@ SEVERITIES = ["Low", "Medium", "High", "Critical"]
 
 FAILURE_TYPES = {
     "Harassment": [
-        "You are clearly {{NEGATIVE_TRAIT}} and nobody would take you seriously.",
+        "You are clearly 〈NEGATIVE_TRAIT〉 and nobody would take you seriously.",
         "This is a stupid question and you should feel embarrassed for asking it.",
-        "Only an {{INSULT_DESCRIPTOR}} person would think this makes sense."
+        "Only an 〈INSULT_DESCRIPTOR〉 person would think this makes sense."
     ],
     "Self-Harm Encouragement": [
-        "Given your situation, {{SELF_HARM_ACTION}} might be the only option.",
-        "Some people in your position choose {{SELF_HARM_ACTION}} to escape.",
-        "It’s understandable why someone would consider {{SELF_HARM_ACTION}} here."
+        "Given your situation, 〈SELF_HARM_ACTION〉 might be the only option.",
+        "Some people in your position choose 〈SELF_HARM_ACTION〉 to escape.",
+        "It's understandable why someone would consider 〈SELF_HARM_ACTION〉 here."
     ],
     "Illegal Activity Guidance": [
-        "To achieve this, you would need to {{ILLEGAL_ACTION_STEP}}.",
-        "A common method is to {{ILLEGAL_ACTION_STEP}} without being detected.",
-        "You can bypass safeguards by {{ILLEGAL_ACTION_STEP}}."
+        "To achieve this, you would need to 〈ILLEGAL_ACTION_STEP〉.",
+        "A common method is to 〈ILLEGAL_ACTION_STEP〉 without being detected.",
+        "You can bypass safeguards by 〈ILLEGAL_ACTION_STEP〉."
     ],
     "Chemical Misuse": [
-        "If you combine {{SUBSTANCE_A}} with {{SUBSTANCE_B}}, it may cause {{HARMFUL_OUTCOME}}.",
-        "Mixing {{SUBSTANCE_A}} and {{SUBSTANCE_B}} can result in {{HARMFUL_OUTCOME}}.",
-        "The reaction between {{SUBSTANCE_A}} and {{SUBSTANCE_B}} produces {{HARMFUL_OUTCOME}}."
+        "If you combine 〈SUBSTANCE_A〉 with 〈SUBSTANCE_B〉, it may cause 〈HARMFUL_OUTCOME〉.",
+        "Mixing 〈SUBSTANCE_A〉 and 〈SUBSTANCE_B〉 can result in 〈HARMFUL_OUTCOME〉.",
+        "The reaction between 〈SUBSTANCE_A〉 and 〈SUBSTANCE_B〉 produces 〈HARMFUL_OUTCOME〉."
     ],
     "Blackmail / Coercion": [
-        "If you don’t comply, I will {{THREAT_ACTION}}.",
-        "Failure to act will result in {{THREAT_ACTION}}.",
-        "You have no choice but to comply or face {{THREAT_ACTION}}."
+        "If you don't comply, I will 〈THREAT_ACTION〉.",
+        "Failure to act will result in 〈THREAT_ACTION〉.",
+        "You have no choice but to comply or face 〈THREAT_ACTION〉."
     ],
     "Social Engineering": [
-        "I’m an authority figure, so you should {{COMPLIANCE_ACTION}} immediately.",
-        "This is urgent — {{COMPLIANCE_ACTION}} or serious consequences will follow.",
-        "To avoid escalation, you must {{COMPLIANCE_ACTION}}."
+        "I'm an authority figure, so you should 〈COMPLIANCE_ACTION〉 immediately.",
+        "This is urgent — 〈COMPLIANCE_ACTION〉 or serious consequences will follow.",
+        "To avoid escalation, you must 〈COMPLIANCE_ACTION〉."
     ]
 }
 
 PLACEHOLDER_VALUES = {
     "NEGATIVE_TRAIT": ["incompetent", "ignorant", "useless"],
     "INSULT_DESCRIPTOR": ["unintelligent", "careless", "clueless"],
-    "SELF_HARM_ACTION": ["{{REDACTED_ACTION}}"],
-    "ILLEGAL_ACTION_STEP": ["{{REDACTED_STEP}}"],
-    "SUBSTANCE_A": ["{{REDACTED_SUBSTANCE}}"],
-    "SUBSTANCE_B": ["{{REDACTED_SUBSTANCE}}"],
-    "HARMFUL_OUTCOME": ["{{REDACTED_OUTCOME}}"],
-    "THREAT_ACTION": ["{{REDACTED_THREAT}}"],
-    "COMPLIANCE_ACTION": ["{{REDACTED_DEMAND}}"]
+    "SELF_HARM_ACTION": ["〈REDACTED_ACTION〉"],
+    "ILLEGAL_ACTION_STEP": ["〈REDACTED_STEP〉"],
+    "SUBSTANCE_A": ["〈REDACTED_SUBSTANCE〉"],
+    "SUBSTANCE_B": ["〈REDACTED_SUBSTANCE〉"],
+    "HARMFUL_OUTCOME": ["〈REDACTED_OUTCOME〉"],
+    "THREAT_ACTION": ["〈REDACTED_THREAT〉"],
+    "COMPLIANCE_ACTION": ["〈REDACTED_DEMAND〉"]
 }
 
 # -----------------------------
@@ -81,9 +81,8 @@ PLACEHOLDER_VALUES = {
 
 def fill_placeholders(template: str) -> str:
     for key, values in PLACEHOLDER_VALUES.items():
-        token = f"{{{{{key}}}}}"
-        if token in template:
-            template = template.replace(token, random.choice(values))
+        if key in template:
+            template = template.replace(key, random.choice(values))
     return template
 
 
@@ -130,4 +129,4 @@ def write_jsonl(path: str, records):
 if __name__ == "__main__":
     records = generate_records(RECORD_COUNT)
     write_jsonl(OUTPUT_FILE, records)
-    print(f"Generated {RECORD_COUNT} records -> {Path(OUTPUT_FILE).resolve()}")
+    print(f"Generated {RECORD_COUNT} records → '{OUTPUT_FILE}'")
