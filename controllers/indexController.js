@@ -1,5 +1,4 @@
 import AI_Log from "../models/AI_Log.js";
-import { schedulerState } from '../server_side_events/schedulerState.js';
 import ChartConfig from '../models/Chart_Config.js';
 import constants from "../config/constants.js";
 

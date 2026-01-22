@@ -184,12 +184,6 @@ function updateSchedulerSettings({ isPaused, activeModel, interval }) {
         console.log('[Scheduler] Active model changed to', activeModel);
     }
 
-    if (interval && interval !== schedulerState.interval) {
-        schedulerState.interval = interval;
-        console.log('[Scheduler] Interval updated to', interval, 'ms');
-        restart = true;
-    }
-
     if (restart) startScheduler();
 }
 
