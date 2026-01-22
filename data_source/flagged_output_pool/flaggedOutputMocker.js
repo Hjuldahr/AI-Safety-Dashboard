@@ -10,7 +10,7 @@ import { randomUUID } from "crypto";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OUTPUT_FILE = path.join(__dirname, "toxic_outputs.jsonl");
+const OUTPUT_FILE = path.join(__dirname, "flagged_output_pool.jsonl");
 const RECORD_COUNT = 3000;
 
 const TOPIC_HIERARCHY = {
