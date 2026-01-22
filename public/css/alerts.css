@@ -62,9 +62,9 @@ body {
     .live-alerts-panel {
         flex: 1;
     }
-    .alert-log-panel {
-        flex: 3;
-    }
+        .alert-log-panel {
+            flex: 3;
+        }
 }
 
 
@@ -110,6 +110,49 @@ body {
         grid-row: 1 / 2;
         justify-self: start;
         align-self: end;
+    }
+
+    /* Place tags and rule builder below the model row */
+    .tags-group {
+        grid-column: 1 / -1;
+        grid-row: 2 / 3;
+    }
+
+    .rule-group {
+        grid-column: 1 / -1;
+        grid-row: 3 / 4;
+    }
+
+    /* Dual-list custom box and item styling */
+    .dual-list-box {
+        min-height: 120px;
+        max-height: 220px;
+        overflow: auto;
+        border: 1px solid var(--border-color);
+        padding: 8px;
+        border-radius: 6px;
+        background: #fff;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-content: flex-start;
+    }
+
+    .dual-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.06) inset;
+    }
+
+    .dual-item.selected {
+        outline: 2px solid rgba(0,0,0,0.15);
+        transform: translateY(-1px);
     }
 }
 

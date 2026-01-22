@@ -582,7 +582,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <div style="display:flex; gap:0.5rem; align-items:center;">
                   <div style="flex:1;">
                     <div class="dual-list-label">Available</div>
-                    <select id="modal-tag-left" multiple size="8" style="width:100%"></select>
+                                        <div id="modal-tag-left" class="dual-list-box" style="width:100%"></div>
                   </div>
                   <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
                     <button id="modal-move-selected-right" class="btn btn-secondary">▶</button>
@@ -592,7 +592,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                   </div>
                   <div style="flex:1;">
                     <div class="dual-list-label">Selected</div>
-                    <select id="modal-tag-right" multiple size="8" style="width:100%"></select>
+                                        <div id="modal-tag-right" class="dual-list-box" style="width:100%"></div>
                   </div>
                 </div>
                 <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
@@ -614,25 +614,33 @@ document.addEventListener('DOMContentLoaded', async function () {
             const mConfirm = modal.querySelector('#modal-confirm');
 
             function renderModalLists() {
+                left.innerHTML = '';
+                right.innerHTML = '';
                 const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-                const leftOpts = ordered.filter(t => !initialSelected.includes(t._id));
-                left.innerHTML = leftOpts.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
-                // right should reflect current selected array
-                right.innerHTML = initialSelected.map(id => { const t = tagsCache[id]; return `<option value="${id}">${t ? t.name : id}</option>`; }).join('');
+                ordered.forEach(t => {
+                    const pill = createTagPill(t);
+                    // toggle selection if currently in initialSelected
+                    if (initialSelected.includes(t._id)) {
+                        pill.classList.add('selected');
+                        right.appendChild(pill);
+                    } else {
+                        left.appendChild(pill);
+                    }
+                });
             }
 
             mMoveSelR.addEventListener('click', () => {
-                const toMove = Array.from(left.selectedOptions).map(o=>o.value);
+                const toMove = Array.from(left.querySelectorAll('.dual-item.selected')).map(el=>el.dataset.id);
                 toMove.forEach(id => { if (!initialSelected.includes(id)) initialSelected.push(id); });
                 renderModalLists();
             });
             mMoveAllR.addEventListener('click', () => {
-                const all = Array.from(left.options).map(o=>o.value);
+                const all = Array.from(left.querySelectorAll('.dual-item')).map(el=>el.dataset.id);
                 all.forEach(id => { if (!initialSelected.includes(id)) initialSelected.push(id); });
                 renderModalLists();
             });
             mMoveSelL.addEventListener('click', () => {
-                const toMove = Array.from(right.selectedOptions).map(o=>o.value);
+                const toMove = Array.from(right.querySelectorAll('.dual-item.selected')).map(el=>el.dataset.id);
                 toMove.forEach(id => { const idx = initialSelected.indexOf(id); if (idx>=0) initialSelected.splice(idx,1); });
                 renderModalLists();
             });
@@ -766,19 +774,35 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // Dual-list tag selector handlers
+    function createTagPill(tag) {
+        const span = document.createElement('span');
+        span.className = 'dual-item';
+        span.dataset.id = tag._id;
+        span.textContent = tag.name || '';
+        span.style.background = tag.color || '#888888';
+        span.tabIndex = 0;
+        span.addEventListener('click', (e) => {
+            span.classList.toggle('selected');
+        });
+        span.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); span.classList.toggle('selected'); }
+        });
+        return span;
+    }
+
     function renderDualLists() {
         const left = document.getElementById('tag-dual-left');
         const right = document.getElementById('tag-dual-right');
         if (!left || !right) return;
+        left.innerHTML = '';
+        right.innerHTML = '';
         const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-        // left = available (not selected)
-        const leftOpts = ordered.filter(t => !selectedTags.includes(t._id));
-        left.innerHTML = leftOpts.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
-        // right = selected
-        right.innerHTML = selectedTags.map(id => {
-            const t = tagsCache[id];
-            return `<option value="${id}">${t ? t.name : id}</option>`;
-        }).join('');
+        const selSet = new Set(selectedTags);
+        ordered.forEach(t => {
+            const pill = createTagPill(t);
+            if (selSet.has(t._id)) right.appendChild(pill);
+            else left.appendChild(pill);
+        });
     }
 
     const moveSelectedRightBtn = document.getElementById('move-selected-right');
@@ -789,21 +813,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (moveSelectedRightBtn) moveSelectedRightBtn.addEventListener('click', (e) => {
         const left = document.getElementById('tag-dual-left');
         if (!left) return;
-        const toMove = Array.from(left.selectedOptions).map(o=>o.value);
+        const toMove = Array.from(left.querySelectorAll('.dual-item.selected')).map(el => el.dataset.id);
         toMove.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
         renderDualLists(); renderSelectedTags();
     });
     if (moveAllRightBtn) moveAllRightBtn.addEventListener('click', (e) => {
         const left = document.getElementById('tag-dual-left');
         if (!left) return;
-        const all = Array.from(left.options).map(o=>o.value);
+        const all = Array.from(left.querySelectorAll('.dual-item')).map(el => el.dataset.id);
         all.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
         renderDualLists(); renderSelectedTags();
     });
     if (moveSelectedLeftBtn) moveSelectedLeftBtn.addEventListener('click', (e) => {
         const right = document.getElementById('tag-dual-right');
         if (!right) return;
-        const toMove = Array.from(right.selectedOptions).map(o=>o.value);
+        const toMove = Array.from(right.querySelectorAll('.dual-item.selected')).map(el => el.dataset.id);
         toMove.forEach(id => { const idx = selectedTags.indexOf(id); if (idx>=0) selectedTags.splice(idx,1); });
         renderDualLists(); renderSelectedTags();
     });
