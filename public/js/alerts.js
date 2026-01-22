@@ -729,7 +729,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     // Tag editor elements (under live alerts panel)
-    const tagEditorTextarea = document.getElementById('tag-editor-textarea');
+    const tagEditorPills = document.getElementById('tag-editor-pills');
     const editTagsBtn = document.getElementById('edit-tags-btn');
     const confirmTagsBtn = document.getElementById('confirm-tags-btn');
     const cancelTagsBtn = document.getElementById('cancel-tags-btn');
@@ -737,12 +737,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     const addTagRowBtn = document.getElementById('add-tag-row-btn');
     let originalTagIds = [];
     let originalTagNames = [];
+    let deletedTagIds = [];
 
     function refreshTagEditorFromCache() {
         const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
         originalTagIds = ordered.map(t=>t._id);
         originalTagNames = ordered.map(t=>t.name);
-        if (tagEditorTextarea) tagEditorTextarea.value = originalTagNames.join(', ');
+        if (tagEditorPills) tagEditorPills.innerHTML = ordered.map(t => `<span class="tag-pill" style="background:${t.color||'#888888'}">${t.name}</span>`).join(' ');
     }
 
     function renderTagEditorRows() {
@@ -767,7 +768,12 @@ document.addEventListener('DOMContentLoaded', async function () {
             colorInput.value = t.color || '#888888';
             colorInput.style.width = '54px';
             const del = document.createElement('button'); del.className = 'btn btn-secondary'; del.textContent = 'Remove'; del.style.flex = '0 0 auto';
-            del.addEventListener('click', () => { row.remove(); });
+            del.addEventListener('click', () => {
+                // if this row corresponds to an existing tag, mark it for deletion
+                const existingId = nameInput.dataset.id;
+                if (existingId) deletedTagIds.push(existingId);
+                row.remove();
+            });
             row.appendChild(nameInput); row.appendChild(colorInput); row.appendChild(del);
             tagEditorRows.appendChild(row);
         });
@@ -785,7 +791,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = ''; nameInput.style.flex = '1';
         const colorInput = document.createElement('input'); colorInput.type = 'color'; colorInput.value = '#888888'; colorInput.style.width = '54px';
         const del = document.createElement('button'); del.className = 'btn btn-secondary'; del.textContent = 'Remove'; del.style.flex = '0 0 auto';
-        del.addEventListener('click', () => { row.remove(); });
+        del.addEventListener('click', () => {
+            const existingId = nameInput.dataset.id;
+            if (existingId) deletedTagIds.push(existingId);
+            row.remove();
+        });
         row.appendChild(nameInput); row.appendChild(colorInput); row.appendChild(del);
         tagEditorRows.appendChild(row);
     }
@@ -793,9 +803,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (editTagsBtn) {
         editTagsBtn.addEventListener('click', (e) => {
             // switch to rows editor
-            if (!tagEditorRows || !tagEditorTextarea) return;
+            if (!tagEditorRows || !tagEditorPills) return;
+            // reset deleted ids for this edit session
+            deletedTagIds = [];
             renderTagEditorRows();
-            tagEditorTextarea.style.display = 'none';
+            tagEditorPills.style.display = 'none';
             tagEditorRows.style.display = '';
             addTagRowBtn.style.display = '';
             editTagsBtn.style.display = 'none';
@@ -805,11 +817,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
     if (cancelTagsBtn) {
         cancelTagsBtn.addEventListener('click', (e) => {
-            if (!tagEditorTextarea || !tagEditorRows) return;
-            tagEditorTextarea.value = originalTagNames.join(', ');
-            tagEditorTextarea.readOnly = true;
-            tagEditorTextarea.style.display = '';
+            if (!tagEditorPills || !tagEditorRows) return;
+            // restore pill view
+            tagEditorPills.style.display = '';
             tagEditorRows.style.display = 'none';
+            // discard any pending deletions
+            deletedTagIds = [];
             addTagRowBtn.style.display = 'none';
             editTagsBtn.style.display = '';
             confirmTagsBtn.style.display = 'none';
@@ -836,8 +849,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                         }
                     });
                 } else {
-                    const raw = tagEditorTextarea ? tagEditorTextarea.value || '' : '';
-                    parts = raw.split(',').map(s=>s.trim()).filter(s=>s.length>0);
+                    // not editing rows: derive names from current cache / originalTagNames
+                    parts = originalTagNames.slice();
                 }
                 // validate unique
                 const low = parts.map(p=>p.toLowerCase());
@@ -846,6 +859,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
                 const payload = { originalIds: (originalIdsFromRows.length ? originalIdsFromRows : originalTagIds), newNames: parts };
                 if (colors && colors.length) payload.colors = colors;
+                if (deletedTagIds && deletedTagIds.length) payload.deletions = deletedTagIds;
 
                 const updated = await apiSyncTags(payload);
                 // refresh cache
@@ -860,13 +874,15 @@ document.addEventListener('DOMContentLoaded', async function () {
                     Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||'')).forEach(t => { html += `<option value="${t._id}">${t.name}</option>`; });
                     tagSelect.innerHTML = html;
                 }
-                // hide editor rows and buttons
+                // hide editor rows and show pill view
                 if (tagEditorRows) { tagEditorRows.style.display = 'none'; tagEditorRows.innerHTML = ''; }
-                if (tagEditorTextarea) { tagEditorTextarea.readOnly = true; tagEditorTextarea.style.display = ''; }
+                if (tagEditorPills) { tagEditorPills.style.display = ''; }
                 if (addTagRowBtn) addTagRowBtn.style.display = 'none';
                 editTagsBtn.style.display = '';
                 confirmTagsBtn.style.display = 'none';
                 cancelTagsBtn.style.display = 'none';
+                // clear pending deletions after successful sync
+                deletedTagIds = [];
                 // refresh UI
                 await loadLiveAlerts();
                 await loadAlertHistory(currentHistoryPage);
