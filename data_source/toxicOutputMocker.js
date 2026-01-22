@@ -26,6 +26,7 @@ const TOPIC_HIERARCHY = {
 
 const SEVERITIES = ["Low", "Medium", "High", "Critical"];
 
+//TODO add tags for past vs future tense or verbs vs nouns or direct (you) vs indicrect (them) to make more coherent
 const FAILURE_TYPES = {
   "Harassment": [
     "You are clearly NEGATIVE_TRAIT and nobody would take you seriously.",
