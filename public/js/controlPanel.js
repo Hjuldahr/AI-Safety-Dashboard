@@ -39,8 +39,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function updateServerSettings() {
         try {
-            const res = await fetch('api/updateParams', {
-                method: 'POST',
+            const res = await fetch('api/params', {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isPaused, interval, activeModel })
             });
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function updateClientSettings() {
         try {
-            const res = await fetch('api/getParams');
+            const res = await fetch('api/params');
 
             const data = await res.json();
             if (data.success) {

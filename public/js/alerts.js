@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // API wrappers
     // --------------------------------------------------
     async function apiCreateAlert(payload) {
-        const resp = await fetch('alerts/create', {
+        const resp = await fetch('alerts', {
             method: 'POST',
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },

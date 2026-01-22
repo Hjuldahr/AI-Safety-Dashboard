@@ -12,7 +12,10 @@ let schedulerInterval = null;
 
 // ---------- Model Simulation ----------
 //One method for both models
-function generateModelData(modelName) {
+async function generateModelData(modelName) {
+    // Generate Raw Logs based on Model Profile
+    const calls = await pseudoAI(modelName, schedulerState.interval / 1000); // Use scheduler interval
+
     // Aggregate
     const summary = AIGeneralizer(modelName, schedulerState.interval / 1000);
 

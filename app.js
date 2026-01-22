@@ -78,11 +78,10 @@ const startServer = async () => {
     //Mount all of the routes to /
     app.use("/", mainRouter);
 
-    // Swagger documentation
     const swaggerDocument = YAML.load(path.join(__dirname, './documentation/openapi.yml'));
 
     // Serve the Swagger API documentation at /docs
-    app.use(`${publicURL}docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
     app.listen(PORT, () => {
         //console.log(`Server running on port ${PORT}`);

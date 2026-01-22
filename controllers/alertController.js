@@ -104,7 +104,7 @@ const getAlertHistory = async (req, res) => {
     }
 };
 
-// POST /alerts/create - create a new alert
+// POST /alerts - create a new alert
 const createAlert = async (req, res) => {
     try {
         const { alertName, alertLevel, alertRule, created, modelName } = req.body;
