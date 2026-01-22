@@ -80,22 +80,22 @@ const startServer = async () => {
     // Serve the Swagger API documentation at /docs
     app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-    app.listen(PORT, () => {
-        //console.log(`Server running on port ${PORT}`);
-        console.log(`Server running on http://localhost:${PORT}`);
+    const server = app.listen(PORT, () => {
+        console.log(`Server running on [http://localhost:${PORT}]`);
     });
 
-    // remove if not needed
     const shutdown = async (signal) => {
-        console.log(`\nServer shutting down from ${signal}`);
-
+        console.log(`\nReceived [${signal}] Initiating Shutdown.`);
         try {
-            await mongoose.disconnect();
-            console.log("MongoDB disconnected");
+            server.close(async () => {
+                console.log("HTTP server closed");
+                await mongoose.disconnect();
+                console.log("MongoDB disconnected");
+                process.exit(0);
+            });
         } catch (err) {
-            console.error("MongoDB disconnect error:", err);
-        } finally {
-            process.exit(0);
+            console.error("Shutdown error:", err);
+            process.exit(1);
         }
     };
 
