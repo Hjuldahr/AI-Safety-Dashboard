@@ -42,32 +42,30 @@ async function generateModelData(modelName) {
     };
 }
 
-// ---------- SSE Setup ----------
-function setupSSE(app) {
-    app.get('/events', (req, res) => {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+// Events now have their own router - schedulerRouter
+export const setupSSE = (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
-        const client = {
-            id: nextClientId++,
-            res,
-            userId: req.user ? (req.user._id ? String(req.user._id) : req.user._id) : null,
-            connectedAt: Date.now()
-        };
-        activeClients.push(client);
+    const client = {
+        id: nextClientId++,
+        res,
+        userId: req.user ? (req.user._id ? String(req.user._id) : req.user._id) : null,
+        connectedAt: Date.now()
+    };
+    activeClients.push(client);
 
-        // Heartbeat to keep connection alive
-        const heartbeat = setInterval(() => {
-            res.write(':\n\n');
-        }, HEARTBEAT);
+    // Heartbeat to keep connection alive
+    const heartbeat = setInterval(() => {
+        res.write(':\n\n');
+    }, HEARTBEAT);
 
-        req.on('close', () => {
-            clearInterval(heartbeat);
-            activeClients = activeClients.filter(c => c.res !== res);
-        });
+    req.on('close', () => {
+        clearInterval(heartbeat);
+        activeClients = activeClients.filter(c => c.res !== res);
     });
-}
+};
 
 // ---------- Client Maintenance ----------
 function pruneDeadClients() {
