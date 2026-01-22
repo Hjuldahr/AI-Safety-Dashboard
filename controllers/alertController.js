@@ -352,6 +352,29 @@ const removeTagFromAlertLog = async (req, res) => {
     }
 };
 
+// PUT /alerts/api/logs/:id/tags - replace the tags array for a specific alert log
+const setTagsForAlertLog = async (req, res) => {
+    try {
+        const logId = req.params.id;
+        const { tags } = req.body;
+        if (!logId) return res.status(400).json({ message: 'Missing log id.' });
+        if (!Array.isArray(tags)) return res.status(400).json({ message: 'tags must be an array' });
+
+        const AlertLogModel = await import('../models/alert_log.js');
+        const AlertLog = AlertLogModel.default;
+
+        const existing = await AlertLog.findById(logId);
+        if (!existing) return res.status(404).json({ message: 'Alert log not found.' });
+
+        existing.tags = tags.filter(t => !!t);
+        await existing.save();
+        return res.status(200).json({ message: 'Tags updated on alert log.', tags: existing.tags });
+    } catch (error) {
+        console.error('Error setting tags for alert log:', error);
+        return res.status(500).json({ message: 'Failed to set tags for alert log.' });
+    }
+};
+
 export default { 
     getPage, 
     createAlert, 
@@ -362,5 +385,6 @@ export default {
     getUnreadCount, 
     markAlertsRead,
     addTagToAlertLog,
-    removeTagFromAlertLog
+    removeTagFromAlertLog,
+    setTagsForAlertLog
 };

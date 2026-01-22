@@ -22,5 +22,7 @@ router.put("/:id", isAuthenticated, controller.updateAlertById);
 router.post('/api/logs/:id/tags', isAuthenticated, controller.addTagToAlertLog);
 // Remove a tag from a specific alert log
 router.delete('/api/logs/:id/tags/:tagId', isAuthenticated, controller.removeTagFromAlertLog);
+// Replace tags on a specific alert log
+router.put('/api/logs/:id/tags', isAuthenticated, controller.setTagsForAlertLog);
 
 export default router;

@@ -416,16 +416,15 @@ document.addEventListener('DOMContentLoaded', async function () {
             const level = log.level || 'Info';
             
             const tagsHtml = (log.tags || []).map(t => `
-                <span class="tag-pill" style="background:${t.color || '#888888'}">${t.name || ''}
-                    <button class="remove-log-tag" data-log-id="${log._id}" data-tag-id="${t._id}" title="Remove tag">×</button>
-                </span>`).join(' ');
+                <span class="tag-pill" style="background:${t.color || '#888888'}">${t.name || ''}</span>`).join(' ');
+                const tagIds = (log.tags || []).map(t=>t._id).join(',');
                 newRow.innerHTML = `
                 <td><span class="level-tag ${level.toLowerCase()}">${level}</span></td>
                 <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
                 <td>${log.alertName || ''}</td>
                 <td class="model-cell">${log.modelName || '-'}</td>
                 <td class="details-cell">${log.humanRule || ''}</td>
-                    <td class="tags-cell">${tagsHtml} <button class="add-log-tag" data-id="${log._id}">+</button></td>
+                    <td class="tags-cell">${tagsHtml} <button class="edit-log-tags btn btn-secondary" data-id="${log._id}" data-tags="${tagIds}">Edit</button></td>
             `;
             alertLogBody.appendChild(newRow);
         });
@@ -561,71 +560,102 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Handle tagging a specific alert log (delegated)
     alertLogBody.addEventListener('click', async function (e) {
-        if (e.target && e.target.classList.contains('add-log-tag')) {
-            const id = e.target.dataset.id;
-            if (!id) return;
-            // create inline select popup next to the button
-            // remove any existing popup
-            const existingPopup = document.getElementById('log-tag-popup');
-            if (existingPopup) existingPopup.remove();
-            const popup = document.createElement('div');
-            popup.id = 'log-tag-popup';
-            popup.style.position = 'absolute';
-            popup.style.background = '#fff';
-            popup.style.border = '1px solid #ccc';
-            popup.style.padding = '8px';
-            popup.style.zIndex = 1000;
-            const select = document.createElement('select');
-            select.style.minWidth = '160px';
-            const defaultOpt = document.createElement('option');
-            defaultOpt.value = '';
-            defaultOpt.textContent = '-- select tag --';
-            select.appendChild(defaultOpt);
-            Object.values(tagsCache).forEach(t => {
-                const o = document.createElement('option'); o.value = t._id; o.textContent = t.name; select.appendChild(o);
-            });
-            const addBtn = document.createElement('button'); addBtn.className = 'btn btn-primary'; addBtn.textContent = 'Add';
-            const cancelBtn = document.createElement('button'); cancelBtn.className = 'btn btn-secondary'; cancelBtn.textContent = 'Cancel';
-            cancelBtn.style.marginLeft = '6px';
-            popup.appendChild(select); popup.appendChild(addBtn); popup.appendChild(cancelBtn);
-            document.body.appendChild(popup);
-            // position near target
-            const rect = e.target.getBoundingClientRect();
-            popup.style.left = (rect.left + window.scrollX) + 'px';
-            popup.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+        
+        // Edit tags for a specific alert log (open modal dual-list)
+        if (e.target && e.target.classList.contains('edit-log-tags')) {
+            const logId = e.target.dataset.id;
+            const tagsCsv = e.target.dataset.tags || '';
+            const initialSelected = tagsCsv ? tagsCsv.split(',').filter(Boolean) : [];
 
-            addBtn.addEventListener('click', async () => {
-                const tagId = select.value; if (!tagId) return alert('Select a tag');
+            // create modal overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.style.position = 'fixed'; overlay.style.left = 0; overlay.style.top = 0; overlay.style.right = 0; overlay.style.bottom = 0;
+            overlay.style.background = 'rgba(0,0,0,0.4)'; overlay.style.display = 'flex'; overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center';
+
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.background = '#fff'; modal.style.padding = '16px'; modal.style.borderRadius = '6px'; modal.style.width = '640px'; modal.style.maxWidth = '95%';
+
+            modal.innerHTML = `
+                <h3>Edit Tags</h3>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                  <div style="flex:1;">
+                    <div class="dual-list-label">Available</div>
+                    <select id="modal-tag-left" multiple size="8" style="width:100%"></select>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+                    <button id="modal-move-selected-right" class="btn btn-secondary">▶</button>
+                    <button id="modal-move-all-right" class="btn btn-secondary">≫</button>
+                    <button id="modal-move-selected-left" class="btn btn-secondary">◀</button>
+                    <button id="modal-move-all-left" class="btn btn-secondary">≪</button>
+                  </div>
+                  <div style="flex:1;">
+                    <div class="dual-list-label">Selected</div>
+                    <select id="modal-tag-right" multiple size="8" style="width:100%"></select>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                  <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
+                  <button id="modal-confirm" class="btn btn-primary">Confirm</button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            const left = modal.querySelector('#modal-tag-left');
+            const right = modal.querySelector('#modal-tag-right');
+            const mMoveSelR = modal.querySelector('#modal-move-selected-right');
+            const mMoveAllR = modal.querySelector('#modal-move-all-right');
+            const mMoveSelL = modal.querySelector('#modal-move-selected-left');
+            const mMoveAllL = modal.querySelector('#modal-move-all-left');
+            const mCancel = modal.querySelector('#modal-cancel');
+            const mConfirm = modal.querySelector('#modal-confirm');
+
+            function renderModalLists() {
+                const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+                const leftOpts = ordered.filter(t => !initialSelected.includes(t._id));
+                left.innerHTML = leftOpts.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+                // right should reflect current selected array
+                right.innerHTML = initialSelected.map(id => { const t = tagsCache[id]; return `<option value="${id}">${t ? t.name : id}</option>`; }).join('');
+            }
+
+            mMoveSelR.addEventListener('click', () => {
+                const toMove = Array.from(left.selectedOptions).map(o=>o.value);
+                toMove.forEach(id => { if (!initialSelected.includes(id)) initialSelected.push(id); });
+                renderModalLists();
+            });
+            mMoveAllR.addEventListener('click', () => {
+                const all = Array.from(left.options).map(o=>o.value);
+                all.forEach(id => { if (!initialSelected.includes(id)) initialSelected.push(id); });
+                renderModalLists();
+            });
+            mMoveSelL.addEventListener('click', () => {
+                const toMove = Array.from(right.selectedOptions).map(o=>o.value);
+                toMove.forEach(id => { const idx = initialSelected.indexOf(id); if (idx>=0) initialSelected.splice(idx,1); });
+                renderModalLists();
+            });
+            mMoveAllL.addEventListener('click', () => { initialSelected.length = 0; renderModalLists(); });
+
+            mCancel.addEventListener('click', () => overlay.remove());
+            mConfirm.addEventListener('click', async () => {
                 try {
-                    const resp = await fetch(`alerts/api/logs/${encodeURIComponent(id)}/tags`, {
-                        method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tagId })
+                    const resp = await fetch(`alerts/api/logs/${encodeURIComponent(logId)}/tags`, {
+                        method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type':'application/json' },
+                        body: JSON.stringify({ tags: initialSelected })
                     });
                     const data = await resp.json().catch(()=>({}));
-                    if (!resp.ok) throw new Error(data.message || 'Failed');
+                    if (!resp.ok) throw new Error(data.message || 'Failed to update tags');
+                    overlay.remove();
                     await loadAlertHistory(currentHistoryPage);
                 } catch (err) {
-                    console.error('Failed to add tag to log:', err);
-                    alert('Failed to add tag: ' + err.message);
-                } finally { popup.remove(); }
+                    console.error('Failed to set tags on log:', err);
+                    alert('Failed to update tags: ' + err.message);
+                }
             });
-            cancelBtn.addEventListener('click', () => popup.remove());
-        }
-        // Remove tag from a specific alert log
-        if (e.target && e.target.classList.contains('remove-log-tag')) {
-            const logId = e.target.dataset.logId;
-            const tagId = e.target.dataset.tagId;
-            if (!logId || !tagId) return;
-            try {
-                const resp = await fetch(`alerts/api/logs/${encodeURIComponent(logId)}/tags/${encodeURIComponent(tagId)}`, {
-                    method: 'DELETE', credentials: 'same-origin'
-                });
-                const data = await resp.json().catch(()=>({}));
-                if (!resp.ok) throw new Error(data.message || 'Failed to remove tag');
-                await loadAlertHistory(currentHistoryPage);
-            } catch (err) {
-                console.error('Failed to remove tag from log:', err);
-                alert('Failed to remove tag: ' + err.message);
-            }
+
+            renderModalLists();
         }
     });
 
