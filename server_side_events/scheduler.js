@@ -11,7 +11,7 @@ let nextClientId = 1;
 let schedulerInterval = null;
 
 const SCHEDULER_INTERVAL = 1000; // 1 second
-const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 3; //Max speed which alerts can be triggered
+const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; //Max speed which alerts can be triggered
 
 // This determines which models the evaluator should run on / should be visible on the frontend.
 // This list checks for js files with the same name in the ai_models folder.
@@ -148,7 +148,7 @@ async function schedulerTick() {
         // Keep only last MAX_RECORDS
         let count = await AI_Log.countDocuments();
         while (count > MAX_RECORDS) {
-            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
+            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 }); //ToDo: Refactor this to avoid sorting entire DB
             count--;
         }
 
