@@ -1,4 +1,3 @@
-let interval = 5 * 1000;
 let activeModel = "GoodModel";
 let isPaused = false;
 
@@ -13,8 +12,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const toggleButton = document.querySelector("#toggle-button"); //<button>
     const refreshButton = document.querySelector("#refresh-button"); //<button>
     const modelSelect = document.querySelector("#model-select"); //<select>
-    const intervalSelect = document.querySelector("#interval-select"); //<select>
-
     // toggleButton.innerHTML = pauseText;
     // toggleButton.style.backgroundColor = pauseColour;
 
@@ -24,11 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const toggleButton = document.querySelector("#toggle-button");
         if (toggleButton) {
             toggleButton.style.display = 'none';
-        }
-
-        const intervalSelect = document.querySelector("#interval-select");
-        if (intervalSelect) {
-            intervalSelect.style.display = 'none';
         }
 
         const addChartBtn = document.getElementById("add_new_chart");
@@ -42,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const res = await fetch('api/params', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isPaused, interval, activeModel })
+                body: JSON.stringify({ isPaused, activeModel })
             });
 
             const data = await res.json();
@@ -67,15 +59,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('Did not receive server scheduler state.');
             }
 
-            interval = data.state.interval;
             activeModel = data.state.activeModel;
             isPaused = data.state.isPaused;
 
             toggleButton.innerHTML = isPaused ? playText : pauseText;
             toggleButton.style.backgroundColor = isPaused ? playColour : pauseColour;
             modelSelect.value = activeModel;
-            intervalSelect.value = interval;
-
         } catch (err) {
             console.error('Error:', err);
         }
@@ -100,12 +89,6 @@ document.addEventListener('DOMContentLoaded', function () {
         updateServerSettings();
 
         await loadChartsFromDatabase()
-    })
-
-    intervalSelect.addEventListener('change', (event) => {
-        interval = event.target.value;
-
-        updateServerSettings();
     })
 
     // -- New chart logic --

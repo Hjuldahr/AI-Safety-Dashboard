@@ -61,8 +61,6 @@ const startServer = async () => {
     app.set("views", path.join(PROJECT_ROOT, "views"));
     app.set("view engine", "ejs");
 
-    // Hook up SSE routes
-    scheduler.setupSSE(app);
     // Start background tasks
     scheduler.setupScheduler();
 

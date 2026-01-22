@@ -1,5 +1,5 @@
 // server_side_events/scheduler.js
-import { pseudoAI, AIGeneralizer } from '../data_generator/dataGenerator.js';
+import { AIGeneralizer } from '../data_evaluation/AIGeneralizer.js';
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
@@ -10,18 +10,23 @@ let activeClients = [];
 let nextClientId = 1;
 let schedulerInterval = null;
 
-// ---------- Model Simulation ----------
-//One method for both models
-async function generateModelData(modelName) {
-    // Generate Raw Logs based on Model Profile
-    const calls = await pseudoAI(modelName, schedulerState.interval / 1000); // Use scheduler interval
+const SCHEDULER_INTERVAL = 1000; // 1 second
+const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; //Max speed which alerts can be triggered
 
-    // Aggregate
-    const summary = AIGeneralizer(modelName, calls);
+// This determines which models the evaluator should run on / should be visible on the frontend.
+// This list checks for js files with the same name in the ai_models folder.
+const AI_MODELS = ["GoodModel", "BadModel"];
+
+// ---------- Model Simulation ----------
+//One method for all models
+async function generateModelData(modelName) {
+
+    // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
+    const summary = AIGeneralizer(modelName, SCHEDULER_INTERVAL / 1000);
 
     // Format for DB/SSE
     return {
-        modelName: summary.model,
+        modelName: modelName,
         policyCompliance: summary.policyCompliance.mean * 100,
         responseHelpfulness: summary.responseHelpfulness.mean * 5,
         responseTime: summary.responseTime.mean,
@@ -37,32 +42,30 @@ async function generateModelData(modelName) {
     };
 }
 
-// ---------- SSE Setup ----------
-function setupSSE(app) {
-    app.get('/events', (req, res) => {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+// Events now have their own router - schedulerRouter
+export const setupSSE = (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
-        const client = {
-            id: nextClientId++,
-            res,
-            userId: req.user ? (req.user._id ? String(req.user._id) : req.user._id) : null,
-            connectedAt: Date.now()
-        };
-        activeClients.push(client);
+    const client = {
+        id: nextClientId++,
+        res,
+        userId: req.user ? (req.user._id ? String(req.user._id) : req.user._id) : null,
+        connectedAt: Date.now()
+    };
+    activeClients.push(client);
 
-        // Heartbeat to keep connection alive
-        const heartbeat = setInterval(() => {
-            res.write(':\n\n');
-        }, HEARTBEAT);
+    // Heartbeat to keep connection alive
+    const heartbeat = setInterval(() => {
+        res.write(':\n\n');
+    }, HEARTBEAT);
 
-        req.on('close', () => {
-            clearInterval(heartbeat);
-            activeClients = activeClients.filter(c => c.res !== res);
-        });
+    req.on('close', () => {
+        clearInterval(heartbeat);
+        activeClients = activeClients.filter(c => c.res !== res);
     });
-}
+};
 
 // ---------- Client Maintenance ----------
 function pruneDeadClients() {
@@ -125,21 +128,19 @@ async function schedulerTick() {
     if (schedulerState.isPaused) return;
 
     try {
-        const goodData = await generateModelData("GoodModel");
-        const badData = await generateModelData("BadModel");
+        const data = {};
 
-        const dataToSave = {
-            GoodModel: goodData,
-            BadModel: badData
-        };
+        // Generate data for all of the models in the AI_MODELS list.
+        for (const model of AI_MODELS) {
+            data[model] = await generateModelData(model);
+        }
 
-        // Save logs
-        await AI_Log.addLog(goodData);
-        await AI_Log.addLog(badData);
+        // Add all the logs to the DB
+        await AI_Log.addLogs(Object.values(data));
 
         // Evaluate alerts
         try {
-            await evaluateAlerts(dataToSave, { cooldownMs: 60 * 1000 });
+            await evaluateAlerts(data, { cooldownMs: ALERTS_COOLDOWN });
         } catch (alertErr) {
             console.error('Error evaluating alerts:', alertErr);
         }
@@ -147,12 +148,12 @@ async function schedulerTick() {
         // Keep only last MAX_RECORDS
         let count = await AI_Log.countDocuments();
         while (count > MAX_RECORDS) {
-            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
+            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 }); //ToDo: Refactor this to avoid sorting entire DB
             count--;
         }
 
         // Broadcast real-time update to clients
-        broadcastEvent('update', dataToSave);
+        broadcastEvent('update', data);
 
     } catch (err) {
         console.error('Scheduler tick error:', err);
@@ -164,8 +165,8 @@ async function schedulerTick() {
 function startScheduler() {
     if (schedulerInterval) clearInterval(schedulerInterval);
     if (!schedulerState.isPaused) {
-        schedulerInterval = setInterval(schedulerTick, schedulerState.interval);
-        console.log('[Scheduler] Started with interval', schedulerState.interval, 'ms');
+        schedulerInterval = setInterval(schedulerTick, SCHEDULER_INTERVAL);
+        console.log('[Scheduler] Started with interval', SCHEDULER_INTERVAL, 'ms');
     }
 }
 
@@ -181,12 +182,6 @@ function updateSchedulerSettings({ isPaused, activeModel, interval }) {
     if (activeModel) {
         schedulerState.activeModel = activeModel;
         console.log('[Scheduler] Active model changed to', activeModel);
-    }
-
-    if (interval && interval !== schedulerState.interval) {
-        schedulerState.interval = interval;
-        console.log('[Scheduler] Interval updated to', interval, 'ms');
-        restart = true;
     }
 
     if (restart) startScheduler();
