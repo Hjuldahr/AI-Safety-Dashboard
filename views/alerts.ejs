@@ -19,9 +19,12 @@
 </head>
 
 <body>
+  <script id="constants-json" type="application/json">
+    <%- JSON.stringify(constants || {}) %>
+  </script>
   <script>
     //Grab the constants sent on page load
-    window.CONSTANTS = <%- JSON.stringify(constants) %>;
+    window.CONSTANTS = JSON.parse(document.getElementById('constants-json').textContent);
 
     // Unpacking the obj
     const {
@@ -101,10 +104,12 @@
           <div class="card" style="margin-top:1rem; padding:0.75rem;">
             <label for="tag-editor-textarea">Manage Tags (comma-separated)</label>
             <textarea id="tag-editor-textarea" rows="2" style="width:100%;" readonly></textarea>
-            <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+            <div id="tag-editor-rows" style="display:none; width:100%; margin-top:0.5rem;"></div>
+            <div style="margin-top:0.5rem; display:flex; gap:0.5rem; align-items:center;">
               <button id="edit-tags-btn" class="btn btn-secondary">Edit</button>
               <button id="confirm-tags-btn" class="btn btn-primary" style="display:none;">Confirm</button>
               <button id="cancel-tags-btn" class="btn btn-secondary" style="display:none;">Cancel</button>
+              <button id="add-tag-row-btn" class="btn btn-secondary" style="display:none; margin-left: auto;">Add Row</button>
             </div>
           </div>
         </aside>

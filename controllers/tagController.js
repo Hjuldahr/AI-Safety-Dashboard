@@ -13,7 +13,6 @@ const listTags = async (req, res) => {
 const createTag = async (req, res) => {
     try {
         const { name, color } = req.body;
-        if (!name || !name.trim()) return res.status(400).json({ message: 'Missing tag name.' });
         const existing = await Tag.findOne({ name: name.trim() });
         if (existing) return res.status(200).json({ tag: existing });
         const tag = await Tag.create({ name: name.trim(), color: color || '#888888' });
@@ -27,8 +26,9 @@ const createTag = async (req, res) => {
 // POST /tags/sync - position-based sync of tag list
 const syncTags = async (req, res) => {
     try {
-        const { originalIds, newNames } = req.body;
+        const { originalIds, newNames, colors } = req.body;
         if (!Array.isArray(originalIds) || !Array.isArray(newNames)) return res.status(400).json({ message: 'originalIds and newNames must be arrays' });
+        if (colors && !Array.isArray(colors)) return res.status(400).json({ message: 'colors must be an array if provided' });
 
         // Normalize names
         const cleaned = newNames.map(n => (n && String(n).trim()) || '');
@@ -46,13 +46,13 @@ const syncTags = async (req, res) => {
         existingTags.forEach(t => { existingById[String(t._id)] = t; });
 
         // Palette for auto colors
-        const PALETTE = ['#8888FF','#FF8888','#88FF88','#FFCC66','#66CCFF','#CC66FF','#FF66A3','#66FFCC','#FFD166'];
-        const allExistingColors = new Set((await Tag.find().lean()).map(t=>t.color).filter(Boolean));
+        const PALETTE = ['#8888ff','#ff8888','#88ff88','#ffcc66','#66ccff','#cc66ff','#ff66a3','#66ffcc','#ffd166'];
+        const allExistingColors = new Set((await Tag.find().lean()).map(t=>String(t.color||'').toLowerCase()).filter(Boolean));
 
         const pickColor = () => {
             for (const c of PALETTE) if (!allExistingColors.has(c)) { allExistingColors.add(c); return c; }
             // fallback random
-            const rand = '#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+            const rand = ('#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0')).toLowerCase();
             allExistingColors.add(rand);
             return rand;
         };
@@ -78,40 +78,50 @@ const syncTags = async (req, res) => {
         const Alert = (await import('../models/alert_model.js')).default;
         const AlertLog = (await import('../models/alert_log.js')).default;
 
+        const colorNormalized = (c) => {
+            if (!c) return null;
+            const s = c.trim();
+            if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
+            const m = s.match(/^#([0-9a-fA-F]{3})$/);
+            if (m) return ('#' + m[1].split('').map(ch => ch+ch).join('')).toLowerCase();
+            return null;
+        };
+
         for (let i = 0; i < maxLen; i++) {
             const origId = originalIds[i];
             const newName = cleaned[i];
+            const requestedColor = (colors && colors[i]) ? String(colors[i]).trim() : null;
+
             if (origId && newName) {
-                // rename if changed
+                // rename and/or recolor if changed
                 const existing = existingById[String(origId)];
-                if (existing && existing.name !== newName) {
-                    await Tag.findByIdAndUpdate(origId, { name: newName }, { new: true });
+                const updates = {};
+                if (existing && existing.name !== newName) updates.name = newName;
+                const norm = colorNormalized(requestedColor);
+                if (norm && (!existing || (existing.color||'').toLowerCase() !== norm)) updates.color = norm;
+                if (Object.keys(updates).length) {
+                    await Tag.findByIdAndUpdate(origId, updates, { new: true });
                 }
             } else if (!origId && newName) {
                 // create new tag
-                // check again unique
                 const lower = newName.toLowerCase();
-                if (nameToId[lower]) {
-                    // should have been caught earlier
-                    continue;
-                }
-                const color = pickColor();
+                if (nameToId[lower]) continue; // already exists
+                const norm = colorNormalized(requestedColor);
+                const color = norm || pickColor();
                 const created = await Tag.create({ name: newName, color });
-                // add to nameToId map
                 nameToId[created.name.toLowerCase()] = String(created._id);
             } else if (origId && !newName) {
                 // delete tag
                 const idToDelete = origId;
-                // remove references from Alerts
                 await Alert.updateMany({ tags: idToDelete }, { $pull: { tags: mongoose.Types.ObjectId(idToDelete) } });
-                // remove references from AlertLog.tags
                 await AlertLog.updateMany({ tags: idToDelete }, { $pull: { tags: mongoose.Types.ObjectId(idToDelete) } });
                 await Tag.findByIdAndDelete(idToDelete);
             }
         }
 
         const updated = await Tag.find().sort({ name: 1 }).lean();
-        return res.status(200).json({ tags: updated });
+        const normalized = updated.map(t => ({ ...t, color: t.color ? String(t.color).toLowerCase() : t.color }));
+        return res.status(200).json({ tags: normalized });
     } catch (error) {
         console.error('Error syncing tags:', error);
         return res.status(500).json({ message: 'Failed to sync tags.' });

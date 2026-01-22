@@ -733,6 +733,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     const editTagsBtn = document.getElementById('edit-tags-btn');
     const confirmTagsBtn = document.getElementById('confirm-tags-btn');
     const cancelTagsBtn = document.getElementById('cancel-tags-btn');
+    const tagEditorRows = document.getElementById('tag-editor-rows');
+    const addTagRowBtn = document.getElementById('add-tag-row-btn');
     let originalTagIds = [];
     let originalTagNames = [];
 
@@ -743,11 +745,59 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (tagEditorTextarea) tagEditorTextarea.value = originalTagNames.join(', ');
     }
 
+    function renderTagEditorRows() {
+        if (!tagEditorRows) return;
+        tagEditorRows.innerHTML = '';
+        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+        // create inputs for each existing tag
+        ordered.forEach(t => {
+            const row = document.createElement('div');
+            row.className = 'tag-editor-row';
+            row.style.display = 'flex';
+            row.style.gap = '8px';
+            row.style.alignItems = 'center';
+            row.style.marginBottom = '6px';
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = t.name || '';
+            nameInput.dataset.id = t._id;
+            nameInput.style.flex = '1';
+            const colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.value = t.color || '#888888';
+            colorInput.style.width = '54px';
+            const del = document.createElement('button'); del.className = 'btn btn-secondary'; del.textContent = 'Remove'; del.style.flex = '0 0 auto';
+            del.addEventListener('click', () => { row.remove(); });
+            row.appendChild(nameInput); row.appendChild(colorInput); row.appendChild(del);
+            tagEditorRows.appendChild(row);
+        });
+        // If no tags, show one empty row
+        if (ordered.length === 0) {
+            addEmptyTagEditorRow();
+        }
+    }
+
+    function addEmptyTagEditorRow() {
+        if (!tagEditorRows) return;
+        const row = document.createElement('div');
+        row.className = 'tag-editor-row';
+        row.style.display = 'flex'; row.style.gap = '8px'; row.style.alignItems = 'center'; row.style.marginBottom = '6px';
+        const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = ''; nameInput.style.flex = '1';
+        const colorInput = document.createElement('input'); colorInput.type = 'color'; colorInput.value = '#888888'; colorInput.style.width = '54px';
+        const del = document.createElement('button'); del.className = 'btn btn-secondary'; del.textContent = 'Remove'; del.style.flex = '0 0 auto';
+        del.addEventListener('click', () => { row.remove(); });
+        row.appendChild(nameInput); row.appendChild(colorInput); row.appendChild(del);
+        tagEditorRows.appendChild(row);
+    }
+
     if (editTagsBtn) {
         editTagsBtn.addEventListener('click', (e) => {
-            if (!tagEditorTextarea) return;
-            tagEditorTextarea.readOnly = false;
-            tagEditorTextarea.focus();
+            // switch to rows editor
+            if (!tagEditorRows || !tagEditorTextarea) return;
+            renderTagEditorRows();
+            tagEditorTextarea.style.display = 'none';
+            tagEditorRows.style.display = '';
+            addTagRowBtn.style.display = '';
             editTagsBtn.style.display = 'none';
             confirmTagsBtn.style.display = '';
             cancelTagsBtn.style.display = '';
@@ -755,9 +805,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
     if (cancelTagsBtn) {
         cancelTagsBtn.addEventListener('click', (e) => {
-            if (!tagEditorTextarea) return;
+            if (!tagEditorTextarea || !tagEditorRows) return;
             tagEditorTextarea.value = originalTagNames.join(', ');
             tagEditorTextarea.readOnly = true;
+            tagEditorTextarea.style.display = '';
+            tagEditorRows.style.display = 'none';
+            addTagRowBtn.style.display = 'none';
             editTagsBtn.style.display = '';
             confirmTagsBtn.style.display = 'none';
             cancelTagsBtn.style.display = 'none';
@@ -765,15 +818,36 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
     if (confirmTagsBtn) {
         confirmTagsBtn.addEventListener('click', async (e) => {
-            if (!tagEditorTextarea) return;
-            const raw = tagEditorTextarea.value || '';
-            const parts = raw.split(',').map(s=>s.trim()).filter(s=>s.length>0);
-            // validate unique
-            const low = parts.map(p=>p.toLowerCase());
-            const dup = low.find((v,i)=> low.indexOf(v)!==i);
-            if (dup) return alert('Tag names must be unique');
             try {
-                const updated = await apiSyncTags({ originalIds: originalTagIds, newNames: parts });
+                // if rows editor visible, gather names, colors, and original ids from rows
+                let parts = [];
+                let colors = [];
+                let originalIdsFromRows = [];
+                if (tagEditorRows && tagEditorRows.style.display !== 'none') {
+                    const rows = tagEditorRows.querySelectorAll('.tag-editor-row');
+                    rows.forEach(r => {
+                        const ni = r.querySelector('input[type="text"]');
+                        const ci = r.querySelector('input[type="color"]');
+                        if (ni && ni.value && ni.value.trim()) {
+                            parts.push(ni.value.trim());
+                            colors.push(ci && ci.value ? ci.value : '#888888');
+                            // preserve original id if present on the input
+                            originalIdsFromRows.push(ni.dataset.id || null);
+                        }
+                    });
+                } else {
+                    const raw = tagEditorTextarea ? tagEditorTextarea.value || '' : '';
+                    parts = raw.split(',').map(s=>s.trim()).filter(s=>s.length>0);
+                }
+                // validate unique
+                const low = parts.map(p=>p.toLowerCase());
+                const dup = low.find((v,i)=> low.indexOf(v)!==i);
+                if (dup) return alert('Tag names must be unique');
+
+                const payload = { originalIds: (originalIdsFromRows.length ? originalIdsFromRows : originalTagIds), newNames: parts };
+                if (colors && colors.length) payload.colors = colors;
+
+                const updated = await apiSyncTags(payload);
                 // refresh cache
                 Object.keys(tagsCache).forEach(k=>delete tagsCache[k]);
                 updated.forEach(t=>{ tagsCache[t._id]=t; });
@@ -786,8 +860,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                     Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||'')).forEach(t => { html += `<option value="${t._id}">${t.name}</option>`; });
                     tagSelect.innerHTML = html;
                 }
-                // hide editor buttons
-                tagEditorTextarea.readOnly = true;
+                // hide editor rows and buttons
+                if (tagEditorRows) { tagEditorRows.style.display = 'none'; tagEditorRows.innerHTML = ''; }
+                if (tagEditorTextarea) { tagEditorTextarea.readOnly = true; tagEditorTextarea.style.display = ''; }
+                if (addTagRowBtn) addTagRowBtn.style.display = 'none';
                 editTagsBtn.style.display = '';
                 confirmTagsBtn.style.display = 'none';
                 cancelTagsBtn.style.display = 'none';
@@ -798,6 +874,12 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.error('Failed to sync tags:', err);
                 alert('Failed to sync tags: ' + err.message);
             }
+        });
+    }
+
+    if (addTagRowBtn) {
+        addTagRowBtn.addEventListener('click', (e) => {
+            addEmptyTagEditorRow();
         });
     }
 
