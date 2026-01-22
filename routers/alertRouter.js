@@ -18,5 +18,11 @@ router.post('/mark-read', isAuthenticated, controller.markAlertsRead);
 router.delete("/:id", isAuthenticated, controller.removeAlertById);
 // Update an alert by id
 router.put("/:id", isAuthenticated, controller.updateAlertById);
+// Add a tag to a specific alert log
+router.post('/api/logs/:id/tags', isAuthenticated, controller.addTagToAlertLog);
+// Remove a tag from a specific alert log
+router.delete('/api/logs/:id/tags/:tagId', isAuthenticated, controller.removeTagFromAlertLog);
+// Replace tags on a specific alert log
+router.put('/api/logs/:id/tags', isAuthenticated, controller.setTagsForAlertLog);
 
 export default router;

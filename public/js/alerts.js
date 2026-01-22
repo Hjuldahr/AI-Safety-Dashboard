@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
 
     // --------------------------------------------------
     // DOM references
@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Client-side cache and edit state
     const liveAlertsCache = {};
+    const tagsCache = {};
+    const selectedTags = [];
     let currentEditId = null;
     let currentHistoryPage = 1;
 
@@ -279,6 +281,15 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             sel.innerHTML = html;
         });
+        // Populate tag filter dropdown if present
+        const tagFilter = document.getElementById('filter-tag');
+        if (tagFilter) {
+            let html = '<option value="all">All Tags</option>';
+            Object.values(tagsCache).forEach(t => {
+                html += `<option value="${t._id}">${t.name}</option>`;
+            });
+            tagFilter.innerHTML = html;
+        }
     }
 
     // Generate <option> tags for Numeric fields only (alerts usually need math)
@@ -304,6 +315,36 @@ document.addEventListener('DOMContentLoaded', function () {
         return data;
     }
 
+    async function apiListTags() {
+        const resp = await fetch('tags');
+        if (!resp.ok) throw new Error('Failed to load tags');
+        const data = await resp.json();
+        return data.tags || [];
+    }
+
+    async function apiCreateTag(payload) {
+        const resp = await fetch('tags', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.message || 'Failed to create tag');
+        return data.tag;
+    }
+
+    async function apiSyncTags(payload) {
+        const resp = await fetch('tags/sync', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.message || 'Failed to sync tags');
+        return data.tags || [];
+    }
     async function apiGetLiveAlerts() {
         const resp = await fetch('alerts/live');
         if (!resp.ok) throw new Error('Failed to load live alerts');
@@ -364,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderHistoryTable(logs) {
         alertLogBody.innerHTML = ''; // clear existing
         if (!logs || logs.length === 0) {
-            alertLogBody.innerHTML = '<tr><td colspan="5">No alert history found.</td></tr>';
+            alertLogBody.innerHTML = '<tr><td colspan="6">No alert history found.</td></tr>';
             return;
         }
 
@@ -374,12 +415,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const timeString = createdTs.toLocaleString('en-CA', { hour12: true }).replace(',', '');
             const level = log.level || 'Info';
             
-            newRow.innerHTML = `
+            const tagsHtml = (log.tags || []).map(t => `
+                <span class="tag-pill" style="background:${t.color || '#888888'}">${t.name || ''}</span>`).join(' ');
+                const tagIds = (log.tags || []).map(t=>t._id).join(',');
+                newRow.innerHTML = `
                 <td><span class="level-tag ${level.toLowerCase()}">${level}</span></td>
                 <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
                 <td>${log.alertName || ''}</td>
                 <td class="model-cell">${log.modelName || '-'}</td>
                 <td class="details-cell">${log.humanRule || ''}</td>
+                    <td class="tags-cell">${tagsHtml} <button class="edit-log-tags btn btn-secondary" data-id="${log._id}" data-tags="${tagIds}">Edit</button></td>
             `;
             alertLogBody.appendChild(newRow);
         });
@@ -389,12 +434,13 @@ document.addEventListener('DOMContentLoaded', function () {
         currentHistoryPage = page;
         
         // UI Loading state
-        alertLogBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+        alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
         historyPagination.innerHTML = '';
 
         // Get filter values
         const level = document.getElementById('filter-level').value;
         const model = document.getElementById('filter-model').value;
+        const tag = document.getElementById('filter-tag') ? document.getElementById('filter-tag').value : '';
         const startDate = document.getElementById('filter-start-date') ? document.getElementById('filter-start-date').value : '';
         const endDate = document.getElementById('filter-end-date') ? document.getElementById('filter-end-date').value : '';
 
@@ -404,6 +450,7 @@ document.addEventListener('DOMContentLoaded', function () {
         params.set('limit', 10); // Standard limit
         if (level && level !== 'all') params.set('level', level);
         if (model && model !== 'all') params.set('modelName', model);
+        if (tag && tag !== 'all') params.set('tag', tag);
         if (startDate) params.set('startDate', startDate);
         if (endDate) params.set('endDate', endDate);
 
@@ -417,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
             renderPagination(historyPagination, data.pages, data.page, loadAlertHistory);
         } catch (err) {
             console.error('History load error:', err);
-            alertLogBody.innerHTML = `<tr><td colspan="5">Error loading history: ${err.message}</td></tr>`;
+            alertLogBody.innerHTML = `<tr><td colspan="6">Error loading history: ${err.message}</td></tr>`;
         }
     }
 
@@ -444,7 +491,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const uiReadable = formatRuleReadableFromUI();
         const created = Date.now();
         try {
-            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, modelName });
+            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, modelName, tags: selectedTags });
             await loadLiveAlerts();
             
             // Reload history to show the new alert log (if triggered immediately or just to refresh state)
@@ -511,6 +558,115 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Handle tagging a specific alert log (delegated)
+    alertLogBody.addEventListener('click', async function (e) {
+        
+        // Edit tags for a specific alert log (open modal dual-list)
+        if (e.target && e.target.classList.contains('edit-log-tags')) {
+            const logId = e.target.dataset.id;
+            const tagsCsv = e.target.dataset.tags || '';
+            const initialSelected = tagsCsv ? tagsCsv.split(',').filter(Boolean) : [];
+
+            // create modal overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.style.position = 'fixed'; overlay.style.left = 0; overlay.style.top = 0; overlay.style.right = 0; overlay.style.bottom = 0;
+            overlay.style.background = 'rgba(0,0,0,0.4)'; overlay.style.display = 'flex'; overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center';
+
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.background = '#fff'; modal.style.padding = '16px'; modal.style.borderRadius = '6px'; modal.style.width = '640px'; modal.style.maxWidth = '95%';
+
+            modal.innerHTML = `
+                <h3>Edit Tags</h3>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                  <div style="flex:1;">
+                    <div class="dual-list-label">Available</div>
+                                        <div id="modal-tag-left" class="dual-list-box" style="width:100%"></div>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+                    <button id="modal-move-selected-right" class="btn btn-secondary">▶</button>
+                    <button id="modal-move-all-right" class="btn btn-secondary">≫</button>
+                    <button id="modal-move-selected-left" class="btn btn-secondary">◀</button>
+                    <button id="modal-move-all-left" class="btn btn-secondary">≪</button>
+                  </div>
+                  <div style="flex:1;">
+                    <div class="dual-list-label">Selected</div>
+                                        <div id="modal-tag-right" class="dual-list-box" style="width:100%"></div>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                  <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
+                  <button id="modal-confirm" class="btn btn-primary">Confirm</button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            const left = modal.querySelector('#modal-tag-left');
+            const right = modal.querySelector('#modal-tag-right');
+            const mMoveSelR = modal.querySelector('#modal-move-selected-right');
+            const mMoveAllR = modal.querySelector('#modal-move-all-right');
+            const mMoveSelL = modal.querySelector('#modal-move-selected-left');
+            const mMoveAllL = modal.querySelector('#modal-move-all-left');
+            const mCancel = modal.querySelector('#modal-cancel');
+            const mConfirm = modal.querySelector('#modal-confirm');
+
+            function renderModalLists() {
+                left.innerHTML = '';
+                right.innerHTML = '';
+                const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+                ordered.forEach(t => {
+                    const pill = createTagPill(t);
+                    // toggle selection if currently in initialSelected
+                    if (initialSelected.includes(t._id)) {
+                        pill.classList.add('selected');
+                        right.appendChild(pill);
+                    } else {
+                        left.appendChild(pill);
+                    }
+                });
+            }
+
+            mMoveSelR.addEventListener('click', () => {
+                const toMove = Array.from(left.querySelectorAll('.dual-item.selected')).map(el=>el.dataset.id);
+                toMove.forEach(id => { if (!initialSelected.includes(id)) initialSelected.push(id); });
+                renderModalLists();
+            });
+            mMoveAllR.addEventListener('click', () => {
+                const all = Array.from(left.querySelectorAll('.dual-item')).map(el=>el.dataset.id);
+                all.forEach(id => { if (!initialSelected.includes(id)) initialSelected.push(id); });
+                renderModalLists();
+            });
+            mMoveSelL.addEventListener('click', () => {
+                const toMove = Array.from(right.querySelectorAll('.dual-item.selected')).map(el=>el.dataset.id);
+                toMove.forEach(id => { const idx = initialSelected.indexOf(id); if (idx>=0) initialSelected.splice(idx,1); });
+                renderModalLists();
+            });
+            mMoveAllL.addEventListener('click', () => { initialSelected.length = 0; renderModalLists(); });
+
+            mCancel.addEventListener('click', () => overlay.remove());
+            mConfirm.addEventListener('click', async () => {
+                try {
+                    const resp = await fetch(`alerts/api/logs/${encodeURIComponent(logId)}/tags`, {
+                        method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type':'application/json' },
+                        body: JSON.stringify({ tags: initialSelected })
+                    });
+                    const data = await resp.json().catch(()=>({}));
+                    if (!resp.ok) throw new Error(data.message || 'Failed to update tags');
+                    overlay.remove();
+                    await loadAlertHistory(currentHistoryPage);
+                } catch (err) {
+                    console.error('Failed to set tags on log:', err);
+                    alert('Failed to update tags: ' + err.message);
+                }
+            });
+
+            renderModalLists();
+        }
+    });
+
     function startEdit(alertObj) {
         if (!alertObj) return;
         currentEditId = alertObj._id;
@@ -518,6 +674,17 @@ document.addEventListener('DOMContentLoaded', function () {
         alertLevelSelect.value = alertObj.alertLevel || 'Info';
         if (modelSelect) modelSelect.value = alertObj.modelName || '';
         populateRuleBuilderFromRule(alertObj.alertRule || {});
+        // populate selected tags for editing
+        selectedTags.length = 0;
+        if (alertObj.tags && Array.isArray(alertObj.tags)) {
+            alertObj.tags.forEach(t => {
+                if (t && t._id) {
+                    tagsCache[t._id] = t;
+                    selectedTags.push(t._id);
+                }
+            });
+        }
+        renderSelectedTags();
         addAlertBtn.style.display = 'none';
         saveBtn.style.display = '';
         cancelBtn.style.display = '';
@@ -543,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const ruleJSON = buildRuleJSON();
         if (!ruleJSON) return;
         try {
-            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON, modelName });
+            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON, modelName, tags: selectedTags });
             await loadLiveAlerts();
             cancelEdit();
         } catch (err) {
@@ -572,6 +739,270 @@ document.addEventListener('DOMContentLoaded', function () {
     // --------------------------------------------------
     // Initialization
     // --------------------------------------------------
+    // Load existing tags and wire up tag builder/editor
+    try {
+        const existing = await apiListTags();
+        existing.forEach(t => { tagsCache[t._id] = t; });
+        // initialize dual-list UI
+        renderDualLists();
+    } catch (e) {
+        console.warn('Failed to load tags at startup:', e);
+    }
+
+    function renderSelectedTags() {
+        const container = document.getElementById('selected-tags');
+        if (!container) return;
+        container.innerHTML = '';
+        selectedTags.forEach(t => {
+            const tag = tagsCache[t] || { _id: t, name: t, color: '#888888' };
+            const span = document.createElement('span');
+            span.className = 'tag-pill';
+            span.style.background = tag.color || '#888888';
+            span.textContent = tag.name || '';
+            const rem = document.createElement('button');
+            rem.className = 'remove-tag-btn';
+            rem.textContent = '×';
+            rem.dataset.id = t;
+            rem.addEventListener('click', () => {
+                const idx = selectedTags.indexOf(t);
+                if (idx >= 0) selectedTags.splice(idx, 1);
+                renderSelectedTags();
+            });
+            span.appendChild(rem);
+            container.appendChild(span);
+        });
+    }
+
+    // Dual-list tag selector handlers
+    function createTagPill(tag) {
+        const span = document.createElement('span');
+        span.className = 'dual-item';
+        span.dataset.id = tag._id;
+        span.textContent = tag.name || '';
+        span.style.background = tag.color || '#888888';
+        span.tabIndex = 0;
+        span.addEventListener('click', (e) => {
+            span.classList.toggle('selected');
+        });
+        span.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); span.classList.toggle('selected'); }
+        });
+        return span;
+    }
+
+    function renderDualLists() {
+        const left = document.getElementById('tag-dual-left');
+        const right = document.getElementById('tag-dual-right');
+        if (!left || !right) return;
+        left.innerHTML = '';
+        right.innerHTML = '';
+        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+        const selSet = new Set(selectedTags);
+        ordered.forEach(t => {
+            const pill = createTagPill(t);
+            if (selSet.has(t._id)) right.appendChild(pill);
+            else left.appendChild(pill);
+        });
+    }
+
+    const moveSelectedRightBtn = document.getElementById('move-selected-right');
+    const moveAllRightBtn = document.getElementById('move-all-right');
+    const moveSelectedLeftBtn = document.getElementById('move-selected-left');
+    const moveAllLeftBtn = document.getElementById('move-all-left');
+
+    if (moveSelectedRightBtn) moveSelectedRightBtn.addEventListener('click', (e) => {
+        const left = document.getElementById('tag-dual-left');
+        if (!left) return;
+        const toMove = Array.from(left.querySelectorAll('.dual-item.selected')).map(el => el.dataset.id);
+        toMove.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
+        renderDualLists(); renderSelectedTags();
+    });
+    if (moveAllRightBtn) moveAllRightBtn.addEventListener('click', (e) => {
+        const left = document.getElementById('tag-dual-left');
+        if (!left) return;
+        const all = Array.from(left.querySelectorAll('.dual-item')).map(el => el.dataset.id);
+        all.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
+        renderDualLists(); renderSelectedTags();
+    });
+    if (moveSelectedLeftBtn) moveSelectedLeftBtn.addEventListener('click', (e) => {
+        const right = document.getElementById('tag-dual-right');
+        if (!right) return;
+        const toMove = Array.from(right.querySelectorAll('.dual-item.selected')).map(el => el.dataset.id);
+        toMove.forEach(id => { const idx = selectedTags.indexOf(id); if (idx>=0) selectedTags.splice(idx,1); });
+        renderDualLists(); renderSelectedTags();
+    });
+    if (moveAllLeftBtn) moveAllLeftBtn.addEventListener('click', (e) => {
+        selectedTags.length = 0;
+        renderDualLists(); renderSelectedTags();
+    });
+
+    // Tag editor elements (under live alerts panel)
+    const tagEditorPills = document.getElementById('tag-editor-pills');
+    const editTagsBtn = document.getElementById('edit-tags-btn');
+    const confirmTagsBtn = document.getElementById('confirm-tags-btn');
+    const cancelTagsBtn = document.getElementById('cancel-tags-btn');
+    const tagEditorRows = document.getElementById('tag-editor-rows');
+    const addTagRowBtn = document.getElementById('add-tag-row-btn');
+    let originalTagIds = [];
+    let originalTagNames = [];
+    let deletedTagIds = [];
+
+    function refreshTagEditorFromCache() {
+        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+        originalTagIds = ordered.map(t=>t._id);
+        originalTagNames = ordered.map(t=>t.name);
+        if (tagEditorPills) tagEditorPills.innerHTML = ordered.map(t => `<span class="tag-pill" style="background:${t.color||'#888888'}">${t.name}</span>`).join(' ');
+    }
+
+    function renderTagEditorRows() {
+        if (!tagEditorRows) return;
+        tagEditorRows.innerHTML = '';
+        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+        // create inputs for each existing tag
+        ordered.forEach(t => {
+            const row = document.createElement('div');
+            row.className = 'tag-editor-row';
+            row.style.display = 'flex';
+            row.style.gap = '8px';
+            row.style.alignItems = 'center';
+            row.style.marginBottom = '6px';
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = t.name || '';
+            nameInput.dataset.id = t._id;
+            nameInput.style.flex = '1';
+            const colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.value = t.color || '#888888';
+            colorInput.style.width = '54px';
+            const del = document.createElement('button'); del.className = 'btn btn-secondary'; del.textContent = 'Remove'; del.style.flex = '0 0 auto';
+            del.addEventListener('click', () => {
+                // if this row corresponds to an existing tag, mark it for deletion
+                const existingId = nameInput.dataset.id;
+                if (existingId) deletedTagIds.push(existingId);
+                row.remove();
+            });
+            row.appendChild(nameInput); row.appendChild(colorInput); row.appendChild(del);
+            tagEditorRows.appendChild(row);
+        });
+        // If no tags, show one empty row
+        if (ordered.length === 0) {
+            addEmptyTagEditorRow();
+        }
+    }
+
+    function addEmptyTagEditorRow() {
+        if (!tagEditorRows) return;
+        const row = document.createElement('div');
+        row.className = 'tag-editor-row';
+        row.style.display = 'flex'; row.style.gap = '8px'; row.style.alignItems = 'center'; row.style.marginBottom = '6px';
+        const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = ''; nameInput.style.flex = '1';
+        const colorInput = document.createElement('input'); colorInput.type = 'color'; colorInput.value = '#888888'; colorInput.style.width = '54px';
+        const del = document.createElement('button'); del.className = 'btn btn-secondary'; del.textContent = 'Remove'; del.style.flex = '0 0 auto';
+        del.addEventListener('click', () => {
+            const existingId = nameInput.dataset.id;
+            if (existingId) deletedTagIds.push(existingId);
+            row.remove();
+        });
+        row.appendChild(nameInput); row.appendChild(colorInput); row.appendChild(del);
+        tagEditorRows.appendChild(row);
+    }
+
+    if (editTagsBtn) {
+        editTagsBtn.addEventListener('click', (e) => {
+            // switch to rows editor
+            if (!tagEditorRows || !tagEditorPills) return;
+            // reset deleted ids for this edit session
+            deletedTagIds = [];
+            renderTagEditorRows();
+            tagEditorPills.style.display = 'none';
+            tagEditorRows.style.display = '';
+            addTagRowBtn.style.display = '';
+            editTagsBtn.style.display = 'none';
+            confirmTagsBtn.style.display = '';
+            cancelTagsBtn.style.display = '';
+        });
+    }
+    if (cancelTagsBtn) {
+        cancelTagsBtn.addEventListener('click', (e) => {
+            if (!tagEditorPills || !tagEditorRows) return;
+            // restore pill view
+            tagEditorPills.style.display = '';
+            tagEditorRows.style.display = 'none';
+            // discard any pending deletions
+            deletedTagIds = [];
+            addTagRowBtn.style.display = 'none';
+            editTagsBtn.style.display = '';
+            confirmTagsBtn.style.display = 'none';
+            cancelTagsBtn.style.display = 'none';
+        });
+    }
+    if (confirmTagsBtn) {
+        confirmTagsBtn.addEventListener('click', async (e) => {
+            try {
+                // if rows editor visible, gather names, colors, and original ids from rows
+                let parts = [];
+                let colors = [];
+                let originalIdsFromRows = [];
+                if (tagEditorRows && tagEditorRows.style.display !== 'none') {
+                    const rows = tagEditorRows.querySelectorAll('.tag-editor-row');
+                    rows.forEach(r => {
+                        const ni = r.querySelector('input[type="text"]');
+                        const ci = r.querySelector('input[type="color"]');
+                        if (ni && ni.value && ni.value.trim()) {
+                            parts.push(ni.value.trim());
+                            colors.push(ci && ci.value ? ci.value : '#888888');
+                            // preserve original id if present on the input
+                            originalIdsFromRows.push(ni.dataset.id || null);
+                        }
+                    });
+                } else {
+                    // not editing rows: derive names from current cache / originalTagNames
+                    parts = originalTagNames.slice();
+                }
+                // validate unique
+                const low = parts.map(p=>p.toLowerCase());
+                const dup = low.find((v,i)=> low.indexOf(v)!==i);
+                if (dup) return alert('Tag names must be unique');
+
+                const payload = { originalIds: (originalIdsFromRows.length ? originalIdsFromRows : originalTagIds), newNames: parts };
+                if (colors && colors.length) payload.colors = colors;
+                if (deletedTagIds && deletedTagIds.length) payload.deletions = deletedTagIds;
+
+                const updated = await apiSyncTags(payload);
+                // refresh cache
+                Object.keys(tagsCache).forEach(k=>delete tagsCache[k]);
+                updated.forEach(t=>{ tagsCache[t._id]=t; });
+                refreshTagEditorFromCache();
+                populateModelDropdowns();
+                // update dual-list UI
+                renderDualLists();
+                // hide editor rows and show pill view
+                if (tagEditorRows) { tagEditorRows.style.display = 'none'; tagEditorRows.innerHTML = ''; }
+                if (tagEditorPills) { tagEditorPills.style.display = ''; }
+                if (addTagRowBtn) addTagRowBtn.style.display = 'none';
+                editTagsBtn.style.display = '';
+                confirmTagsBtn.style.display = 'none';
+                cancelTagsBtn.style.display = 'none';
+                // clear pending deletions after successful sync
+                deletedTagIds = [];
+                // refresh UI
+                await loadLiveAlerts();
+                await loadAlertHistory(currentHistoryPage);
+            } catch (err) {
+                console.error('Failed to sync tags:', err);
+                alert('Failed to sync tags: ' + err.message);
+            }
+        });
+    }
+
+    if (addTagRowBtn) {
+        addTagRowBtn.addEventListener('click', (e) => {
+            addEmptyTagEditorRow();
+        });
+    }
+
+    refreshTagEditorFromCache();
     populateModelDropdowns();
     resetAlertBuilder();
     loadLiveAlerts();

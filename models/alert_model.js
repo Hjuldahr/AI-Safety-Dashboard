@@ -33,6 +33,8 @@ const alert_model_Schema = new mongoose.Schema({
         required: true,
         default: () => new Date().getTime()
     },
+    // Tags associated with this alert
+    tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }]
 });
 
 // ---------- Helper / Statics ----------
