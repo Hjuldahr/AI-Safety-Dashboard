@@ -78,12 +78,6 @@ export default async function evaluateAlerts(data, options = {}) {
                     alertLevel: alert.alertLevel,
                     modelName: alert.modelName || null,
                     alertRule: alert.alertRule,
-                    // include tag snapshot if present on alert
-                    tags: Array.isArray(alert.tags) && alert.tags.length ? alert.tags.map(t => {
-                        // if tags are populated objects, preserve their fields; if ObjectId, keep id only
-                        if (t && typeof t === 'object' && t.name) return { _id: t._id, name: t.name, color: t.color };
-                        return { _id: t };
-                    }) : [],
                     created: alert.created
                 };
                 try {
@@ -95,7 +89,7 @@ export default async function evaluateAlerts(data, options = {}) {
                             alert: created.alert,
                             timestamp: created.timestamp,
                             alertSnapshot: created.alertSnapshot,
-                            tags: created.tags || created.alertSnapshot && created.alertSnapshot.tags || []
+                            tags: created.tags || []
                         };
                         broadcastEvent('alert', payload);
                     } catch (emitErr) {

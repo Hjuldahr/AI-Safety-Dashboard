@@ -106,8 +106,6 @@ const syncTags = async (req, res) => {
                 await Alert.updateMany({ tags: idToDelete }, { $pull: { tags: mongoose.Types.ObjectId(idToDelete) } });
                 // remove references from AlertLog.tags
                 await AlertLog.updateMany({ tags: idToDelete }, { $pull: { tags: mongoose.Types.ObjectId(idToDelete) } });
-                // remove from snapshot tags arrays
-                await AlertLog.updateMany({ 'alertSnapshot.tags._id': mongoose.Types.ObjectId(idToDelete) }, { $pull: { 'alertSnapshot.tags': { _id: mongoose.Types.ObjectId(idToDelete) } } });
                 await Tag.findByIdAndDelete(idToDelete);
             }
         }

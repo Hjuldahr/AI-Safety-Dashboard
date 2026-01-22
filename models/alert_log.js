@@ -13,11 +13,7 @@ const AlertSnapshotSchema = new Schema({
     modelName: String,
     alertRule: Schema.Types.Mixed,
     // Preserve tags as simple objects at time of firing
-    tags: [{
-        _id: Schema.Types.ObjectId,
-        name: String,
-        color: String
-    }],
+    // (No longer preserving tags in the snapshot — tags are stored as refs on the log)
     created: Date
 }, { _id: false });
 

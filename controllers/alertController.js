@@ -51,10 +51,10 @@ const getAlertHistory = async (req, res) => {
             query['alertSnapshot.modelName'] = modelName;
         }
         if (start || end) query.timestamp = {};
-        // Tag filter: match either snapshot tags or current tags on the log
+        // Tag filter: match current tags on the log
         if (req.query.tag) {
             const tagId = req.query.tag;
-            query.$or = [ { 'alertSnapshot.tags._id': tagId }, { 'tags': tagId } ];
+            query.tags = tagId;
         }
         if (start) {
             const sd = new Date(start);
@@ -75,6 +75,7 @@ const getAlertHistory = async (req, res) => {
             .skip(skip)
             .limit(limit)
             .populate('alert')
+            .populate('tags')
             .lean();
 
         const alertLogs = rawLogs.map(l => {
@@ -85,14 +86,14 @@ const getAlertHistory = async (req, res) => {
             } catch (err) {
                 humanRule = '';
             }
-            return {
+                return {
                 _id: l._id,
                 level: a.alertLevel || 'Info',
                 timestamp: l.timestamp,
                 alertName: a.alertName || '',
                 modelName: a.modelName || null,
                 humanRule,
-                tags: (a && a.tags) ? a.tags.map(t => ({ _id: t._id || t, name: t.name || '', color: t.color || '#888888' })) : (l.tags || []).map(t => ({ _id: t, name: '', color: '#888888' })),
+                    tags: (l.tags || []).map(t => ({ _id: t._id || t, name: t.name || '', color: t.color || '#888888' })),
                 created: l.timestamp // Ensure created exists for frontend sorting/display
             };
         });
@@ -315,13 +316,6 @@ const addTagToAlertLog = async (req, res) => {
         if (!existing.tags) existing.tags = [];
         if (!existing.tags.find(t => String(t) === String(tagObjectId))) {
             existing.tags.push(tagObjectId);
-        }
-
-        // Also ensure snapshot preserves tag info
-        if (!existing.alertSnapshot) existing.alertSnapshot = {};
-        if (!existing.alertSnapshot.tags) existing.alertSnapshot.tags = [];
-        if (!existing.alertSnapshot.tags.find(t => String(t._id) === String(tagObjectId))) {
-            existing.alertSnapshot.tags.push({ _id: tag._id, name: tag.name, color: tag.color });
         }
 
         await existing.save();
