@@ -29,7 +29,6 @@ const domain = process.env.DOMAIN || "http://localhost:2121/";
 const publicURL = process.env.PUBLIC_URL || "/";
 const PORT = process.env.PORT || 2121;
 
-
 const startServer = async () => {
     const app = express();
 
@@ -85,6 +84,23 @@ const startServer = async () => {
         //console.log(`Server running on port ${PORT}`);
         console.log(`Server running on http://localhost:${PORT}`);
     });
+
+    // remove if not needed
+    const shutdown = async (signal) => {
+        console.log(`\nServer shutting down from ${signal}`);
+
+        try {
+            await mongoose.disconnect();
+            console.log("MongoDB disconnected");
+        } catch (err) {
+            console.error("MongoDB disconnect error:", err);
+        } finally {
+            process.exit(0);
+        }
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
 }
 
 // Connect to the database and then start the server
