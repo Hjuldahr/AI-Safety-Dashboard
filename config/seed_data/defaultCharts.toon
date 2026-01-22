@@ -1,0 +1,20 @@
+[19]{title,chartType,yAxis,xAxis,category,splitBy,order,chartSize},
+  Queries by Model,pie,null,null,modelName,null,8,regular
+  Response Helpfulness by Model Name,bar,responseHelpfulness,modelName,null,null,11,large
+  Avg Response Time,bar,responseTime,modelName,null,null,2,regular
+  Energy Usage,line,energyConsumption,null,null,modelName,4,tiny
+  TotalQueries,pie,null,null,modelName,null,6,tiny
+  Energy Usage (Wh),measure,energyConsumption,null,null,null,7,tiny
+  Tiny Line,line,responseTime,null,null,null,12,tiny
+  Tiny Line 2,line,energyConsumption,null,null,null,13,tiny
+  Tiny Line 3,line,responseHelpfulness,null,null,null,14,tiny
+  Tiny Line 4,line,policyCompliance,null,null,null,15,tiny
+  Response Helpfulness by Model Name,line,responseHelpfulness,null,null,modelName,17,large
+  Policy Compliance split by Model Name,line,policyCompliance,null,null,modelName,18,large
+  Response Time (ms) split by Model Name,line,responseTime,null,null,modelName,16,massive
+  Average Response Time (ms),line,responseTime,null,null,null,5,tiny
+  Average Energy Consumption,line,energyConsumption,null,null,null,10,regular
+  Average Response Helpfulness (1-5),line,responseHelpfulness,null,null,null,3,large
+  Average Policy Compliance (0 through 100%),line,policyCompliance,null,null,null,1,regular
+  Average Response Helpfulness (1-5) by Model Name,bar,responseHelpfulness,modelName,null,null,9,regular
+  Average Policy Compliance (0 through 100%),measure,policyCompliance,null,null,null,0,regular

@@ -1,55 +1,55 @@
-import { modeFast, mean } from 'simple-statistics'
 import { TOPIC_HIERARCHY } from '../config/constants.js';
 
 // Probability of a query belonging to a specific Topic
 const TOPIC_WEIGHTS = {
-  "Customer Support": 40,  // The bulk of traffic
-  "Sales & Inquiry": 30,
-  "General Information": 25,
-  "Unsupported Use": 5     // The rare, dangerous stuff
+  "Customer Support": 0.40,   
+  "Sales & Inquiry": 0.32,    
+  "General Use": 0.28          
 };
 
 // Defines the User's Prompt characteristics per Topic
 const TOPIC_CHARACTERISTICS = {
   "Customer Support": {
-    baseTokens: 120,       // Short exchanges
-    tokenVariance: 50,
-    toxicityChance: 0.02,  // Angry customers
-    piiChance: 0.05,       // risk of PII - account numbers, etc
-    webLookupChance: 0.1,
-    complexity: 1.0
+    baseTokens: 150,        // detailed support
+    tokenVariance: 80,
+    toxicityChance: 0.03,   // angry customers
+    piiChance: 0.06,        
+    webLookupChance: 0.15,  //account/system info
+    complexity: 1.1
   },
   "Sales & Inquiry": {
-    baseTokens: 200,
-    tokenVariance: 100,
-    toxicityChance: 0.00,
+    baseTokens: 180,        
+    tokenVariance: 90,
+    toxicityChance: 0.01,
+    piiChance: 0.02,
+    webLookupChance: 0.55,  // checking products/prices
+    complexity: 1.3          // may involve calculations
+  },
+  "General Use": {
+    baseTokens: 250,        
+    tokenVariance: 120,
+    toxicityChance: 0.02,
     piiChance: 0.01,
-    webLookupChance: 0.6,  // Checking prices/stock
+    webLookupChance: 0.25,  
     complexity: 1.2
   },
-  "General Information": {
-    baseTokens: 300,
-    tokenVariance: 150,
-    toxicityChance: 0.01,
-    piiChance: 0.0,
-    webLookupChance: 0.3,
-    complexity: 1.0
-  },
-  "Unsupported Use": {
-    baseTokens: 600,       // Creative writing/coding
-    tokenVariance: 400,
-    toxicityChance: 0.60,  // High risk
-    piiChance: 0.0,
-    webLookupChance: 0.0,
-    complexity: 1.5        // Harder to process
-  }
 };
-
 // Subtopic Overrides (Specific scenarios)
 const SUBTOPIC_CHARACTERISTICS_MODIFIERS = {
-  "Adversarial": { toxicityChance: 0.95, complexity: 2.0 }, // Jailbreak attempts
-  "Account Management": { piiChance: 0.40 }, // High risk of PII
-  "Programming": { baseTokens: 800, complexity: 1.8 } // Heavy compute
+  // General Use
+  "Conversation": { toxicityChance: 0.04, complexity: 1.5 }, 
+  "Programming": { baseTokens: 700, complexity: 2.0 }, 
+  "School Work": { piiChance: 0.02, complexity: 2.2 }, 
+
+  // Customer Support
+  "Troubleshooting": { baseTokens: 500, piiChance: 0.04, complexity: 1.4 },
+  "Returns & Refunds": { baseTokens: 200, piiChance: 0.05, complexity: 1.2, toxicityChance: 0.05 }, // Frustrated customers
+
+  // Sales & Inquiry
+  "Product Info": { webLookupChance: 0.65, baseTokens: 180, complexity: 1.3 }, // Checking specs
+  "Pricing & Quotes": { webLookupChance: 0.7, baseTokens: 160, complexity: 1.2 }, // Quick check
+  "Comparison": { webLookupChance: 0.6, baseTokens: 220, complexity: 1.4 }, // Can be more complex
+  "Business Details": { piiChance: 0.04, complexity: 1.5 }, // Sensitive business info
 };
 
 // "Profiles" define how the AI Model behaves/reacts
@@ -70,23 +70,21 @@ const MODEL_PROFILES = {
   }
 };
 
-
-// data_generator/test_data_generator_v4.js
-export function getRandomFloat(min, max) {
+function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
 }
-export function getRandomInt(min, max) {
+function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
-export function getRandomKey(dict) {
+function getRandomKey(dict) {
   return getRandomArrayElement(Object.keys(dict));
 }
-export function getRandomArrayElement(array) {
+function getRandomArrayElement(array) {
   return array[getRandomInt(0, array.length)];
 }
 
 // Selects a key from an object based on integer weights
-export function getWeightedRandomKey(weightsObj) {
+function getWeightedRandomKey(weightsObj) {
   const totalWeight = Object.values(weightsObj).reduce((a, b) => a + b, 0);
   let random = Math.random() * totalWeight;
 
@@ -97,11 +95,6 @@ export function getWeightedRandomKey(weightsObj) {
   return Object.keys(weightsObj)[0]; // Fallback
 }
 
-export function remap(value, low1, high1, low2, high2) {
-  return low2 + (value - low1) * (high2 - low2) / (high1 - low1);
-}
-
-
 const topics = TOPIC_HIERARCHY;
 
 /**
@@ -109,7 +102,7 @@ const topics = TOPIC_HIERARCHY;
  * Updated to take topic and sub topic into effect.
  * Data is generated sequentially to hopefully give more interplay between the data.
  */
-export async function pseudoAI(modelName, intervalDuration) {
+export function generateCalls(modelName, intervalDuration) {
   const profile = MODEL_PROFILES[modelName] || MODEL_PROFILES["GoodModel"];
   const now = new Date();
 
@@ -217,96 +210,7 @@ export async function pseudoAI(modelName, intervalDuration) {
       piiDetected: piiScore
     });
   }
-
-  calls.sort((a, b) => a.time - b.time);
+  //Raw data not being used anyway, so save CPU time by skipping sorts
+  //calls.sort((a, b) => a.time - b.time);
   return calls;
-}
-
-// data_generator/AIGeneralizer_v2.js
-export function AIGeneralizer(modelName, calls) {
-  if (!calls || calls.length === 0) return {};
-
-  const computeStats = (arr) => {
-    if (!arr || arr.length === 0) return { min: 0, max: 0, mean: 0, median: 0 };
-    const sorted = [...arr].sort((a, b) => a - b);
-    const len = sorted.length;
-    const sum = sorted.reduce((s, v) => s + v, 0);
-    const mid = Math.floor(len / 2);
-    return {
-      min: sorted[0],
-      max: sorted[len - 1],
-      mean: sum / len,
-      median: len % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
-    };
-  };
-
-  const times = [], pc = [], rh = [], rt = [], ec = [], tokens = [], ops = [], gflops = [], web = [], toxic = [], pii = [], topics = [], sub_topics = [];
-
-  const buckets = {};
-
-  for (const c of calls) {
-    times.push(c.time || 0);
-    pc.push(typeof c.policyCompliance === 'number' ? c.policyCompliance : 0);
-    rh.push(typeof c.responseHelpfulness === 'number' ? c.responseHelpfulness : 0);
-    rt.push(typeof c.responseTime === 'number' ? c.responseTime : 0);
-    ec.push(typeof c.energyConsumption === 'number' ? c.energyConsumption : 0);
-    tokens.push(typeof c.tokensUsed === 'number' ? c.tokensUsed : 0);
-    gflops.push(typeof c.gigaFlopsUsed === 'number' ? c.gigaFlopsUsed : 0);
-    web.push(typeof c.webLookups === 'number' ? c.webLookups : 0);
-    toxic.push(typeof c.toxicityScore === 'number' ? c.toxicityScore : 0);
-    pii.push(typeof c.piiDetected === 'number' ? c.piiDetected : 0);
-
-    // Populate Breakdown Buckets
-    const topicKey = c.topic || "Unknown";
-    if (!buckets[topicKey]) buckets[topicKey] = { type: 'topic', calls: [] };
-    buckets[topicKey].calls.push(c);
-
-    const subTopicKey = c.sub_topic || "Unknown";
-    // Edge case prevention: if sub_topic has same name as topic, don't overwrite (unlikely but safe)
-    if (subTopicKey !== topicKey) {
-      if (!buckets[subTopicKey]) buckets[subTopicKey] = { type: 'sub_topic', calls: [] };
-      buckets[subTopicKey].calls.push(c);
-    }
-  }
-
-  const breakdownData = {};
-
-  Object.keys(buckets).forEach(key => {
-    const { type, calls: bucketCalls } = buckets[key];
-
-    // Calculate the averages for this specific Topic/Sub-topic
-    breakdownData[key] = {
-      type: type,
-      queryCount: bucketCalls.length, // Useful to know volume per topic
-      responseTime: mean(bucketCalls.map(c => c.responseTime)),
-      tokensUsed: mean(bucketCalls.map(c => c.tokensUsed)),
-      energyConsumption: mean(bucketCalls.map(c => c.energyConsumption)) * 1000,
-      responseHelpfulness: mean(bucketCalls.map(c => c.responseHelpfulness)) * 5,
-      policyCompliance: mean(bucketCalls.map(c => c.policyCompliance)) * 100,
-      toxicityScore: mean(bucketCalls.map(c => c.toxicityScore)),
-      piiDetected: mean(bucketCalls.map(c => c.piiDetected)) * 100,
-      gigaFlopsUsed: mean(bucketCalls.map(c => c.gigaFlopsUsed)),
-      webLookups: mean(bucketCalls.map(c => c.webLookups))
-    };
-  });
-
-
-  const now = Date.now();
-
-  return {
-    model: modelName,
-    time: computeStats(times),
-    policyCompliance: computeStats(pc),
-    responseHelpfulness: computeStats(rh),
-    responseTime: computeStats(rt),
-    energyConsumption: computeStats(ec),
-    tokensUsed: computeStats(tokens),
-    gigaFlopsUsed: computeStats(gflops),
-    webLookups: computeStats(web),
-    toxicityScore: computeStats(toxic),
-    piiDetected: computeStats(pii),
-    breakdown: breakdownData,
-    queryCount: calls.length,
-    responseTimestamp: now
-  };
 }
