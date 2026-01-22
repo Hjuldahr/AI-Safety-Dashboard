@@ -705,13 +705,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     try {
         const existing = await apiListTags();
         existing.forEach(t => { tagsCache[t._id] = t; });
-        // populate existing tags select
-        const tagSelect = document.getElementById('tag-select');
-        if (tagSelect) {
-            let html = '<option value="">-- select tag --</option>';
-            existing.sort((a,b)=> (a.name||'').localeCompare(b.name||'')).forEach(t => { html += `<option value="${t._id}">${t.name}</option>`; });
-            tagSelect.innerHTML = html;
-        }
+        // initialize dual-list UI
+        renderDualLists();
     } catch (e) {
         console.warn('Failed to load tags at startup:', e);
     }
@@ -740,12 +735,51 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    document.getElementById('add-existing-tag-btn').addEventListener('click', (e) => {
-        const sel = document.getElementById('tag-select');
-        if (!sel) return;
-        const id = sel.value; if (!id) return alert('Select a tag to add');
-        if (!selectedTags.includes(id)) selectedTags.push(id);
-        renderSelectedTags();
+    // Dual-list tag selector handlers
+    function renderDualLists() {
+        const left = document.getElementById('tag-dual-left');
+        const right = document.getElementById('tag-dual-right');
+        if (!left || !right) return;
+        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+        // left = available (not selected)
+        const leftOpts = ordered.filter(t => !selectedTags.includes(t._id));
+        left.innerHTML = leftOpts.map(t => `<option value="${t._id}">${t.name}</option>`).join('');
+        // right = selected
+        right.innerHTML = selectedTags.map(id => {
+            const t = tagsCache[id];
+            return `<option value="${id}">${t ? t.name : id}</option>`;
+        }).join('');
+    }
+
+    const moveSelectedRightBtn = document.getElementById('move-selected-right');
+    const moveAllRightBtn = document.getElementById('move-all-right');
+    const moveSelectedLeftBtn = document.getElementById('move-selected-left');
+    const moveAllLeftBtn = document.getElementById('move-all-left');
+
+    if (moveSelectedRightBtn) moveSelectedRightBtn.addEventListener('click', (e) => {
+        const left = document.getElementById('tag-dual-left');
+        if (!left) return;
+        const toMove = Array.from(left.selectedOptions).map(o=>o.value);
+        toMove.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
+        renderDualLists(); renderSelectedTags();
+    });
+    if (moveAllRightBtn) moveAllRightBtn.addEventListener('click', (e) => {
+        const left = document.getElementById('tag-dual-left');
+        if (!left) return;
+        const all = Array.from(left.options).map(o=>o.value);
+        all.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
+        renderDualLists(); renderSelectedTags();
+    });
+    if (moveSelectedLeftBtn) moveSelectedLeftBtn.addEventListener('click', (e) => {
+        const right = document.getElementById('tag-dual-right');
+        if (!right) return;
+        const toMove = Array.from(right.selectedOptions).map(o=>o.value);
+        toMove.forEach(id => { const idx = selectedTags.indexOf(id); if (idx>=0) selectedTags.splice(idx,1); });
+        renderDualLists(); renderSelectedTags();
+    });
+    if (moveAllLeftBtn) moveAllLeftBtn.addEventListener('click', (e) => {
+        selectedTags.length = 0;
+        renderDualLists(); renderSelectedTags();
     });
 
     // Tag editor elements (under live alerts panel)
@@ -887,13 +921,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                 updated.forEach(t=>{ tagsCache[t._id]=t; });
                 refreshTagEditorFromCache();
                 populateModelDropdowns();
-                // re-render tag select
-                const tagSelect = document.getElementById('tag-select');
-                if (tagSelect) {
-                    let html = '<option value="">-- select tag --</option>';
-                    Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||'')).forEach(t => { html += `<option value="${t._id}">${t.name}</option>`; });
-                    tagSelect.innerHTML = html;
-                }
+                // update dual-list UI
+                renderDualLists();
                 // hide editor rows and show pill view
                 if (tagEditorRows) { tagEditorRows.style.display = 'none'; tagEditorRows.innerHTML = ''; }
                 if (tagEditorPills) { tagEditorPills.style.display = ''; }

@@ -68,12 +68,24 @@
           </div>
 
           <div class="form-group">
-            <label for="tag-select">Tags:</label>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-              <select id="tag-select" style="min-width:160px;"></select>
-              <button type="button" id="add-existing-tag-btn" class="btn btn-secondary">Add</button>
+            <label for="tag-dual-left">Tags:</label>
+            <div class="dual-list" style="display:flex; gap:0.5rem; align-items:center;">
+              <div style="flex:1;">
+                <div class="dual-list-label">Available</div>
+                <select id="tag-dual-left" multiple size="6" style="width:100%"></select>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+                <button type="button" id="move-selected-right" class="btn btn-secondary">▶</button>
+                <button type="button" id="move-all-right" class="btn btn-secondary">≫</button>
+                <button type="button" id="move-selected-left" class="btn btn-secondary">◀</button>
+                <button type="button" id="move-all-left" class="btn btn-secondary">≪</button>
+              </div>
+              <div style="flex:1;">
+                <div class="dual-list-label">Selected</div>
+                <select id="tag-dual-right" multiple size="6" style="width:100%"></select>
+              </div>
             </div>
-            <div id="selected-tags" class="selected-tags"></div>
+            <div id="selected-tags" class="selected-tags" style="margin-top:8px;"></div>
           </div>
 
           <div class="form-group add-alert-button-container">
