@@ -1,5 +1,5 @@
 // server_side_events/scheduler.js
-import { AIGeneralizer } from '../data_evaluation/AIGeneralizer.js';
+import { AIAnalyzer } from '../data_analysis_pipeline/AIAnalyzer.js';
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
@@ -22,7 +22,7 @@ const AI_MODELS = ["GoodModel", "BadModel"];
 async function generateModelData(modelName) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
-    const summary = AIGeneralizer(modelName, SCHEDULER_INTERVAL / 1000);
+    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000);
 
     // Format for DB/SSE
     return {

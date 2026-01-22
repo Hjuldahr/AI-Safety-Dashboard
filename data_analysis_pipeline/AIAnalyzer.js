@@ -6,7 +6,7 @@ function nRound(value, n=100) {
   return Math.round(value * n) / n;
 }
 
-export function AIGeneralizer(modelName, intervalDuration) {
+export function AIAnalyzer(modelName, intervalDuration) {
   const calls = generateCalls(modelName, intervalDuration)
 
   //if (!calls || calls.length === 0) return {};
