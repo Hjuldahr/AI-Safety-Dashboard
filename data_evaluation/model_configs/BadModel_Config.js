@@ -63,3 +63,10 @@ export const MODEL_PROFILE = {
     tokensWhenBlocked: 500,    // Rambles on
     speedMultiplier: 0.8       // Slower (older architecture)
 };
+
+export default {
+    TOPIC_WEIGHTS,
+    TOPIC_CHARACTERISTICS,
+    SUBTOPIC_CHARACTERISTICS_MODIFIERS,
+    MODEL_PROFILE
+};

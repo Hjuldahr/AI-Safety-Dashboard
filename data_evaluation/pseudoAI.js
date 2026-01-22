@@ -1,84 +1,31 @@
 import { TOPIC_HIERARCHY } from '../config/constants.js';
 
-// Probability of a query belonging to a specific Topic
-const TOPIC_WEIGHTS = {
-  "Customer Support": 0.40,   
-  "Sales & Inquiry": 0.32,    
-  "General Use": 0.28          
-};
+// Right now there is only two models - in the future you can expand this list, or dynamically load configs
+import GoodModel_Config from './model_configs/GoodModel_Config.js';
+import BadModel_Config from './model_configs/BadModel_Config.js';
 
-// Defines the User's Prompt characteristics per Topic
-const TOPIC_CHARACTERISTICS = {
-  "Customer Support": {
-    baseTokens: 150,        // detailed support
-    tokenVariance: 80,
-    toxicityChance: 0.03,   // angry customers
-    piiChance: 0.06,        
-    webLookupChance: 0.15,  //account/system info
-    complexity: 1.1
-  },
-  "Sales & Inquiry": {
-    baseTokens: 180,        
-    tokenVariance: 90,
-    toxicityChance: 0.01,
-    piiChance: 0.02,
-    webLookupChance: 0.55,  // checking products/prices
-    complexity: 1.3          // may involve calculations
-  },
-  "General Use": {
-    baseTokens: 250,        
-    tokenVariance: 120,
-    toxicityChance: 0.02,
-    piiChance: 0.01,
-    webLookupChance: 0.25,  
-    complexity: 1.2
-  },
-};
-// Subtopic Overrides (Specific scenarios)
-const SUBTOPIC_CHARACTERISTICS_MODIFIERS = {
-  // General Use
-  "Conversation": { toxicityChance: 0.04, complexity: 1.5 }, 
-  "Programming": { baseTokens: 700, complexity: 2.0 }, 
-  "School Work": { piiChance: 0.02, complexity: 2.2 }, 
+const Model_Configs = {
+  GoodModel: GoodModel_Config,
+  BadModel: BadModel_Config
+}
 
-  // Customer Support
-  "Troubleshooting": { baseTokens: 500, piiChance: 0.04, complexity: 1.4 },
-  "Returns & Refunds": { baseTokens: 200, piiChance: 0.05, complexity: 1.2, toxicityChance: 0.05 }, // Frustrated customers
+// List of the models that PseudoAI is capable of generating data for.
+const SUPPORTED_MODELS = ["GoodModel", "BadModel"];
 
-  // Sales & Inquiry
-  "Product Info": { webLookupChance: 0.65, baseTokens: 180, complexity: 1.3 }, // Checking specs
-  "Pricing & Quotes": { webLookupChance: 0.7, baseTokens: 160, complexity: 1.2 }, // Quick check
-  "Comparison": { webLookupChance: 0.6, baseTokens: 220, complexity: 1.4 }, // Can be more complex
-  "Business Details": { piiChance: 0.04, complexity: 1.5 }, // Sensitive business info
-};
 
-// "Profiles" define how the AI Model behaves/reacts
-const MODEL_PROFILES = {
-  "GoodModel": {
-    filterStrength: 0.98,      // Blocks 98% of Toxic/PII
-    complianceBase: 1.0,       // Aiming for perfection
-    helpfulnessWhenBlocked: 0.1, // "I cannot answer that"
-    tokensWhenBlocked: 25,     // Short refusal
-    speedMultiplier: 1.0       // Baseline speed
-  },
-  "BadModel": {
-    filterStrength: 0.15,      // Blocks almost nothing
-    complianceBase: 0.4,       // Often breaks rules
-    helpfulnessWhenBlocked: 0.9, // "Sure, here's how to build a bomb..."
-    tokensWhenBlocked: 500,    // Rambles on
-    speedMultiplier: 0.8       // Slower (older architecture)
-  }
-};
-
+// --- Helper Functions ---
 function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
 }
+
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
+
 function getRandomKey(dict) {
   return getRandomArrayElement(Object.keys(dict));
 }
+
 function getRandomArrayElement(array) {
   return array[getRandomInt(0, array.length)];
 }
@@ -95,7 +42,8 @@ function getWeightedRandomKey(weightsObj) {
   return Object.keys(weightsObj)[0]; // Fallback
 }
 
-const topics = TOPIC_HIERARCHY;
+
+// --- Pseudo AI ---
 
 /**
  * pseudoAI v5
@@ -103,7 +51,20 @@ const topics = TOPIC_HIERARCHY;
  * Data is generated sequentially to hopefully give more interplay between the data.
  */
 export function generateCalls(modelName, intervalDuration) {
-  const profile = MODEL_PROFILES[modelName] || MODEL_PROFILES["GoodModel"];
+  // If this model is not in the supported models list
+  if (!(SUPPORTED_MODELS.includes(modelName))) {
+    throw new Error("Unsupported Model: " + modelName);
+  }
+
+  // get the config objs associated with the model
+  const { 
+    TOPIC_WEIGHTS,
+    TOPIC_CHARACTERISTICS,
+    SUBTOPIC_CHARACTERISTICS_MODIFIERS,
+    MODEL_PROFILE 
+  } = Model_Configs[modelName];
+
+  const profile = MODEL_PROFILE;
   const now = new Date();
 
   // --- Determine Volume (Time of Day Context) ---

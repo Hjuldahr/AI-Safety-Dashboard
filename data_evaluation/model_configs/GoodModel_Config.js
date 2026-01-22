@@ -63,3 +63,10 @@ export const MODEL_PROFILE = {
     tokensWhenBlocked: 25,     // Short refusal
     speedMultiplier: 1.0       // Baseline speed
 };
+
+export default {
+    TOPIC_WEIGHTS,
+    TOPIC_CHARACTERISTICS,
+    SUBTOPIC_CHARACTERISTICS_MODIFIERS,
+    MODEL_PROFILE
+};
