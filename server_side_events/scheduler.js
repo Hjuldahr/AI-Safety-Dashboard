@@ -14,14 +14,14 @@ let schedulerInterval = null;
 //One method for both models
 async function generateModelData(modelName) {
     // Generate Raw Logs based on Model Profile
-    const calls = await pseudoAI(modelName, schedulerState.interval / 1000); // Use scheduler interval
+    // const calls = await pseudoAI(modelName, schedulerState.interval / 1000); // Use scheduler interval
 
     // Aggregate
     const summary = AIGeneralizer(modelName, schedulerState.interval / 1000);
 
     // Format for DB/SSE
     return {
-        modelName: summary.model,
+        modelName: modelName,
         policyCompliance: summary.policyCompliance.mean * 100,
         responseHelpfulness: summary.responseHelpfulness.mean * 5,
         responseTime: summary.responseTime.mean,
@@ -125,8 +125,8 @@ async function schedulerTick() {
     if (schedulerState.isPaused) return;
 
     try {
-        const goodData = generateModelData("GoodModel");
-        const badData = generateModelData("BadModel");
+        const goodData = await generateModelData("GoodModel");
+        const badData = await generateModelData("BadModel");
 
         const dataToSave = {
             GoodModel: goodData,
@@ -136,6 +136,7 @@ async function schedulerTick() {
         // Save logs
         await AI_Log.addLog(goodData);
         await AI_Log.addLog(badData);
+
 
         // Evaluate alerts
         try {
