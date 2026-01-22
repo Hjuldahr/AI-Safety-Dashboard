@@ -20,6 +20,6 @@ This file contains information about the rest of the documentation available abo
 
 ## Open API Documentation
 - Open API documentation is provided in yaml format in the `documentation/openapi.yml` file.
-- It is also available at `[Domain]/docs`.
+- It is also available at `[Domain]/docs/`.
 - More information about this in the `documentation/openapi_documentation.md` file
 
