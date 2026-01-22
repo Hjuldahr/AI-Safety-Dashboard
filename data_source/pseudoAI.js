@@ -70,21 +70,21 @@ const MODEL_PROFILES = {
   }
 };
 
-export function getRandomFloat(min, max) {
+function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;
 }
-export function getRandomInt(min, max) {
+function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
-export function getRandomKey(dict) {
+function getRandomKey(dict) {
   return getRandomArrayElement(Object.keys(dict));
 }
-export function getRandomArrayElement(array) {
+function getRandomArrayElement(array) {
   return array[getRandomInt(0, array.length)];
 }
 
 // Selects a key from an object based on integer weights
-export function getWeightedRandomKey(weightsObj) {
+function getWeightedRandomKey(weightsObj) {
   const totalWeight = Object.values(weightsObj).reduce((a, b) => a + b, 0);
   let random = Math.random() * totalWeight;
 
@@ -102,7 +102,7 @@ const topics = TOPIC_HIERARCHY;
  * Updated to take topic and sub topic into effect.
  * Data is generated sequentially to hopefully give more interplay between the data.
  */
-export async function pseudoAI(modelName, intervalDuration) {
+export function generateCalls(modelName, intervalDuration) {
   const profile = MODEL_PROFILES[modelName] || MODEL_PROFILES["GoodModel"];
   const now = new Date();
 

@@ -1,11 +1,14 @@
 import { mean } from 'simple-statistics'
+import { generateCalls } from './pseudoAI.js'
 
-export function nRound(value, n=100) {
+function nRound(value, n=100) {
   return Math.round(value * n) / n;
 }
 
-export function AIGeneralizer(modelName, calls) {
-  if (!calls || calls.length === 0) return {};
+export function AIGeneralizer(modelName, intervalDuration) {
+  const calls = generateCalls(modelName, intervalDuration)
+
+  //if (!calls || calls.length === 0) return {};
 
   const computeStats = (arr) => {
     if (!arr || arr.length === 0) return { min: 0, max: 0, mean: 0, median: 0 };

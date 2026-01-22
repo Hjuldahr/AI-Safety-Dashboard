@@ -56,8 +56,6 @@ function weightedRandom(weightMap) {
     return Object.keys(weightMap)[0];
 }
 
-
-
 export async function dummyAI(modelName, intervalDuration, queries = 10, previousGeneralization = {}) {
     const calls = [];
     const now = new Date();

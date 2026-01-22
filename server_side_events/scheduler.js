@@ -1,6 +1,5 @@
 // server_side_events/scheduler.js
 import { AIGeneralizer } from '../data_source/AIGeneralizer.js';
-import { pseudoAI } from '../data_source/pseudoAI.js';
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
@@ -13,12 +12,9 @@ let schedulerInterval = null;
 
 // ---------- Model Simulation ----------
 //One method for both models
-async function generateModelData(modelName) {
-    // Generate Raw Logs based on Model Profile
-    const calls = await pseudoAI(modelName, schedulerState.interval / 1000); 
-
+function generateModelData(modelName) {
     // Aggregate
-    const summary = AIGeneralizer(modelName, calls);
+    const summary = AIGeneralizer(modelName, schedulerState.interval / 1000);
 
     // Format for DB/SSE
     return {
@@ -126,8 +122,8 @@ async function schedulerTick() {
     if (schedulerState.isPaused) return;
 
     try {
-        const goodData = await generateModelData("GoodModel");
-        const badData = await generateModelData("BadModel");
+        const goodData = generateModelData("GoodModel");
+        const badData = generateModelData("BadModel");
 
         const dataToSave = {
             GoodModel: goodData,
