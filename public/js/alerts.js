@@ -415,14 +415,17 @@ document.addEventListener('DOMContentLoaded', async function () {
             const timeString = createdTs.toLocaleString('en-CA', { hour12: true }).replace(',', '');
             const level = log.level || 'Info';
             
-            const tagsHtml = (log.tags || []).map(t => `<span class="tag-pill" style="background:${t.color || '#888888'}">${t.name || ''}</span>`).join(' ');
-            newRow.innerHTML = `
+            const tagsHtml = (log.tags || []).map(t => `
+                <span class="tag-pill" style="background:${t.color || '#888888'}">${t.name || ''}
+                    <button class="remove-log-tag" data-log-id="${log._id}" data-tag-id="${t._id}" title="Remove tag">×</button>
+                </span>`).join(' ');
+                newRow.innerHTML = `
                 <td><span class="level-tag ${level.toLowerCase()}">${level}</span></td>
                 <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
                 <td>${log.alertName || ''}</td>
                 <td class="model-cell">${log.modelName || '-'}</td>
                 <td class="details-cell">${log.humanRule || ''}</td>
-                <td class="tags-cell">${tagsHtml} <button class="add-log-tag" data-id="${log._id}">+</button></td>
+                    <td class="tags-cell">${tagsHtml} <button class="add-log-tag" data-id="${log._id}">+</button></td>
             `;
             alertLogBody.appendChild(newRow);
         });
@@ -606,6 +609,23 @@ document.addEventListener('DOMContentLoaded', async function () {
                 } finally { popup.remove(); }
             });
             cancelBtn.addEventListener('click', () => popup.remove());
+        }
+        // Remove tag from a specific alert log
+        if (e.target && e.target.classList.contains('remove-log-tag')) {
+            const logId = e.target.dataset.logId;
+            const tagId = e.target.dataset.tagId;
+            if (!logId || !tagId) return;
+            try {
+                const resp = await fetch(`alerts/api/logs/${encodeURIComponent(logId)}/tags/${encodeURIComponent(tagId)}`, {
+                    method: 'DELETE', credentials: 'same-origin'
+                });
+                const data = await resp.json().catch(()=>({}));
+                if (!resp.ok) throw new Error(data.message || 'Failed to remove tag');
+                await loadAlertHistory(currentHistoryPage);
+            } catch (err) {
+                console.error('Failed to remove tag from log:', err);
+                alert('Failed to remove tag: ' + err.message);
+            }
         }
     });
 

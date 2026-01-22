@@ -327,6 +327,31 @@ const addTagToAlertLog = async (req, res) => {
     }
 };
 
+// DELETE /alerts/api/logs/:id/tags/:tagId - remove a tag reference from a specific alert log
+const removeTagFromAlertLog = async (req, res) => {
+    try {
+        const logId = req.params.id;
+        const tagId = req.params.tagId;
+        if (!logId || !tagId) return res.status(400).json({ message: 'Missing log id or tag id.' });
+
+        const AlertLogModel = await import('../models/alert_log.js');
+        const AlertLog = AlertLogModel.default;
+
+        const existing = await AlertLog.findById(logId);
+        if (!existing) return res.status(404).json({ message: 'Alert log not found.' });
+
+        const beforeCount = (existing.tags || []).length;
+        existing.tags = (existing.tags || []).filter(t => String(t) !== String(tagId));
+        if (existing.tags.length === beforeCount) return res.status(404).json({ message: 'Tag not found on this alert log.' });
+
+        await existing.save();
+        return res.status(200).json({ message: 'Tag removed from alert log.' });
+    } catch (error) {
+        console.error('Error removing tag from alert log:', error);
+        return res.status(500).json({ message: 'Failed to remove tag from alert log.' });
+    }
+};
+
 export default { 
     getPage, 
     createAlert, 
@@ -336,5 +361,6 @@ export default {
     updateAlertById, 
     getUnreadCount, 
     markAlertsRead,
-    addTagToAlertLog
+    addTagToAlertLog,
+    removeTagFromAlertLog
 };
