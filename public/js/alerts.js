@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
 
     // --------------------------------------------------
     // DOM references
@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Client-side cache and edit state
     const liveAlertsCache = {};
+    const tagsCache = {};
+    const selectedTags = [];
     let currentEditId = null;
     let currentHistoryPage = 1;
 
@@ -279,6 +281,15 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             sel.innerHTML = html;
         });
+        // Populate tag filter dropdown if present
+        const tagFilter = document.getElementById('filter-tag');
+        if (tagFilter) {
+            let html = '<option value="all">All Tags</option>';
+            Object.values(tagsCache).forEach(t => {
+                html += `<option value="${t._id}">${t.name}</option>`;
+            });
+            tagFilter.innerHTML = html;
+        }
     }
 
     // Generate <option> tags for Numeric fields only (alerts usually need math)
@@ -304,6 +315,36 @@ document.addEventListener('DOMContentLoaded', function () {
         return data;
     }
 
+    async function apiListTags() {
+        const resp = await fetch('tags');
+        if (!resp.ok) throw new Error('Failed to load tags');
+        const data = await resp.json();
+        return data.tags || [];
+    }
+
+    async function apiCreateTag(payload) {
+        const resp = await fetch('tags', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.message || 'Failed to create tag');
+        return data.tag;
+    }
+
+    async function apiSyncTags(payload) {
+        const resp = await fetch('tags/sync', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.message || 'Failed to sync tags');
+        return data.tags || [];
+    }
     async function apiGetLiveAlerts() {
         const resp = await fetch('alerts/live');
         if (!resp.ok) throw new Error('Failed to load live alerts');
@@ -364,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderHistoryTable(logs) {
         alertLogBody.innerHTML = ''; // clear existing
         if (!logs || logs.length === 0) {
-            alertLogBody.innerHTML = '<tr><td colspan="5">No alert history found.</td></tr>';
+            alertLogBody.innerHTML = '<tr><td colspan="6">No alert history found.</td></tr>';
             return;
         }
 
@@ -374,12 +415,14 @@ document.addEventListener('DOMContentLoaded', function () {
             const timeString = createdTs.toLocaleString('en-CA', { hour12: true }).replace(',', '');
             const level = log.level || 'Info';
             
+            const tagsHtml = (log.tags || []).map(t => `<span class="tag-pill" style="background:${t.color || '#888888'}">${t.name || ''}</span>`).join(' ');
             newRow.innerHTML = `
                 <td><span class="level-tag ${level.toLowerCase()}">${level}</span></td>
                 <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
                 <td>${log.alertName || ''}</td>
                 <td class="model-cell">${log.modelName || '-'}</td>
                 <td class="details-cell">${log.humanRule || ''}</td>
+                <td class="tags-cell">${tagsHtml} <button class="add-log-tag" data-id="${log._id}">+</button></td>
             `;
             alertLogBody.appendChild(newRow);
         });
@@ -389,12 +432,13 @@ document.addEventListener('DOMContentLoaded', function () {
         currentHistoryPage = page;
         
         // UI Loading state
-        alertLogBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+        alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
         historyPagination.innerHTML = '';
 
         // Get filter values
         const level = document.getElementById('filter-level').value;
         const model = document.getElementById('filter-model').value;
+        const tag = document.getElementById('filter-tag') ? document.getElementById('filter-tag').value : '';
         const startDate = document.getElementById('filter-start-date') ? document.getElementById('filter-start-date').value : '';
         const endDate = document.getElementById('filter-end-date') ? document.getElementById('filter-end-date').value : '';
 
@@ -404,6 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
         params.set('limit', 10); // Standard limit
         if (level && level !== 'all') params.set('level', level);
         if (model && model !== 'all') params.set('modelName', model);
+        if (tag && tag !== 'all') params.set('tag', tag);
         if (startDate) params.set('startDate', startDate);
         if (endDate) params.set('endDate', endDate);
 
@@ -417,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function () {
             renderPagination(historyPagination, data.pages, data.page, loadAlertHistory);
         } catch (err) {
             console.error('History load error:', err);
-            alertLogBody.innerHTML = `<tr><td colspan="5">Error loading history: ${err.message}</td></tr>`;
+            alertLogBody.innerHTML = `<tr><td colspan="6">Error loading history: ${err.message}</td></tr>`;
         }
     }
 
@@ -444,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const uiReadable = formatRuleReadableFromUI();
         const created = Date.now();
         try {
-            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, modelName });
+            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, modelName, tags: selectedTags });
             await loadLiveAlerts();
             
             // Reload history to show the new alert log (if triggered immediately or just to refresh state)
@@ -511,6 +556,59 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Handle tagging a specific alert log (delegated)
+    alertLogBody.addEventListener('click', async function (e) {
+        if (e.target && e.target.classList.contains('add-log-tag')) {
+            const id = e.target.dataset.id;
+            if (!id) return;
+            // create inline select popup next to the button
+            // remove any existing popup
+            const existingPopup = document.getElementById('log-tag-popup');
+            if (existingPopup) existingPopup.remove();
+            const popup = document.createElement('div');
+            popup.id = 'log-tag-popup';
+            popup.style.position = 'absolute';
+            popup.style.background = '#fff';
+            popup.style.border = '1px solid #ccc';
+            popup.style.padding = '8px';
+            popup.style.zIndex = 1000;
+            const select = document.createElement('select');
+            select.style.minWidth = '160px';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = '-- select tag --';
+            select.appendChild(defaultOpt);
+            Object.values(tagsCache).forEach(t => {
+                const o = document.createElement('option'); o.value = t._id; o.textContent = t.name; select.appendChild(o);
+            });
+            const addBtn = document.createElement('button'); addBtn.className = 'btn btn-primary'; addBtn.textContent = 'Add';
+            const cancelBtn = document.createElement('button'); cancelBtn.className = 'btn btn-secondary'; cancelBtn.textContent = 'Cancel';
+            cancelBtn.style.marginLeft = '6px';
+            popup.appendChild(select); popup.appendChild(addBtn); popup.appendChild(cancelBtn);
+            document.body.appendChild(popup);
+            // position near target
+            const rect = e.target.getBoundingClientRect();
+            popup.style.left = (rect.left + window.scrollX) + 'px';
+            popup.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+
+            addBtn.addEventListener('click', async () => {
+                const tagId = select.value; if (!tagId) return alert('Select a tag');
+                try {
+                    const resp = await fetch(`alerts/api/logs/${encodeURIComponent(id)}/tags`, {
+                        method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tagId })
+                    });
+                    const data = await resp.json().catch(()=>({}));
+                    if (!resp.ok) throw new Error(data.message || 'Failed');
+                    await loadAlertHistory(currentHistoryPage);
+                } catch (err) {
+                    console.error('Failed to add tag to log:', err);
+                    alert('Failed to add tag: ' + err.message);
+                } finally { popup.remove(); }
+            });
+            cancelBtn.addEventListener('click', () => popup.remove());
+        }
+    });
+
     function startEdit(alertObj) {
         if (!alertObj) return;
         currentEditId = alertObj._id;
@@ -518,6 +616,17 @@ document.addEventListener('DOMContentLoaded', function () {
         alertLevelSelect.value = alertObj.alertLevel || 'Info';
         if (modelSelect) modelSelect.value = alertObj.modelName || '';
         populateRuleBuilderFromRule(alertObj.alertRule || {});
+        // populate selected tags for editing
+        selectedTags.length = 0;
+        if (alertObj.tags && Array.isArray(alertObj.tags)) {
+            alertObj.tags.forEach(t => {
+                if (t && t._id) {
+                    tagsCache[t._id] = t;
+                    selectedTags.push(t._id);
+                }
+            });
+        }
+        renderSelectedTags();
         addAlertBtn.style.display = 'none';
         saveBtn.style.display = '';
         cancelBtn.style.display = '';
@@ -543,7 +652,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const ruleJSON = buildRuleJSON();
         if (!ruleJSON) return;
         try {
-            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON, modelName });
+            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON, modelName, tags: selectedTags });
             await loadLiveAlerts();
             cancelEdit();
         } catch (err) {
@@ -572,6 +681,127 @@ document.addEventListener('DOMContentLoaded', function () {
     // --------------------------------------------------
     // Initialization
     // --------------------------------------------------
+    // Load existing tags and wire up tag builder/editor
+    try {
+        const existing = await apiListTags();
+        existing.forEach(t => { tagsCache[t._id] = t; });
+        // populate existing tags select
+        const tagSelect = document.getElementById('tag-select');
+        if (tagSelect) {
+            let html = '<option value="">-- select tag --</option>';
+            existing.sort((a,b)=> (a.name||'').localeCompare(b.name||'')).forEach(t => { html += `<option value="${t._id}">${t.name}</option>`; });
+            tagSelect.innerHTML = html;
+        }
+    } catch (e) {
+        console.warn('Failed to load tags at startup:', e);
+    }
+
+    function renderSelectedTags() {
+        const container = document.getElementById('selected-tags');
+        if (!container) return;
+        container.innerHTML = '';
+        selectedTags.forEach(t => {
+            const tag = tagsCache[t] || { _id: t, name: t, color: '#888888' };
+            const span = document.createElement('span');
+            span.className = 'tag-pill';
+            span.style.background = tag.color || '#888888';
+            span.textContent = tag.name || '';
+            const rem = document.createElement('button');
+            rem.className = 'remove-tag-btn';
+            rem.textContent = '×';
+            rem.dataset.id = t;
+            rem.addEventListener('click', () => {
+                const idx = selectedTags.indexOf(t);
+                if (idx >= 0) selectedTags.splice(idx, 1);
+                renderSelectedTags();
+            });
+            span.appendChild(rem);
+            container.appendChild(span);
+        });
+    }
+
+    document.getElementById('add-existing-tag-btn').addEventListener('click', (e) => {
+        const sel = document.getElementById('tag-select');
+        if (!sel) return;
+        const id = sel.value; if (!id) return alert('Select a tag to add');
+        if (!selectedTags.includes(id)) selectedTags.push(id);
+        renderSelectedTags();
+    });
+
+    // Tag editor elements (under live alerts panel)
+    const tagEditorTextarea = document.getElementById('tag-editor-textarea');
+    const editTagsBtn = document.getElementById('edit-tags-btn');
+    const confirmTagsBtn = document.getElementById('confirm-tags-btn');
+    const cancelTagsBtn = document.getElementById('cancel-tags-btn');
+    let originalTagIds = [];
+    let originalTagNames = [];
+
+    function refreshTagEditorFromCache() {
+        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+        originalTagIds = ordered.map(t=>t._id);
+        originalTagNames = ordered.map(t=>t.name);
+        if (tagEditorTextarea) tagEditorTextarea.value = originalTagNames.join(', ');
+    }
+
+    if (editTagsBtn) {
+        editTagsBtn.addEventListener('click', (e) => {
+            if (!tagEditorTextarea) return;
+            tagEditorTextarea.readOnly = false;
+            tagEditorTextarea.focus();
+            editTagsBtn.style.display = 'none';
+            confirmTagsBtn.style.display = '';
+            cancelTagsBtn.style.display = '';
+        });
+    }
+    if (cancelTagsBtn) {
+        cancelTagsBtn.addEventListener('click', (e) => {
+            if (!tagEditorTextarea) return;
+            tagEditorTextarea.value = originalTagNames.join(', ');
+            tagEditorTextarea.readOnly = true;
+            editTagsBtn.style.display = '';
+            confirmTagsBtn.style.display = 'none';
+            cancelTagsBtn.style.display = 'none';
+        });
+    }
+    if (confirmTagsBtn) {
+        confirmTagsBtn.addEventListener('click', async (e) => {
+            if (!tagEditorTextarea) return;
+            const raw = tagEditorTextarea.value || '';
+            const parts = raw.split(',').map(s=>s.trim()).filter(s=>s.length>0);
+            // validate unique
+            const low = parts.map(p=>p.toLowerCase());
+            const dup = low.find((v,i)=> low.indexOf(v)!==i);
+            if (dup) return alert('Tag names must be unique');
+            try {
+                const updated = await apiSyncTags({ originalIds: originalTagIds, newNames: parts });
+                // refresh cache
+                Object.keys(tagsCache).forEach(k=>delete tagsCache[k]);
+                updated.forEach(t=>{ tagsCache[t._id]=t; });
+                refreshTagEditorFromCache();
+                populateModelDropdowns();
+                // re-render tag select
+                const tagSelect = document.getElementById('tag-select');
+                if (tagSelect) {
+                    let html = '<option value="">-- select tag --</option>';
+                    Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||'')).forEach(t => { html += `<option value="${t._id}">${t.name}</option>`; });
+                    tagSelect.innerHTML = html;
+                }
+                // hide editor buttons
+                tagEditorTextarea.readOnly = true;
+                editTagsBtn.style.display = '';
+                confirmTagsBtn.style.display = 'none';
+                cancelTagsBtn.style.display = 'none';
+                // refresh UI
+                await loadLiveAlerts();
+                await loadAlertHistory(currentHistoryPage);
+            } catch (err) {
+                console.error('Failed to sync tags:', err);
+                alert('Failed to sync tags: ' + err.message);
+            }
+        });
+    }
+
+    refreshTagEditorFromCache();
     populateModelDropdowns();
     resetAlertBuilder();
     loadLiveAlerts();

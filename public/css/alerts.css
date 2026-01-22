@@ -83,10 +83,28 @@ body {
 @media (min-width: 768px) {
     .alert-builder-grid {
         grid-template-columns: repeat(3, 1fr);
+        gap: 1rem 1.5rem;
     }
-    .rule-builder {
-       grid-column: 1 / -1; /* Span all columns */
+
+    .tags-cell {
+        max-width: 220px;
+        overflow: hidden; /* clip overflow instead of wrapping */
+        align-items: center;
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: nowrap; /* keep pills on single line */
     }
+
+    /* Allow each pill to shrink; truncate long names with ellipsis */
+    .tag-pill {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 0 1 auto; /* allow shrinking but don't force growth */
+        min-width: 0; /* allow flex-basis to shrink below content width */
+    }
+
+    .tag-pill .remove-tag-btn { flex: 0 0 auto; }
     .add-alert-button-container {
         grid-column: 3 / 4;
         grid-row: 1 / 2;
@@ -417,3 +435,81 @@ input[type="text"]:focus, select:focus {
     color: white;
     border-color: #007bff;
 }
+
+/* Tag pills */
+.tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    color: white;
+    margin-right: 0.35rem;
+    height: 20px;
+    line-height: 20px;
+    box-sizing: border-box;
+}
+
+.tag-pill .remove-tag-btn {
+    background: rgba(255,255,255,0.18);
+    border: none;
+    color: white;
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin-left: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tag-pill .remove-tag-btn:hover {
+    background: rgba(255,255,255,0.35);
+}
+
+/* Tag builder layout */
+.tag-builder {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.selected-tags {
+    margin-top: 0.5rem;
+}
+
+.tags-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Keep table rows vertically aligned and prevent tag pills from wrapping
+   so that row heights remain consistent and horizontal borders align. */
+.alert-log-table th, .alert-log-table td {
+    vertical-align: middle;
+}
+.tags-cell {
+    max-width: 220px;
+    overflow: hidden;
+    align-items: center;
+}
+
+.tag-pill { white-space: nowrap; }
+
+.add-log-tag {
+    background: none;
+    border: 1px dashed #9ca3af;
+    color: #6b7280;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.add-log-tag:hover {
+    background: #f3f4f6;
+}
+

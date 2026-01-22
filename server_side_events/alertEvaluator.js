@@ -8,7 +8,7 @@ export default async function evaluateAlerts(data, options = {}) {
 
     let alerts;
     try {
-        alerts = await Alert.find().lean();
+        alerts = await Alert.find().populate('tags').lean();
     } catch (err) {
         console.error('[AlertEvaluator] Failed to fetch alerts:', err);
         return;
@@ -78,17 +78,24 @@ export default async function evaluateAlerts(data, options = {}) {
                     alertLevel: alert.alertLevel,
                     modelName: alert.modelName || null,
                     alertRule: alert.alertRule,
+                    // include tag snapshot if present on alert
+                    tags: Array.isArray(alert.tags) && alert.tags.length ? alert.tags.map(t => {
+                        // if tags are populated objects, preserve their fields; if ObjectId, keep id only
+                        if (t && typeof t === 'object' && t.name) return { _id: t._id, name: t.name, color: t.color };
+                        return { _id: t };
+                    }) : [],
                     created: alert.created
                 };
                 try {
-                    const created = await AlertLog.create({ alert: alert._id, alertSnapshot: snapshot });
+                    const created = await AlertLog.create({ alert: alert._id, alertSnapshot: snapshot, tags: alert.tags || [] });
                     // Emit SSE 'alert' event with basic info
                     try {
                         const payload = {
                             _id: created._id,
                             alert: created.alert,
                             timestamp: created.timestamp,
-                            alertSnapshot: created.alertSnapshot
+                            alertSnapshot: created.alertSnapshot,
+                            tags: created.tags || created.alertSnapshot && created.alertSnapshot.tags || []
                         };
                         broadcastEvent('alert', payload);
                     } catch (emitErr) {

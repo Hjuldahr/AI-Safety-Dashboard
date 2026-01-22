@@ -64,6 +64,15 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label for="tag-select">Tags:</label>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <select id="tag-select" style="min-width:160px;"></select>
+              <button type="button" id="add-existing-tag-btn" class="btn btn-secondary">Add</button>
+            </div>
+            <div id="selected-tags" class="selected-tags"></div>
+          </div>
+
           <div class="form-group add-alert-button-container">
             <button id="add-alert-btn" class="btn btn-primary">Add Alert</button>
           </div>
@@ -89,6 +98,15 @@
           <h2 class="card-title">View and Edit Live Alerts</h2>
           <ul id="live-alerts-list" class="live-alerts-list">
           </ul>
+          <div class="card" style="margin-top:1rem; padding:0.75rem;">
+            <label for="tag-editor-textarea">Manage Tags (comma-separated)</label>
+            <textarea id="tag-editor-textarea" rows="2" style="width:100%;" readonly></textarea>
+            <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+              <button id="edit-tags-btn" class="btn btn-secondary">Edit</button>
+              <button id="confirm-tags-btn" class="btn btn-primary" style="display:none;">Confirm</button>
+              <button id="cancel-tags-btn" class="btn btn-secondary" style="display:none;">Cancel</button>
+            </div>
+          </div>
         </aside>
 
         <div class="card alert-log-panel">
@@ -113,6 +131,11 @@
               <select id="filter-model" name="model" class="model-select-dynamic">
               </select>
 
+              <label for="filter-tag">Tag:</label>
+              <select id="filter-tag" name="tag">
+                <option value="all">All Tags</option>
+              </select>
+
               <label for="filter-start-date">From:</label>
               <input type="date" id="filter-start-date" name="startDate">
 
@@ -132,11 +155,12 @@
                   <th>Alert</th>
                   <th>Model</th>
                   <th>Triggered By</th>
+                  <th>Tags</th>
                 </tr>
               </thead>
               <tbody id="alert-log-body">
                 <tr>
-                  <td colspan="5">Loading history...</td>
+                  <td colspan="6">Loading history...</td>
                 </tr>
               </tbody>
             </table>

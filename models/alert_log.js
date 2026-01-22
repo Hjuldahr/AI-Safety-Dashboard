@@ -12,6 +12,12 @@ const AlertSnapshotSchema = new Schema({
     // Optional model name the alert targets
     modelName: String,
     alertRule: Schema.Types.Mixed,
+    // Preserve tags as simple objects at time of firing
+    tags: [{
+        _id: Schema.Types.ObjectId,
+        name: String,
+        color: String
+    }],
     created: Date
 }, { _id: false });
 
@@ -22,6 +28,8 @@ const AlertLogSchema = new Schema({
         ref: 'Alert',
         required: true
     },
+    // Current tags (refs) — may be empty; snapshot contains preserved tag objects
+    tags: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
     alertSnapshot: {
         type: AlertSnapshotSchema,
         required: false
