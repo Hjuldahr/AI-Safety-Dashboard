@@ -87,20 +87,38 @@ const startServer = async () => {
     });
 
     const shutdown = async (signal) => {
-        console.log(`\nReceived [${signal}] Initiating Shutdown.`);
+        console.log(`\nReceived [${signal}] Initiating shutdown.`);
+
+        const forceExitTimer = setTimeout(() => {
+            console.error("Forcing shutdown after timeout.");
+            server.closeAllConnections?.();
+            process.exit(1);
+        }, 1000 * 10); // 10 seconds
+
         try {
             await broadcastMotd({
-                message: "The server will be shutting down for maintenance.", bground: "#b35d00", lock: true
+                message: "The server will be shutting down for maintenance.",
+                bground: "#b35d00",
+                lock: true
             });
 
-            server.close(async () => {
-                console.log("HTTP server closed");
-                await mongoose.disconnect();
-                console.log("MongoDB disconnected");
-                process.exit(0);
+            // Stop accepting new connections
+            await new Promise((resolve, reject) => {
+                server.close(err => (err ? reject(err) : resolve()));
             });
+            console.log("HTTP server closed");
+
+            // Kill existing connections
+            server.closeIdleConnections?.();
+
+            await mongoose.disconnect();
+            console.log("MongoDB disconnected");
+
+            clearTimeout(forceExitTimer);
+            process.exit(0);
         } catch (err) {
             console.error("Shutdown error:", err);
+            clearTimeout(forceExitTimer);
             process.exit(1);
         }
     };
