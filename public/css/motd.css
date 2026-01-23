@@ -1,25 +1,30 @@
-.motd {
-  position: relative;         
+body {
+  margin: 0;
+}
+
+#motd-banner {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  
   background-color: #0056b3;
   color: white;
   padding: 0.5rem 1rem;
-
-  display: flex;
-  align-items: center;
 }
 
-.motd-text {
-  position: absolute;         
-  left: 50%;
-  transform: translateX(-50%);
+#motd-text {
+  flex: 1;
   margin: 0;
   text-align: center;
+  margin-right: 2rem;
 }
 
-.dismiss-button {
-  margin-left: auto;         
-  width: 32px;
-  height: 32px;
+#dismiss-button {
+  position: absolute;
+  right: 0.5rem;
 
   border-radius: 50%;
   background-color: transparent;
@@ -28,13 +33,12 @@
   font-size: 16px;
   cursor: pointer;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  /* Strips stylization from other buttons */
-  transition: none; 
-  animation: none; 
+  transition: none;
+  animation: none;
   transform: none;
   box-shadow: none;
+}
+
+#motd-banner.hidden {
+  display: none;
 }

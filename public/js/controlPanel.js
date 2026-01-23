@@ -1,6 +1,7 @@
 let activeModel = "GoodModel";
 let isPaused = false;
 
+// TODO move colours into a css file class
 const pauseText = "⏸ Pause Graphs";
 const pauseColour = "#f45b69ff";
 const playText = "▶ Resume Graphs";
