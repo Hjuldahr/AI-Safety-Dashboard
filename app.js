@@ -102,7 +102,7 @@ const startServer = async () => {
                 lock: true
             });
 
-            // Stop accepting new connections
+            // Block new connections
             await new Promise((resolve, reject) => {
                 server.close(err => (err ? reject(err) : resolve()));
             });
