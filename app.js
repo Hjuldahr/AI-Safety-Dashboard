@@ -48,7 +48,7 @@ async function startServer() {
             resave: false,
             saveUninitialized: false,
             store: MongoStore.create({
-                client: mongoose.connection.getClient(), // IMPORTANT
+                client: mongoose.connection.getClient(),
             }),
             cookie: {
                 maxAge: 1000 * 60 * 60 * 24,
