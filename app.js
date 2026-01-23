@@ -14,6 +14,7 @@ import { connectDB, seedDataBase, seedCharts } from './config/database.js';
 // import { swaggerSpec } from "./config/swaggerConfig.js";
 import swaggerUi from "swagger-ui-express";
 import YAML from 'yamljs';
+import { broadcastMotd } from "./controllers/motdController.js";
 
 dotenv.config();
 
@@ -88,6 +89,10 @@ const startServer = async () => {
     const shutdown = async (signal) => {
         console.log(`\nReceived [${signal}] Initiating Shutdown.`);
         try {
+            await broadcastMotd({
+                message: "The server will be shutting down for maintenance."
+            });
+
             server.close(async () => {
                 console.log("HTTP server closed");
                 await mongoose.disconnect();
