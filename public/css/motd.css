@@ -50,3 +50,6 @@ body {
 #motd-readmore.hidden {
   display: none;
 }
+#dismiss-button.hidden {
+  display: none;
+}

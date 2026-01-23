@@ -3,9 +3,9 @@ let isPaused = false;
 
 // TODO move colours into a css file class
 const pauseText = "⏸ Pause Graphs";
-const pauseColour = "#f45b69ff";
+const pauseColour = "#f45b69";
 const playText = "▶ Resume Graphs";
-const playColour = "#2ca58dff"
+const playColour = "#2ca58d"
 
 const loadChartsFromDatabase = window.DashboardApp.actions.loadCharts; // get the helper method exposed in the chartDataManager.js file.
 

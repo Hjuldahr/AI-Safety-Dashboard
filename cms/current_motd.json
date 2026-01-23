@@ -1,0 +1,6 @@
+{
+    "message": "Welcome to the Dashboard!",
+    "linkText": "Read the devlog",
+    "linkUrl": "/cms/test_log.html",
+    "timeout": 10
+}

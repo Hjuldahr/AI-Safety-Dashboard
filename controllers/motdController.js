@@ -2,7 +2,7 @@
 import { broadcastEvent } from "../server_side_events/scheduler.js";
 import { readFile } from "fs/promises";
 
-const filePath = "devlogs/current_motd.json";
+const filePath = "cms/current_motd.json";
 
 async function readJsonFile() {
   try {

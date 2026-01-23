@@ -35,7 +35,7 @@ const startServer = async () => {
 
     // Serve all public files in the public folder (must be done before mounting main routes)
     app.use(express.static(path.join(PROJECT_ROOT, "public")));
-    app.use("/devlogs", express.static(path.join(process.cwd(), "devlogs")));
+    app.use("/cms", express.static(path.join(process.cwd(), "cms")));
 
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
@@ -90,7 +90,7 @@ const startServer = async () => {
         console.log(`\nReceived [${signal}] Initiating Shutdown.`);
         try {
             await broadcastMotd({
-                message: "The server will be shutting down for maintenance."
+                message: "The server will be shutting down for maintenance.", bground: "#b35d00", lock: true
             });
 
             server.close(async () => {
