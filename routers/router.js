@@ -6,9 +6,11 @@ import logRouter from "./logRouter.js";
 import reportRouter from "./reportRouter.js";
 import controlPanelRouter from './controlPanelRouter.js';
 import schedulerRouter from "./schedulerRouter.js";
+import motdRouter from "./motdRouter.js";
 
 const router = express.Router();
 
+router.use("/", motdRouter);
 router.use("/", authRouter);
 router.use("/", indexRouter);
 router.use("/alerts", alertRouter);

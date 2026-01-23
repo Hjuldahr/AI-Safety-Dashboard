@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>&#8203;</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fff;
+      color: #555;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    main {
+      text-align: center;
+      max-width: 600px;
+    }
+    p {
+      line-height: 1.6;
+    }
+    button {
+      margin-top: 20px;
+      padding: 8px 12px;
+      cursor: pointer;
+      background-color: #eee;
+    }
+    footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p>
+      What are you doing here?<br>
+      Did you use inspect element?<br>
+      Did your browser tooltip reveal it for you?<br>
+      The Readmore link had been hidden for a reason.<br><br>
+      There's nothing here for you.<br>
+      So go back<br>
+      Press ALT + ⬅️<br><br>
+      or listen to some music<br>
+      or go on a walk<br>
+      or spend time with family<br>
+      anything other than reading this text<br><br>
+      anything other than being in this white void<br><br>
+      Why are you still reading this?<br>
+      why am I still writing this at 12 at night?<br>
+      I guess we both made mistakes.
+    </p>
+    <button id="leave-btn">Leave</button>
+    <footer>
+      <small>Please, go do something better.</small>
+    </footer>
+  </main>
+
+  <script>
+    function leave() { window.location.href = "/"; }
+    setTimeout(leave, 1000 * 15);
+    document.getElementById("leave-btn").addEventListener("click", leave);
+  </script>
+</body>
+</html>

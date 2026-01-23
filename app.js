@@ -34,6 +34,7 @@ const startServer = async () => {
 
     // Serve all public files in the public folder (must be done before mounting main routes)
     app.use(express.static(path.join(PROJECT_ROOT, "public")));
+    app.use("/devlogs", express.static(path.join(process.cwd(), "devlogs")));
 
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));

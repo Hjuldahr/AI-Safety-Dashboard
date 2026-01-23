@@ -97,3 +97,7 @@
     - Cannot load any other page until the offending page is closed.
     - This bug has been hard to track down - limited instances of finding this bug in a while.
     - Likely caused by a server side error that is not being logged. The fix is adding more try/catch statements
+
+
+
+[] Add MOTD hookin to shutdown as an alert, add a way to automatically push when file changes

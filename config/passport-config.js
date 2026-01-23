@@ -3,7 +3,6 @@ import { Strategy as LocalStrategy } from 'passport-local';
 import User from '../models/user.js'; // Import our User model
 
 function initialize(passport) {
-
     // Lets users log in with either username or password.
     const authenticateUser = async (username, password, done) => {
         // The 'username' field from the form can be either an email or a username.

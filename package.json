@@ -4,7 +4,8 @@
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "push_motd": "curl -X GET http://localhost:2121/api/motd/push"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

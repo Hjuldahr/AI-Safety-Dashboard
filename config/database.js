@@ -3,7 +3,6 @@ import Chart_Config from '../models/Chart_Config.js';
 import mongoose from 'mongoose';
 import defaultCharts from './seed_data/defaultCharts.json' with { type: 'json' };
 
-
 const connectDB = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URL);

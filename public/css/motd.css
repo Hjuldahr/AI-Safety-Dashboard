@@ -8,6 +8,7 @@ body {
   justify-content: center;
   align-items: center;
   width: 100%;
+  height: auto;
   box-sizing: border-box;
   
   background-color: #0056b3;
@@ -20,6 +21,10 @@ body {
   margin: 0;
   text-align: center;
   margin-right: 2rem;
+}
+
+#motd-readmore {
+  color: gainsboro;
 }
 
 #dismiss-button {
@@ -40,5 +45,8 @@ body {
 }
 
 #motd-banner.hidden {
+  display: none;
+}
+#motd-readmorer.hidden {
   display: none;
 }
