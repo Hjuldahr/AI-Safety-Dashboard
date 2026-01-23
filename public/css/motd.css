@@ -1,0 +1,40 @@
+.motd {
+  position: relative;         
+  background-color: #0056b3;
+  color: white;
+  padding: 0.5rem 1rem;
+
+  display: flex;
+  align-items: center;
+}
+
+.motd-text {
+  position: absolute;         
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  text-align: center;
+}
+
+.dismiss-button {
+  margin-left: auto;         
+  width: 32px;
+  height: 32px;
+
+  border-radius: 50%;
+  background-color: transparent;
+  color: white;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Strips stylization from other buttons */
+  transition: none; 
+  animation: none; 
+  transform: none;
+  box-shadow: none;
+}
