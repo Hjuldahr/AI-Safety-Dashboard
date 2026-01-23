@@ -9,6 +9,7 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="css/fullSite.css">
+  <link rel="stylesheet" href="css/motd.css">
   <link rel="stylesheet" href="css/header.css">
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/logs.css">
@@ -17,10 +18,13 @@
   <!-- Scripts -->
   <script src="js/logging.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
-  <script src="js/notifications.js" defer></script>s
+  <script src="js/notifications.js" defer></script>
+
+  <script src="js/motd.js" defer></script>
 </head>
 
 <body>
+  <%- include('components/motd') %>
   <%- include('components/header') %>
   <%- include('components/nav') %>
   <main class="content">

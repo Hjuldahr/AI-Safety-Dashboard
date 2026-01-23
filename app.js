@@ -33,6 +33,14 @@ let shuttingDown = false;
 async function startServer() {
     const app = express();
 
+    app.use((req, res, next) => {
+        if (shuttingDown) {
+            res.set("Connection", "close");
+            return res.sendStatus(503);
+        }
+        next();
+    });
+
     /* ---------- Static + Parsers ---------- */
     app.use(express.static(path.join(PROJECT_ROOT, "public")));
     app.use("/cms", express.static(path.join(process.cwd(), "cms")));
@@ -88,6 +96,9 @@ async function shutdown(signal) {
     shuttingDown = true;
 
     console.log(`\n[${signal}] Graceful shutdown started`);
+
+    scheduler.stopScheduler();
+    console.log("Scheduler stopped");
 
     const forceExitTimer = setTimeout(() => {
         console.error("Forcing shutdown after timeout");

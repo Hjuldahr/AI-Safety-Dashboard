@@ -11,20 +11,17 @@ let nextClientId = 1;
 let schedulerInterval = null;
 
 const SCHEDULER_INTERVAL = 1000; // 1 second
-const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; //Max speed which alerts can be triggered
+const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60;
 
-// This determines which models the evaluator should run on / should be visible on the frontend.
-// This list checks for js files with the same name in the ai_models folder.
 const AI_MODELS = ["GoodModel", "BadModel"];
 
-// ---------- Model Simulation ----------
-//One method for all models
-async function generateModelData(modelName) {
+// ---------- Shutdown Guard ----------
+let shuttingDown = false;
 
-    // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
+// ---------- Model Simulation ----------
+async function generateModelData(modelName) {
     const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000);
 
-    // Format for DB/SSE
     return {
         modelName: modelName,
         policyCompliance: summary.policyCompliance.mean * 100,
@@ -35,14 +32,14 @@ async function generateModelData(modelName) {
         gigaFlopsUsed: summary.gigaFlopsUsed.mean,
         webLookups: summary.webLookups.mean,
         toxicityScore: summary.toxicityScore.mean,
-        piiDetected: summary.piiDetected.mean * 100, // Scale to %
+        piiDetected: summary.piiDetected.mean * 100,
         queryCount: summary.queryCount,
         responseTimestamp: summary.responseTimestamp,
         breakdown: summary.breakdown
     };
 }
 
-// Events now have their own router - schedulerRouter
+// ---------- SSE ----------
 export const setupSSE = (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -56,7 +53,6 @@ export const setupSSE = (req, res) => {
     };
     activeClients.push(client);
 
-    // Heartbeat to keep connection alive
     const heartbeat = setInterval(() => {
         res.write(':\n\n');
     }, HEARTBEAT);
@@ -67,7 +63,6 @@ export const setupSSE = (req, res) => {
     });
 };
 
-// ---------- Client Maintenance ----------
 function pruneDeadClients() {
     activeClients = activeClients.filter(c => {
         try {
@@ -114,6 +109,9 @@ function safeWriteAll(sseData, targetUserId = null) {
 
 function broadcastEvent(eventType, data) {
     try {
+        // STOP broadcasting during shutdown
+        if (shuttingDown) return;
+
         const sseData = `event: ${eventType}\n` + `data: ${JSON.stringify(data)}\n\n`;
         pruneDeadClients();
         const target = data?._targetUser || null;
@@ -125,17 +123,16 @@ function broadcastEvent(eventType, data) {
 
 // ---------- Scheduler Tick ----------
 async function schedulerTick() {
+    if (shuttingDown) return;   
     if (schedulerState.isPaused) return;
 
     try {
         const data = {};
-
-        // Generate data for all of the models in the AI_MODELS list.
         for (const model of AI_MODELS) {
             data[model] = await generateModelData(model);
         }
 
-        // Add all the logs to the DB
+        // Add logs to DB
         await AI_Log.addLogs(Object.values(data));
 
         // Evaluate alerts
@@ -148,11 +145,10 @@ async function schedulerTick() {
         // Keep only last MAX_RECORDS
         let count = await AI_Log.countDocuments();
         while (count > MAX_RECORDS) {
-            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 }); //ToDo: Refactor this to avoid sorting entire DB
+            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 });
             count--;
         }
 
-        // Broadcast real-time update to clients
         broadcastEvent('update', data);
 
     } catch (err) {
@@ -167,6 +163,13 @@ function startScheduler() {
     if (!schedulerState.isPaused) {
         schedulerInterval = setInterval(schedulerTick, SCHEDULER_INTERVAL);
         console.log('[Scheduler] Started with interval', SCHEDULER_INTERVAL, 'ms');
+    }
+}
+
+function stopScheduler() {
+    shuttingDown = true;
+    if (schedulerInterval) {
+        clearInterval(schedulerInterval);
     }
 }
 
@@ -191,5 +194,5 @@ function setupScheduler() {
     startScheduler();
 }
 
-export default { setupSSE, setupScheduler, updateSchedulerSettings };
+export default { setupSSE, setupScheduler, updateSchedulerSettings, stopScheduler };
 export { broadcastEvent };
