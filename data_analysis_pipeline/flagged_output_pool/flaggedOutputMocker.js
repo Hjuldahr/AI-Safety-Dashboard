@@ -10,7 +10,7 @@ import { randomUUID } from "crypto";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const OUTPUT_FILE = path.join(__dirname, "flagged_output_pool.jsonl");
+const OUTPUT_FILE = path.join(__dirname, "flagged_output_pool.json");
 const RECORD_COUNT = 3000;
 
 const TOPIC_HIERARCHY = {
@@ -129,9 +129,11 @@ function generateRecords(count) {
 function writeJsonl(filePath, records) {
   const stream = fs.createWriteStream(filePath, { encoding: "utf8" });
 
-  for (const record of records) {
-    stream.write(JSON.stringify(record) + "\n");
-  }
+  //jsonl version (more token efficient, less node.js compatible)
+  //for (const record of records) {
+  //  stream.write(JSON.stringify(record) + "\n");
+  //}
+  stream.write(JSON.stringify(records, null, 4))
 
   stream.end();
 }
