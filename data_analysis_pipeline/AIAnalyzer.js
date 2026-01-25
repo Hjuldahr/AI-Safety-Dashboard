@@ -26,7 +26,7 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
     };
   };
 
-  const times = [], pc = [], rh = [], rt = [], ec = [], tokens = [], ops = [], gflops = [], web = [], toxic = [], pii = [], topics = [], sub_topics = [];
+  const times = [], pc = [], rh = [], rt = [], ec = [], tokens = [], ops = [], gflops = [], web = [], toxic = [], pii = [], topics = [], sub_topics = [], flaggedOutputs = [];
 
   const buckets = {};
 
@@ -53,6 +53,8 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
       if (!buckets[subTopicKey]) buckets[subTopicKey] = { type: 'sub_topic', calls: [] };
       buckets[subTopicKey].calls.push(c);
     }
+
+    c.aiOutput != null && flaggedOutputs.push(c.aiOutput)
   }
 
   const breakdownData = {};

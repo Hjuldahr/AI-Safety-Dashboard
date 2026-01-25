@@ -16,16 +16,18 @@ const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; //Max speed which alerts can be
 // This determines which models the evaluator should run on / should be visible on the frontend.
 // This list checks for js files with the same name in the ai_models folder.
 const AI_MODELS = ["GoodModel", "BadModel"];
+let previousGen = null;
 
 // ---------- Shutdown Guard ----------
 let shuttingDown = false;
 
 // ---------- Model Simulation ----------
 //One method for all models
-async function generateModelData(modelName, previousGeneralization) {
+async function generateModelData(modelName) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
-    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization);
+    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGen);
+    previousGen = summary;
 
     // Format for DB/SSE
     return {

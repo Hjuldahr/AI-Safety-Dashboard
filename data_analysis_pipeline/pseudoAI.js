@@ -1,4 +1,5 @@
 import { TOPIC_HIERARCHY } from '../config/constants.js';
+import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' with { type: 'json' };
 
 // Model configs
 import GoodModel_Config from './model_configs/GoodModel_Config.js';
@@ -204,6 +205,8 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const gigaFlopsUsed = (tokens * 6 * complexity) / 1000;
     const energyConsumption = gigaFlopsUsed * 0.5;
 
+    const flagged = isToxic && isChaos; //temporary
+
     calls.push({
       model: modelName,
       time: getRandomInt(startTime, startTime + intervalDuration * 1000),
@@ -217,7 +220,8 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       topic,
       sub_topic,
       toxicityScore,
-      piiDetected: piiScore
+      piiDetected: piiScore,
+      aiOutput: flagged ? getRandomArrayElement(flaggedOutputPool) : null
     });
   }
 
