@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/logs.css">
   <link rel="stylesheet" href="css/notifications.css">
-  
+
   <!-- Scripts -->
   <script src="js/logging.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
@@ -29,6 +29,7 @@
       <div class="log-tabs">
         <button id="user-logs-btn" class="log-tab-btn active" data-view="user">User Logs</button>
         <button id="ai-logs-btn" class="log-tab-btn" data-view="ai">AI Logs</button>
+        <button id="ai-summaries-btn" class="log-tab-btn" data-view="summary">AI Summaries</button>
       </div>
 
       <div class="filter-container">
@@ -69,6 +70,18 @@
           <button type="submit" class="btn-primary">Apply</button>
         </form>
 
+        <form id="ai-summary-filter-form" class="filter-group hidden">
+          <button type="button" class="btn-secondary clear-filters">Clear</button>
+          <label for="summary-filter-model">Model:</label>
+          <select id="summary-filter-model" name="modelName">
+            <option value="all" selected>All Models</option>
+            <!-- ToDo: These options are hard coded right now - change that -->
+            <option value="GoodModel">Good Model</option>
+            <option value="BadModel">Bad Model</option>
+          </select>
+          <button type="submit" class="btn-primary">Apply</button>
+        </form>
+
       </div>
     </div>
 
@@ -96,6 +109,13 @@
         <div id="ai-log-accordion">
         </div>
         <div id="ai-pagination-controls" class="pagination">
+        </div>
+      </div>
+
+      <div id="ai-summary-view" class="hidden">
+        <div id="ai-summary-accordion">
+        </div>
+        <div id="ai-summary-pagination-controls" class="pagination">
         </div>
       </div>
 

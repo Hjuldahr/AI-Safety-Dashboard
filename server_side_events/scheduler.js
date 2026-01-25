@@ -3,7 +3,7 @@ import { AIGeneralizer } from '../data_evaluation/AIGeneralizer.js';
 import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
-import AI_Summary from "../models/AI_Summary.js"
+import AI_Summary from "../models/AI_Summary.js";
 import evaluateAlerts from "./alertEvaluator.js";
 
 // ---------- SSE Clients ----------
