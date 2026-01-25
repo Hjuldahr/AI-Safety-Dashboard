@@ -1,6 +1,6 @@
 // server_side_events/scheduler.js
 import { AIGeneralizer } from '../data_evaluation/AIGeneralizer.js';
-import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
+import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js"
@@ -11,18 +11,6 @@ let activeClients = [];
 let nextClientId = 1;
 let schedulerInterval = null;
 let summaryInterval = null;
-
-const SCHEDULER_INTERVAL = 1000; // 1 second
-const SUMMARY_INTERVAL = 60000; // 1 minute
-
-// AI Logs older than this are deleted - summaries are kept
-const AI_LOG_CUTOFF = 1000 * 60 * 60 * 24 // 1 day
-
-const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; //Max speed which alerts can be triggered
-
-// This determines which models the evaluator should run on / should be visible on the frontend.
-// This list checks for js files with the same name in the ai_models folder.
-const AI_MODELS = ["GoodModel", "BadModel"];
 
 // ---------- Model Simulation ----------
 //One method for all models
