@@ -30,7 +30,7 @@ const AI_Log_Schema = new mongoose.Schema({
     // Energy usage (watt-seconds or joules)
     energyConsumption: {
         type: Number,
-        equired: true,
+        required: true,
         default: 0
     },
 
@@ -130,6 +130,55 @@ AI_Log_Schema.statics.removeLogById = function (logID) {
 AI_Log_Schema.statics.removeLogsByModel = function (modelName) {
     return this.deleteMany({ modelName });
 };
+
+// Summaries
+AI_Log_Schema.statics.generateSixtySecondSummary = async function () {
+    const oneMinuteAgo = Date.now() - 60000;
+
+    return await this.aggregate([
+        {
+            // Filter for records from the last 60 seconds
+            $match: {
+                responseTimestamp: { $gte: oneMinuteAgo }
+            }
+        },
+        {
+            // Group by modelName and calculate averages
+            $group: {
+                _id: "$modelName",
+                policyCompliance: { $avg: "$policyCompliance" },
+                responseHelpfulness: { $avg: "$responseHelpfulness" },
+                responseTime: { $avg: "$responseTime" },
+                energyConsumption: { $avg: "$energyConsumption" },
+                tokensUsed: { $avg: "$tokensUsed" },
+                gigaFlopsUsed: { $avg: "$gigaFlopsUsed" },
+                webLookups: { $avg: "$webLookups" },
+                toxicityScore: { $avg: "$toxicityScore" },
+                piiDetected: { $avg: "$piiDetected" },
+                queryCount: { $sum: "$queryCount" } // We sum the count, not average it
+            }
+        },
+        {
+            // Reshape the output to match AI_Summary schema
+            $project: {
+                _id: 0,
+                modelName: "$_id",
+                policyCompliance: 1,
+                responseHelpfulness: 1,
+                responseTime: 1,
+                energyConsumption: 1,
+                tokensUsed: 1,
+                gigaFlopsUsed: 1,
+                webLookups: 1,
+                toxicityScore: 1,
+                piiDetected: 1,
+                queryCount: 1,
+                responseTimestamp: { $literal: Date.now() }
+            }
+        }
+    ]);
+};
+
 
 // ---------- EXPORT ----------
 const AI_Log_Model = mongoose.model('AI_Logs', AI_Log_Schema);

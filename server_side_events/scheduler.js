@@ -1,21 +1,16 @@
 // server_side_events/scheduler.js
 import { AIGeneralizer } from '../data_evaluation/AIGeneralizer.js';
-import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
+import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
+import AI_Summary from "../models/AI_Summary.js";
 import evaluateAlerts from "./alertEvaluator.js";
 
 // ---------- SSE Clients ----------
 let activeClients = [];
 let nextClientId = 1;
 let schedulerInterval = null;
-
-const SCHEDULER_INTERVAL = 1000; // 1 second
-const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; //Max speed which alerts can be triggered
-
-// This determines which models the evaluator should run on / should be visible on the frontend.
-// This list checks for js files with the same name in the ai_models folder.
-const AI_MODELS = ["GoodModel", "BadModel"];
+let summaryInterval = null;
 
 // ---------- Model Simulation ----------
 //One method for all models
@@ -145,13 +140,6 @@ async function schedulerTick() {
             console.error('Error evaluating alerts:', alertErr);
         }
 
-        // Keep only last MAX_RECORDS
-        let count = await AI_Log.countDocuments();
-        while (count > MAX_RECORDS) {
-            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 }); //ToDo: Refactor this to avoid sorting entire DB
-            count--;
-        }
-
         // Broadcast real-time update to clients
         broadcastEvent('update', data);
 
@@ -161,12 +149,36 @@ async function schedulerTick() {
     }
 }
 
+// ---------- Create Summary ----------
+async function createSummary() {
+    // Takes the last 60 seconds of logs for both models and averages them
+    try {
+        const summaries = await AI_Log.generateSixtySecondSummary();
+
+        if (summaries.length > 0) {
+            // Save to the summary collection
+            await AI_Summary.insertMany(summaries);
+
+            // Delete extra
+            const cutoff = Date.now() - AI_LOG_CUTOFF;
+            await AI_Log.deleteMany({ responseTimestamp: { $lt: cutoff } });
+        }
+    } catch (err) {
+        console.error('Summary Generation Error:', err);
+    }
+}
+
 // ---------- Scheduler Control ----------
 function startScheduler() {
     if (schedulerInterval) clearInterval(schedulerInterval);
+    if (summaryInterval) clearInterval(summaryInterval);
+
     if (!schedulerState.isPaused) {
         schedulerInterval = setInterval(schedulerTick, SCHEDULER_INTERVAL);
+        summaryInterval = setInterval(createSummary, SUMMARY_INTERVAL);
+
         console.log('[Scheduler] Started with interval', SCHEDULER_INTERVAL, 'ms');
+        console.log('[Summary] Started with interval', SUMMARY_INTERVAL, 'ms');
     }
 }
 
