@@ -8,6 +8,7 @@ router.get("/", isAuthenticated, controller.getPage);
 
 router.get("/api/user", isAuthenticated, controller.getFilteredUserLogs);
 router.get("/api/ai", isAuthenticated, controller.getFilteredAILogs);
+router.get("/api/summary", isAuthenticated, controller.getFilteredAISummaries);
 
 
 // ToDo: Implement these

@@ -1,6 +1,7 @@
 // --- GLOBAL STATE ---
 let currentLogsPage = 1;
 let currentAiLogsPage = 1;
+let currentAiSummariesPage = 1;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,16 +9,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const elements = {
         userLogsBtn: document.getElementById('user-logs-btn'),
         aiLogsBtn: document.getElementById('ai-logs-btn'),
+        aiSummariesBtn: document.getElementById('ai-summaries-btn'),
         userFilterForm: document.getElementById('user-filter-form'),
         aiFilterForm: document.getElementById('ai-filter-form'),
+        aiSummaryFilterForm: document.getElementById('ai-summary-filter-form'),
         userLogView: document.getElementById('user-log-view'),
         aiLogView: document.getElementById('ai-log-view'),
+        aiSummaryView: document.getElementById('ai-summary-view'),
         userLogTbody: document.getElementById('user-log-tbody'),
         aiLogAccordion: document.getElementById('ai-log-accordion'),
+        aiSummaryAccordion: document.getElementById('ai-summary-accordion'),
         userClearBtn: document.querySelector('#user-filter-form .clear-filters'),
         aiClearBtn: document.querySelector('#ai-filter-form .clear-filters'),
+        aiSummaryClearBtn: document.querySelector('#ai-summary-filter-form .clear-filters'),
         paginationControls: document.getElementById('pagination-controls'),
-        aiPaginationControls: document.getElementById('ai-pagination-controls')
+        aiPaginationControls: document.getElementById('ai-pagination-controls'),
+        aiSummaryPaginationControls: document.getElementById('ai-summary-pagination-controls'),
     };
 
     // --- EVENT LISTENERS ---
@@ -25,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tab switching
     elements.userLogsBtn.addEventListener('click', () => toggleViews('user', elements));
     elements.aiLogsBtn.addEventListener('click', () => toggleViews('ai', elements));
+    elements.aiSummariesBtn.addEventListener("click", () => toggleViews('summary', elements))
 
     // Filter form submission
     elements.userFilterForm.addEventListener('submit', (e) => {
@@ -38,20 +46,35 @@ document.addEventListener('DOMContentLoaded', () => {
         handleAiFilter(elements); // Stays as-is for now
     });
 
+
+    elements.aiSummaryFilterForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleAiSummaryFilter(elements); //ToDo:make this method
+    });
+
+
     // Clear filters buttons
     elements.userClearBtn.addEventListener('click', () => {
         elements.userFilterForm.reset();
         // Reset to page 1
         handleUserFilter(elements, 1);
     });
+
     elements.aiClearBtn.addEventListener('click', () => {
         elements.aiFilterForm.reset();
         handleAiFilter(elements);
     });
 
+    elements.aiSummaryClearBtn.addEventListener('click', () => {
+        elements.aiSummaryFilterForm.reset();
+        handleAiSummaryFilter(elements);
+    });
+
+
     // --- INITIAL RENDER ---
     handleUserFilter(elements, 1);
     handleAiFilter(elements, 1);
+    handleAiSummaryFilter(elements, 1);
 });
 
 
@@ -61,13 +84,46 @@ document.addEventListener('DOMContentLoaded', () => {
  * Toggles between 'user' and 'ai' log views
  */
 function toggleViews(viewToShow, elements) {
-    const isUser = viewToShow === 'user';
-    elements.userLogsBtn.classList.toggle('active', isUser);
-    elements.aiLogsBtn.classList.toggle('active', !isUser);
-    elements.userLogView.classList.toggle('hidden', !isUser);
-    elements.aiLogView.classList.toggle('hidden', isUser);
-    elements.userFilterForm.classList.toggle('hidden', !isUser);
-    elements.aiFilterForm.classList.toggle('hidden', isUser);
+    // ToDo: This is the stupidest fucking code ive ever written
+    if (viewToShow === "user") {
+        elements.userLogsBtn.classList.toggle('active', true);
+        elements.aiLogsBtn.classList.toggle('active', false);
+        elements.aiSummariesBtn.classList.toggle('active', false);
+
+        elements.userLogView.classList.toggle('hidden', false);
+        elements.aiLogView.classList.toggle('hidden', true);
+        elements.aiSummaryView.classList.toggle('hidden', true);
+
+        elements.userFilterForm.classList.toggle('hidden', false);
+        elements.aiFilterForm.classList.toggle('hidden', true);
+        elements.aiSummaryFilterForm.classList.toggle('hidden', true);
+    }
+    else if (viewToShow === "ai") {
+        elements.userLogsBtn.classList.toggle('active', false);
+        elements.aiLogsBtn.classList.toggle('active', true);
+        elements.aiSummariesBtn.classList.toggle('active', false);
+
+        elements.userLogView.classList.toggle('hidden', true);
+        elements.aiLogView.classList.toggle('hidden', false);
+        elements.aiSummaryView.classList.toggle('hidden', true);
+
+        elements.userFilterForm.classList.toggle('hidden', true);
+        elements.aiFilterForm.classList.toggle('hidden', false);
+        elements.aiSummaryFilterForm.classList.toggle('hidden', true);
+    }
+    else if (viewToShow === "summary") {
+        elements.userLogsBtn.classList.toggle('active', false);
+        elements.aiLogsBtn.classList.toggle('active', false);
+        elements.aiSummariesBtn.classList.toggle('active', true);
+
+        elements.userLogView.classList.toggle('hidden', true);
+        elements.aiLogView.classList.toggle('hidden', true);
+        elements.aiSummaryView.classList.toggle('hidden', false);
+
+        elements.userFilterForm.classList.toggle('hidden', true);
+        elements.aiFilterForm.classList.toggle('hidden', true);
+        elements.aiSummaryFilterForm.classList.toggle('hidden', false);
+    }
 }
 
 
@@ -107,9 +163,9 @@ function renderUserLogs(logs, tbody) {
 }
 
 /**
- * Populates the AI Logs accordion (still uses mock data)
+ * Populates the AI Logs + Summaries accordion
  */
-function renderAiLogs(logs, accordion) {
+function renderAiAccordion(logs, accordion) {
     accordion.innerHTML = '';
     if (logs.length === 0) {
         accordion.innerHTML = '<p>No AI logs found.</p>';
@@ -147,6 +203,7 @@ function renderAiLogs(logs, accordion) {
         accordion.appendChild(item);
     });
 }
+
 
 /**
  * Renders pagination buttons in a specific container
@@ -186,8 +243,8 @@ function renderPagination(container, totalPages, currentPage, elements, handlerF
     container.appendChild(prevBtn);
 
     // Logic to determine which numbers to show
-    const siblings = 1; 
-    
+    const siblings = 1;
+
     // If total pages is small (e.g., 7 or less), just show them all to avoid complex dot logic
     if (totalPages <= 7) {
         for (let i = 1; i <= totalPages; i++) {
@@ -212,7 +269,7 @@ function renderPagination(container, totalPages, currentPage, elements, handlerF
 
         if (currentPage <= siblings + 2) end = siblings + 4; // Extend range if near start
         if (currentPage >= totalPages - (siblings + 1)) start = totalPages - (siblings + 3); // Extend range if near end
-        
+
         // Sanity check to keep bounds within 2 and total-1
         start = Math.max(2, start);
         end = Math.min(totalPages - 1, end);
@@ -251,7 +308,7 @@ function getDotClass(eventType) {
         case 'Logout': return 'log-dot-logout';
         case 'Chart_Modified': case 'Alert_Created': case 'Alert_Modified': return 'log-dot-alert';
         case 'Chart_Created': case 'Report_Created': return 'log-dot-report';
-        case 'Alert_Deleted': case 'Report_Deleted': case 'Failed_Login': case 'Chart_Deleted':  return 'log-dot-delete';
+        case 'Alert_Deleted': case 'Report_Deleted': case 'Failed_Login': case 'Chart_Deleted': return 'log-dot-delete';
         default: return 'log-dot-default';
     }
 }
@@ -330,11 +387,51 @@ async function handleAiFilter(elements, page = 1) {
         const data = await response.json(); // { logs, total, page, pages }
 
         // Render data and pagination
-        renderAiLogs(data.logs, elements.aiLogAccordion);
+        renderAiAccordion(data.logs, elements.aiLogAccordion);
         renderPagination(elements.aiPaginationControls, data.pages, data.page, elements, handleAiFilter);
 
     } catch (error) {
         console.error('Failed to fetch AI logs:', error);
         elements.aiLogAccordion.innerHTML = `<p>Error loading logs. ${error.message}</p>`;
+    }
+}
+
+/**
+ * Fetches and filters AI Summaries from the API
+ * @param {object} elements - The DOM elements
+ * @param {number} page - The page number to fetch
+ */
+async function handleAiSummaryFilter(elements, page = 1) {
+    currentAiSummariesPage = page; // Set AI page state
+
+    // Show loading state
+    elements.aiSummaryAccordion.innerHTML = '<p>Loading...</p>';
+    elements.aiSummaryPaginationControls.innerHTML = ''; // Clear AI pagination
+
+    const modelName = elements.aiSummaryFilterForm.querySelector('#summary-filter-model').value;
+
+    // Build URL query string
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('limit', 10); // Using same limit as user logs
+    if (modelName && modelName !== 'all') {
+        params.set('modelName', modelName);
+    }
+
+    try {
+        // Fetch data from the API
+        const response = await fetch(`logs/api/summary?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json(); // { logs, total, page, pages }
+
+        // Render data and pagination
+        renderAiAccordion(data.logs, elements.aiSummaryAccordion);
+        renderPagination(elements.aiSummaryPaginationControls, data.pages, data.page, elements, handleAiSummaryFilter);
+
+    } catch (error) {
+        console.error('Failed to fetch AI summaries:', error);
+        elements.aiSummaryAccordion.innerHTML = `<p>Error loading summaries. ${error.message}</p>`;
     }
 }
