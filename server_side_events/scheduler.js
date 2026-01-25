@@ -17,12 +17,15 @@ const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; //Max speed which alerts can be
 // This list checks for js files with the same name in the ai_models folder.
 const AI_MODELS = ["GoodModel", "BadModel"];
 
+// ---------- Shutdown Guard ----------
+let shuttingDown = false;
+
 // ---------- Model Simulation ----------
 //One method for all models
-async function generateModelData(modelName) {
+async function generateModelData(modelName, previousGeneralization) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
-    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000);
+    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization);
 
     // Format for DB/SSE
     return {
@@ -114,6 +117,8 @@ function safeWriteAll(sseData, targetUserId = null) {
 
 function broadcastEvent(eventType, data) {
     try {
+        if (shuttingDown) return;
+        
         const sseData = `event: ${eventType}\n` + `data: ${JSON.stringify(data)}\n\n`;
         pruneDeadClients();
         const target = data?._targetUser || null;
@@ -125,7 +130,7 @@ function broadcastEvent(eventType, data) {
 
 // ---------- Scheduler Tick ----------
 async function schedulerTick() {
-    if (schedulerState.isPaused) return;
+    if (schedulerState.isPaused || shuttingDown) return;
 
     try {
         const data = {};
@@ -170,6 +175,13 @@ function startScheduler() {
     }
 }
 
+function stopScheduler() {
+    shuttingDown = true;
+    if (schedulerInterval) {
+        clearInterval(schedulerInterval);
+    }
+}
+
 function updateSchedulerSettings({ isPaused, activeModel, interval }) {
     let restart = false;
 
@@ -191,5 +203,5 @@ function setupScheduler() {
     startScheduler();
 }
 
-export default { setupSSE, setupScheduler, updateSchedulerSettings };
+export default { setupSSE, setupScheduler, updateSchedulerSettings, stopScheduler };
 export { broadcastEvent };
