@@ -57,13 +57,12 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // --- 1. INITIALIZATION ---
     async function init() {
-        // FIX: Fetch tags FIRST so the cache is full
         try {
             const tData = await apiListTags();
             (tData || []).forEach(t => tagsCache[t._id] = t);
         } catch (e) { console.warn('Tags load failed', e); }
 
-        // FIX: Populate dropdowns AFTER tags are loaded
+        // Populate dropdowns AFTER tags are loaded
         populateModelDropdowns();
 
         await loadLiveAlerts();
@@ -421,8 +420,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // --- 8. LOG TAGGING MODAL (Dynamic) ---
-    
-    // FIX: Guard clause to prevent crash if alertLogBody is null
     if (alertLogBody) {
         alertLogBody.addEventListener('click', (e) => {
             if (!e.target.classList.contains('add-log-tag-btn')) return;
@@ -522,15 +519,10 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // --- API WRAPPERS ---
     async function apiGetLiveAlerts() { return fetch('alerts/live').then(r=>r.json()); }
-    
-    // FIX: Updated to use absolute path '/tags' for the new Tag Router
     async function apiListTags() { return fetch('/tags').then(r=>r.json()).then(d=>d.tags); }
-    
     async function apiCreateAlert(p) { return fetch('alerts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
     async function apiUpdateAlert(id, p) { return fetch(`alerts/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
     async function apiDeleteAlert(id) { return fetch(`alerts/${id}`, {method:'DELETE'}).then(r=>r.json()); }
-    
-    // FIX: Updated to use absolute path '/tags/sync' for the new Tag Router
     async function apiSyncTags(p) { return fetch('/tags/sync', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
 
     init();
