@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <td>${log.alertName || ''}</td>
                 <td class="model-cell">${log.modelName || '-'}</td>
                 <td class="details-cell">${log.humanRule || ''}</td>
-                    <td class="tags-cell">${tagsHtml} <button class="edit-log-tags btn btn-secondary" data-id="${log._id}" data-tags="${tagIds}">Edit</button></td>
+                <td><div class="tags-cell">${tagsHtml} <button class="edit-log-tags btn btn-secondary" data-id="${log._id}" data-tags="${tagIds}">Edit</button></div></td>   
             `;
             alertLogBody.appendChild(newRow);
         });
@@ -684,7 +684,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 }
             });
         }
-        renderSelectedTags();
         addAlertBtn.style.display = 'none';
         saveBtn.style.display = '';
         cancelBtn.style.display = '';
@@ -749,29 +748,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         console.warn('Failed to load tags at startup:', e);
     }
 
-    function renderSelectedTags() {
-        const container = document.getElementById('selected-tags');
-        if (!container) return;
-        container.innerHTML = '';
-        selectedTags.forEach(t => {
-            const tag = tagsCache[t] || { _id: t, name: t, color: '#888888' };
-            const span = document.createElement('span');
-            span.className = 'tag-pill';
-            span.style.background = tag.color || '#888888';
-            span.textContent = tag.name || '';
-            const rem = document.createElement('button');
-            rem.className = 'remove-tag-btn';
-            rem.textContent = '×';
-            rem.dataset.id = t;
-            rem.addEventListener('click', () => {
-                const idx = selectedTags.indexOf(t);
-                if (idx >= 0) selectedTags.splice(idx, 1);
-                renderSelectedTags();
-            });
-            span.appendChild(rem);
-            container.appendChild(span);
-        });
-    }
+    // `renderSelectedTags` removed: selected-tags UI is no longer updated here.
 
     // Dual-list tag selector handlers
     function createTagPill(tag) {
@@ -815,25 +792,25 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (!left) return;
         const toMove = Array.from(left.querySelectorAll('.dual-item.selected')).map(el => el.dataset.id);
         toMove.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
-        renderDualLists(); renderSelectedTags();
+        renderDualLists();
     });
     if (moveAllRightBtn) moveAllRightBtn.addEventListener('click', (e) => {
         const left = document.getElementById('tag-dual-left');
         if (!left) return;
         const all = Array.from(left.querySelectorAll('.dual-item')).map(el => el.dataset.id);
         all.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
-        renderDualLists(); renderSelectedTags();
+        renderDualLists();
     });
     if (moveSelectedLeftBtn) moveSelectedLeftBtn.addEventListener('click', (e) => {
         const right = document.getElementById('tag-dual-right');
         if (!right) return;
         const toMove = Array.from(right.querySelectorAll('.dual-item.selected')).map(el => el.dataset.id);
         toMove.forEach(id => { const idx = selectedTags.indexOf(id); if (idx>=0) selectedTags.splice(idx,1); });
-        renderDualLists(); renderSelectedTags();
+        renderDualLists();
     });
     if (moveAllLeftBtn) moveAllLeftBtn.addEventListener('click', (e) => {
         selectedTags.length = 0;
-        renderDualLists(); renderSelectedTags();
+        renderDualLists();
     });
 
     // Tag editor elements (under live alerts panel)
