@@ -1,16 +1,18 @@
+import fs from 'fs';
+
 import { TOPIC_HIERARCHY } from '../config/constants.js';
 import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' with { type: 'json' };
 
-// Model configs
-import GoodModel_Config from './model_configs/GoodModel_Config.js';
-import BadModel_Config from './model_configs/BadModel_Config.js';
+let Model_Configs = {};
 
-const Model_Configs = {
-  GoodModel: GoodModel_Config,
-  BadModel: BadModel_Config
-};
+const CONFIG_PATH = './model_configs'
+const files = fs.readdir(CONFIG_PATH);
+files.array.forEach(e => {
+  Model_Configs[e.ModelName] = e;
+});
 
 const SUPPORTED_MODELS = ["GoodModel", "BadModel"];
+
 
 function getRandomFloat(min, max) {
   return Math.random() * (max - min) + min;

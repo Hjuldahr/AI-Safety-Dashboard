@@ -1,0 +1,16 @@
+data_analysis_pipeline/
+├─ core/
+│  ├─ random.js                 # shared RNG helpers
+│  ├─ statsAccumulator.js       # incremental stats
+│  └─ topicSelector.js          # weighted selection
+│
+├─ simulation/
+│  ├─ modelRegistry.js          # load & normalize configs
+│  ├─ biasEngine.js             # applyGeneralizationBias
+│  ├─ callSimulator.js          # simulates ONE call (pure)
+│  └─ batchSimulator.js         # simulates N calls → aggregates
+│
+├─ analyzer/
+│  └─ AIAnalyzer.js             # orchestration only
+│
+└─ flagged_output_pool/
