@@ -1,9 +1,11 @@
 // server_side_events/scheduler.js
-import { AIAnalyzer } from '../data_analysis_pipeline/AIAnalyzer.js';
 import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import evaluateAlerts from "./alertEvaluator.js";
+
+import { AIAnalyzer } from "../new_data_analysis_pipeline/analyzer/AIAnalyzer.js";
+import { SUPPORTED_MODELS } from "../new_data_analysis_pipeline/simulation/modelRegistry.js";
 
 // ---------- SSE Clients ----------
 let activeClients = [];
@@ -11,25 +13,23 @@ let nextClientId = 1;
 let schedulerInterval = null;
 
 const SCHEDULER_INTERVAL = 1000; // 1 second
-const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; //Max speed which alerts can be triggered
+const ALERTS_COOLDOWN = SCHEDULER_INTERVAL * 60; // Max speed which alerts can be triggered
 
-// This determines which models the evaluator should run on / should be visible on the frontend.
-// This list checks for js files with the same name in the ai_models folder.
-const AI_MODELS = ["GoodModel", "BadModel"];
-let previousGen = null;
+// previous generalization per model
+const previousGens = {};
 
 // ---------- Shutdown Guard ----------
 let shuttingDown = false;
 
 // ---------- Model Simulation ----------
-//One method for all models
-async function generateModelData(modelName) {
+function generateModelData(modelName) {
+    const summary = AIAnalyzer(
+        modelName, 
+        SCHEDULER_INTERVAL / 1000, 
+        previousGens[modelName]
+    );
+    previousGens[modelName] = summary;
 
-    // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
-    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGen);
-    previousGen = summary;
-
-    // Format for DB/SSE
     return {
         modelName: modelName,
         policyCompliance: summary.policyCompliance.mean * 100,
@@ -40,7 +40,7 @@ async function generateModelData(modelName) {
         gigaFlopsUsed: summary.gigaFlopsUsed.mean,
         webLookups: summary.webLookups.mean,
         toxicityScore: summary.toxicityScore.mean,
-        piiDetected: summary.piiDetected.mean * 100, // Scale to %
+        piiDetected: summary.piiDetected.mean * 100,
         queryCount: summary.queryCount,
         responseTimestamp: summary.responseTimestamp,
         breakdown: summary.breakdown
@@ -63,7 +63,7 @@ export const setupSSE = (req, res) => {
 
     // Heartbeat to keep connection alive
     const heartbeat = setInterval(() => {
-        res.write(':\n\n');
+        try { res.write(':\n\n'); } catch (e) { /* ignore */ }
     }, HEARTBEAT);
 
     req.on('close', () => {
@@ -120,7 +120,7 @@ function safeWriteAll(sseData, targetUserId = null) {
 function broadcastEvent(eventType, data) {
     try {
         if (shuttingDown) return;
-        
+
         const sseData = `event: ${eventType}\n` + `data: ${JSON.stringify(data)}\n\n`;
         pruneDeadClients();
         const target = data?._targetUser || null;
@@ -132,40 +132,53 @@ function broadcastEvent(eventType, data) {
 
 // ---------- Scheduler Tick ----------
 async function schedulerTick() {
-    if (schedulerState.isPaused || shuttingDown) return;
+  if (schedulerState.isPaused || shuttingDown) return;
 
-    try {
-        const data = {};
+  try {
+    const data = {};
+    const logsToAdd = [];
 
-        // Generate data for all of the models in the AI_MODELS list.
-        for (const model of AI_MODELS) {
-            data[model] = await generateModelData(model);
-        }
-
-        // Add all the logs to the DB
-        await AI_Log.addLogs(Object.values(data));
-
-        // Evaluate alerts
-        try {
-            await evaluateAlerts(data, { cooldownMs: ALERTS_COOLDOWN });
-        } catch (alertErr) {
-            console.error('Error evaluating alerts:', alertErr);
-        }
-
-        // Keep only last MAX_RECORDS
-        let count = await AI_Log.countDocuments();
-        while (count > MAX_RECORDS) {
-            await AI_Log.findOneAndDelete({}).sort({ responseTimestamp: 1 }); //ToDo: Refactor this to avoid sorting entire DB
-            count--;
-        }
-
-        // Broadcast real-time update to clients
-        broadcastEvent('update', data);
-
-    } catch (err) {
-        console.error('Scheduler tick error:', err);
-        broadcastEvent('update', { error: 'Failed to fetch or save AI logs' });
+    for (const model of SUPPORTED_MODELS) {
+      try {
+        const val = generateModelData(model);
+        data[val.modelName] = val;
+        logsToAdd.push(val);
+      } catch (err) {
+        console.error(`[Scheduler] Failed to generate data for ${model}:`, err);
+      }
     }
+
+    if (logsToAdd.length > 0) {
+      try {
+        if (typeof AI_Log.insertMany === 'function') {
+          await AI_Log.insertMany(logsToAdd);
+        } else if (typeof AI_Log.addLogs === 'function') {
+          await AI_Log.addLogs(logsToAdd);
+        } else {
+          for (const doc of logsToAdd) await AI_Log.create(doc);
+        }
+      } catch (dbErr) {
+        console.error('Error saving AI logs (bulk):', dbErr);
+      }
+    }
+
+    await evaluateAlerts(data, { cooldownMs: ALERTS_COOLDOWN });
+
+    // Trim DB
+    const count = await AI_Log.countDocuments();
+    const excess = count - MAX_RECORDS;
+    if (excess > 0) {
+      const oldest = await AI_Log.find({}).sort({ responseTimestamp: 1 }).limit(excess).select('_id');
+      const ids = oldest.map(d => d._id).filter(Boolean);
+      if (ids.length) await AI_Log.deleteMany({ _id: { $in: ids } });
+    }
+
+    broadcastEvent('update', data);
+
+  } catch (err) {
+    console.error('Scheduler tick error:', err);
+    broadcastEvent('update', { error: 'Failed to fetch or save AI logs' });
+  }
 }
 
 // ---------- Scheduler Control ----------
@@ -196,6 +209,11 @@ function updateSchedulerSettings({ isPaused, activeModel, interval }) {
     if (activeModel) {
         schedulerState.activeModel = activeModel;
         console.log('[Scheduler] Active model changed to', activeModel);
+    }
+
+    if (interval && typeof interval === 'number' && interval > 0 && interval !== SCHEDULER_INTERVAL) {
+        // Note: SCHEDULER_INTERVAL is const - if you want runtime changes, store it in schedulerState instead
+        console.log('[Scheduler] Interval change requested but not applied (SCHEDULER_INTERVAL is constant).');
     }
 
     if (restart) startScheduler();

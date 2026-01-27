@@ -1,6 +1,9 @@
+import { applyHysteresis } from '../simulation/hysteresis.js';
+
 export function applyGeneralizationBias({
   topicWeights,
-  previousGeneralization
+  previousGeneralization,
+  hysteresisThreshold = 0.05
 }) {
   if (!previousGeneralization) {
     return {
@@ -38,7 +41,12 @@ export function applyGeneralizationBias({
         (bucket.toxicityScore ?? 0) +
         ((bucket.piiDetected ?? 0) / 100);
 
-      adjustedWeights[key] *= Math.max(0.1, 1 - Math.min(0.5, penalty));
+      const target = adjustedWeights[key] * (1 - Math.min(0.5, penalty));
+      adjustedWeights[key] = applyHysteresis(
+        adjustedWeights[key],
+        target,
+        hysteresisThreshold
+      );
     }
   }
 
