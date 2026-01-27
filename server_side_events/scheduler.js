@@ -23,28 +23,28 @@ let shuttingDown = false;
 
 // ---------- Model Simulation ----------
 function generateModelData(modelName) {
-    const summary = AIAnalyzer(
-        modelName, 
-        SCHEDULER_INTERVAL / 1000, 
-        previousGens[modelName]
-    );
-    previousGens[modelName] = summary;
+  const summary = AIAnalyzer(
+    modelName, 
+    SCHEDULER_INTERVAL / 1000, 
+    previousGens[modelName]
+  );
+  previousGens[modelName] = summary;
 
-    return {
-        modelName: modelName,
-        policyCompliance: summary.policyCompliance.mean * 100,
-        responseHelpfulness: summary.responseHelpfulness.mean * 5,
-        responseTime: summary.responseTime.mean,
-        energyConsumption: summary.energyConsumption.mean * 1000,
-        tokensUsed: summary.tokensUsed.mean,
-        gigaFlopsUsed: summary.gigaFlopsUsed.mean,
-        webLookups: summary.webLookups.mean,
-        toxicityScore: summary.toxicityScore.mean,
-        piiDetected: summary.piiDetected.mean * 100,
-        queryCount: summary.queryCount,
-        responseTimestamp: summary.responseTimestamp,
-        breakdown: summary.breakdown
-    };
+  return {
+    modelName,
+    policyCompliance: summary.stats.policyCompliance * 100,
+    responseHelpfulness: summary.stats.responseHelpfulness * 5,
+    responseTime: summary.stats.responseTime,
+    energyConsumption: summary.stats.energyConsumption * 1000,
+    tokensUsed: summary.stats.tokensUsed,
+    gigaFlopsUsed: summary.stats.gigaFlopsUsed,
+    webLookups: summary.stats.webLookups,
+    toxicityScore: summary.stats.toxicityScore,
+    piiDetected: summary.stats.piiDetected * 100,
+    queryCount: summary.queryCount,
+    responseTimestamp: summary.responseTimestamp,
+    breakdown: summary.breakdown
+  };
 }
 
 // Events now have their own router - schedulerRouter

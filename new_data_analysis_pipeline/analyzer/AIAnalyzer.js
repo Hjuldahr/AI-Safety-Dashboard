@@ -12,6 +12,7 @@ export function AIAnalyzer(
   );
 
   return {
+    modelName,
     ...result,
     responseTimestamp: Date.now()
   };

@@ -1,44 +1,25 @@
 import flaggedOutputPool from '../flagged_output_pool/flagged_output_pool.json' with { type: 'json' };
 import { selectTopic } from './topicSelector.js';
-import { randFloats, randInts, randBools } from '../core/random.js'; //randFloats, randInts unused
-import { applyHysteresis } from './hysteresis.js'; //unused
+import { randBools } from '../core/random.js';
 
 export function simulateCallVectorized({
   model,
   topicWeights,
   characteristicBias,
   queryCount,
-  emitCalls,
-  hysteresisThreshold
+  emitCalls
 }) {
-  const {
-    TOPIC_CHARACTERISTICS,
-    SUBTOPIC_CHARACTERISTICS_MODIFIERS,
-    MODEL_PROFILE
-  } = model;
+  const { TOPIC_CHARACTERISTICS, SUBTOPIC_CHARACTERISTICS_MODIFIERS, MODEL_PROFILE } = model;
 
-  // vectorized RNG
   const chaos = randBools(queryCount, 0.01);
 
-  // topic selection
   const topicSelections = Array.from({ length: queryCount }, () => selectTopic(topicWeights));
 
-  const tokens = new Int32Array(queryCount);
-  const responseTime = new Float64Array(queryCount);
-  const compliance = new Float64Array(queryCount);
-  const helpfulness = new Float64Array(queryCount);
-  const toxicityScore = new Float64Array(queryCount);
-  const piiDetected = new Float64Array(queryCount);
-  const gflops = new Float64Array(queryCount);
-  const energy = new Float64Array(queryCount);
-  const webLookups = new Int32Array(queryCount);
-
-  const calls = emitCalls ? [] : null;
+  const calls = [];
   const breakdown = {};
 
   for (let i = 0; i < queryCount; i++) {
     const { topic, sub_topic } = topicSelections[i];
-
     const baseChar = TOPIC_CHARACTERISTICS[topic];
     const subMod = SUBTOPIC_CHARACTERISTICS_MODIFIERS[sub_topic] || {};
 
@@ -98,68 +79,71 @@ export function simulateCallVectorized({
     const gflopsUsed = (t * 6 * complexity) / 1000;
     const energyUsed = gflopsUsed * 0.5;
 
-    tokens[i] = t;
-    compliance[i] = c;
-    helpfulness[i] = h;
-    toxicityScore[i] = tox;
-    piiDetected[i] = pii;
-    responseTime[i] = rt;
-    gflops[i] = gflopsUsed;
-    energy[i] = energyUsed;
-    webLookups[i] = needsWeb ? Math.floor(Math.random() * 3) + 1 : 0;
+    const webLookups = needsWeb ? Math.floor(Math.random() * 3) + 1 : 0;
 
-    // breakdown
+    const call = {
+      topic,
+      sub_topic,
+      tokensUsed: t,
+      gigaFlopsUsed: gflopsUsed,
+      policyCompliance: c,
+      responseHelpfulness: h,
+      responseTime: rt,
+      energyConsumption: energyUsed,
+      webLookups,
+      toxicityScore: tox,
+      piiDetected: pii,
+      aiOutput: isChaos && isToxic ? flaggedOutputPool[Math.floor(Math.random() * flaggedOutputPool.length)] : null,
+      time: Date.now()
+    };
+
+    calls.push(call);
+
     const bucket = breakdown[topic] ??= { count: 0, toxicity: 0, pii: 0 };
     bucket.count++;
     bucket.toxicity += tox;
     bucket.pii += pii;
-
-    if (emitCalls) {
-      calls.push({
-        topic,
-        sub_topic,
-        tokensUsed: t,
-        gigaFlopsUsed: gflopsUsed,
-        policyCompliance: c,
-        responseHelpfulness: h,
-        responseTime: rt,
-        energyConsumption: energyUsed,
-        webLookups: webLookups[i],
-        toxicityScore: tox,
-        piiDetected: pii,
-        aiOutput: isChaos && isToxic ? flaggedOutputPool[Math.floor(Math.random() * flaggedOutputPool.length)] : null
-      });
-    }
   }
 
-  // finalize stats
-  const stats = {
-    policyCompliance: mean(compliance),
-    responseHelpfulness: mean(helpfulness),
-    responseTime: mean(responseTime),
-    energyConsumption: mean(energy),
-    tokensUsed: mean(tokens),
-    gigaFlopsUsed: mean(gflops),
-    toxicityScore: mean(toxicityScore),
-    piiDetected: mean(piiDetected)
-  };
-
-  const finalBreakdown = Object.fromEntries(
-    Object.entries(breakdown).map(([k, v]) => [
-      k,
-      {
-        queryCount: v.count,
-        toxicityScore: v.toxicity / v.count,
-        piiDetected: v.pii / v.count
-      }
-    ])
-  );
-
-  return { stats, breakdown: finalBreakdown, calls };
+  return { calls, breakdown: computeBreakdownFromCalls(calls) };
 }
 
 function mean(arr) {
   let sum = 0;
-  for (let i = 0; i < arr.length; i++) sum += arr[i];
+  for (const v of arr) sum += v;
   return sum / arr.length;
+}
+
+function computeBreakdownFromCalls(calls) {
+  const buckets = {};
+  for (const c of calls) {
+    const topicKey = c.topic || "Unknown";
+    if (!buckets[topicKey]) buckets[topicKey] = { type: 'topic', calls: [] };
+    buckets[topicKey].calls.push(c);
+
+    const subTopicKey = c.sub_topic || "Unknown";
+    if (subTopicKey !== topicKey) {
+      if (!buckets[subTopicKey]) buckets[subTopicKey] = { type: 'sub_topic', calls: [] };
+      buckets[subTopicKey].calls.push(c);
+    }
+  }
+
+  const breakdownData = {};
+  for (const key of Object.keys(buckets)) {
+    const bucketCalls = buckets[key].calls;
+    breakdownData[key] = {
+      type: buckets[key].type,
+      queryCount: bucketCalls.length,
+      responseTime: mean(bucketCalls.map(c => c.responseTime)),
+      tokensUsed: mean(bucketCalls.map(c => c.tokensUsed)),
+      energyConsumption: mean(bucketCalls.map(c => c.energyConsumption)) * 1000,
+      responseHelpfulness: mean(bucketCalls.map(c => c.responseHelpfulness)) * 5,
+      policyCompliance: mean(bucketCalls.map(c => c.policyCompliance)) * 100,
+      toxicityScore: mean(bucketCalls.map(c => c.toxicityScore)),
+      piiDetected: mean(bucketCalls.map(c => c.piiDetected)) * 100,
+      gigaFlopsUsed: mean(bucketCalls.map(c => c.gigaFlopsUsed)),
+      webLookups: mean(bucketCalls.map(c => c.webLookups))
+    };
+  }
+  return breakdownData;
 }
