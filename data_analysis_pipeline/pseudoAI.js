@@ -1,47 +1,9 @@
-import fs from 'fs';
-
+import random from './random.js';
 import { TOPIC_HIERARCHY } from '../config/constants.js';
+import { getModelConfig, LOADED_MODELS } from './modelRegistry.js';
 import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' with { type: 'json' };
 
-let Model_Configs = {};
-
-const CONFIG_PATH = './model_configs'
-const files = fs.readdir(CONFIG_PATH);
-files.array.forEach(e => {
-  Model_Configs[e.ModelName] = e;
-});
-
-const SUPPORTED_MODELS = ["GoodModel", "BadModel"];
-
-
-function getRandomFloat(min, max) {
-  return Math.random() * (max - min) + min;
-}
-
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max - min)) + min;
-}
-
-function getRandomArrayElement(array) {
-  return array[getRandomInt(0, array.length)];
-}
-
-function getWeightedRandomKey(weightsObj) {
-  const totalWeight = Object.values(weightsObj).reduce((a, b) => a + b, 0);
-  let roll = Math.random() * totalWeight;
-
-  for (const key in weightsObj) {
-    if (roll < weightsObj[key]) return key;
-    roll -= weightsObj[key];
-  }
-  return Object.keys(weightsObj)[0];
-}
-
-function applyGeneralizationBias({
-  topicWeights,
-  previousGeneralization
-}) {
-  // First round / no feedback
+function applyGeneralizationBias(topicWeights, previousGeneralization) {
   if (!previousGeneralization) {
     return {
       topicWeights,
@@ -50,14 +12,8 @@ function applyGeneralizationBias({
     };
   }
 
-  const {
-    toxicityScore,
-    piiDetected,
-    policyCompliance,
-    breakdown
-  } = previousGeneralization;
+  const { toxicityScore, piiDetected, policyCompliance, breakdown } = previousGeneralization;
 
-  // ---- Global risk feedback ----
   const toxicityBias = 1 + Math.min(0.5, toxicityScore?.mean || 0);
   const piiBias = 1 + Math.min(0.5, (piiDetected?.mean || 0) / 100);
 
@@ -68,7 +24,6 @@ function applyGeneralizationBias({
 
   const volumeBias = Math.max(0.6, Math.min(1.2, stability + 0.8));
 
-  // ---- Topic-level feedback ----
   const adjustedWeights = { ...topicWeights };
 
   if (breakdown) {
@@ -89,40 +44,26 @@ function applyGeneralizationBias({
 
   return {
     topicWeights: adjustedWeights,
-    characteristicBias: {
-      toxicity: toxicityBias,
-      pii: piiBias
-    },
+    characteristicBias: { toxicity: toxicityBias, pii: piiBias },
     volumeBias
   };
 }
 
 /**
- * pseudoAI v7
- * - Feedback-aware
- * - Topic self-correcting
- * - Deterministic-safe
+ * pseudoAI v7.1
+ * - Topic + subtopic aware web lookups
+ * - Config-safe
  */
 export function generateCalls(modelName, intervalDuration, previousGeneralization = null) {
-  if (!SUPPORTED_MODELS.includes(modelName)) {
-    throw new Error("Unsupported Model: " + modelName);
+  if (!LOADED_MODELS.includes(modelName)) {
+    throw new Error(`Model has no configuration file loaded: ${modelName}`);
   }
 
-  const {
-    TOPIC_WEIGHTS: RAW_TOPIC_WEIGHTS,
-    TOPIC_CHARACTERISTICS,
-    SUBTOPIC_CHARACTERISTICS_MODIFIERS,
-    MODEL_PROFILE
-  } = Model_Configs[modelName];
+  const modelConfig = getModelConfig(modelName);
+  const { MODEL_PROFILE } = modelConfig;
 
-  const {
-    topicWeights,
-    characteristicBias,
-    volumeBias
-  } = applyGeneralizationBias({
-    topicWeights: RAW_TOPIC_WEIGHTS,
-    previousGeneralization
-  });
+  const { topicWeights, characteristicBias, volumeBias } =
+    applyGeneralizationBias(modelConfig.TOPIC_WEIGHTS, previousGeneralization);
 
   const now = new Date();
 
@@ -131,7 +72,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
   const angle = ((hour - 3) / 24) * 2 * Math.PI;
   const timeWeight = Math.sin(angle) + 1.5;
 
-  const baseQueries = getRandomInt(30, 80);
+  const baseQueries = random.getRandomInt(30, 80);
   const queries = Math.max(
     1,
     Math.floor(baseQueries * timeWeight * intervalDuration * volumeBias / 2)
@@ -142,15 +83,16 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
 
   for (let i = 0; i < queries; i++) {
     // ---- Topic selection ----
-    const topic = getWeightedRandomKey(topicWeights);
-    const sub_topic = getRandomArrayElement(TOPIC_HIERARCHY[topic]);
+    const topic = random.getWeightedRandomKey(topicWeights);
+    const sub_topic = random.getRandomArrayElement(TOPIC_HIERARCHY[topic]);
 
-    const baseChar = TOPIC_CHARACTERISTICS[topic];
-    const subMod = SUBTOPIC_CHARACTERISTICS_MODIFIERS[sub_topic] || {};
+    const baseChar = modelConfig.TOPIC_CHARACTERISTICS[topic];
+    const subMod = modelConfig.SUBTOPIC_CHARACTERISTICS_MODIFIERS[sub_topic] || {};
 
     // ---- Chaos injection ----
-    const isChaos = Math.random() < 0.01;
+    const isChaos = random.getRandomBool(0.01);
 
+    // ---- Risk chances ----
     const toxicityChance = isChaos
       ? 0.5
       : (subMod.toxicityChance ?? baseChar.toxicityChance) * characteristicBias.toxicity;
@@ -159,13 +101,18 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       ? 0.5
       : (subMod.piiChance ?? baseChar.piiChance) * characteristicBias.pii;
 
-    const isToxic = Math.random() < toxicityChance;
-    const hasPII = Math.random() < piiChance;
-    const needsWeb = Math.random() < baseChar.webLookupChance;
+    // ---- Web lookup chance (FIXED) ----
+    const webLookupChance = isChaos
+      ? 0.8
+      : (subMod.webLookupChance ?? baseChar.webLookupChance ?? 0);
+
+    const isToxic = random.getRandomBool(toxicityChance);
+    const hasPII = random.getRandomBool(piiChance);
+    const needsWeb = random.getRandomBool(webLookupChance);
 
     // ---- Moderation behavior ----
-    const caughtToxic = isToxic && Math.random() < MODEL_PROFILE.filterStrength;
-    const caughtPII = hasPII && Math.random() < MODEL_PROFILE.filterStrength;
+    const caughtToxic = isToxic && random.getRandomBool(MODEL_PROFILE.filterStrength);
+    const caughtPII = hasPII && random.getRandomBool(MODEL_PROFILE.filterStrength);
 
     let compliance, helpfulness, tokens, piiScore, toxicityScore;
 
@@ -177,28 +124,34 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       toxicityScore = 0;
     } else {
       if (isToxic) {
-        compliance = getRandomFloat(0, 0.2);
-        toxicityScore = getRandomFloat(0.8, 1.0);
+        compliance = random.getRandomFloat(0, 0.2);
+        toxicityScore = random.getRandomFloat(0.8, 1.0);
       } else {
-        compliance = (1 - getRandomFloat(0, 0.1) + MODEL_PROFILE.complianceBase) / 2;
-        toxicityScore = getRandomFloat(0, 0.1);
+        compliance =
+          (1 - random.getRandomFloat(0, 0.1) + MODEL_PROFILE.complianceBase) / 2;
+        toxicityScore = random.getRandomFloat(0, 0.1);
       }
 
-      piiScore = hasPII ? getRandomFloat(0.8, 1.0) : 0;
-      helpfulness = getRandomFloat(0.8, 1.0);
+      piiScore = hasPII ? random.getRandomFloat(0.8, 1.0) : 0;
+      helpfulness = random.getRandomFloat(0.8, 1.0);
 
-      tokens = Math.max(10, Math.floor(
-        (baseChar.baseTokens +
-          getRandomFloat(-baseChar.tokenVariance, baseChar.tokenVariance)) *
-        (subMod.complexity || 1)
-      ));
+      const baseTokens = subMod.baseTokens ?? baseChar.baseTokens;
+      const tokenVariance = subMod.tokenVariance ?? baseChar.tokenVariance;
+
+      tokens = Math.max(
+        10,
+        Math.floor(
+          (baseTokens + random.getRandomFloat(-tokenVariance, tokenVariance)) *
+          (subMod.complexity || 1)
+        )
+      );
     }
 
     // ---- Physics & cost simulation ----
     const msPerToken = 20 * MODEL_PROFILE.speedMultiplier;
-    let responseTime = tokens * msPerToken + getRandomFloat(0, 50);
+    let responseTime = tokens * msPerToken + random.getRandomFloat(0, 50);
 
-    if (needsWeb) responseTime += getRandomFloat(500, 1500);
+    if (needsWeb) responseTime += random.getRandomFloat(500, 1500);
     if (caughtToxic || caughtPII) responseTime += 50;
 
     const complexity =
@@ -207,23 +160,23 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const gigaFlopsUsed = (tokens * 6 * complexity) / 1000;
     const energyConsumption = gigaFlopsUsed * 0.5;
 
-    const flagged = isToxic && isChaos; //temporary
+    const flagged = isToxic && isChaos;
 
     calls.push({
       model: modelName,
-      time: getRandomInt(startTime, startTime + intervalDuration * 1000),
+      time: random.getRandomInt(startTime, startTime + intervalDuration * 1000),
       tokensUsed: tokens,
       gigaFlopsUsed,
       policyCompliance: compliance,
       responseHelpfulness: helpfulness,
       responseTime,
       energyConsumption,
-      webLookups: needsWeb ? getRandomInt(1, 4) : 0,
+      webLookups: needsWeb ? random.getRandomInt(1, 4) : 0,
       topic,
       sub_topic,
       toxicityScore,
       piiDetected: piiScore,
-      aiOutput: flagged ? getRandomArrayElement(flaggedOutputPool) : null
+      aiOutput: flagged ? random.getRandomArrayElement(flaggedOutputPool) : null
     });
   }
 

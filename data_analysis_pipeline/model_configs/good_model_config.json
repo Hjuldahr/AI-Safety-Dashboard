@@ -1,6 +1,6 @@
 {
     "META": {
-        "ModelName": "BadAI"
+        "ModelName": "GoodModel"
     },
     "TOPIC_WEIGHTS": {
         "Customer Support": 0.40,

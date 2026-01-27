@@ -1,9 +1,11 @@
 import fs from 'fs';
 
-const CONFIG_DIR = new URL('../model_configs/', import.meta.url);
+const CONFIG_DIR = new URL('./model_configs/', import.meta.url);
 
 const registry = {};
 
+
+// Replace with lazy loader if many models are added later
 for (const file of fs.readdirSync(CONFIG_DIR)) {
   if (!file.endsWith('.json')) continue;
 
@@ -12,7 +14,10 @@ for (const file of fs.readdirSync(CONFIG_DIR)) {
   );
 
   const name = config.META?.ModelName;
-  if (!name) throw new Error(`Missing ModelName in ${file}`);
+  
+  if (!name) {
+    throw new Error(`Missing Meta.ModelName in ${file}`);
+  }
 
   registry[name] = config;
 }
@@ -24,4 +29,4 @@ export function getModelConfig(name) {
   return registry[name];
 }
 
-export const SUPPORTED_MODELS = Object.keys(registry);
+export const LOADED_MODELS = Object.keys(registry);
