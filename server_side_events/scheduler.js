@@ -1,5 +1,6 @@
 // server_side_events/scheduler.js
-import { AIAnalyzer } from '../data_analysis_pipeline/AIAnalyzer.js';
+//import { AIAnalyzer } from '../data_analysis_pipeline/AIAnalyzer.js';
+import { generateAggregates } from '../data_analysis_pipeline/IntegratedAI.js';
 import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
@@ -22,7 +23,10 @@ let previousGeneralization = []
 async function generateModelData(modelName) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
-    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization);
+    //const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization);
+    //previousGeneralization = summary;
+    
+    const summary = generateAggregates(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization )
     previousGeneralization = summary;
 
     // Format for DB/SSE
@@ -39,7 +43,8 @@ async function generateModelData(modelName) {
         piiDetected: summary.piiDetected.mean * 100, // Scale to %
         queryCount: summary.queryCount,
         responseTimestamp: summary.responseTimestamp,
-        breakdown: summary.breakdown
+        breakdown: summary.breakdown,
+        flaggedOutputs: summary.flaggedOutputs
     };
 }
 

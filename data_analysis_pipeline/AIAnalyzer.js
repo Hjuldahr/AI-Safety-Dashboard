@@ -1,99 +1,170 @@
-import { mean } from 'simple-statistics'
 import { generateCalls } from './pseudoAI.js'
 
+function nRound(value, n = 100) {
+  return Math.round(value * n) / n
+}
 
-function nRound(value, n=100) {
-  return Math.round(value * n) / n;
+/**
+ * Streaming stats accumulator
+ * - Keeps min / max / sum / count
+ * - Keeps a compact list ONLY for median
+ */
+function createStatsAccumulator() {
+  return {
+    min: Infinity,
+    max: -Infinity,
+    sum: 0,
+    count: 0,
+    values: [],
+
+    push(v) {
+      const value = typeof v === 'number' ? v : 0
+      this.min = Math.min(this.min, value)
+      this.max = Math.max(this.max, value)
+      this.sum += value
+      this.count++
+      this.values.push(value)
+    },
+
+    finalize() {
+      if (this.count === 0) {
+        return { min: 0, max: 0, mean: 0, median: 0 }
+      }
+
+      const sorted = this.values
+        .sort((a, b) => a - b)
+        .map(v => nRound(v))
+
+      const mid = Math.floor(sorted.length / 2)
+      const median =
+        sorted.length % 2 === 0
+          ? (sorted[mid - 1] + sorted[mid]) / 2
+          : sorted[mid]
+
+      return {
+        min: sorted[0],
+        max: sorted[sorted.length - 1],
+        mean: this.sum / this.count,
+        median
+      }
+    }
+  }
 }
 
 export function AIAnalyzer(modelName, intervalDuration, previousGeneralization = null) {
   const calls = generateCalls(modelName, intervalDuration, previousGeneralization)
 
-  //if (!calls || calls.length === 0) return {};
-
-  const computeStats = (arr) => {
-    if (!arr || arr.length === 0) return { min: 0, max: 0, mean: 0, median: 0 };
-    // round after sorting to preserve precision
-    const sorted = [...arr].sort((a, b) => a - b).map((x) => nRound(x));
-    const len = sorted.length;
-    const sum = sorted.reduce((s, v) => s + v, 0);
-    const mid = Math.floor(len / 2);
-    return {
-      min: sorted[0],
-      max: sorted[len - 1],
-      mean: sum / len,
-      median: len % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
-    };
-  };
-
-  const times = [], pc = [], rh = [], rt = [], ec = [], tokens = [], ops = [], gflops = [], web = [], toxic = [], pii = [], topics = [], sub_topics = [], flaggedOutputs = [];
-
-  const buckets = {};
-
-  for (const c of calls) {
-    times.push(c.time || 0);
-    pc.push(typeof c.policyCompliance === 'number' ? c.policyCompliance : 0);
-    rh.push(typeof c.responseHelpfulness === 'number' ? c.responseHelpfulness : 0);
-    rt.push(typeof c.responseTime === 'number' ? c.responseTime : 0);
-    ec.push(typeof c.energyConsumption === 'number' ? c.energyConsumption : 0);
-    tokens.push(typeof c.tokensUsed === 'number' ? c.tokensUsed : 0);
-    gflops.push(typeof c.gigaFlopsUsed === 'number' ? c.gigaFlopsUsed : 0);
-    web.push(typeof c.webLookups === 'number' ? c.webLookups : 0);
-    toxic.push(typeof c.toxicityScore === 'number' ? c.toxicityScore : 0);
-    pii.push(typeof c.piiDetected === 'number' ? c.piiDetected : 0);
-
-    // Populate Breakdown Buckets
-    const topicKey = c.topic || "Unknown";
-    if (!buckets[topicKey]) buckets[topicKey] = { type: 'topic', calls: [] };
-    buckets[topicKey].calls.push(c);
-
-    const subTopicKey = c.sub_topic || "Unknown";
-    // Edge case prevention: if sub_topic has same name as topic, don't overwrite (unlikely but safe)
-    if (subTopicKey !== topicKey) {
-      if (!buckets[subTopicKey]) buckets[subTopicKey] = { type: 'sub_topic', calls: [] };
-      buckets[subTopicKey].calls.push(c);
-    }
-
-    c.aiOutput != null && flaggedOutputs.push(c.aiOutput)
+  // ---- Global accumulators ----
+  const stats = {
+    time: createStatsAccumulator(),
+    policyCompliance: createStatsAccumulator(),
+    responseHelpfulness: createStatsAccumulator(),
+    responseTime: createStatsAccumulator(),
+    energyConsumption: createStatsAccumulator(),
+    tokensUsed: createStatsAccumulator(),
+    gigaFlopsUsed: createStatsAccumulator(),
+    webLookups: createStatsAccumulator(),
+    toxicityScore: createStatsAccumulator(),
+    piiDetected: createStatsAccumulator()
   }
 
-  const breakdownData = {};
+  // ---- Breakdown buckets ----
+  const buckets = {}
 
-  Object.keys(buckets).forEach(key => {
-    const { type, calls: bucketCalls } = buckets[key];
+  for (const c of calls) {
+    stats.time.push(c.time)
+    stats.policyCompliance.push(c.policyCompliance)
+    stats.responseHelpfulness.push(c.responseHelpfulness)
+    stats.responseTime.push(c.responseTime)
+    stats.energyConsumption.push(c.energyConsumption)
+    stats.tokensUsed.push(c.tokensUsed)
+    stats.gigaFlopsUsed.push(c.gigaFlopsUsed)
+    stats.webLookups.push(c.webLookups)
+    stats.toxicityScore.push(c.toxicityScore)
+    stats.piiDetected.push(c.piiDetected)
 
-    // Calculate the averages for this specific Topic/Sub-topic
-    breakdownData[key] = {
-      type: type,
-      queryCount: bucketCalls.length, // Useful to know volume per topic
-      responseTime: mean(bucketCalls.map(c => c.responseTime)),
-      tokensUsed: mean(bucketCalls.map(c => c.tokensUsed)),
-      energyConsumption: mean(bucketCalls.map(c => c.energyConsumption)) * 1000,
-      responseHelpfulness: mean(bucketCalls.map(c => c.responseHelpfulness)) * 5,
-      policyCompliance: mean(bucketCalls.map(c => c.policyCompliance)) * 100,
-      toxicityScore: mean(bucketCalls.map(c => c.toxicityScore)),
-      piiDetected: mean(bucketCalls.map(c => c.piiDetected)) * 100,
-      gigaFlopsUsed: mean(bucketCalls.map(c => c.gigaFlopsUsed)),
-      webLookups: mean(bucketCalls.map(c => c.webLookups))
-    };
-  });
+    const topicKey = c.topic || 'Unknown'
+    if (!buckets[topicKey]) {
+      buckets[topicKey] = {
+        type: 'topic',
+        calls: []
+      }
+    }
+    buckets[topicKey].calls.push(c)
 
-  const now = Date.now();
+    const subTopicKey = c.sub_topic || 'Unknown'
+    if (subTopicKey !== topicKey) {
+      if (!buckets[subTopicKey]) {
+        buckets[subTopicKey] = {
+          type: 'sub_topic',
+          calls: []
+        }
+      }
+      buckets[subTopicKey].calls.push(c)
+    }
+  }
+
+  // ---- Breakdown aggregation (single pass per bucket) ----
+  const breakdown = {}
+
+  for (const key in buckets) {
+    const { type, calls: bucketCalls } = buckets[key]
+
+    let rt = 0,
+      tokens = 0,
+      energy = 0,
+      helpfulness = 0,
+      compliance = 0,
+      toxicity = 0,
+      pii = 0,
+      gflops = 0,
+      web = 0
+
+    for (const c of bucketCalls) {
+      rt += c.responseTime || 0
+      tokens += c.tokensUsed || 0
+      energy += c.energyConsumption || 0
+      helpfulness += c.responseHelpfulness || 0
+      compliance += c.policyCompliance || 0
+      toxicity += c.toxicityScore || 0
+      pii += c.piiDetected || 0
+      gflops += c.gigaFlopsUsed || 0
+      web += c.webLookups || 0
+    }
+
+    const n = bucketCalls.length || 1
+
+    breakdown[key] = {
+      type,
+      queryCount: n,
+      responseTime: rt / n,
+      tokensUsed: tokens / n,
+      energyConsumption: (energy / n) * 1000,
+      responseHelpfulness: (helpfulness / n) * 5,
+      policyCompliance: (compliance / n) * 100,
+      toxicityScore: toxicity / n,
+      piiDetected: (pii / n) * 100,
+      gigaFlopsUsed: gflops / n,
+      webLookups: web / n
+    }
+  }
+
+  const now = Date.now()
 
   return {
     model: modelName,
-    time: computeStats(times),
-    policyCompliance: computeStats(pc),
-    responseHelpfulness: computeStats(rh),
-    responseTime: computeStats(rt),
-    energyConsumption: computeStats(ec),
-    tokensUsed: computeStats(tokens),
-    gigaFlopsUsed: computeStats(gflops),
-    webLookups: computeStats(web),
-    toxicityScore: computeStats(toxic),
-    piiDetected: computeStats(pii),
-    breakdown: breakdownData,
+    time: stats.time.finalize(),
+    policyCompliance: stats.policyCompliance.finalize(),
+    responseHelpfulness: stats.responseHelpfulness.finalize(),
+    responseTime: stats.responseTime.finalize(),
+    energyConsumption: stats.energyConsumption.finalize(),
+    tokensUsed: stats.tokensUsed.finalize(),
+    gigaFlopsUsed: stats.gigaFlopsUsed.finalize(),
+    webLookups: stats.webLookups.finalize(),
+    toxicityScore: stats.toxicityScore.finalize(),
+    piiDetected: stats.piiDetected.finalize(),
+    breakdown,
     queryCount: calls.length,
     responseTimestamp: now
-  };
+  }
 }
