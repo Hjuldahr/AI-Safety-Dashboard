@@ -9,6 +9,7 @@ function computeStats(arr) {
   const len = sorted.length;
   const sum = sorted.reduce((s, v) => s + v, 0);
   const mid = Math.floor(len / 2);
+
   return {
     min: sorted[0],
     max: sorted[len - 1],

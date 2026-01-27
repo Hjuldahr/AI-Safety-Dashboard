@@ -1,7 +1,8 @@
 {
     "META": {
-        "ModelName": "BadAI"
+        "ModelName": "GoodModel"
     },
+    "QUERY_RATE": 1.0,
     "TOPIC_WEIGHTS": {
         "Customer Support": 0.40,
         "Sales & Inquiry": 0.32,

@@ -23,28 +23,40 @@ let shuttingDown = false;
 
 // ---------- Model Simulation ----------
 function generateModelData(modelName) {
-  const summary = AIAnalyzer(
-    modelName, 
-    SCHEDULER_INTERVAL / 1000, 
-    previousGens[modelName]
-  );
-  previousGens[modelName] = summary;
+  try {
+    const summary = AIAnalyzer(
+      modelName,
+      SCHEDULER_INTERVAL / 1000,
+      previousGens[modelName]
+    );
 
-  return {
-    modelName,
-    policyCompliance: summary.stats.policyCompliance * 100,
-    responseHelpfulness: summary.stats.responseHelpfulness * 5,
-    responseTime: summary.stats.responseTime,
-    energyConsumption: summary.stats.energyConsumption * 1000,
-    tokensUsed: summary.stats.tokensUsed,
-    gigaFlopsUsed: summary.stats.gigaFlopsUsed,
-    webLookups: summary.stats.webLookups,
-    toxicityScore: summary.stats.toxicityScore,
-    piiDetected: summary.stats.piiDetected * 100,
-    queryCount: summary.queryCount,
-    responseTimestamp: summary.responseTimestamp,
-    breakdown: summary.breakdown
-  };
+    if (!summary || !summary.policyCompliance) {
+      throw new Error(`Analyzer returned invalid data for ${modelName}`);
+    }
+
+    //console.log(`[Analyzer] ${modelName} summary`, summary);
+
+    previousGens[modelName] = summary;
+
+    return {
+      modelName: modelName,
+      policyCompliance: summary.policyCompliance.mean * 100,
+      responseHelpfulness: summary.responseHelpfulness.mean * 5,
+      responseTime: summary.responseTime.mean,
+      energyConsumption: summary.energyConsumption.mean * 1000,
+      tokensUsed: summary.tokensUsed.mean,
+      gigaFlopsUsed: summary.gigaFlopsUsed.mean,
+      webLookups: summary.webLookups.mean,
+      toxicityScore: summary.toxicityScore.mean,
+      piiDetected: summary.piiDetected.mean * 100,
+      queryCount: summary.queryCount,
+      responseTimestamp: summary.responseTimestamp,
+      breakdown: summary.breakdown
+    };
+  } catch (e) {
+    console.error(`[Scheduler] Failed to generate data for ${modelName}:`, e);
+    return null;
+  }
 }
 
 // Events now have their own router - schedulerRouter
@@ -134,6 +146,8 @@ function broadcastEvent(eventType, data) {
 async function schedulerTick() {
   if (schedulerState.isPaused || shuttingDown) return;
 
+  //console.log("[Scheduler] Tick at", new Date().toISOString());
+
   try {
     const data = {};
     const logsToAdd = [];
@@ -147,6 +161,8 @@ async function schedulerTick() {
         console.error(`[Scheduler] Failed to generate data for ${model}:`, err);
       }
     }
+
+    //console.log("[Scheduler] Saving logs:", logsToAdd.length);
 
     if (logsToAdd.length > 0) {
       try {

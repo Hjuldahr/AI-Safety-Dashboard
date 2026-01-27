@@ -1,5 +1,5 @@
 import flaggedOutputPool from '../flagged_output_pool/flagged_output_pool.json' with { type: 'json' };
-import { selectTopic } from './topicSelector.js';
+import { selectTopic } from '../core/topicSelector.js';
 import { randBools } from '../core/random.js';
 
 export function simulateCallVectorized({
