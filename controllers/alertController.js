@@ -51,6 +51,11 @@ const getAlertHistory = async (req, res) => {
             query['alertSnapshot.modelName'] = modelName;
         }
         if (start || end) query.timestamp = {};
+        // Tag filter: match current tags on the log
+        if (req.query.tag) {
+            const tagId = req.query.tag;
+            query.tags = tagId;
+        }
         if (start) {
             const sd = new Date(start);
             if (!Number.isNaN(sd.getTime())) query.timestamp.$gte = sd;
@@ -70,6 +75,7 @@ const getAlertHistory = async (req, res) => {
             .skip(skip)
             .limit(limit)
             .populate('alert')
+            .populate('tags')
             .lean();
 
         const alertLogs = rawLogs.map(l => {
@@ -80,13 +86,14 @@ const getAlertHistory = async (req, res) => {
             } catch (err) {
                 humanRule = '';
             }
-            return {
+                return {
                 _id: l._id,
                 level: a.alertLevel || 'Info',
                 timestamp: l.timestamp,
                 alertName: a.alertName || '',
                 modelName: a.modelName || null,
                 humanRule,
+                    tags: (l.tags || []).map(t => ({ _id: t._id || t, name: t.name || '', color: t.color || '#888888' })),
                 created: l.timestamp // Ensure created exists for frontend sorting/display
             };
         });
@@ -107,7 +114,7 @@ const getAlertHistory = async (req, res) => {
 // POST /alerts - create a new alert
 const createAlert = async (req, res) => {
     try {
-        const { alertName, alertLevel, alertRule, created, modelName } = req.body;
+        const { alertName, alertLevel, alertRule, created, modelName, tags } = req.body;
 
         // Normalize and validate rule using model static
         let normalizedRule;
@@ -117,7 +124,7 @@ const createAlert = async (req, res) => {
             return res.status(400).json({ message: 'Invalid alert rule: ' + err.message });
         }
 
-        const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created, modelName: modelName || null });
+        const newAlert = new Alert({ alertName, alertLevel, alertRule: normalizedRule, created, modelName: modelName || null, tags: Array.isArray(tags) ? tags : [] });
         await newAlert.save();
         // Add a human readable version for UI/logging
         const humanRule = Alert.convertToHumanFormat(normalizedRule);
@@ -136,7 +143,7 @@ const createAlert = async (req, res) => {
 // GET /alerts/live - return alerts as JSON (optionally filter active=true)
 const getLiveAlerts = async (req, res) => {
     try {
-        const alerts = await Alert.find().sort({ created: -1 }).lean();
+        const alerts = await Alert.find().sort({ created: -1 }).populate('tags').lean();
         return res.status(200).json({ alerts });
     } catch (error) {
         console.error('Error fetching live alerts:', error);
@@ -276,6 +283,97 @@ const markAlertsRead = async (req, res) => {
         return res.status(500).json({ message: 'Failed to mark read' });
     }
 };
+// POST /alerts/api/logs/:id/tags - add a tag to a specific alert log (creates tag if name provided)
+const addTagToAlertLog = async (req, res) => {
+    try {
+        const logId = req.params.id;
+        if (!logId) return res.status(400).json({ message: 'Missing log id.' });
+        const { tagId, name, color } = req.body;
+        // Lazy-load Tag model to avoid circular deps
+        const Tag = (await import('../models/tag.js')).default;
+
+        let tag = null;
+        if (tagId) {
+            tag = await Tag.findById(tagId).lean();
+            if (!tag) return res.status(404).json({ message: 'Tag not found.' });
+        } else if (name) {
+            // find or create by name
+            tag = await Tag.findOne({ name: name.trim() });
+            if (!tag) {
+                tag = await Tag.create({ name: name.trim(), color: color || '#888888' });
+            }
+        } else {
+            return res.status(400).json({ message: 'Missing tagId or name.' });
+        }
+
+        const AlertLogModel = await import('../models/alert_log.js');
+        const AlertLog = AlertLogModel.default;
+
+        // Add to tags array (avoid duplicates)
+        const existing = await AlertLog.findById(logId);
+        if (!existing) return res.status(404).json({ message: 'Alert log not found.' });
+        const tagObjectId = tag._id;
+        if (!existing.tags) existing.tags = [];
+        if (!existing.tags.find(t => String(t) === String(tagObjectId))) {
+            existing.tags.push(tagObjectId);
+        }
+
+        await existing.save();
+
+        return res.status(200).json({ message: 'Tag added to alert log.', tag: { _id: tag._id, name: tag.name, color: tag.color } });
+    } catch (error) {
+        console.error('Error adding tag to alert log:', error);
+        return res.status(500).json({ message: 'Failed to add tag.' });
+    }
+};
+
+// DELETE /alerts/api/logs/:id/tags/:tagId - remove a tag reference from a specific alert log
+const removeTagFromAlertLog = async (req, res) => {
+    try {
+        const logId = req.params.id;
+        const tagId = req.params.tagId;
+        if (!logId || !tagId) return res.status(400).json({ message: 'Missing log id or tag id.' });
+
+        const AlertLogModel = await import('../models/alert_log.js');
+        const AlertLog = AlertLogModel.default;
+
+        const existing = await AlertLog.findById(logId);
+        if (!existing) return res.status(404).json({ message: 'Alert log not found.' });
+
+        const beforeCount = (existing.tags || []).length;
+        existing.tags = (existing.tags || []).filter(t => String(t) !== String(tagId));
+        if (existing.tags.length === beforeCount) return res.status(404).json({ message: 'Tag not found on this alert log.' });
+
+        await existing.save();
+        return res.status(200).json({ message: 'Tag removed from alert log.' });
+    } catch (error) {
+        console.error('Error removing tag from alert log:', error);
+        return res.status(500).json({ message: 'Failed to remove tag from alert log.' });
+    }
+};
+
+// PUT /alerts/api/logs/:id/tags - replace the tags array for a specific alert log
+const setTagsForAlertLog = async (req, res) => {
+    try {
+        const logId = req.params.id;
+        const { tags } = req.body;
+        if (!logId) return res.status(400).json({ message: 'Missing log id.' });
+        if (!Array.isArray(tags)) return res.status(400).json({ message: 'tags must be an array' });
+
+        const AlertLogModel = await import('../models/alert_log.js');
+        const AlertLog = AlertLogModel.default;
+
+        const existing = await AlertLog.findById(logId);
+        if (!existing) return res.status(404).json({ message: 'Alert log not found.' });
+
+        existing.tags = tags.filter(t => !!t);
+        await existing.save();
+        return res.status(200).json({ message: 'Tags updated on alert log.', tags: existing.tags });
+    } catch (error) {
+        console.error('Error setting tags for alert log:', error);
+        return res.status(500).json({ message: 'Failed to set tags for alert log.' });
+    }
+};
 
 export default { 
     getPage, 
@@ -285,5 +383,8 @@ export default {
     removeAlertById, 
     updateAlertById, 
     getUnreadCount, 
-    markAlertsRead 
+    markAlertsRead,
+    addTagToAlertLog,
+    removeTagFromAlertLog,
+    setTagsForAlertLog
 };

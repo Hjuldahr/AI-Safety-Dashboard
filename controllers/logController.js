@@ -1,8 +1,9 @@
-import { Parser } from 'json2csv';
-import PDFDocument from 'pdfkit';
 import User_Log from '../models/User_Log.js';
 import AI_Log from '../models/AI_Log.js';
-import User from '../models/user.js';
+import AI_Summary from "../models/AI_Summary.js"
+import { Parser } from 'json2csv';
+import PDFDocument from 'pdfkit';
+
 
 // === Helper Query Builders ===
 const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
@@ -273,6 +274,51 @@ const getFilteredAILogs = async (req, res) => {
     }
 };
 
+const getFilteredAISummaries = async (req, res) => {
+    try {
+        const {
+            modelName,
+            startDate,
+            endDate,
+            page = 1,
+            limit = 10
+        } = req.query;
+
+        const pageNum = Number(page);
+        const limitNum = Number(limit);
+
+        const query = buildAILogQuery({
+            modelName,
+            startDate,
+            endDate
+        });
+
+        const skip = (pageNum - 1) * limitNum;
+
+        const logsQuery = AI_Summary.find(query)
+            .sort({ responseTimestamp: -1 })
+            .skip(skip)
+            .limit(limitNum);
+
+        const totalQuery = AI_Summary.countDocuments(query);
+
+        const [logs, total] = await Promise.all([logsQuery, totalQuery]);
+
+        res.json({
+            logs,
+            total,
+            page: pageNum,
+            limit: limitNum,
+            pages: Math.ceil(total / limitNum)
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch AI Summaries.' });
+    }
+};
+
+
 // Log Page
 const getPage = async (req, res) => {
     try {
@@ -291,5 +337,6 @@ export default {
     exportAILogCSV,
     exportAILogPDF,
     getFilteredUserLogs,
-    getFilteredAILogs
+    getFilteredAILogs,
+    getFilteredAISummaries
 }

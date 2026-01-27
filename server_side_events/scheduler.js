@@ -1,7 +1,9 @@
 // server_side_events/scheduler.js
-import { HEARTBEAT, MAX_RECORDS } from '../config/sse.js';
+import { AIGeneralizer } from '../data_evaluation/AIGeneralizer.js';
+import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
+import AI_Summary from "../models/AI_Summary.js";
 import evaluateAlerts from "./alertEvaluator.js";
 
 import { AIAnalyzer } from "../new_data_analysis_pipeline/analyzer/AIAnalyzer.js";
@@ -20,6 +22,7 @@ const previousGens = {};
 
 // ---------- Shutdown Guard ----------
 let shuttingDown = false;
+let summaryInterval = null;
 
 // ---------- Model Simulation ----------
 function generateModelData(modelName) {
@@ -190,19 +193,63 @@ async function schedulerTick() {
     }
 
     broadcastEvent('update', data);
+    try {
+        const data = {};
 
-  } catch (err) {
-    console.error('Scheduler tick error:', err);
-    broadcastEvent('update', { error: 'Failed to fetch or save AI logs' });
-  }
+        // Generate data for all of the models in the AI_MODELS list.
+        for (const model of AI_MODELS) {
+            data[model] = await generateModelData(model);
+        }
+
+        // Add all the logs to the DB
+        await AI_Log.addLogs(Object.values(data));
+
+        // Evaluate alerts
+        try {
+            await evaluateAlerts(data, { cooldownMs: ALERTS_COOLDOWN });
+        } catch (alertErr) {
+            console.error('Error evaluating alerts:', alertErr);
+        }
+
+        // Broadcast real-time update to clients
+        broadcastEvent('update', data);
+
+    } catch (err) {
+        console.error('Scheduler tick error:', err);
+        broadcastEvent('update', { error: 'Failed to fetch or save AI logs' });
+    }
+}
+
+// ---------- Create Summary ----------
+async function createSummary() {
+    // Takes the last 60 seconds of logs for both models and averages them
+    try {
+        const summaries = await AI_Log.generateSixtySecondSummary();
+
+        if (summaries.length > 0) {
+            // Save to the summary collection
+            await AI_Summary.insertMany(summaries);
+
+            // Delete extra
+            const cutoff = Date.now() - AI_LOG_CUTOFF;
+            await AI_Log.deleteMany({ responseTimestamp: { $lt: cutoff } });
+        }
+    } catch (err) {
+        console.error('Summary Generation Error:', err);
+    }
 }
 
 // ---------- Scheduler Control ----------
 function startScheduler() {
     if (schedulerInterval) clearInterval(schedulerInterval);
+    if (summaryInterval) clearInterval(summaryInterval);
+
     if (!schedulerState.isPaused) {
         schedulerInterval = setInterval(schedulerTick, SCHEDULER_INTERVAL);
+        summaryInterval = setInterval(createSummary, SUMMARY_INTERVAL);
+
         console.log('[Scheduler] Started with interval', SCHEDULER_INTERVAL, 'ms');
+        console.log('[Summary] Started with interval', SUMMARY_INTERVAL, 'ms');
     }
 }
 
