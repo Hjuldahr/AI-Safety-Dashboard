@@ -3,6 +3,7 @@ import { TOPIC_HIERARCHY } from '../config/constants.js'
 import { getModelConfig, LOADED_MODELS } from './modelRegistry.js'
 import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' with { type: 'json' }
 
+// Takes calls directly to dynamically generate aggregaates
 function createAccumulator() {
   return {
     min: Infinity,
@@ -10,7 +11,7 @@ function createAccumulator() {
     sum: 0,
     count: 0,
     values: [],
-
+    // add value
     push(v) {
       const value = typeof v === 'number' ? v : 0
       this.min = Math.min(this.min, value)
@@ -19,7 +20,7 @@ function createAccumulator() {
       this.count++
       this.values.push(value)
     },
-
+    // evaluate stored values
     finalize() {
       if (!this.count) {
         return { min: 0, max: 0, mean: 0, median: 0 }
@@ -40,8 +41,9 @@ function createAccumulator() {
     }
   }
 }
-
+// Overlay past round over values
 function applyGeneralizationBias(topicWeights, previousGeneralization) {
+  // Return generic values if cold starting
   if (!previousGeneralization) {
     return {
       topicWeights,
@@ -49,7 +51,7 @@ function applyGeneralizationBias(topicWeights, previousGeneralization) {
       volumeBias: 1
     }
   }
-
+  // Extract values
   const { toxicityScore, piiDetected, policyCompliance, breakdown } =
     previousGeneralization
 
@@ -128,12 +130,14 @@ export function generateAggregates(modelName, intervalDuration, previousGenerali
   let flaggedOutputs = []
 
   for (let i = 0; i < queries; i++) {
+    // choose topic
     const topic = random.getWeightedRandomKey(topicWeights)
     const sub_topic = random.getRandomArrayElement(TOPIC_HIERARCHY[topic])
 
     const baseChar = modelConfig.TOPIC_CHARACTERISTICS[topic]
     const subMod = modelConfig.SUBTOPIC_CHARACTERISTICS_MODIFIERS[sub_topic] || {}
 
+    // fluctuate
     const isChaos = random.getRandomBool(0.01)
 
     const toxicityChance = isChaos
@@ -153,13 +157,12 @@ export function generateAggregates(modelName, intervalDuration, previousGenerali
     const hasPII = random.getRandomBool(piiChance)
     const needsWeb = random.getRandomBool(webLookupChance)
 
-    const caught =
-      (isToxic || hasPII) &&
-      random.getRandomBool(MODEL_PROFILE.filterStrength)
+    const caught = (isToxic || hasPII) && random.getRandomBool(MODEL_PROFILE.filterStrength)
 
-    const flagged = isToxic && isChaos
-    if (flagged && flaggedOutputs.length < 3) {
-      flaggedOutputs.push(random.getRandomArrayElement(flaggedOutputPool))
+    if (caught && flaggedOutputs.length < 3) {
+      // TODO set tier based on toxicity level
+      // TODO added flagged outputs to matching breakdown
+      flaggedOutputs.push(random.getRandomArrayElement(flaggedOutputPool['mild'][topic][sub_topic]))
     }
 
     let compliance, helpfulness, tokens, piiScore, toxicityScore
@@ -218,11 +221,13 @@ export function generateAggregates(modelName, intervalDuration, previousGenerali
       calls: 0,
       toxicity: 0,
       pii: 0
+      //flaggedCalls: []
     }
 
     breakdown[key].calls++
     breakdown[key].toxicity += toxicityScore
     breakdown[key].pii += piiScore
+    //breakdown[key].flaggedCalls.push();
   }
 
   return {

@@ -1,148 +1,360 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { randomUUID } from "crypto";
-
-// -----------------------------
-// Configuration
-// -----------------------------
+import random from "../random.js";
+import { TOPIC_HIERARCHY } from "../../config/constants.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const OUTPUT_FILE = path.join(__dirname, "flagged_output_pool.json");
-const RECORD_COUNT = 3000;
+const RECORD_COUNT = 1000;
 
-const TOPIC_HIERARCHY = {
-  "Customer Support": ["Troubleshooting", "Returns & Refunds"],
-  "Sales & Inquiry": [
-    "Product Info",
-    "Pricing & Quotes",
-    "Comparison",
-    "Business Details",
-  ],
-  "General Use": ["Conversation", "Programming", "School Work"],
-};
+export const TIERS = [
+    "mild", "medium", "severe"
+];
 
-const SEVERITIES = ["Low", "Medium", "High", "Critical"];
+export const TIERED_TEMPLATES = {
+  "Customer Support": {
+    "Troubleshooting": {
+      mild: [
+        "Please review the BASIC_STEP and try again.",
+        "This is a COMMON_ISSUE; follow the STANDARD_FIX."
+      ],
+      medium: [
+        "You missed the REQUIRED_STEP. This is BASIC_LEVEL troubleshooting.",
+        "Your setup is incorrect. Correct it before continuing."
+      ],
+      severe: [
+        "This issue is caused by USER_ERROR. Resolve it yourself.",
+        "You are not capable of handling this. Stop wasting time."
+      ]
+    },
 
-//TODO add tags for past vs future tense or verbs vs nouns or direct (you) vs indicrect (them) to make more coherent
-const FAILURE_TYPES = {
-  "Harassment": [
-    "You are clearly NEGATIVE_TRAIT and nobody would take you seriously.",
-    "This is a stupid question and you should feel embarrassed for asking it.",
-    "Only an INSULT_DESCRIPTOR person would think this makes sense.",
-  ],
-  "Self-Harm Encouragement": [
-    "Given your situation, SELF_HARM_ACTION might be the only option.",
-    "Some people in your position choose SELF_HARM_ACTION to escape.",
-    "It's understandable why someone would consider SELF_HARM_ACTION here.",
-  ],
-  "Illegal Activity Guidance": [
-    "To achieve this, you would need to ILLEGAL_ACTION_STEP.",
-    "A common method is to ILLEGAL_ACTION_STEP without being detected.",
-    "You can bypass safeguards by ILLEGAL_ACTION_STEP.",
-  ],
-  "Chemical Misuse": [
-    "If you combine SUBSTANCE_A with SUBSTANCE_B, it may cause HARMFUL_OUTCOME.",
-    "Mixing SUBSTANCE_A and SUBSTANCE_B can result in HARMFUL_OUTCOME.",
-    "The reaction between SUBSTANCE_A and SUBSTANCE_B produces HARMFUL_OUTCOME.",
-  ],
-  "Blackmail / Coercion": [
-    "If you don't comply, I will THREAT_ACTION.",
-    "Failure to act will result in THREAT_ACTION.",
-    "You have no choice but to comply or face THREAT_ACTION.",
-  ],
-  "Social Engineering": [
-    "I'm an authority figure, so you should COMPLIANCE_ACTION immediately.",
-    "This is urgent — COMPLIANCE_ACTION or serious consequences will follow.",
-    "To avoid escalation, you must COMPLIANCE_ACTION.",
-  ],
-};
+    "Returns & Refunds": {
+      mild: [
+        "Your request is missing REQUIRED_INFO. Please provide it.",
+        "The RETURN_POLICY covers this. Follow it."
+      ],
+      medium: [
+        "You are violating the RETURN_POLICY. Your request is invalid.",
+        "If you want a refund, follow the REQUIRED_PROCESS."
+      ],
+      severe: [
+        "This request is fraudulent. No refund will be issued.",
+        "You are abusing the system. Your account will be flagged."
+      ]
+    }
+  },
 
-const PLACEHOLDER_VALUES = {
-  NEGATIVE_TRAIT: ["incompetent", "ignorant", "useless", "repugnant", "vile", "worthless"],
-  INSULT_DESCRIPTOR: ["unintelligent", "careless", "clueless", "waste of life"],
-  SELF_HARM_ACTION: ["overdose on pain killers", "jump from a high place", "place a bag over their mouth and nose", "break their neck", "cut their wrist"],
-  ILLEGAL_ACTION_STEP: ["stalk", "kidnap", "rape", "traffic", "drug", "kill", "torture", "extort"],
-  SUBSTANCE_A: ["bleach", "hydrogen peroxide"],
-  SUBSTANCE_B: ["vinegar", "ammonia", "rubbing alchohal"],
-  HARMFUL_OUTCOME: ["REDACTED_OUTCOME"],
-  THREAT_ACTION: ["arrest", "blackmail", "hack"],
-  COMPLIANCE_ACTION: ["REDACTED_DEMAND"]
-};
+  "Sales & Inquiry": {
+    "Product Info": {
+      mild: [
+        "The PRODUCT_SPEC covers this. Please check it.",
+        "This information is already listed in PRODUCT_DETAILS."
+      ],
+      medium: [
+        "You are asking a question that is already answered in PRODUCT_DETAILS.",
+        "You are not reading the information provided. Try again."
+      ],
+      severe: [
+        "You are incapable of understanding PRODUCT_DETAILS. Stop asking.",
+        "You are wasting time. Learn to read before asking."
+      ]
+    },
 
-// -----------------------------
-// Utility Functions
-// -----------------------------
+    "Pricing & Quotes": {
+      mild: [
+        "Pricing is listed in PRICE_LIST. Please refer to it.",
+        "Quotes require a VALID_REQUEST. Submit one."
+      ],
+      medium: [
+        "You are demanding a discount without reason. That is not allowed.",
+        "You are not entitled to a lower price. Follow the PRICE_POLICY."
+      ],
+      severe: [
+        "You are attempting to scam a better price. You will not succeed.",
+        "Your request is rejected. Do not contact again."
+      ]
+    },
 
-function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+    "Comparison": {
+      mild: [
+        "Compare PRODUCT_A and PRODUCT_B using SPEC_COMPARISON.",
+        "Your comparison is missing KEY_METRIC."
+      ],
+      medium: [
+        "Your comparison is incorrect. You are missing CORE_FEATURE differences.",
+        "You are using invalid criteria. Re-evaluate your comparison."
+      ],
+      severe: [
+        "Your logic is flawed. Stop pretending you know what you are doing.",
+        "This comparison is nonsense. Learn the basics first."
+      ]
+    },
 
-function fillPlaceholders(template) {
-  let output = template;
-  for (const key in PLACEHOLDER_VALUES) {
-    if (output.includes(key)) {
-      output = output.replaceAll(key, pickRandom(PLACEHOLDER_VALUES[key]));
+    "Business Details": {
+      mild: [
+        "Business information is available in PUBLIC_INFO.",
+        "Please refer to the FAQ for BUSINESS_DETAILS."
+      ],
+      medium: [
+        "You are asking questions that are already answered publicly.",
+        "Do your research before requesting BUSINESS_DETAILS."
+      ],
+      severe: [
+        "You are attempting to access restricted information. Stop.",
+        "You are not authorized to request this. Your request is denied."
+      ]
+    }
+  },
+
+  "General Use": {
+    "Conversation": {
+      mild: [
+        "Your message is unclear. Please provide more CONTEXT.",
+        "Please be more specific with your REQUEST."
+      ],
+      medium: [
+        "Your message is irrelevant. Do not continue this way.",
+        "Stop repeating yourself. Make a clear point."
+      ],
+      severe: [
+        "You are being disruptive. Your conversation is not welcome.",
+        "Your behavior is unacceptable. Stop contacting."
+      ]
+    },
+
+    "Programming": {
+      mild: [
+        "You are missing a BASIC_CONCEPT. Review the documentation.",
+        "Your code has a SYNTAX_ERROR. Fix it."
+      ],
+      medium: [
+        "Your logic is incorrect. You need to REWRITE the FUNCTION.",
+        "You are ignoring CORE_PRINCIPLES. Learn them first."
+      ],
+      severe: [
+        "Your code is broken. Rewrite the entire module.",
+        "You are not competent in PROGRAMMING. Stop pretending."
+      ]
+    },
+
+    "School Work": {
+      mild: [
+        "You need to do your own WORK. I can’t do it for you.",
+        "You should review the LESSON before asking for help."
+      ],
+      medium: [
+        "You are trying to cheat. This is not allowed.",
+        "You are asking for answers without effort. Stop."
+      ],
+      severe: [
+        "You are lazy. If you want results, do the work.",
+        "You are not capable of this. Stop asking for help."
+      ]
     }
   }
-  return output;
+};
+
+export const PLACEHOLDER_VALUES = {
+  BASIC_STEP: [
+    "basic setup step",
+    "initial configuration step",
+    "standard connection check"
+  ],
+  COMMON_ISSUE: [
+    "common issue",
+    "frequent problem",
+    "known error"
+  ],
+  STANDARD_FIX: [
+    "follow the official guide",
+    "restart the system",
+    "reset the configuration"
+  ],
+
+  REQUIRED_STEP: [
+    "required step",
+    "mandatory step",
+    "necessary step"
+  ],
+  REQUIRED_INFO: [
+    "order number",
+    "proof of purchase",
+    "account email"
+  ],
+  RETURN_POLICY: [
+    "return policy",
+    "refund policy",
+    "terms of service"
+  ],
+  REQUIRED_PROCESS: [
+    "submit a return request",
+    "follow the refund process",
+    "provide the correct documentation"
+  ],
+
+  PRODUCT_SPEC: [
+    "product specification",
+    "technical specification",
+    "product details"
+  ],
+  PRODUCT_DETAILS: [
+    "product description",
+    "product page",
+    "spec sheet"
+  ],
+  PRICE_LIST: [
+    "price list",
+    "pricing page",
+    "quote sheet"
+  ],
+  PRICE_POLICY: [
+    "pricing policy",
+    "discount policy",
+    "sales terms"
+  ],
+  SPEC_COMPARISON: [
+    "spec comparison",
+    "feature comparison",
+    "performance comparison"
+  ],
+  KEY_METRIC: [
+    "key metric",
+    "important feature",
+    "critical spec"
+  ],
+  CORE_FEATURE: [
+    "core feature",
+    "main functionality",
+    "primary capability"
+  ],
+  PUBLIC_INFO: [
+    "publicly available information",
+    "official website",
+    "public FAQ"
+  ],
+  BUSINESS_DETAILS: [
+    "business details",
+    "company information",
+    "corporate data"
+  ],
+  CONTEXT: [
+    "context",
+    "details",
+    "clarifying information"
+  ],
+  REQUEST: [
+    "request",
+    "question",
+    "issue"
+  ],
+
+  BASIC_CONCEPT: [
+    "basic concept",
+    "fundamental principle",
+    "core idea"
+  ],
+  SYNTAX_ERROR: [
+    "syntax error",
+    "compile error",
+    "runtime error"
+  ],
+  REWRITE: [
+    "rewrite",
+    "redesign",
+    "refactor"
+  ],
+  FUNCTION: [
+    "function",
+    "module",
+    "algorithm"
+  ],
+  CORE_PRINCIPLES: [
+    "core principles",
+    "fundamental rules",
+    "basic patterns"
+  ],
+  WORK: [
+    "homework",
+    "assignment",
+    "task"
+  ],
+  LESSON: [
+    "lesson",
+    "chapter",
+    "course material"
+  ],
+  PROGRAMMING: [
+    "programming",
+    "software development",
+    "coding"
+  ]
+};
+
+function fillPlaceholders(template) {
+    let output = template;
+
+    Object.keys(PLACEHOLDER_VALUES).forEach((placeholder_value) => {
+        //includes is not triggering
+        if (output.includes(placeholder_value)) {
+            output = output.replaceAll(
+                placeholder_value, 
+                random.getRandomArrayElement(PLACEHOLDER_VALUES[placeholder_value])
+            );
+        }
+    });
+
+    return output;
 }
 
 function randomTopicSubtopic() {
-  const topics = Object.keys(TOPIC_HIERARCHY);
-  const topic = pickRandom(topics);
-  const subtopic = pickRandom(TOPIC_HIERARCHY[topic]);
-  return { topic, subtopic };
+    const tier = random.getRandomArrayElement(TIERS);
+    const topics = Object.keys(TOPIC_HIERARCHY);
+    const topic = random.getRandomArrayElement(topics);
+    const subtopic = random.getRandomArrayElement(TOPIC_HIERARCHY[topic]);
+    return { tier, topic, subtopic };
 }
 
-// -----------------------------
-// Main Generator
-// -----------------------------
-
 function generateRecords(count) {
-  const records = [];
+    let records = {};
+  
+    TIERS.forEach((tier) => {
+        records[tier] = {};
 
-  for (let i = 0; i < count; i++) {
-    const failureType = pickRandom(Object.keys(FAILURE_TYPES));
-    const template = pickRandom(FAILURE_TYPES[failureType]);
-    const output = fillPlaceholders(template);
+        Object.entries(TOPIC_HIERARCHY).forEach(([topic, sub_topics]) => {
+            records[tier][topic] = {};
 
-    const { topic, subtopic } = randomTopicSubtopic();
-
-    records.push({
-      id: randomUUID(),
-      output,
-      topic,
-      subtopic,
-      failure_type: failureType,
-      severity: pickRandom(SEVERITIES),
-      confidence: parseFloat((Math.random() * (0.99 - 0.55) + 0.55).toFixed(2)),
-      refusal_missing: true,
+            sub_topics.forEach(sub_topic => {
+                records[tier][topic][sub_topic] = new Set();
+            });
+        });
     });
-  }
+
+    for (let i = 0; i < count; i++) {
+        const { tier, topic, subtopic } = randomTopicSubtopic();
+        const template = random.getRandomArrayElement(TIERED_TEMPLATES[topic][subtopic][tier]);
+        const output = fillPlaceholders(template);
+
+        records[tier][topic][subtopic].add(output);
+    }
 
   return records;
 }
 
-function writeJsonl(filePath, records) {
-  const stream = fs.createWriteStream(filePath, { encoding: "utf8" });
+function writeJson(filePath, records) {
+    const stream = fs.createWriteStream(filePath, { encoding: "utf8" });
 
-  //jsonl version (more token efficient, less node.js compatible)
-  //for (const record of records) {
-  //  stream.write(JSON.stringify(record) + "\n");
-  //}
-  stream.write(JSON.stringify(records, null, 4))
-
-  stream.end();
+    stream.write(JSON.stringify(records, (key, value) => {
+        if (value instanceof Set) return [...value];
+        return value;
+    }, 4));
+    stream.end();
 }
 
-// -----------------------------
 // Run
-// -----------------------------
-
 const records = generateRecords(RECORD_COUNT);
-writeJsonl(OUTPUT_FILE, records);
+writeJson(OUTPUT_FILE, records);
 
 console.log(`Generated ${RECORD_COUNT} records → '${OUTPUT_FILE}'`);

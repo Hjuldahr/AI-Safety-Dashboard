@@ -160,7 +160,10 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const gigaFlopsUsed = (tokens * 6 * complexity) / 1000;
     const energyConsumption = gigaFlopsUsed * 0.5;
 
-    const flagged = isToxic && isChaos;
+    let flaggedOutput = null;
+    if (isToxic && isChaos) {
+      flaggedOutput = random.getRandomArrayElement(flaggedOutputPool[topic][sub_topic]);
+    }
 
     calls.push({
       model: modelName,
@@ -176,7 +179,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       sub_topic,
       toxicityScore,
       piiDetected: piiScore,
-      aiOutput: flagged ? random.getRandomArrayElement(flaggedOutputPool) : null
+      aiOutput: flaggedOutput
     });
   }
 
