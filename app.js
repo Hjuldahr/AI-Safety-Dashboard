@@ -15,6 +15,8 @@ import { connectDB, seedDataBase, seedCharts } from './config/database.js';
 import swaggerUi from "swagger-ui-express";
 import YAML from 'yamljs';
 
+let shuttingDown = false;
+
 dotenv.config();
 
 //passport initialization
@@ -25,10 +27,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export const PROJECT_ROOT = __dirname;
 
-const domain = process.env.DOMAIN || "http://localhost:2121/";
-const publicURL = process.env.PUBLIC_URL || "/";
 const PORT = process.env.PORT || 2121;
-
 
 const startServer = async () => {
     const app = express();
@@ -81,10 +80,44 @@ const startServer = async () => {
     // Serve the Swagger API documentation at /docs
     app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-    app.listen(PORT, () => {
-        //console.log(`Server running on port ${PORT}`);
-        console.log(`Server running on http://localhost:${PORT}`);
+    const server = app.listen(PORT, () => {
+        console.log(`Server running on [http://localhost:${PORT}/]`);
     });
+
+    const shutdown = async (signal) => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+
+        console.log(`\n[${signal}] Shutting down...`);
+
+        const forceExitTimer = setTimeout(() => {
+            console.error("Force exit");
+            process.exit(1);
+        }, 10_000);
+
+        try {
+            scheduler.stopScheduler();
+
+            await new Promise((resolve, reject) => {
+                server.close(err => (err ? reject(err) : resolve()));
+            });
+
+            server.closeAllConnections?.();
+            server.closeIdleConnections?.();
+
+            await mongoose.disconnect();
+
+            clearTimeout(forceExitTimer);
+            process.exit(0);
+        } catch (err) {
+            console.error("Shutdown failed:", err);
+            clearTimeout(forceExitTimer);
+            process.exit(1);
+        }
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
 }
 
 // Connect to the database and then start the server
