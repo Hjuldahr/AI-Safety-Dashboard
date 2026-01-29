@@ -146,16 +146,21 @@ AI_Log_Schema.statics.generateSixtySecondSummary = async function () {
             // Group by modelName and calculate averages
             $group: {
                 _id: "$modelName",
+                // Quality = Average
                 policyCompliance: { $avg: "$policyCompliance" },
                 responseHelpfulness: { $avg: "$responseHelpfulness" },
                 responseTime: { $avg: "$responseTime" },
-                energyConsumption: { $avg: "$energyConsumption" },
-                tokensUsed: { $avg: "$tokensUsed" },
-                gigaFlopsUsed: { $avg: "$gigaFlopsUsed" },
-                webLookups: { $avg: "$webLookups" },
                 toxicityScore: { $avg: "$toxicityScore" },
                 piiDetected: { $avg: "$piiDetected" },
-                queryCount: { $sum: "$queryCount" } // We sum the count, not average it
+
+                // The items below are added up instead of averaged (tokens used, etc)
+
+                // Volume = Sum (Accumulate the usage over the minute)
+                energyConsumption: { $sum: "$energyConsumption" },
+                tokensUsed: { $sum: "$tokensUsed" },
+                gigaFlopsUsed: { $sum: "$gigaFlopsUsed" },
+                webLookups: { $sum: "$webLookups" },
+                queryCount: { $sum: "$queryCount" }
             }
         },
         {
