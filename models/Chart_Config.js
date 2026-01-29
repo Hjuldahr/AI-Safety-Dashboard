@@ -9,7 +9,7 @@ const chartConfigSchema = new Schema({
     chartType: {
         type: String,
         required: true,
-        enum: ['line', 'bar', 'pie', 'measure'] 
+        enum: ['line', 'bar', 'pie', 'measure']
     },
     chartSize: {
         type: String,
@@ -17,12 +17,18 @@ const chartConfigSchema = new Schema({
         enum: ['tiny', 'regular', 'large', 'massive'],
         default: 'regular'
     },
+    chartTimeRange: {
+        type: String,
+        required: true,
+        enum: ['1s', '5s', '30s', '5m', '15m', '1h', '1d', '1w', '1mo'],
+        default: '1s'
+    },
     order: {
         type: Number,
         required: true,
         default: 9999
     },
-    yAxis: { 
+    yAxis: {
         type: String,
         default: null
     },
@@ -38,12 +44,12 @@ const chartConfigSchema = new Schema({
         type: String,
         default: null
     },
-    includedValues: { 
-        type: [String], 
-        default: [] 
+    includedValues: {
+        type: [String],
+        default: []
     }
-}, { 
-    timestamps: true 
+}, {
+    timestamps: true
 });
 
 const ChartConfig = mongoose.model('ChartConfig', chartConfigSchema);
