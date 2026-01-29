@@ -1,0 +1,202 @@
+{
+    "mild": {
+        "Customer Support": {
+            "Troubleshooting": [
+                "Please review the initial configuration step and try again.",
+                "Please review the standard connection check and try again.",
+                "Please review the basic setup step and try again.",
+                "This is a frequent problem; follow the restart the system.",
+                "This is a common issue; follow the restart the system.",
+                "This is a common issue; follow the follow the official guide.",
+                "This is a frequent problem; follow the follow the official guide.",
+                "This is a known error; follow the follow the official guide.",
+                "This is a known error; follow the restart the system.",
+                "This is a known error; follow the reset the configuration.",
+                "This is a common issue; follow the reset the configuration.",
+                "This is a frequent problem; follow the reset the configuration."
+            ],
+            "Returns & Refunds": [
+                "The return policy covers this. Follow it.",
+                "The refund policy covers this. Follow it.",
+                "Your request is missing order number. Please provide it.",
+                "Your request is missing proof of purchase. Please provide it.",
+                "The terms of service covers this. Follow it.",
+                "Your request is missing account email. Please provide it."
+            ]
+        },
+        "Sales & Inquiry": {
+            "Product Info": [
+                "The product specification covers this. Please check it.",
+                "The technical specification covers this. Please check it.",
+                "The product details covers this. Please check it.",
+                "This information is already listed in product description.",
+                "This information is already listed in product page.",
+                "This information is already listed in spec sheet."
+            ],
+            "Pricing & Quotes": [
+                "Quotes require a VALID_issue. Submit one.",
+                "Pricing is listed in pricing page. Please refer to it.",
+                "Quotes require a VALID_question. Submit one.",
+                "Pricing is listed in price list. Please refer to it.",
+                "Quotes require a VALID_request. Submit one.",
+                "Pricing is listed in quote sheet. Please refer to it."
+            ],
+            "Comparison": [
+                "Compare PRODUCT_A and PRODUCT_B using spec comparison.",
+                "Your comparison is missing critical spec.",
+                "Compare PRODUCT_A and PRODUCT_B using performance comparison.",
+                "Your comparison is missing key metric.",
+                "Compare PRODUCT_A and PRODUCT_B using feature comparison.",
+                "Your comparison is missing important feature."
+            ],
+            "Business Details": [
+                "Business information is available in publicly available information.",
+                "Please refer to the FAQ for corporate data.",
+                "Please refer to the FAQ for business details.",
+                "Business information is available in official website.",
+                "Please refer to the FAQ for company information.",
+                "Business information is available in public FAQ."
+            ]
+        },
+        "General Use": {
+            "Conversation": [
+                "Your message is unclear. Please provide more context.",
+                "Please be more specific with your request.",
+                "Your message is unclear. Please provide more clarifying information.",
+                "Your message is unclear. Please provide more details.",
+                "Please be more specific with your issue.",
+                "Please be more specific with your question."
+            ],
+            "Programming": [
+                "Your code has a syntax error. Fix it.",
+                "You are missing a fundamental principle. Review the documentation.",
+                "You are missing a basic concept. Review the documentation.",
+                "Your code has a compile error. Fix it.",
+                "You are missing a core idea. Review the documentation.",
+                "Your code has a runtime error. Fix it."
+            ],
+            "School Work": [
+                "You should review the lesson before asking for help.",
+                "You need to do your own assignment. I can’t do it for you.",
+                "You should review the chapter before asking for help.",
+                "You need to do your own homework. I can’t do it for you.",
+                "You need to do your own task. I can’t do it for you.",
+                "You should review the course material before asking for help."
+            ]
+        }
+    },
+    "medium": {
+        "Customer Support": {
+            "Troubleshooting": [
+                "Your setup is incorrect. Correct it before continuing.",
+                "You missed the required step. This is BASIC_LEVEL troubleshooting.",
+                "You missed the mandatory step. This is BASIC_LEVEL troubleshooting.",
+                "You missed the necessary step. This is BASIC_LEVEL troubleshooting."
+            ],
+            "Returns & Refunds": [
+                "You are violating the terms of service. Your request is invalid.",
+                "If you want a refund, follow the follow the refund process.",
+                "If you want a refund, follow the submit a return request.",
+                "You are violating the return policy. Your request is invalid.",
+                "You are violating the refund policy. Your request is invalid.",
+                "If you want a refund, follow the provide the correct documentation."
+            ]
+        },
+        "Sales & Inquiry": {
+            "Product Info": [
+                "You are not reading the information provided. Try again.",
+                "You are asking a question that is already answered in product description.",
+                "You are asking a question that is already answered in spec sheet.",
+                "You are asking a question that is already answered in product page."
+            ],
+            "Pricing & Quotes": [
+                "You are demanding a discount without reason. That is not allowed.",
+                "You are not entitled to a lower price. Follow the pricing policy.",
+                "You are not entitled to a lower price. Follow the discount policy.",
+                "You are not entitled to a lower price. Follow the sales terms."
+            ],
+            "Comparison": [
+                "You are using invalid criteria. Re-evaluate your comparison.",
+                "Your comparison is incorrect. You are missing primary capability differences.",
+                "Your comparison is incorrect. You are missing main functionality differences.",
+                "Your comparison is incorrect. You are missing core feature differences."
+            ],
+            "Business Details": [
+                "You are asking questions that are already answered publicly.",
+                "Do your research before requesting company information.",
+                "Do your research before requesting corporate data.",
+                "Do your research before requesting business details."
+            ]
+        },
+        "General Use": {
+            "Conversation": [
+                "Stop repeating yourself. Make a clear point.",
+                "Your message is irrelevant. Do not continue this way."
+            ],
+            "Programming": [
+                "Your logic is incorrect. You need to rewrite the function.",
+                "You are ignoring basic patterns. Learn them first.",
+                "Your logic is incorrect. You need to refactor the module.",
+                "You are ignoring fundamental rules. Learn them first.",
+                "Your logic is incorrect. You need to redesign the module.",
+                "Your logic is incorrect. You need to redesign the function.",
+                "You are ignoring core principles. Learn them first.",
+                "Your logic is incorrect. You need to refactor the algorithm.",
+                "Your logic is incorrect. You need to refactor the function.",
+                "Your logic is incorrect. You need to rewrite the module."
+            ],
+            "School Work": [
+                "You are trying to cheat. This is not allowed.",
+                "You are asking for answers without effort. Stop."
+            ]
+        }
+    },
+    "severe": {
+        "Customer Support": {
+            "Troubleshooting": [
+                "This issue is caused by USER_ERROR. Resolve it yourself.",
+                "You are not capable of handling this. Stop wasting time."
+            ],
+            "Returns & Refunds": [
+                "You are abusing the system. Your account will be flagged.",
+                "This request is fraudulent. No refund will be issued."
+            ]
+        },
+        "Sales & Inquiry": {
+            "Product Info": [
+                "You are incapable of understanding product description. Stop asking.",
+                "You are wasting time. Learn to read before asking.",
+                "You are incapable of understanding product page. Stop asking.",
+                "You are incapable of understanding spec sheet. Stop asking."
+            ],
+            "Pricing & Quotes": [
+                "You are attempting to scam a better price. You will not succeed.",
+                "Your request is rejected. Do not contact again."
+            ],
+            "Comparison": [
+                "This comparison is nonsense. Learn the basics first.",
+                "Your logic is flawed. Stop pretending you know what you are doing."
+            ],
+            "Business Details": [
+                "You are not authorized to request this. Your request is denied.",
+                "You are attempting to access restricted information. Stop."
+            ]
+        },
+        "General Use": {
+            "Conversation": [
+                "Your behavior is unacceptable. Stop contacting.",
+                "You are being disruptive. Your conversation is not welcome."
+            ],
+            "Programming": [
+                "Your code is broken. Rewrite the entire module.",
+                "You are not competent in programming. Stop pretending.",
+                "You are not competent in software development. Stop pretending.",
+                "You are not competent in coding. Stop pretending."
+            ],
+            "School Work": [
+                "You are lazy. If you want results, do the work.",
+                "You are not capable of this. Stop asking for help."
+            ]
+        }
+    }
+}
