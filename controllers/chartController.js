@@ -44,4 +44,4 @@ const getRecentData = async (req, res) => {
     }
 };
 
-export { getRecentData }
+export default { getRecentData }
