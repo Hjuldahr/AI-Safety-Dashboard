@@ -66,7 +66,45 @@ document.addEventListener('DOMContentLoaded', async function () {
         populateModelDropdowns();
 
         await loadLiveAlerts();
+        await loadLiveAlerts();
+        await loadLiveAlerts();
         await loadAlertHistory(1);
+        await initCharts();
+        setupLiveUpdates();
+    }
+
+    // --- CHART LOGIC ---
+    const chartRangeSelect = document.getElementById('chart-range-select');
+
+    async function initCharts() {
+        if(chartRangeSelect) {
+            chartRangeSelect.addEventListener('change', () => fetchAndRenderCharts());
+        }
+        await fetchAndRenderCharts();
+    }
+
+    async function fetchAndRenderCharts() {
+        try {
+            const range = chartRangeSelect ? chartRangeSelect.value : '24h';
+            const end = new Date();
+            let start = new Date();
+            if(range === '24h') start.setTime(end.getTime() - 24*60*60*1000);
+            else if(range === '7d') start.setTime(end.getTime() - 7*24*60*60*1000);
+            else if(range === '30d') start.setTime(end.getTime() - 30*24*60*60*1000);
+
+            const params = new URLSearchParams({ 
+                startDate: start.toISOString(), 
+                endDate: end.toISOString() 
+            });
+
+            const res = await fetch(`alerts/api/stats?${params.toString()}`);
+            const data = await res.json();
+            
+            // Use new AlertCharts builder
+            if (window.AlertCharts) {
+                window.AlertCharts.render(data);
+            }
+        } catch(e) { console.error('Chart load failed', e); }
     }
 
     function populateModelDropdowns() {
@@ -394,29 +432,46 @@ document.addEventListener('DOMContentLoaded', async function () {
                 if(!data.logs || data.logs.length===0) { alertLogBody.innerHTML = '<tr><td colspan="6">No history.</td></tr>'; return; }
                 
                 data.logs.forEach(log => {
-                    const tr = document.createElement('tr');
-                    const date = new Date(log.created).toLocaleString('en-CA', {hour12:true}).replace(',','');
-                    const tagsHtml = (log.tags||[]).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
-                    const tagIds = (log.tags||[]).map(t=>t._id).join(',');
-                    
-                    tr.innerHTML = `
-                        <td data-label="Level"><span class="level-badge ${log.level.toLowerCase()}">${log.level}</span></td>
-                        <td data-label="Time">${date}</td>
-                        <td data-label="Alert">${log.alertName}</td>
-                        <td data-label="Model">${log.modelName||'-'}</td>
-                        <td data-label="Triggered By">${log.humanRule||''}</td>
-                        <td data-label="Tags">
-                            <div class="tags-cell">
-                                ${tagsHtml}
-                                <button class="add-log-tag-btn" data-id="${log._id}" data-tags="${tagIds}">+</button>
-                            </div>
-                        </td>
-                    `;
+                    const tr = createAlertRow(log);
                     alertLogBody.appendChild(tr);
                 });
             }
-            if(historyPagination) renderPagination(data.pages, data.page);
+            if(historyPagination) Pagination.render(historyPagination, data.pages, data.page, (newPage) => loadAlertHistory(newPage));
         } catch(e) { console.error(e); }
+    }
+
+    function createAlertRow(log) {
+        const tr = document.createElement('tr');
+        const date = new Date(log.created || log.timestamp).toLocaleString('en-CA', {hour12:true}).replace(',','');
+        const tagsHtml = (log.tags||[]).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
+        const tagIds = (log.tags||[]).map(t=>t._id).join(',');
+        const snapshot = log.alertSnapshot || {}; 
+        
+        // Handle flattened or nested structure
+        const level = log.level || snapshot.alertLevel || 'Info';
+        const alertName = log.alertName || snapshot.alertName || 'Alert';
+        const modelName = log.modelName || snapshot.modelName || '-';
+        
+        // Use server-sent humanRule, or fallback to snapshot (which might be raw for old logs)
+        // Logic relying on backend format now.
+        const humanRule = log.humanRule || (snapshot.alertRule ? JSON.stringify(snapshot.alertRule) : '');
+
+        tr.innerHTML = `
+            <td data-label="Level"><span class="level-badge ${level.toLowerCase()}">${level}</span></td>
+            <td data-label="Time">${date}</td>
+            <td data-label="Alert">${alertName}</td>
+            <td data-label="Model">${modelName}</td>
+            <td data-label="Triggered By">${humanRule}</td>
+            <td data-label="Tags">
+                <div class="tags-cell">
+                    ${tagsHtml}
+                    <button class="add-log-tag-btn" data-id="${log._id}" data-tags="${tagIds}">+</button>
+                </div>
+            </td>
+        `;
+        // Add animation class for new rows
+        tr.classList.add('fade-in-row');
+        return tr;
     }
 
     // --- 8. LOG TAGGING MODAL (Dynamic) ---
@@ -499,22 +554,46 @@ document.addEventListener('DOMContentLoaded', async function () {
         };
     }
 
-    function renderPagination(total, curr) {
-        historyPagination.innerHTML = '';
-        if(total <= 1) return;
-        const btn = (t, p) => {
-            const b = document.createElement('button'); b.textContent = t;
-            if(p===curr) b.className = 'active'; b.onclick = () => loadAlertHistory(p);
-            return b;
-        };
-        if(curr>1) historyPagination.appendChild(btn('Prev', curr-1));
-        for(let i=1; i<=total; i++) historyPagination.appendChild(btn(i, i));
-        if(curr<total) historyPagination.appendChild(btn('Next', curr+1));
-    }
+    // --- PAGINATION (Function Removed - Uses Shared Component) ---
 
     if (historyFilterForm) {
         historyFilterForm.addEventListener('submit', e => { e.preventDefault(); loadAlertHistory(1); });
         document.querySelector('.clear-filters').addEventListener('click', () => { historyFilterForm.reset(); loadAlertHistory(1); });
+    }
+
+    // --- 9. LIVE UPDATES (SSE) ---
+    function setupLiveUpdates() {
+        try {
+            const evtSource = new EventSource('events');
+            
+            evtSource.addEventListener('alert', (event) => {
+                try {
+                    const alertData = JSON.parse(event.data);
+                    
+                    // 1. Live Counters & Charts
+                    loadLiveAlerts();
+                    fetchAndRenderCharts();
+
+                    // 2. Log Table (Prepend if on page 1)
+                    if (currentHistoryPage === 1 && alertLogBody) {
+                        // Remove "No history" row if present
+                        if(alertLogBody.children.length === 1 && alertLogBody.firstElementChild.innerText.includes('No history')) {
+                            alertLogBody.innerHTML = '';
+                        }
+                        
+                        const tr = createAlertRow(alertData);
+                        alertLogBody.prepend(tr);
+
+                        // Keep list size managed
+                        if(alertLogBody.children.length > 10) {
+                            alertLogBody.lastElementChild.remove();
+                        }
+                    }
+                } catch(e) { console.error('SSE Error', e); }
+            });
+
+            window.addEventListener('beforeunload', () => evtSource.close());
+        } catch(e) { console.error('SSE Setup Failed', e); }
     }
 
     // --- API WRAPPERS ---

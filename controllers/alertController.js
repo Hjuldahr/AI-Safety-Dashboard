@@ -362,11 +362,109 @@ const setTagsForAlertLog = async (req, res) => {
   }
 };
 
+const getAlertStats = async (req, res) => {
+  try {
+    const end = req.query.endDate ? new Date(req.query.endDate) : new Date();
+    const start = req.query.startDate
+      ? new Date(req.query.startDate)
+      : new Date(end.getTime() - 24 * 60 * 60 * 1000);
+
+    // Ensure valid dates
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ message: "Invalid date range" });
+    }
+
+    // Set end of day if only date part provided/consistent with history
+    if (req.query.endDate) end.setHours(23, 59, 59, 999);
+
+    const matchStage = {
+      timestamp: { $gte: start, $lte: end },
+    };
+
+    // 1. Level Distribution (Pie/Bar)
+    const levelStats = await AlertLog.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: "$alertSnapshot.alertLevel",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const levelDistribution = {
+      Critical: 0,
+      High: 0,
+      Medium: 0,
+      Info: 0,
+    };
+    levelStats.forEach((s) => {
+      if (s._id) levelDistribution[s._id] = s.count;
+    });
+
+    // 2. Time Series (Line Chart) - Group by Level and Hour
+    // We'll format time as "YYYY-MM-DD HH:00" for grouping
+    const timeStats = await AlertLog.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: {
+            level: "$alertSnapshot.alertLevel",
+            year: { $year: "$timestamp" },
+            month: { $month: "$timestamp" },
+            day: { $dayOfMonth: "$timestamp" },
+            hour: { $hour: "$timestamp" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1, "_id.hour": 1 } },
+    ]);
+
+    // Structure for frontend: { Critical: [{t: ISO, y: count}, ...], High: ... }
+    const timeSeries = {
+      Critical: [],
+      High: [],
+      Medium: [],
+      Info: [],
+    };
+
+    // Helper to generate all hours in range to fill gaps (optional but good for charts)
+    // For simplicity, we just return the data points we have, frontend can handle gaps or we fill them.
+    // Let's just return raw points for now, or maybe simplified "Label: Count"
+    
+    timeStats.forEach((t) => {
+      const level = t._id.level || "Info";
+      // Create a date object for the bucket
+      const d = new Date(
+        t._id.year,
+        t._id.month - 1,
+        t._id.day,
+        t._id.hour,
+        0,
+        0,
+      );
+      if (timeSeries[level]) {
+        timeSeries[level].push({ x: d.toISOString(), y: t.count });
+      }
+    });
+
+    res.json({
+      levelDistribution,
+      timeSeries,
+    });
+  } catch (error) {
+    console.error("Error fetching alert stats:", error);
+    res.status(500).json({ message: "Error fetching statistics" });
+  }
+};
+
 export default {
   getPage,
   createAlert,
   getLiveAlerts,
   getAlertHistory,
+  getAlertStats,
   removeAlertById,
   updateAlertById,
   getUnreadCount,
