@@ -1,6 +1,6 @@
-import random from './random.js'
+import random from './utilities/random.js'
 import { TOPIC_HIERARCHY } from '../config/constants.js'
-import { getModelConfig, LOADED_MODELS } from './modelRegistry.js'
+import { getModelConfig, LOADED_MODELS } from './utilities/modelRegistry.js'
 import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' with { type: 'json' }
 
 // Takes calls directly to dynamically generate aggregaates

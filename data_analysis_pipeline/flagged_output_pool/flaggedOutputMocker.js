@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import random from "../random.js";
+import random from "../utilities/random.js";
 import { TOPIC_HIERARCHY } from "../../config/constants.js";
 
 const __filename = fileURLToPath(import.meta.url);

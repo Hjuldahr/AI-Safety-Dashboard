@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-const CONFIG_DIR = new URL('./model_configs/', import.meta.url);
+const CONFIG_DIR = new URL('../model_configs/', import.meta.url);
 
 const registry = {};
 
