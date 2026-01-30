@@ -20,8 +20,8 @@ const chartConfigSchema = new Schema({
     chartTimeRange: {
         type: String,
         required: true,
-        enum: ['1s', '5s', '30s', '5m', '15m', '1h', '1d', '1w', '1mo'],
-        default: '1s'
+        enum: ['10s', '30s', '1m', '5m', '15m', '1h', '1d', '1w', '1mo'],
+        default: '10s'
     },
     order: {
         type: Number,

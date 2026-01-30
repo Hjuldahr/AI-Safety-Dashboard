@@ -3,22 +3,28 @@
     const charts = window.DashboardApp.charts;
     let allLogs = window.DashboardApp.logs;
     let allConfigs = window.DashboardApp.configs;
-    const { CACHE_MAX_POINTS, TINY_CACHE_MAX_POINTS } = window.DashboardApp.constants;
+    const { DATA_DICTIONARY, TIMEFRAME_CONFIG } = window.CONSTANTS;
+    const { CACHE_MAX_POINTS } = window.DashboardApp.constants;
+
+    // reset the logs obj on reload
+    window.DashboardApp.logs = {};
+
+    // Initialize empty arrays for all known timeframes to prevent null checks later
+    Object.keys(TIMEFRAME_CONFIG).forEach(tf => {
+        window.DashboardApp.logs[tf] = {};
+    });
 
     // Local state only needed here
     let isReloadingCharts = false;
+    let updateTickCounter = 0; // Used to throttle low-fi charts
 
     // Returns the selected model
     function getCurrentModel() {
         const select = document.getElementById('model-select');
-        return select?.value || 'good';
+        return select?.value || KNOWN_MODELS[0];
     }
 
-    // Expose the getCurrentModel method to the other js files
-    window.DashboardApp.actions.getCurrentModel = getCurrentModel;
-
-    // ToDo: Is this method even used?
-    // Clears the live updated charts (all of them now)
+    // Removes the live updating charts (all of them)
     function clearDynamicCharts() {
         document.querySelectorAll('.dynamic-chart-card').forEach(card => card.remove());
         document.querySelectorAll('.tiny-group-wrapper').forEach(wrapper => wrapper.remove());
@@ -35,86 +41,28 @@
         try {
             const response = await fetch(`api/recentData`);
             if (!response.ok) throw new Error('Failed to fetch initial chart data');
+
             const data = await response.json();
+
             allLogs = data.logs || {};
             allConfigs = data.configs || [];
 
-            window.DashboardApp.logs = data.logs || {};
             window.DashboardApp.configs = data.configs || [];
 
-            clearDynamicCharts();
-            const container = document.querySelector('.charts-container');
-            let currentTinyGroup = null;
+            // ToDo: See if this line is needed
+            // clearDynamicCharts();
 
-            for (const config of allConfigs) {
-                const chartSize = config.chartSize || 'regular';
-                const chartCard = document.createElement('div');
-                chartCard.className = `chart-card dynamic-chart-card chart-${chartSize}`;
-                chartCard.dataset.id = config._id;
-
-                // Admin buttons
-                const isAdmin = document.querySelector("#isAdmin");
-                if (isAdmin) {
-                    const deleteBtn = document.createElement('span');
-                    deleteBtn.className = 'delete-chart-btn';
-                    deleteBtn.dataset.id = config._id;
-                    deleteBtn.innerHTML = '&times;';
-                    chartCard.appendChild(deleteBtn);
-
-                    const editBtn = document.createElement('span');
-                    editBtn.className = 'edit-chart-btn';
-                    editBtn.dataset.id = config._id;
-                    editBtn.innerHTML = '✏️';
-                    chartCard.appendChild(editBtn);
-                }
-
-                const editFormContainer = document.createElement('div');
-                editFormContainer.className = 'edit-chart-form';
-                editFormContainer.id = `edit-form-${config._id}`;
-                chartCard.appendChild(editFormContainer);
-
-                if (chartSize === 'tiny') {
-                    if (!currentTinyGroup || currentTinyGroup.childElementCount >= 4) {
-                        currentTinyGroup = document.createElement('div');
-                        currentTinyGroup.className = 'chart-card-group tiny-group-wrapper';
-                        container.appendChild(currentTinyGroup);
-                    }
-                    currentTinyGroup.appendChild(chartCard);
-
-                    new Sortable(currentTinyGroup, {
-                        group: {
-                            name: 'tiny-charts',
-                            put: function (to) {
-                                return to.el.children.length < 4;
-                            }
-                        },
-                        animation: 150,
-                        preventOnFilter: true,
-                        onEnd: window.DashboardApp.admin.saveNewOrder
-                    });
-                } else {
-                    currentTinyGroup = null;
-                    container.appendChild(chartCard);
-                }
-
-                if (config.chartType === 'measure') {
-                    chartCard.classList.add('kpi-card');
-                    const kpiWrapper = document.createElement('div');
-                    kpiWrapper.className = 'kpi-content-wrapper';
-                    chartCard.appendChild(kpiWrapper);
-                    chartCard.customConfig = config;
-                    charts[config._id] = chartCard;
-                } else {
-                    const canvas = document.createElement('canvas');
-                    canvas.id = config._id;
-                    chartCard.appendChild(canvas);
-                    const ctx = canvas.getContext('2d');
-                    const chart = window.DashboardApp.renderer.createChartFromConfig(config, ctx);
-                    chart.customConfig = config;
-                    charts[config._id] = chart;
-                }
+            // Store the logs locally - per timeframe
+            if (data.logs) {
+                Object.keys(data.logs).forEach(tf => {
+                    window.DashboardApp.logs[tf] = data.logs[tf];
+                });
             }
 
+            // Build DOM
+            rebuildChartDOM();
+
+            // Initial Render
             populateAllCharts();
         } catch (err) {
             console.error('Error loading charts:', err);
@@ -123,27 +71,114 @@
         }
     }
 
-    // Expose the loadChartsFromDatabase method to the other js files
-    window.DashboardApp.actions.loadCharts = loadChartsFromDatabase;
+    // A helper to wipe the board and place cards
+    function rebuildChartDOM() {
+        const container = document.querySelector('.charts-container');
+
+        // Clear the page
+        clearDynamicCharts();
+
+        let currentTinyGroup = null;
+
+        // Create new cards
+        window.DashboardApp.configs.forEach(config => {
+            // each card
+            const chartCard = createChartCardDOM(config);
+
+            // Tiny Group Logic
+            if (config.chartSize === 'tiny') {
+                if (!currentTinyGroup || currentTinyGroup.childElementCount >= 4) {
+                    currentTinyGroup = document.createElement('div');
+                    currentTinyGroup.className = 'chart-card-group tiny-group-wrapper';
+                    container.appendChild(currentTinyGroup);
+
+                    // Init Sortable for this group
+                    if (window.Sortable) {
+                        new Sortable(currentTinyGroup, {
+                            group: {
+                                name: 'tiny-charts',
+                                put: (to) => to.el.children.length < 4
+                            },
+                            animation: 150,
+                            preventOnFilter: true,
+                            onEnd: window.DashboardApp.admin.saveNewOrder
+                        });
+                    }
+                }
+                currentTinyGroup.appendChild(chartCard);
+            } else {
+                currentTinyGroup = null;
+                container.appendChild(chartCard);
+            }
+
+            // Initialize Chart Instance
+            if (config.chartType === 'measure') {
+                charts[config._id] = chartCard; // Store element for KPIs
+            } else {
+                const ctx = chartCard.querySelector('canvas').getContext('2d');
+                const chart = window.DashboardApp.renderer.createChartFromConfig(config, ctx);
+                chart.customConfig = config; // Attach config to instance for easy access
+                charts[config._id] = chart;
+            }
+        });
+    }
+
+    function createChartCardDOM(config) {
+        const chartSize = config.chartSize || 'regular';
+        const card = document.createElement('div');
+        card.className = `chart-card dynamic-chart-card chart-${chartSize}`;
+        card.dataset.id = config._id;
+
+        // Store current timeframe on the DOM element for UI logic
+        card.dataset.timeframe = config.chartTimeRange || '10s';
+
+        // Admin Controls (Edit/Delete)
+        if (document.querySelector("#isAdmin")) {
+            card.innerHTML += `
+                <span class="delete-chart-btn" data-id="${config._id}">&times;</span>
+                <span class="edit-chart-btn" data-id="${config._id}">✏️</span>
+            `;
+        }
+
+        // Header / Zoom Controls (Only for non-tiny charts)
+        if (chartSize !== 'tiny') {
+            // Note: We will implement the click listeners for these later in chartAdmin or similar
+            card.innerHTML += `
+                <div class="chart-controls">
+                     <button class="zoom-btn zoom-out" data-id="${config._id}">-</button>
+                     <span class="zoom-label">${config.chartTimeRange || '10s'}</span>
+                     <button class="zoom-btn zoom-in" data-id="${config._id}">+</button>
+                </div>
+            `;
+        }
+
+        // Edit Form Container
+        card.innerHTML += `<div class="edit-chart-form" id="edit-form-${config._id}"></div>`;
+
+        // Content
+        if (config.chartType === 'measure') {
+            card.classList.add('kpi-card');
+            card.innerHTML += `<div class="kpi-content-wrapper"></div>`;
+        } else {
+            card.innerHTML += `<canvas id="${config._id}"></canvas>`;
+        }
+
+        // Attach Config to DOM for reference
+        card.customConfig = config;
+        return card;
+    }
 
     function populateAllCharts() {
         const activeModel = getCurrentModel();
-        if (!allLogs || !Object.keys(allLogs).length) return;
-        const activeModelLogs = allLogs[activeModel];
-        if (!activeModelLogs) return;
 
         for (const config of allConfigs) {
             const chartOrElem = charts[config._id];
             if (!chartOrElem) continue;
 
-            switch (config.chartType) {
-                case 'line': window.DashboardApp.renderer.mapLineData(chartOrElem, config, config.splitBy === 'modelName' ? allLogs : activeModelLogs); break;
-                case 'bar': window.DashboardApp.renderer.mapBarData(chartOrElem, config, allLogs); break;
-                case 'pie': window.DashboardApp.renderer.mapPieData(chartOrElem, config, allLogs); break;
-                case 'measure': window.DashboardApp.renderer.mapMeasureData(chartOrElem, config, activeModelLogs); break;
-            }
+            // Determine which timeframe / data source to use
+            const timeframe = config.chartTimeRange || '10s';
 
-            if (chartOrElem instanceof Chart) chartOrElem.update('none');
+            callChartRenderer(chartOrElem, config, timeframe, activeModel);
         }
     }
 
@@ -152,159 +187,170 @@
         const evtSource = new EventSource('events');
         window.__chartEvtSource = evtSource;
 
-        let pendingUpdates = [];
+        let pendingUpdates = []; // Store latest updates
         let rafScheduled = false;
 
-        function processUpdates() {
-            pendingUpdates.forEach(({ newValue }) => {
-                Object.entries(newValue).forEach(([modelName, newLog]) => {
-                    if (!window.DashboardApp.logs[modelName]) {
-                        window.DashboardApp.logs[modelName] = [];
-                    }
-
-                    // Push the new log
-                    window.DashboardApp.logs[modelName].push(newLog);
-
-                    // Optional: Keep memory clean (keep last 50 items so snapshot is always available)
-                    if (window.DashboardApp.logs[modelName].length > 50) {
-                        window.DashboardApp.logs[modelName].shift();
-                    }
-                });
-            });
-
-            pendingUpdates.forEach(({ id, newValue, now }) => {
-                const chartOrElem = charts[id];
-                const config = chartOrElem?.customConfig;
-                if (!config) return; // Safety check
-
-                const modelData = newValue[getCurrentModel()];
-                if (!modelData) return;
-
-                // Line Charts and Measure
-                if (config.chartType === 'line') {
-                    const maxPoints = (config.chartSize === 'tiny') ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
-                    const chart = chartOrElem;
-
-                    let limit = maxPoints;
-
-                    // Update Time Labels
-                    chart.data.labels.push(now);
-                    if (chart.data.labels.length > limit) chart.data.labels.shift();
-
-                    // Split Logic
-                    if (config.splitBy) {
-                        if (modelData.breakdown) {
-                            chart.data.datasets.forEach(dataset => {
-                                const categoryKey = dataset.label; // e.g., "Customer Support"
-
-                                // Handle Model Name Split
-                                if (config.splitBy === 'modelName') {
-                                    // Note: SSE sends data for *all* models keyed by model name
-                                    const specificModelData = newValue[categoryKey];
-                                    if (specificModelData) {
-                                        const val = getValueFromPath(specificModelData, DATA_DICTIONARY[config.yAxis].dbPath);
-                                        dataset.data.push(val);
-                                    } else {
-                                        dataset.data.push(null);
-                                    }
-                                }
-                                // Handle Topic Split
-                                else {
-                                    const metricObj = modelData.breakdown[categoryKey];
-                                    // Note: Since we pre-aggregated, the inner key is the yAxis ID (e.g. "responseTime")
-                                    const val = metricObj ? metricObj[config.yAxis] : null;
-                                    dataset.data.push(val);
-                                }
-
-                                if (dataset.data.length > limit) dataset.data.shift();
-                            });
-                        }
-                    }
-                    // Standard Line Logic
-                    else {
-                        // Use the helper to find the value based on the DB Path
-                        const val = getValueFromPath(modelData, DATA_DICTIONARY[config.yAxis].dbPath);
-
-                        if (val !== undefined) {
-                            chart.data.datasets[0].data.push(val);
-                            if (chart.data.datasets[0].data.length > maxPoints) chart.data.datasets[0].data.shift();
-                        }
-                    }
-                    chart.update('none');
-                }
-
-                else if (config.chartType === 'measure') {
-                    const val = modelData[config.yAxis];
-                    if (val !== undefined) {
-                        const kpiValue = chartOrElem.querySelector('.kpi-value');
-                        if (kpiValue) kpiValue.textContent = val.toFixed(1);
-                    }
-                }
-
-                // Bar Charts using weighted / moving average
-                else if (config.chartType === 'bar') {
-                    const chart = chartOrElem;
-                    const xField = config.xAxis;
-                    const yField = config.yAxis;
-
-                    // Iterate through the existing bars
-                    chart.data.labels.forEach((label, index) => {
-                        let newVal = null;
-
-                        // Check Topic/Sub-topic
-                        if ((xField === 'topic' || xField === 'sub_topic') && modelData.breakdown) {
-                            if (modelData.breakdown[label]) {
-                                newVal = modelData.breakdown[label][yField];
-                            }
-                        }
-                        // Check Standard Fields
-                        else if (modelData[xField] === label) {
-                            // If the X-axis is something categorical like "ModelName" 
-                            // and the current log belongs to that category
-                            newVal = modelData[yField];
-                        }
-
-                        if (newVal !== null && newVal !== undefined) {
-                            const currentVal = chart.data.datasets[0].data[index];
-                            const smoothedVal = (currentVal * 0.9) + (newVal * 0.1);
-                            chart.data.datasets[0].data[index] = smoothedVal;
-                        }
-                    });
-                    chart.update('none');
-                }
-
-                // Pie Charts
-                else if (config.chartType === 'pie') {
-                    window.DashboardApp.renderer.mapPieData(
-                        chartOrElem,
-                        config,
-                        window.DashboardApp.logs // Pass the full global log state
-                    );
-
-                    chartOrElem.update('none');
-                }
-            });
-
-            pendingUpdates = [];
-            rafScheduled = false;
-        }
-
         evtSource.addEventListener('update', (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                const now = new Date().toLocaleTimeString();
-                Object.keys(charts).forEach(id => pendingUpdates.push({ id, newValue: data, now }));
-
-                if (!rafScheduled) {
-                    rafScheduled = true;
-                    requestAnimationFrame(processUpdates);
-                }
-            } catch (err) {
-                console.error('Error processing SSE message:', err);
+            pendingUpdates.push(JSON.parse(event.data));
+            if (!rafScheduled) {
+                rafScheduled = true;
+                requestAnimationFrame(processPendingUpdates);
             }
         });
 
-        evtSource.onerror = (err) => console.warn('EventSource error', err);
+        // The "Brain" of the real-time system
+        function processPendingUpdates() {
+            if (pendingUpdates.length === 0) { rafScheduled = false; return; }
+
+            while (pendingUpdates.length > 0) {
+                const newValue = pendingUpdates.shift();
+                updateTickCounter++;
+                // --- DATA MERGE STEP ---
+                // Update ALL timeframes in memory (Background Logic)
+                Object.keys(TIMEFRAME_CONFIG).forEach(timeframe => {
+                    const config = TIMEFRAME_CONFIG[timeframe];
+                    const bucketSize = config.bucket;
+                    const limit = config.limit || 300;
+
+                    Object.entries(newValue).forEach(([modelName, newLog]) => {
+                        // Ensure structure exists
+                        if (!window.DashboardApp.logs[timeframe][modelName]) {
+                            window.DashboardApp.logs[timeframe][modelName] = [];
+                        }
+
+                        const modelArr = window.DashboardApp.logs[timeframe][modelName];
+                        const lastPoint = modelArr[modelArr.length - 1];
+
+                        // Determine Buckets
+                        // We use responseTimestamp from server to align perfectly
+                        const newLogBucket = Math.floor(newLog.responseTimestamp / bucketSize) * bucketSize;
+                        const lastPointBucket = lastPoint ? Math.floor(lastPoint.responseTimestamp / bucketSize) * bucketSize : null;
+
+                        if (lastPoint && newLogBucket === lastPointBucket) {
+                            // === MERGE (LIVE TIP) ===
+                            mergeLogs(lastPoint, newLog);
+                        } else {
+                            // === PUSH (NEW BUCKET) ===
+                            // Deep clone to prevent reference issues
+                            modelArr.push(structuredClone(newLog));
+
+                            // Maintain Array Size
+                            while (modelArr.length > limit + 1) {
+                                modelArr.shift();
+                            }
+                        }
+                    });
+                });
+            }
+
+            // --- RENDER STEP ---
+            // Instead of calling populateAllCharts(), we iterate manually to apply Throttling
+            const activeModel = getCurrentModel();
+            const charts = window.DashboardApp.charts;
+
+            window.DashboardApp.configs.forEach(config => {
+                const chartOrElem = charts[config._id];
+                if (!chartOrElem) return;
+
+                const timeframe = config.chartTimeRange || '10s';
+                const tfConfig = TIMEFRAME_CONFIG[timeframe];
+
+                // THROTTLE CHECK:
+                // If bucket > 1 minute (Low Fidelity), only update every 5 ticks (5s)
+                // High fidelity (10s, 30s, 1m) updates every tick (1s)
+                const isLowFi = tfConfig.bucket >= 60000;
+                if (isLowFi && (updateTickCounter % 5 !== 0)) {
+                    return; // Skip render for this chart this frame
+                }
+
+                callChartRenderer(chartOrElem, config, timeframe, activeModel);
+            });
+
+            rafScheduled = false;
+        }
+    }
+
+    // Helper function used by setupSSE and populateAllCharts
+    function callChartRenderer(chartOrElem, config, timeframe, activeModel) {
+        // Prepare Data
+        const tfLogs = window.DashboardApp.logs[timeframe];
+
+        // Select specific logs based on chart needs
+        // (Split by model = needs all logs. Split by topic = needs active model logs)
+        const relevantLogs = (config.splitBy === 'modelName' || config.chartType === 'bar' || config.chartType === 'pie')
+            ? tfLogs
+            : tfLogs[activeModel];
+
+        if (!relevantLogs) return;
+
+        // Render
+        switch (config.chartType) {
+            case 'line': window.DashboardApp.renderer.mapLineData(chartOrElem, config, relevantLogs, timeframe); break;
+            case 'bar': window.DashboardApp.renderer.mapBarData(chartOrElem, config, tfLogs); break;
+            case 'pie': window.DashboardApp.renderer.mapPieData(chartOrElem, config, tfLogs); break;
+            case 'measure': window.DashboardApp.renderer.mapMeasureData(chartOrElem, config, relevantLogs); break;
+        }
+
+        if (chartOrElem instanceof Chart) chartOrElem.update('none');
+    }
+
+    // Merge logic helper merges target and source AI Logs / Summaries
+    function mergeLogs(target, source) {
+        const countA = target.queryCount || 1;
+        const countB = source.queryCount || 1;
+        const total = countA + countB;
+
+        // ToDo: Update this to use Contants.js in the future
+        // 1. Weighted Averages (Quality)
+        ['policyCompliance', 'responseHelpfulness', 'responseTime', 'toxicityScore', 'piiDetected'].forEach(k => {
+            if (target[k] !== undefined && source[k] !== undefined) {
+                target[k] = ((target[k] * countA) + (source[k] * countB)) / total;
+            }
+        });
+
+        // ToDo: Update this to use Contants.js in the future
+        // 2. Sums (Volume)
+        ['energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 'webLookups'].forEach(k => {
+            target[k] = (target[k] || 0) + (source[k] || 0);
+        });
+
+        // 3. Update Total Count
+        target.queryCount = total;
+
+        // 4. Breakdown Merge (Dense / Sparse Logic)
+        if (source.breakdown) {
+            if (!target.breakdown) target.breakdown = {};
+
+            Object.keys(source.breakdown).forEach(key => {
+                const srcMetric = source.breakdown[key];
+                const tgtMetric = target.breakdown[key];
+
+                if (!tgtMetric) {
+                    // New key? Copy it.
+                    target.breakdown[key] = { ...srcMetric };
+                } else {
+                    // Existing key? Merge it.
+                    // (We repeat the logic because Breakdown items are structured same as root log)
+                    const subCountA = tgtMetric.queryCount || 0;
+                    const subCountB = srcMetric.queryCount || 0;
+                    const subTotal = subCountA + subCountB;
+
+                    // ToDo: Update this to use Contants.js in the future
+                    ['policyCompliance', 'responseHelpfulness', 'responseTime', 'toxicityScore', 'piiDetected'].forEach(k => {
+                        if (tgtMetric[k] !== undefined && srcMetric[k] !== undefined) {
+                            tgtMetric[k] = ((tgtMetric[k] * subCountA) + (srcMetric[k] * subCountB)) / subTotal;
+                        }
+                    });
+
+                    // ToDo: Update this to use Contants.js in the future
+                    ['energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 'webLookups'].forEach(k => {
+                        tgtMetric[k] = (tgtMetric[k] || 0) + (srcMetric[k] || 0);
+                    });
+
+                    tgtMetric.queryCount = subTotal;
+                }
+            });
+        }
     }
 
 
@@ -338,6 +384,6 @@
     });
 
     // EXPORT functions to the public namespace
-    window.DashboardApp.data.getCurrentModel = getCurrentModel;
-    window.DashboardApp.data.loadCharts = loadChartsFromDatabase;
+    window.DashboardApp.actions.getCurrentModel = getCurrentModel;
+    window.DashboardApp.actions.loadCharts = loadChartsFromDatabase;
 })();

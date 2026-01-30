@@ -35,6 +35,21 @@ export const CHART_SIZES = {
     MASSIVE: 'massive'
 };
 
+export const TIMEFRAME_CONFIG = {
+    // High Fidelity (AI_Log)
+    '10s': { model: 'AI_Log', timerange: 10 * 1000, bucket: 1000, limit: 10 },           // 1 Second Buckets
+    '30s': { model: 'AI_Log', timerange: 30 * 1000, bucket: 1000, limit: 30  },          // 1 Second Buckets
+    '1m': { model: 'AI_Log', timerange: 1 * 60 * 1000, bucket: 1000, limit: 60  },       // 1 Second Buckets
+    '5m': { model: 'AI_Log', timerange: 5 * 60 * 1000, bucket: 1000, limit: 10  },       // 1 Second Buckets
+    '15m': { model: 'AI_Log', timerange: 15 * 60 * 1000, bucket: 10 * 1000, limit: 10 }, // 10 Second Buckets
+
+    // Low Fidelity (AI_Summary - 1 min resolution)
+    '1h': { model: 'AI_Summary', timerange: 60 * 60 * 1000, bucket: 60 * 1000 },                     // 1 Minute Buckets
+    '1d': { model: 'AI_Summary', timerange: 24 * 60 * 60 * 1000, bucket: 10 * 60 * 1000 },           // 10 Minute Buckets
+    '1w': { model: 'AI_Summary', timerange: 7 * 24 * 60 * 60 * 1000, bucket: 60 * 60 * 1000 },       // 1 hour Buckets
+    '1mo': { model: 'AI_Summary', timerange: 30 * 24 * 60 * 60 * 1000, bucket: 6 * 60 * 60 * 1000 }, // 6 hour Buckets
+};
+
 export const DATA_DICTIONARY = {
     // CATEGORICAL (Dimensions)
     modelName: {
@@ -145,5 +160,6 @@ export default {
     TOPIC_HIERARCHY,
     CHART_TYPES,
     CHART_SIZES,
-    DATA_DICTIONARY
+    DATA_DICTIONARY,
+    TIMEFRAME_CONFIG
 }

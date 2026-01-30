@@ -1,14 +1,41 @@
 // File runs on load
 (() => {
     const { DATA_DICTIONARY } = window.CONSTANTS;
-    const { CACHE_MAX_POINTS, TINY_CACHE_MAX_POINTS } = window.DashboardApp.constants;
     const getCurrentModel = window.DashboardApp.actions.getCurrentModel; // get the helper method exposed in the chartDataManager.js file.
+
+    // ---------- Helpers ----------
+
+    // Formats timestamps based on the current zoom level
+    function formatTimeLabel(timestamp, timeframe) {
+        const date = new Date(timestamp);
+        if (!date.getTime()) return '';
+
+        // High Fidelity (Seconds/Minutes)
+        if (['10s', '30s', '1m', '5m', '15m'].includes(timeframe)) {
+            return date.toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        // Mid Fidelity (Hours)
+        if (['1h', '1d'].includes(timeframe)) {
+            return date.toLocaleTimeString([], { hour12: true, hour: '2-digit', minute: '2-digit' });
+        }
+        // Low Fidelity (Dates)
+        if (['1w', '1mo'].includes(timeframe)) {
+            return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}h`;
+        }
+        return date.toLocaleTimeString();
+    }
 
     // ---------- Chart Skeleton ----------
     function createChartFromConfig(config, ctx) {
         const options = {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false, //ToDo: See if this is good with or without
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            },
             plugins: {
                 legend: { display: true, labels: { font: { size: 14 } } },
                 title: { display: true, text: config.title, font: { size: 16 }, color: 'dimgray' }
@@ -17,7 +44,7 @@
                 x: { display: true, ticks: { font: { size: 12 } } },
                 y: { display: true, ticks: { font: { size: 12 }, min: 0 } }
             },
-            devicePixelRatio: 3
+            devicePixelRatio: window.devicePixelRatio || 1 //ToDo: See if this is better than 3
         };
 
         if (config.chartSize === 'tiny') {
@@ -42,8 +69,15 @@
     }
 
     // ---------- Data Mappers ----------
-    function mapLineData(chart, config, logs) {
-        const maxPoints = config.chartSize === 'tiny' ? TINY_CACHE_MAX_POINTS : CACHE_MAX_POINTS;
+
+    /**
+     * Map Data for Line Charts
+     * @param {Chart} chart - The ChartJS instance
+     * @param {Object} config - The chart configuration
+     * @param {Array|Object} logs - The data (already filtered to relevant models/timeframe)
+     * @param {String} timeframe - e.g. '10s', '1h'
+     */
+    function mapLineData(chart, config, logs, timeframe = '10s') {
         const yConfig = DATA_DICTIONARY[config.yAxis];
         const splitConfig = config.splitBy ? DATA_DICTIONARY[config.splitBy] : null;
 
@@ -54,8 +88,8 @@
         // Group logs by Timestamp
         const logsByTime = {};
         flatLogs.forEach(log => {
-            //groups timestamps that are within 1 second.
-            const t = Math.floor(log.responseTimestamp / 1000) * 1000;
+            //groups logs in the same timestamp.
+            const t = log.responseTimestamp;
             if (!logsByTime[t]) logsByTime[t] = [];
             logsByTime[t].push(log);
         });
@@ -64,14 +98,13 @@
         // Use timestamp as the Source of Truth for the X-Axis
         const sortedTimestamps = Object.keys(logsByTime)
             .map(Number) // Convert string keys back to numbers
-            .sort((a, b) => a - b)
-            .slice(-maxPoints);
+            .sort((a, b) => a - b);
 
         // Generate Labels
-        chart.data.labels = sortedTimestamps.map(ts => new Date(ts).toLocaleTimeString());
+        chart.data.labels = sortedTimestamps.map(ts => formatTimeLabel(ts, timeframe));
 
         // Generate Datasets
-        chart.data.datasets = [];
+        const newDatasets = [];
 
         // --- CASE A: SPLIT CHART ---
         if (splitConfig && splitConfig.acceptedValues) {
@@ -110,7 +143,8 @@
                     borderColor: color,
                     backgroundColor: Utils.transparentize(color, 0.5),
                     tension: 0.3,
-                    spanGaps: true
+                    spanGaps: true,
+                    pointRadius: config.chartSize === 'tiny' ? 0 : 2
                 });
             });
         }
@@ -136,6 +170,8 @@
             });
         }
 
+        chart.data.datasets = newDatasets;
+
         if (config.chartSize !== 'tiny' && chart.options.scales.y) {
             chart.options.scales.y.title = { display: true, text: yConfig.label };
             chart.options.scales.y.min = 0;
@@ -152,6 +188,22 @@
         const flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
         flatLogs.forEach(log => {
+            const weight = log.queryCount || 1;
+
+            // Helper to accumulate weighted sums
+            const addToGroup = (key, value) => {
+                if (!groups[key]) groups[key] = { weightedSum: 0, totalWeight: 0 };
+                // ToDo: Update this to use Contants.js in the future
+                const isVolume = ['tokensUsed', 'energyConsumption', 'queryCount', 'webLookups'].includes(config.yAxis);
+
+                if (isVolume) {
+                    groups[key].weightedSum += value;
+                    groups[key].totalWeight = 1; // Divisor stays 1 (or effectively unused)
+                } else {
+                    groups[key].weightedSum += (value * weight);
+                    groups[key].totalWeight += weight;
+                }
+            };
             // Handle Categorical Splits (Topic/Subtopic)
             // These are special because they are arrays/objects inside 'breakdown', not simple fields
             if (xConfig.dbPath.startsWith('breakdown.')) {
@@ -163,31 +215,26 @@
                             if (!groups[key]) groups[key] = { sum: 0, count: 0 };
 
                             const val = item[config.yAxis]; // Value is inside the breakdown object
-                            if (val !== undefined) {
-                                groups[key].sum += val;
-                                groups[key].count += 1;
-                            }
+
+                            // const itemWeight = item.queryCount || weight;
+                            if (val !== undefined) addToGroup(key, val * (isVolume ? 1 : 1));
                         }
                     });
                 }
             }
             // Handle Standard Fields (e.g. ModelName)
             else {
-                const key = getValueFromPath(log, xConfig.dbPath) || 'unknown';
-                if (!groups[key]) groups[key] = { sum: 0, count: 0 };
-
-                const val = getValueFromPath(log, yConfig.dbPath);
-                if (val !== undefined) {
-                    groups[key].sum += val;
-                    groups[key].count += 1;
-                }
+                const key = window.DashboardApp.utils.getValueFromPath(log, xConfig.dbPath) || 'unknown';
+                const val = window.DashboardApp.utils.getValueFromPath(log, yConfig.dbPath);
+                if (val !== undefined) addToGroup(key, val);
             }
         });
 
         const labels = Object.keys(groups);
         const data = labels.map(label => {
             const g = groups[label];
-            return g.count ? (g.sum / g.count) : 0;
+            // If totalWeight is > 1, it's an average. If it's 1 (Volume), it's a sum.
+            return g.totalWeight > 0 ? (g.weightedSum / (g.totalWeight === 1 ? 1 : g.totalWeight)) : 0;
         });
 
         chart.data.labels = labels;
