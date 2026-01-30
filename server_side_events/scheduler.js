@@ -1,14 +1,10 @@
 // server_side_events/scheduler.js
-//import { AIAnalyzer } from '../data_analysis_pipeline/AIAnalyzer.js';
-import { generateAggregates } from '../data_analysis_pipeline/IntegratedAI.js';
+import { AIGeneralizer } from '../data_evaluation/AIGeneralizer.js';
 import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
 import evaluateAlerts from "./alertEvaluator.js";
-
-// ---------- Shutdown Guard ----------
-let shuttingDown = false;
 
 // ---------- SSE Clients ----------
 let activeClients = [];
@@ -17,17 +13,11 @@ let schedulerInterval = null;
 let summaryInterval = null;
 
 // ---------- Model Simulation ----------
-let previousGeneralization = []
-
 //One method for all models
 async function generateModelData(modelName) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
-    //const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization);
-    //previousGeneralization = summary;
-    
-    const summary = generateAggregates(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization )
-    previousGeneralization = summary;
+    const summary = AIGeneralizer(modelName, SCHEDULER_INTERVAL / 1000);
 
     // Format for DB/SSE
     return {
@@ -43,8 +33,7 @@ async function generateModelData(modelName) {
         piiDetected: summary.piiDetected.mean * 100, // Scale to %
         queryCount: summary.queryCount,
         responseTimestamp: summary.responseTimestamp,
-        breakdown: summary.breakdown,
-        flaggedOutputs: summary.flaggedOutputs
+        breakdown: summary.breakdown
     };
 }
 
@@ -120,8 +109,6 @@ function safeWriteAll(sseData, targetUserId = null) {
 
 function broadcastEvent(eventType, data) {
     try {
-        if (shuttingDown) return;
-        
         const sseData = `event: ${eventType}\n` + `data: ${JSON.stringify(data)}\n\n`;
         pruneDeadClients();
         const target = data?._targetUser || null;
@@ -133,7 +120,7 @@ function broadcastEvent(eventType, data) {
 
 // ---------- Scheduler Tick ----------
 async function schedulerTick() {
-    if (schedulerState.isPaused || shuttingDown) return;
+    if (schedulerState.isPaused) return;
 
     try {
         const data = {};
@@ -195,13 +182,6 @@ function startScheduler() {
     }
 }
 
-function stopScheduler() {
-    shuttingDown = true;
-    if (schedulerInterval) {
-        clearInterval(schedulerInterval);
-    }
-}
-
 function updateSchedulerSettings({ isPaused, activeModel, interval }) {
     let restart = false;
 
@@ -223,5 +203,5 @@ function setupScheduler() {
     startScheduler();
 }
 
-export default { setupSSE, setupScheduler, updateSchedulerSettings, stopScheduler };
+export default { setupSSE, setupScheduler, updateSchedulerSettings };
 export { broadcastEvent };
