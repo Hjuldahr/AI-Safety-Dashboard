@@ -84,40 +84,40 @@ const startServer = async () => {
         console.log(`Server running on [http://localhost:${PORT}/]`);
     });
 
-    const shutdown = async (signal) => {
-        if (shuttingDown) return;
-        shuttingDown = true;
+    // const shutdown = async (signal) => {
+    //     if (shuttingDown) return;
+    //     shuttingDown = true;
 
-        console.log(`\n[${signal}] Shutting down...`);
+    //     console.log(`\n[${signal}] Shutting down...`);
 
-        const forceExitTimer = setTimeout(() => {
-            console.error("Force exit");
-            process.exit(1);
-        }, 10_000);
+    //     const forceExitTimer = setTimeout(() => {
+    //         console.error("Force exit");
+    //         process.exit(1);
+    //     }, 10_000);
 
-        try {
-            scheduler.stopScheduler();
+    //     try {
+    //         scheduler.stopScheduler();
 
-            await new Promise((resolve, reject) => {
-                server.close(err => (err ? reject(err) : resolve()));
-            });
+    //         await new Promise((resolve, reject) => {
+    //             server.close(err => (err ? reject(err) : resolve()));
+    //         });
 
-            server.closeAllConnections?.();
-            server.closeIdleConnections?.();
+    //         server.closeAllConnections?.();
+    //         server.closeIdleConnections?.();
 
-            await mongoose.disconnect();
+    //         await mongoose.disconnect();
 
-            clearTimeout(forceExitTimer);
-            process.exit(0);
-        } catch (err) {
-            console.error("Shutdown failed:", err);
-            clearTimeout(forceExitTimer);
-            process.exit(1);
-        }
-    };
+    //         clearTimeout(forceExitTimer);
+    //         process.exit(0);
+    //     } catch (err) {
+    //         console.error("Shutdown failed:", err);
+    //         clearTimeout(forceExitTimer);
+    //         process.exit(1);
+    //     }
+    // };
 
-    process.on("SIGINT", shutdown);
-    process.on("SIGTERM", shutdown);
+    // process.on("SIGINT", shutdown);
+    // process.on("SIGTERM", shutdown);
 }
 
 // Connect to the database and then start the server
