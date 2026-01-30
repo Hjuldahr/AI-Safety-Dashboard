@@ -32,6 +32,8 @@ const PORT = process.env.PORT || 2121;
 const startServer = async () => {
     const app = express();
 
+    app.set('trust proxy', 1);
+
     // Serve all public files in the public folder (must be done before mounting main routes)
     app.use(express.static(path.join(PROJECT_ROOT, "public")));
 
@@ -46,7 +48,8 @@ const startServer = async () => {
         resave: false,
         saveUninitialized: false,
         store: MongoStore.create({
-            mongoUrl: process.env.MONGO_URL // MongoDB connection string
+            mongoUrl: process.env.MONGO_URL, // MongoDB connection string
+            secure: process.env.NODE_ENV === 'production', //use https in production
         }),
         cookie: {
             maxAge: 1000 * 60 * 60 * 24 * 1, // Cookie expires in 1 day
