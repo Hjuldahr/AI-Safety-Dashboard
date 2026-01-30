@@ -40,8 +40,6 @@ const startServer = async () => {
 
     app.use(cookieParser());
 
-    console.log("Mongo URL: " + process.env.MONGO_URL);
-
     app.use(session({
         name: 'dashboard.sid',
         secret: process.env.SESSION_SECRET,
