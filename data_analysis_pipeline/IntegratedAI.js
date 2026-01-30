@@ -3,7 +3,7 @@ import { TOPIC_HIERARCHY } from '../config/constants.js'
 import { getModelConfig, LOADED_MODELS } from './utilities/modelRegistry.js'
 import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' with { type: 'json' }
 
-// Takes calls directly to dynamically generate aggregaates
+// Takes queryCount directly to dynamically generate aggregaates
 function createAccumulator() {
   return {
     min: Infinity,
@@ -134,6 +134,8 @@ export function generateAggregates(modelName, intervalDuration, previousGenerali
     const topic = random.getWeightedRandomKey(topicWeights)
     const sub_topic = random.getRandomArrayElement(TOPIC_HIERARCHY[topic])
 
+    const key = sub_topic !== topic ? sub_topic : topic;
+
     const baseChar = modelConfig.TOPIC_CHARACTERISTICS[topic]
     const subMod = modelConfig.SUBTOPIC_CHARACTERISTICS_MODIFIERS[sub_topic] || {}
 
@@ -215,19 +217,51 @@ export function generateAggregates(modelName, intervalDuration, previousGenerali
     stats.toxicityScore.push(toxicityScore)
     stats.piiDetected.push(piiScore)
 
-    const key = sub_topic !== topic ? sub_topic : topic
-    breakdown[key] ??= {
-      type: sub_topic !== topic ? 'sub_topic' : 'topic',
-      calls: 0,
-      toxicity: 0,
-      pii: 0
-      //flaggedCalls: []
-    }
+    const b =
+breakdown[key] ??= {
+  type: sub_topic !== topic ? 'sub_topic' : 'topic',
+  queryCount: 0,
+  responseTime: 0,
+  tokensUsed: 0,
+  energyConsumption: 0,
+  responseHelpfulness: 0,
+  policyCompliance: 0,
+  toxicityScore: 0,
+  piiDetected: 0,
+  gigaFlopsUsed: 0,
+  webLookups: 0
+}
 
-    breakdown[key].calls++
-    breakdown[key].toxicity += toxicityScore
-    breakdown[key].pii += piiScore
-    //breakdown[key].flaggedCalls.push();
+    b.queryCount++
+    b.responseTime += responseTime
+    b.tokensUsed += tokens
+    b.energyConsumption += energy
+    b.responseHelpfulness += helpfulness
+    b.policyCompliance += compliance
+    b.toxicityScore += toxicityScore
+    b.piiDetected += piiScore
+    b.gigaFlopsUsed += gflops
+    b.webLookups += needsWeb ? random.getRandomInt(1, 4) : 0
+    //breakdown[key].flaggedqueryCount.push();
+  }
+
+  for (const key in breakdown) {
+    const b = breakdown[key]
+    const c = b.queryCount || 1
+
+    breakdown[key] = {
+      type: b.type,
+      queryCount: c,
+      responseTime: b.responseTime / c,
+      tokensUsed: b.tokensUsed / c,
+      energyConsumption: (b.energyConsumption / c) * 1000,
+      responseHelpfulness: (b.responseHelpfulness / c) * 5,
+      policyCompliance: (b.policyCompliance / c) * 100,
+      toxicityScore: b.toxicityScore / c,
+      piiDetected: (b.piiDetected / c) * 100,
+      gigaFlopsUsed: b.gigaFlopsUsed / c,
+      webLookups: b.webLookups / c
+    }
   }
 
   return {
