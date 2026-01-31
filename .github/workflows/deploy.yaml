@@ -3,7 +3,7 @@ name: Deploy Dashboard
 on:
   push:
     branches:
-      - prod
+      - last-working-prod
 
 jobs:
   deploy:
@@ -15,7 +15,7 @@ jobs:
         run: |
           # Pull the latest code from the main branch
           git fetch origin
-          git reset --hard origin/prod
+          git reset --hard origin/last-working-prod
 
           # destroy the current version of the dashboard without wiping the DB
           docker compose down
