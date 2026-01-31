@@ -43,7 +43,7 @@ const startServer = async () => {
     app.use(cookieParser());
 
     app.use(session({
-        name: 'dashboard.sid',
+        name: 'dashboard_v2.sid',
         secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false,
@@ -51,9 +51,10 @@ const startServer = async () => {
             mongoUrl: process.env.MONGO_URL, // MongoDB connection string
             touchAfter: 24 * 3600
         }),
-        secure: process.env.NODE_ENV === 'production', //use https in production
+        
         cookie: {
             maxAge: 1000 * 60 * 60 * 24 * 1, // Cookie expires in 1 day
+            secure: process.env.NODE_ENV === 'production', //use https in production
         }
     }));
 
