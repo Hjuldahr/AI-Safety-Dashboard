@@ -262,7 +262,6 @@ async function handleUserFilter(elements, page = 1) {
 
         // Render data and pagination
         renderUserLogs(data.logs, elements.userLogTbody);
-        renderUserLogs(data.logs, elements.userLogTbody);
         Pagination.render(elements.paginationControls, data.pages, data.page, (newPage) => handleUserFilter(elements, newPage));
 
     } catch (error) {
@@ -302,8 +301,7 @@ async function handleAiFilter(elements, page = 1) {
         const data = await response.json(); // { logs, total, page, pages }
 
         // Render data and pagination
-        renderAiLogs(data.logs, elements.aiLogAccordion);
-        renderAiLogs(data.logs, elements.aiLogAccordion);
+        renderAiAccordion(data.logs, elements.aiLogAccordion);
         Pagination.render(elements.aiPaginationControls, data.pages, data.page, (newPage) => handleAiFilter(elements, newPage));
 
     } catch (error) {
@@ -344,7 +342,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiSummaryAccordion);
-        renderPagination(elements.aiSummaryPaginationControls, data.pages, data.page, elements, handleAiSummaryFilter);
+        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, elements, handleAiSummaryFilter);
 
     } catch (error) {
         console.error('Failed to fetch AI summaries:', error);
