@@ -20,13 +20,13 @@ services:
       image: mongo:7
       restart: unless-stopped
       volumes:
-        - mongo_data:/data/db
+        - dashboard_mongo_data:/data/db
       expose:
         - "27017"
       networks: [ web-main-net ]
 
 volumes:
-  mongo_data: {}
+  dashboard_mongo_data: {}
 
 networks:
   web-main-net:
