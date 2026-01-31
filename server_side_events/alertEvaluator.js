@@ -89,6 +89,7 @@ export default async function evaluateAlerts(data, options = {}) {
                             alert: created.alert,
                             timestamp: created.timestamp,
                             alertSnapshot: created.alertSnapshot,
+                            humanRule: Alert.convertToHumanFormat(created.alertSnapshot.alertRule),
                             tags: created.tags || []
                         };
                         broadcastEvent('alert', payload);

@@ -39,6 +39,7 @@ const seedAdminUser = async () => {
             await adminUser.save();
             console.log('-INFO- Default admin user created successfully.');
         }
+
     } catch (error) {
         console.error('Error seeding admin user:', error);
         // Exit process with failure if seeding fails, as it's a critical startup step
