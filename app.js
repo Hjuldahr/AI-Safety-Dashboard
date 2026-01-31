@@ -50,6 +50,7 @@ const startServer = async () => {
         store: MongoStore.create({
             mongoUrl: process.env.MONGO_URL, // MongoDB connection string
             secure: process.env.NODE_ENV === 'production', //use https in production
+            touchAfter: 24 * 3600
         }),
         cookie: {
             maxAge: 1000 * 60 * 60 * 24 * 1, // Cookie expires in 1 day
