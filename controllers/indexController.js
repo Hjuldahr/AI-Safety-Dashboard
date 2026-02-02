@@ -7,8 +7,10 @@ const RECENT_DATA_LIMIT = 30;
 
 const getPage = async (req, res) => {
     try {
+        // Ensure permissions are passed explicitly to the template to avoid undefined errors
         res.render("index", {
             user: req.user,
+            permissions: res.locals.permissions || [],
             constants: constants
         }); //renders the index.ejs 
     } catch (error) {

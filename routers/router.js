@@ -7,6 +7,7 @@ import reportRouter from "./reportRouter.js";
 import controlPanelRouter from './controlPanelRouter.js';
 import tagRouter from './tagRouter.js';
 import schedulerRouter from "./schedulerRouter.js";
+import adminRouter from "./adminRouter.js";
 
 const router = express.Router();
 
@@ -18,5 +19,8 @@ router.use("/reports", reportRouter);
 router.use("/", controlPanelRouter);
 router.use('/tags', tagRouter);
 router.use("/", schedulerRouter);
+
+// Admin user management
+router.use('/admin', adminRouter);
 
 export default router;

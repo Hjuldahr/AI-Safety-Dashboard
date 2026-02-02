@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>User Management</title>
+  <link rel="stylesheet" href="/css/fullSite.css">
+</head>
+<body>
+  <%- include('../components/header') %>
+  <%- include('../components/nav') %>
+
+  <main class="content">
+    <h2>User Management</h2>
+
+    <div id="users-container">
+      <!-- Table is rendered by client JS -->
+    </div>
+
+  </main>
+
+  <script>
+    window.AVAILABLE_ROLES = <%- JSON.stringify(rolesList || []) %>;
+    window.CURRENT_USER_ID = "<%= user ? user._id : '' %>";
+  </script>
+  <script src="/js/adminUsers.js" defer></script>
+</body>
+</html>

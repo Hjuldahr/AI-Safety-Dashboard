@@ -1,8 +1,16 @@
 <nav class="site-nav">
     <a href="./">Dashboard</a>
-    <% if (user && user.roles.includes('admin')) { %>
-    <a href="alerts">Alerts</a>
-    <a href="reports">Reports</a>
-    <a href="logs">Logs</a>
+    <% if (typeof permissions !== 'undefined' && permissions.includes('view:alerts')) { %>
+      <a href="alerts">Alerts</a>
+    <% } %>
+    <% if (typeof permissions !== 'undefined' && permissions.includes('view:reports')) { %>
+      <a href="reports">Reports</a>
+    <% } %>
+    <% if (typeof permissions !== 'undefined' && permissions.includes('view:logs')) { %>
+      <a href="logs">Logs</a>
+    <% } %>
+
+    <% if (typeof permissions !== 'undefined' && permissions.includes('manage:users')) { %>
+      <a href="/admin/users">User Management</a>
     <% } %>
 </nav>

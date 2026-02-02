@@ -1,7 +1,7 @@
 <div>
   <div id="dashboard-controls">
     <div class="controls-group">
-      <% if (user && user.roles.includes('admin')) { %>
+      <% if (typeof permissions !== 'undefined' && (permissions.includes('create:graph') || permissions.includes('edit:graph') || permissions.includes('edit:system'))) { %>
       <input type="hidden" value="true" id="isAdmin">
       <% } %>
       <button id="toggle-button">Loading graph state...</button>

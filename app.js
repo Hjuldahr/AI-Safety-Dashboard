@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import session from 'express-session';
 import passport from 'passport';
 import initializePassport from './config/passport-config.js';
+import { setTemplatePermissions } from './middleware/authorization.js';
 import MongoStore from 'connect-mongo';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
@@ -55,6 +56,9 @@ const startServer = async () => {
 
     app.use(passport.initialize());
     app.use(passport.session());
+
+    // Make computed permissions available to server-rendered views
+    app.use(setTemplatePermissions);
 
     // View engine setup
     app.set("views", path.join(PROJECT_ROOT, "views"));
