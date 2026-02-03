@@ -32,7 +32,7 @@ const getRecentData = async (req, res) => {
                 if (config.model === 'AI_Log') {
                     // Fetch enough RAW logs to fill the time range.
                     // We assume logs are ~1 per second.
-                    const rawLimit = Math.ceil(config.timerange / 1000);
+                    const rawLimit = Math.ceil((config.timerange / 1000) * KNOWN_MODELS.length);
 
                     // --- HIGH FIDELITY (AI_Logs) ---
                     const ai_logs = await AI_Log.find({
@@ -45,12 +45,7 @@ const getRecentData = async (req, res) => {
 
                     const sortedLogs = ai_logs.reverse(); // Flip to oldest-first for charting
 
-                    if (config.bucket > 1000) {
-                        data = downsampleLogs(sortedLogs, config.bucket);
-                    } else {
-                        data = sortedLogs;
-                    }
-
+                    data = downsampleLogs(sortedLogs, config.bucket);
                 } else {
                     // --- LOW FIDELITY (Summaries) ---
                     data = await getDownsampledSummary(modelName, startTime, config.bucket);

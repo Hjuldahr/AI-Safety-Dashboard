@@ -102,7 +102,7 @@ const deleteGraph = async (req, res) => {
 // Update only supports title and size for now
 const updateGraph = async (req, res) => {
     try {
-        const { id, newTitle, newSize, includedValues } = req.body;
+        const { id, newTitle, newSize, includedValues, timeframe } = req.body;
 
         const itemToUpdate = await ChartConfig.findById(id);
         if (!itemToUpdate) {
@@ -116,7 +116,32 @@ const updateGraph = async (req, res) => {
             itemToUpdate.includedValues = includedValues;
         }
 
+        if (timeframe !== undefined) {
+            itemToUpdate.timeframe = timeframe;
+        }
+
         await itemToUpdate.save();
+
+        User_Log.addLog(req.user._id, 'Chart_Modified', `User Modified a chart: ${itemToUpdate.title}`).catch(err => console.error('Failed to write log:', err));
+
+        res.status(200).json({ message: 'Chart config updated successfully!' });
+    } catch (error) {
+        console.error("Error updating chart: " + error);
+        res.status(500).send("Server error while updating chart.")
+    }
+};
+
+const patchGraph = async (req, res) => {
+    try {
+        const { id, ...updates } = req.body;
+
+        const itemToUpdate = await ChartConfig.findById(id);
+        if (!itemToUpdate) {
+            return res.status(404).json({ message: 'Chart config not found.' });
+        }
+
+        // Does this work?
+        await ChartConfig.findByIdAndUpdate(id, { ...updates } );
 
         User_Log.addLog(req.user._id, 'Chart_Modified', `User Modified a chart: ${itemToUpdate.title}`).catch(err => console.error('Failed to write log:', err));
 
@@ -173,6 +198,7 @@ export default {
     saveGraph,
     deleteGraph,
     updateGraph,
+    patchGraph,
     getChartConfig,
     reorderCharts
 }

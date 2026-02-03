@@ -35,6 +35,8 @@ export const CHART_SIZES = {
     MASSIVE: 'massive'
 };
 
+export const ZOOM_LEVELS = ['10s', '30s', '1m', '5m', '15m', '1h', '1d', '1w', '1mo'];
+
 export const TIMEFRAME_CONFIG = {
     // High Fidelity (AI_Log)
     '10s': { model: 'AI_Log', timerange: 10 * 1000, bucket: 1000, limit: 10 },           // 1 Second Buckets
@@ -161,5 +163,6 @@ export default {
     CHART_TYPES,
     CHART_SIZES,
     DATA_DICTIONARY,
-    TIMEFRAME_CONFIG
+    TIMEFRAME_CONFIG,
+    ZOOM_LEVELS
 }

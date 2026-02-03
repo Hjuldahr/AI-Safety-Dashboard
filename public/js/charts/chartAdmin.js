@@ -1,6 +1,7 @@
 (() => {
     const charts = window.DashboardApp.charts;
     const loadChartsFromDatabase = window.DashboardApp.actions.loadCharts; // get the helper method exposed in the chartDataManager.js file.
+    const { ZOOM_LEVELS } = window.CONSTANTS;
 
 
     // ---------- Reorder ----------
@@ -205,7 +206,10 @@
                 })
             });
             if (!response.ok) throw new Error('Failed to save changes.');
-            alert("Chart Updated Successfully!")
+            alert("Chart Updated Successfully!");
+
+            // Update the UI
+            await loadChartsFromDatabase();
         } catch (error) {
             console.error('Error saving chart:', error);
             alert("Error Updating Chart!")
@@ -223,14 +227,66 @@
                 body: JSON.stringify({ id })
             });
             if (!response.ok) throw new Error('Failed to delete graph from server');
-            if (charts[id] instanceof Chart) charts[id].destroy();  
+            if (charts[id] instanceof Chart) charts[id].destroy();
             delete charts[id];
             chartCardElement.remove();
             alert('Chart deleted successfully.')
+
+            // Update the UI
+            await loadChartsFromDatabase();
         } catch (error) {
             console.error('Error deleting Chart:', error);
             alert("Error Deleting Chart!");
         }
+    }
+
+    // ---------- Zoom In ----------
+    async function handleZoom(id, direction) {
+        try {
+            // Get the config from the global state array, not the chart instance
+            const config = window.DashboardApp.configs.find(c => c._id === id);
+
+            if (!config) throw new Error("Chart config not found in local state");
+
+            const currentTimeframe = config.chartTimeRange;
+            let tfIndex = ZOOM_LEVELS.indexOf(currentTimeframe);
+
+            if (direction === "in") {
+                tfIndex--;
+                if (tfIndex <= -1) {
+                    alert("Can not zoom in any further.");
+                    tfIndex = 0;
+                }
+            } else if (direction === "out") {
+                tfIndex++;
+                if (tfIndex >= ZOOM_LEVELS.length) {
+                    alert("Can not zoom out any further.");
+                    tfIndex = ZOOM_LEVELS.length - 1;
+                }
+            } else {
+                throw new Error("Unsupported zoom direction: ", direction);
+            }
+
+            console.log("Zooming chart to: ", ZOOM_LEVELS[tfIndex]);
+
+            // Send update
+            const response = await fetch('api/graph', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id,
+                    chartTimeRange: ZOOM_LEVELS[tfIndex]
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to save changes.');
+
+            await loadChartsFromDatabase();
+
+        } catch (error) {
+            console.error("Error in Zoom Handler: ", error)
+        }
+
     }
 
     // ==========================================
@@ -247,16 +303,12 @@
             const card = e.target.closest('.chart-card');
             if (card && confirm(`Are you sure you want to delete this chart?`)) {
                 await deleteGraph(id, card);
-                window.location.reload();
             }
         }
-        if (e.target.classList.contains('cancel-edit-btn')) {
-            closeEditForm(id);
-        }
-        if (e.target.classList.contains('save-edit-btn')) {
-            await handleSaveEdit(id);
-            window.location.reload();
-        }
+        if (e.target.classList.contains('cancel-edit-btn')) closeEditForm(id);
+        if (e.target.classList.contains('save-edit-btn')) await handleSaveEdit(id);
+        if (e.target.classList.contains('zoom-in')) await handleZoom(id, "in");
+        if (e.target.classList.contains('zoom-out')) await handleZoom(id, "out");
     });
 
     // EXPORT functions to the public namespace

@@ -147,6 +147,8 @@
                     <button class="zoom-btn zoom-in" data-id="${config._id}" title="Zoom In">↓</button>
                 </div>
             `;
+            } else {
+                chartHeader += `<div class="spacer-div"></div>`
             }
 
             chartHeader += `

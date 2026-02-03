@@ -11,6 +11,7 @@ router.patch('/api/params', isAuthenticated, controller.updateParams);
 // Graph CRUD
 router.post("/api/graph", isAuthenticated, controller.saveGraph);
 router.put("/api/graph", isAuthenticated, controller.updateGraph);
+router.patch("/api/graph", isAuthenticated, controller.patchGraph);
 router.delete("/api/graph", isAuthenticated, controller.deleteGraph);
 
 router.get("/api/getChartConfig/:id", isAuthenticated, controller.getChartConfig);
