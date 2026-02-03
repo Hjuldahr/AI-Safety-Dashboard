@@ -35,7 +35,7 @@ export const CHART_SIZES = {
     MASSIVE: 'massive'
 };
 
-export const ZOOM_LEVELS = ['10s', '30s', '1m', '5m', '15m', '1h', '1d', '1w', '1mo'];
+
 
 export const TIMEFRAME_CONFIG = {
     // High Fidelity (AI_Log)
@@ -51,6 +51,12 @@ export const TIMEFRAME_CONFIG = {
     '1w': { model: 'AI_Summary', timerange: 7 * 24 * 60 * 60 * 1000, bucket: 60 * 60 * 1000, limit: 168 },       // 1 hour Buckets
     '1mo': { model: 'AI_Summary', timerange: 30 * 24 * 60 * 60 * 1000, bucket: 6 * 60 * 60 * 1000, limit: 120 }, // 6 hour Buckets
 };
+
+// ZOOM_LEVELS stores the above timeframes but in an array : [10s, 30s, 1m, ...] 
+// this is for knowing the "order" of the timeframes for zooming.
+export const ZOOM_LEVELS = Object.keys(TIMEFRAME_CONFIG).sort((a, b) => {
+    return TIMEFRAME_CONFIG[a].timerange - TIMEFRAME_CONFIG[b].timerange;
+});
 
 export const DATA_DICTIONARY = {
     // CATEGORICAL (Dimensions)

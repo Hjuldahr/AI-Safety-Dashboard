@@ -36,7 +36,7 @@ const updateParams = (req, res) => {
 
 const saveGraph = async (req, res) => {
     try {
-        const { title, chartType, chartSize, yAxis, xAxis, category, splitBy, includedValues } = req.body;
+        const { title, chartType, chartSize, yAxis, xAxis, category, splitBy, includedValues, timeframe } = req.body;
 
         // Basic validation
         if (!title || !chartType) {
@@ -51,6 +51,7 @@ const saveGraph = async (req, res) => {
             title,
             chartType,
             chartSize: chartSize || 'regular',
+            chartTimeRange: timeframe,
             yAxis: yAxis || null,
             xAxis: xAxis || null,
             category: category || null,

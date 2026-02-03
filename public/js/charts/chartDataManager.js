@@ -37,6 +37,9 @@
 
     async function loadChartsFromDatabase() {
         if (isReloadingCharts) return;
+
+        // Save the scroll position and scroll back down after rebuilding DOM
+        const currentScroll = window.scrollY;
         isReloadingCharts = true;
         try {
             const response = await fetch(`api/recentData`);
@@ -64,6 +67,9 @@
 
             // Initial Render
             populateAllCharts();
+
+            // Scroll back down
+            window.scrollTo(0, currentScroll);
         } catch (err) {
             console.error('Error loading charts:', err);
         } finally {

@@ -196,12 +196,12 @@
 
         flatLogs.forEach(log => {
             const weight = log.queryCount || 1;
+            // ToDo: Update this to use Contants.js in the future
+            const isVolume = ['tokensUsed', 'energyConsumption', 'queryCount', 'webLookups'].includes(config.yAxis);
 
             // Helper to accumulate weighted sums
             const addToGroup = (key, value) => {
                 if (!groups[key]) groups[key] = { weightedSum: 0, totalWeight: 0 };
-                // ToDo: Update this to use Contants.js in the future
-                const isVolume = ['tokensUsed', 'energyConsumption', 'queryCount', 'webLookups'].includes(config.yAxis);
 
                 if (isVolume) {
                     groups[key].weightedSum += value;
