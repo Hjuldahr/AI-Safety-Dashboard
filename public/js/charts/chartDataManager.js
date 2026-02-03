@@ -134,22 +134,32 @@
 
         // Admin Controls (Edit/Delete)
         if (document.querySelector("#isAdmin")) {
-            card.innerHTML += `
-                <span class="delete-chart-btn" data-id="${config._id}">&times;</span>
-                <span class="edit-chart-btn" data-id="${config._id}">✏️</span>
-            `;
-        }
+            // Wrap all elements in a header div
+            let chartHeader = `<div class="chart-header">`;
 
-        // Header / Zoom Controls (Only for non-tiny charts)
-        if (chartSize !== 'tiny') {
-            // Note: We will implement the click listeners for these later in chartAdmin or similar
-            card.innerHTML += `
-                <div class="chart-controls">
-                     <button class="zoom-btn zoom-out" data-id="${config._id}">-</button>
-                     <span class="zoom-label">${config.chartTimeRange || '10s'}</span>
-                     <button class="zoom-btn zoom-in" data-id="${config._id}">+</button>
+            // Header / Zoom Controls (Only for non-tiny charts)
+            // ToDo: Implement click actions for zoom in / out
+            if (chartSize !== 'tiny') {
+                chartHeader += `
+                <div class="left-chart-buttons">
+                    <button class="zoom-btn zoom-out" data-id="${config._id}" title="Zoom Out">↑</button>
+                    <span class="zoom-label">${config.chartTimeRange || '10s'}</span>
+                    <button class="zoom-btn zoom-in" data-id="${config._id}" title="Zoom In">↓</button>
                 </div>
             `;
+            }
+
+            chartHeader += `
+                <div class="right-chart-buttons">
+                    <span class="edit-chart-btn" data-id="${config._id}">✏️</span>
+                    <span class="delete-chart-btn" data-id="${config._id}">&times;</span>
+                </div>
+            `;
+
+            // Ending of initial div
+            chartHeader += `</div>`;
+
+            card.innerHTML = chartHeader;
         }
 
         // Edit Form Container
@@ -232,7 +242,12 @@
                         } else {
                             // === PUSH (NEW BUCKET) ===
                             // Deep clone to prevent reference issues
-                            modelArr.push(structuredClone(newLog));
+                            const logToPush = structuredClone(newLog);
+
+                            // FORCE timestamp to bucket start to align all models perfectly
+                            logToPush.responseTimestamp = newLogBucket;
+
+                            modelArr.push(logToPush);
 
                             // Maintain Array Size
                             while (modelArr.length > limit + 1) {
@@ -274,6 +289,7 @@
     function callChartRenderer(chartOrElem, config, timeframe, activeModel) {
         // Prepare Data
         const tfLogs = window.DashboardApp.logs[timeframe];
+        const limit = TIMEFRAME_CONFIG[timeframe].limit;
 
         // Select specific logs based on chart needs
         // (Split by model = needs all logs. Split by topic = needs active model logs)
@@ -285,10 +301,10 @@
 
         // Render
         switch (config.chartType) {
-            case 'line': window.DashboardApp.renderer.mapLineData(chartOrElem, config, relevantLogs, timeframe); break;
-            case 'bar': window.DashboardApp.renderer.mapBarData(chartOrElem, config, tfLogs); break;
-            case 'pie': window.DashboardApp.renderer.mapPieData(chartOrElem, config, tfLogs); break;
-            case 'measure': window.DashboardApp.renderer.mapMeasureData(chartOrElem, config, relevantLogs); break;
+            case 'line': window.DashboardApp.renderer.mapLineData(chartOrElem, config, relevantLogs, timeframe, limit); break;
+            case 'bar': window.DashboardApp.renderer.mapBarData(chartOrElem, config, tfLogs, limit); break;
+            case 'pie': window.DashboardApp.renderer.mapPieData(chartOrElem, config, tfLogs, limit); break;
+            case 'measure': window.DashboardApp.renderer.mapMeasureData(chartOrElem, config, relevantLogs, limit); break;
         }
 
         if (chartOrElem instanceof Chart) chartOrElem.update('none');

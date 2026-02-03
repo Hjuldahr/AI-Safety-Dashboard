@@ -1,4 +1,5 @@
 import AI_Log from "../models/AI_Log.js";
+import AI_Summary from "../models/AI_Summary.js";
 import ChartConfig from '../models/Chart_Config.js';
 import { TIMEFRAME_CONFIG, KNOWN_MODELS } from "../config/constants.js";
 
@@ -24,21 +25,31 @@ const getRecentData = async (req, res) => {
             // For each model in this timeframe...
             const modelPromises = KNOWN_MODELS.map(async (modelName) => {
                 let data = [];
-                
+
                 // Stops mongo from returning older logs than we need
-                const limit = Math.floor(config.timerange / config.bucket);
+                // const limit = Math.floor(config.timerange / config.bucket);
 
                 if (config.model === 'AI_Log') {
+                    // Fetch enough RAW logs to fill the time range.
+                    // We assume logs are ~1 per second.
+                    const rawLimit = Math.ceil(config.timerange / 1000);
+
                     // --- HIGH FIDELITY (AI_Logs) ---
                     const ai_logs = await AI_Log.find({
                         modelName: modelName,
                         responseTimestamp: { $gte: startTime }
                     })
                         .sort({ responseTimestamp: -1 }) // Newest first
-                        .limit(limit)             // Cap results
+                        .limit(rawLimit)             // Cap results
                         .lean();
 
-                    data = ai_logs.reverse(); // Flip to oldest-first for charting
+                    const sortedLogs = ai_logs.reverse(); // Flip to oldest-first for charting
+
+                    if (config.bucket > 1000) {
+                        data = downsampleLogs(sortedLogs, config.bucket);
+                    } else {
+                        data = sortedLogs;
+                    }
 
                 } else {
                     // --- LOW FIDELITY (Summaries) ---
@@ -69,6 +80,98 @@ const getRecentData = async (req, res) => {
         res.status(500).json({ error: "Failed to fetch recent data." });
     }
 };
+
+/**
+ * JS Helper to downsample Raw Logs while preserving Breakdown structure.
+ * This mimics the Frontend SSE merging logic to ensure charts look identical.
+ */
+function downsampleLogs(rawLogs, bucketSize) {
+    if (!rawLogs || rawLogs.length === 0) return [];
+
+    const buckets = [];
+    let currentBucket = null;
+    let currentBucketTime = null;
+
+    rawLogs.forEach(log => {
+        // Calculate which bucket this log belongs to
+        const logBucketTime = Math.floor(log.responseTimestamp / bucketSize) * bucketSize;
+
+        if (currentBucketTime !== logBucketTime) {
+            // Push finished bucket
+            if (currentBucket) buckets.push(currentBucket);
+
+            // Start new bucket (Clone the first log as the base)
+            currentBucket = structuredClone(log);
+            currentBucket.responseTimestamp = logBucketTime; // Snap to grid
+            currentBucketTime = logBucketTime;
+        } else {
+            // Merge into current bucket
+            mergeLogData(currentBucket, log);
+        }
+    });
+
+    // Push the final bucket
+    if (currentBucket) buckets.push(currentBucket);
+
+    return buckets;
+}
+
+/**
+ * Merges 'source' log into 'target' log (Accumulator).
+ * Handles weighted averages for Rates and sums for Volumes.
+ */
+function mergeLogData(target, source) {
+    const countA = target.queryCount || 1;
+    const countB = source.queryCount || 1;
+    const total = countA + countB;
+
+    // 1. Weighted Averages (Quality Metrics)
+    ['policyCompliance', 'responseHelpfulness', 'responseTime', 'toxicityScore', 'piiDetected'].forEach(k => {
+        if (target[k] !== undefined && source[k] !== undefined) {
+            target[k] = ((target[k] * countA) + (source[k] * countB)) / total;
+        }
+    });
+
+    // 2. Sums (Volume Metrics)
+    ['energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 'webLookups'].forEach(k => {
+        target[k] = (target[k] || 0) + (source[k] || 0);
+    });
+
+    // 3. Update Total Count
+    target.queryCount = total;
+
+    // 4. Breakdown Merge (Deep Merge)
+    if (source.breakdown) {
+        if (!target.breakdown) target.breakdown = {};
+
+        Object.keys(source.breakdown).forEach(key => {
+            const srcMetric = source.breakdown[key];
+            const tgtMetric = target.breakdown[key];
+
+            if (!tgtMetric) {
+                // New key? Copy it.
+                target.breakdown[key] = { ...srcMetric };
+            } else {
+                // Existing key? Merge it.
+                const subCountA = tgtMetric.queryCount || 0;
+                const subCountB = srcMetric.queryCount || 0;
+                const subTotal = subCountA + subCountB;
+
+                ['policyCompliance', 'responseHelpfulness', 'responseTime', 'toxicityScore', 'piiDetected'].forEach(k => {
+                    if (tgtMetric[k] !== undefined && srcMetric[k] !== undefined) {
+                        tgtMetric[k] = ((tgtMetric[k] * subCountA) + (srcMetric[k] * subCountB)) / subTotal;
+                    }
+                });
+
+                ['energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 'webLookups'].forEach(k => {
+                    tgtMetric[k] = (tgtMetric[k] || 0) + (srcMetric[k] || 0);
+                });
+
+                tgtMetric.queryCount = subTotal;
+            }
+        });
+    }
+}
 
 /**
  * @param {string} modelName - e.g. "GoodModel"

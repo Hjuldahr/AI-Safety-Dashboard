@@ -1,7 +1,10 @@
 // File runs on load
 (() => {
     const { DATA_DICTIONARY } = window.CONSTANTS;
-    const getCurrentModel = window.DashboardApp.actions.getCurrentModel; // get the helper method exposed in the chartDataManager.js file.
+    const getCurrentModel = window.DashboardApp.actions.getCurrentModel; // get the helper methods exposed in the chartDataManager.js file.
+    const getValueFromPath = window.DashboardApp.utils.getValueFromPath; // get the helpers from the chartUtils file.
+    const getHashedColor = window.DashboardApp.utils.getHashedColor;
+    const Utils = window.DashboardApp.utils;
 
     // ---------- Helpers ----------
 
@@ -45,6 +48,7 @@
                 y: { display: true, ticks: { font: { size: 12 }, min: 0 } }
             },
             devicePixelRatio: window.devicePixelRatio || 1 //ToDo: See if this is better than 3
+            // devicePixelRatio: 3
         };
 
         if (config.chartSize === 'tiny') {
@@ -77,7 +81,7 @@
      * @param {Array|Object} logs - The data (already filtered to relevant models/timeframe)
      * @param {String} timeframe - e.g. '10s', '1h'
      */
-    function mapLineData(chart, config, logs, timeframe = '10s') {
+    function mapLineData(chart, config, logs, timeframe = '10s', limit = 30) {
         const yConfig = DATA_DICTIONARY[config.yAxis];
         const splitConfig = config.splitBy ? DATA_DICTIONARY[config.splitBy] : null;
 
@@ -98,7 +102,8 @@
         // Use timestamp as the Source of Truth for the X-Axis
         const sortedTimestamps = Object.keys(logsByTime)
             .map(Number) // Convert string keys back to numbers
-            .sort((a, b) => a - b);
+            .sort((a, b) => a - b)
+            .slice(-limit);
 
         // Generate Labels
         chart.data.labels = sortedTimestamps.map(ts => formatTimeLabel(ts, timeframe));
@@ -137,14 +142,15 @@
                 });
 
                 const color = getHashedColor(categoryValue);
-                chart.data.datasets.push({
+                newDatasets.push({
                     label: categoryValue,
                     data: dataPoints,
                     borderColor: color,
                     backgroundColor: Utils.transparentize(color, 0.5),
                     tension: 0.3,
                     spanGaps: true,
-                    pointRadius: config.chartSize === 'tiny' ? 0 : 2
+                    // pointRadius: config.chartSize === 'tiny' ? 0 : 2
+                    pointRadius: 0
                 });
             });
         }
@@ -160,13 +166,14 @@
             });
 
             const color = yConfig.color || getHashedColor(config.title);
-            chart.data.datasets.push({
+            newDatasets.push({
                 label: yConfig.label,
                 data: dataPoints,
                 borderColor: color,
                 backgroundColor: Utils.transparentize(color, 0.5),
                 fill: true,
-                tension: 0.3
+                tension: 0.3,
+                pointRadius: 0
             });
         }
 
@@ -178,7 +185,7 @@
         }
     }
 
-    function mapBarData(chart, config, logs) {
+    function mapBarData(chart, config, logs, limit = 30) {
         const xConfig = DATA_DICTIONARY[config.xAxis];
         const yConfig = DATA_DICTIONARY[config.yAxis];
 

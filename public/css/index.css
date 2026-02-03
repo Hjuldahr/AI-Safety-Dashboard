@@ -106,11 +106,47 @@ body {
     min-height: 100px;
 }
 
+.chart-header {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 5px;
+}
+
+.left-chart-buttons{
+    /* position: absolute;
+    top: 0px;
+    left: 0px; */
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-self: flex-start;
+    gap: 10px;  
+    border-radius: 8px;
+}
+
+.right-chart-buttons{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-self: flex-end;
+    gap: 10px;
+
+    padding-right: 10px;
+}
 
 .delete-chart-btn {
-    position: absolute;
+    /* position: absolute;
     top: 8px;
-    right: 15px;
+    right: 15px; */
     font-size: 24px;
     font-weight: bold;
     color: #999;
@@ -122,6 +158,69 @@ body {
 
 .delete-chart-btn:hover {
     color: #f45b69;
+}
+
+/* Style for the edit button */
+.edit-chart-btn {
+    /* position: absolute;
+    top: 8px;
+    /* Position it next to the delete button */
+    right: 45px; */
+    font-size: 15px;
+    color: #999;
+    cursor: pointer;
+    z-index: 10;
+    line-height: 1;
+    transition: color 0.2s ease;
+
+    display: flex;
+    align-items: center;
+
+    height: 2em;
+    /* width: 2em; */
+    text-align: center;
+}
+
+.edit-chart-btn:hover {
+    color: #007acc;
+}
+
+/* Zoom Buttons */
+.zoom-btn {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #333;
+    cursor: pointer;
+    font-size: 18px;
+    height: 32px;
+    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.zoom-btn:hover {
+    background-color: #fdfdfd;
+    border-color: #bbb;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.zoom-btn:active {
+    transform: translateY(0);
+    background-color: #eee;
+}
+
+.zoom-label {
+    font-family: sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    user-select: none;
 }
 
 /* --- REGULAR --- */
@@ -194,31 +293,6 @@ body {
     margin-right: 15px;
 }
 
-/* Style for the new edit button */
-.edit-chart-btn {
-    position: absolute;
-    top: 8px;
-    /* Position it next to the delete button */
-    right: 45px;
-    font-size: 15px;
-    color: #999;
-    cursor: pointer;
-    z-index: 10;
-    line-height: 1;
-    transition: color 0.2s ease;
-
-    display: flex;
-    align-items: center;
-
-    height: 2em;
-    /* width: 2em; */
-    text-align: center;
-}
-
-.edit-chart-btn:hover {
-    color: #007acc;
-}
-
 /* The edit form container */
 .edit-chart-form {
     display: flex;
@@ -258,11 +332,11 @@ body {
 }
 
 
-.card-edit-filter-form{
-    margin: 10px 0; 
-    padding: 10px; 
-    background: #f9f9f9; 
-    border: 1px solid #ddd; 
+.card-edit-filter-form {
+    margin: 10px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
     flex: 1 1 auto;
     overflow-y: auto;
     min-height: 60px;
@@ -363,10 +437,10 @@ body {
     margin-bottom: 5px;
 }
 
-@media (max-width: 1500px) { 
-    
-    .tiny-group-wrapper{
+@media (max-width: 1500px) {
+
+    .tiny-group-wrapper {
         min-width: 400px;
     }
-    
- }
+
+}

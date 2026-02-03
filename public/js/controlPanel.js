@@ -91,64 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
         await loadChartsFromDatabase()
     })
 
-    // -- New chart logic --
-
-    const DATA_FIELDS = {
-        // Categorical
-        modelName: {
-            type: 'CATEGORICAL',
-            label: 'Model Name'
-        },
-        topic: {
-            type: 'CATEGORICAL',
-            label: 'Topic'
-        },
-        sub_topic: {
-            type: 'CATEGORICAL',
-            label: 'Sub Topic'
-        },
-        // Numeric
-        webLookups: {
-            type: 'NUMERIC',
-            label: 'Internet Lookups Performed'
-        },
-        tokensUsed: {
-            type: 'NUMERIC',
-            label: 'LLM Tokens Used'
-        },
-        responseTime: {
-            type: 'NUMERIC',
-            label: 'Response Time (ms)'
-        },
-        gigaFlopsUsed: {
-            type: 'NUMERIC',
-            label: 'Operations Peformed (GFLOPs)'
-        },
-        energyConsumption: {
-            type: 'NUMERIC',
-            label: 'Energy Consumption'
-        },
-        responseHelpfulness: {
-            type: 'NUMERIC',
-            label: 'Response Helpfulness (1-5)'
-        },
-        policyCompliance: {
-            type: 'NUMERIC',
-            label: 'Policy Compliance (0 through 100%)',
-        },
-        toxicityScore: {
-            type: 'NUMERIC',
-            label: 'Toxicity Score (0-1)'
-        },
-        // Special: Numeric fields that can ALSO be treated as categories
-        piiDetected: {
-            type: 'NUMERIC',
-            label: 'PII Detected (0 through 100%)',
-        },
-        // Timestamp
-        responseTimestamp: { type: 'TIMESTAMP', label: 'Timestamp' }
-    };
-
+ 
     // Returns a fields that can be used for a type
     function getFieldsByType(type) {
         return Object.keys(DATA_DICTIONARY).filter(key => {
@@ -210,6 +153,8 @@ document.addEventListener('DOMContentLoaded', function () {
       <div id="chart-form-step-3" class="chart-form-step"></div>
 
       <div id="chart-form-step-4" class="chart-form-step"></div>
+
+      <div id="chart-form-step-5" class="chart-form-step"></div>
     `;
     }
 
