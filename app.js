@@ -11,9 +11,7 @@ import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase, seedCharts } from './config/database.js';
-// import { swaggerSpec } from "./config/swaggerConfig.js";
-import swaggerUi from "swagger-ui-express";
-import YAML from 'yamljs';
+
 
 dotenv.config();
 
@@ -76,10 +74,6 @@ const startServer = async () => {
     //Mount all of the routes to /
     app.use("/", mainRouter);
 
-    const swaggerDocument = YAML.load(path.join(__dirname, './documentation/openapi.yml'));
-
-    // Serve the Swagger API documentation at /docs
-    app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
     app.listen(PORT, () => {
         //console.log(`Server running on port ${PORT}`);

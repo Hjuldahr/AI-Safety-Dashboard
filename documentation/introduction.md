@@ -1,4 +1,4 @@
-
+# Introduction
 This file contains information about the rest of the documentation available about the AI Safety Dashboard project.
 
 ## About the documentation
@@ -6,20 +6,21 @@ This file contains information about the rest of the documentation available abo
 	- `[Domain]`: This refers to the domain the site is running on, whether it be `http://localhost:2121/`, `https://danielbierman.ca/dashboard`, or some other domain. When you see `[Domain]` in the documentation use whichever domain the application is active on.
 
 ## Authentication
-- Information about how to authenticate yourself as a user can be found in the `documentation/authentication.md` file.
+- Information about how to authenticate yourself as a user can be found in the [Authentication](/authentication.md) file.
 - API endpoints which require authentication will be tagged "*requires authentication*" as well as include the level of authentication required.
 
-## End Points
-- API endpoints are documented in `.md` files in the `documentation/endpoints/` folder. Within 
-- Includes the following:
-	- `documentation/endpoints/Users.md`: Contains endpoints for users to signup, login, and logout.
-	- ToDo: write this section after determining endpoints lol.
+## API Documentation
+- We are have created OpenAPI documentation which is availible [here](http://localhost:2121/api/docs/).
+- We are using [Swagger](https://swagger.io/) to render the api documentation.
 
 ## Errors
-- Information about how the sites errors are logged can be found in the `documentation/errors.md` file.
+- Information about how the sites errors are logged can be found in [Errors](errors.md).
 
 ## Open API Documentation
-- Open API documentation is provided in yaml format in the `documentation/openapi.yml` file.
-- It is also available at `[Domain]/docs/`.
-- More information about this in the `documentation/openapi_documentation.md` file
+- Open API documentation is provided in [API Documentation](http://localhost:2121/api/docs).
+- It is also available at `[Domain]/api/docs/`.
+- More information about this in [About OpenAPI Documentation](openapi_documentation.md)
 
+## Read Next
+* [Installation](installation.md)
+* [Authentication](authentication.md)
