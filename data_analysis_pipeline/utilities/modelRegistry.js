@@ -2,44 +2,70 @@ import fs from 'fs';
 
 const CONFIG_DIR = new URL('../model_configs/', import.meta.url);
 
+const DEFAULT_SCENARIO = 'Normal';
+// registry = {modelName: {scenarioName: {}}}
 const registry = {};
-const overrides = {};
+// model_scenarios = {modelName: scenarioName}
+const model_scenarios = {};
 
-export function setOverride(modelName, config) {
-  overrides[modelName] = config;
+export function setScenario(modelName, scenario) {
+  if (!registry[modelName]) {
+    throw new Error(`Unsupported model: ${modelName}`);
+  }
+
+  if (!registry[modelName][scenario]) {
+    throw new Error(
+      `Scenario "${scenario}" not found for model "${modelName}"`
+    );
+  }
+
+  model_scenarios[modelName] = scenario;
 }
 
-export function clearOverride(modelName) {
-  delete overrides[modelName];
+export function clearScenario(modelName) {
+  if (!registry[modelName]) {
+    throw new Error(`Unsupported model: ${modelName}`);
+  }
+
+  delete model_scenarios[modelName];
 }
 
-
-
-// Replace with lazy loader if many models are added later
+// TODO add lazy loader when scaling up models + scenarios
 for (const file of fs.readdirSync(CONFIG_DIR)) {
   if (!file.endsWith('.json')) continue;
 
   const config = JSON.parse(
-    fs.readFileSync(new URL(file, CONFIG_DIR))
+    fs.readFileSync(new URL(file, CONFIG_DIR), 'utf8')
   );
 
   const name = config.META?.ModelName;
-  
   if (!name) {
-    throw new Error(`Missing Meta.ModelName in ${file}`);
+    throw new Error(`Missing META.ModelName in ${file}`);
   }
 
-  registry[name] = config;
+  const scenario = config.META.Scenario || DEFAULT_SCENARIO;
+
+  if (!registry[name]) {
+    registry[name] = {};
+  }
+
+  registry[name][scenario] = config;
 }
 
 export function getModelConfig(name) {
-  if (overrides[name]) {
-    return overrides[name];
-  }
   if (!registry[name]) {
     throw new Error(`Unsupported model: ${name}`);
   }
-  return registry[name];
+
+  const scenario = model_scenarios[name] || DEFAULT_SCENARIO;
+
+  if (!registry[name][scenario]) {
+    throw new Error(
+      `Scenario "${scenario}" not found for model "${name}"`
+    );
+  }
+
+  return registry[name][scenario];
 }
 
 export const LOADED_MODELS = Object.keys(registry);

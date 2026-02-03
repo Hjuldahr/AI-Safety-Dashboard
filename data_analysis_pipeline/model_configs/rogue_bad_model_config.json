@@ -1,6 +1,7 @@
 {
     "META": {
-        "ModelName": "RogueModel"
+        "ModelName": "BadModel",
+        "Scenario": "Rogue"
     },
     "TOPIC_WEIGHTS": {
         "Customer Support": 0.20,
