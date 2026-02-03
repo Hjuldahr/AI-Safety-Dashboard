@@ -41,9 +41,9 @@ export const TIMEFRAME_CONFIG = {
     // High Fidelity (AI_Log)
     '10s': { model: 'AI_Log', timerange: 10 * 1000, bucket: 1000, limit: 10 },           // 1 Second Buckets
     '30s': { model: 'AI_Log', timerange: 30 * 1000, bucket: 1000, limit: 30  },          // 1 Second Buckets
-    '1m': { model: 'AI_Log', timerange: 1 * 60 * 1000, bucket: 1000, limit: 60  },       // 1 Second Buckets
-    '5m': { model: 'AI_Log', timerange: 5 * 60 * 1000, bucket: 5 * 1000, limit: 60  },    // 5 Second Buckets
-    '15m': { model: 'AI_Log', timerange: 15 * 60 * 1000, bucket: 15 * 1000, limit: 60 },  // 15 Second Buckets
+    '1min': { model: 'AI_Log', timerange: 1 * 60 * 1000, bucket: 1000, limit: 60  },       // 1 Second Buckets
+    '5min': { model: 'AI_Log', timerange: 5 * 60 * 1000, bucket: 5 * 1000, limit: 60  },    // 5 Second Buckets
+    '15min': { model: 'AI_Log', timerange: 15 * 60 * 1000, bucket: 15 * 1000, limit: 60 },  // 15 Second Buckets
 
     // Low Fidelity (AI_Summary - 1 min resolution)
     '1h': { model: 'AI_Summary', timerange: 60 * 60 * 1000, bucket: 60 * 1000, limit: 60 },                     // 1 Minute Buckets
