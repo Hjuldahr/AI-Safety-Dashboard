@@ -9,6 +9,16 @@ This file contains information about the rest of the documentation available abo
 - Information about how to authenticate yourself as a user can be found in the [Authentication](/authentication.md) file.
 - API endpoints which require authentication will be tagged "*requires authentication*" as well as include the level of authentication required.
 
+## Pages
+- There are 4 main pages that drive the rest of the site:
+	- [Dashboard](dashboard.md)
+	- [Alerts](alerts.md)
+	- [Reports](reports.md)
+	- [Logs](logs.md)
+- There are several other pages used to drive functionality to the above pages:
+	- [Login / Signup](authentication.md)
+	- [User Management](user-management.md)
+
 ## API Documentation
 - We are have created OpenAPI documentation which is availible [here](http://localhost:2121/api/docs/).
 - We are using [Swagger](https://swagger.io/) to render the api documentation.
@@ -24,3 +34,4 @@ This file contains information about the rest of the documentation available abo
 ## Read Next
 * [Installation](installation.md)
 * [Authentication](authentication.md)
+* [Dashboard](dashboard.md)

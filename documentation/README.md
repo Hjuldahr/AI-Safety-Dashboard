@@ -26,3 +26,4 @@ a basic example of one such parameter might be `Policy Compliance`.
 ## Read Next
 * [Introduction](introduction.md)
 * [Installation](installation.md)
+* [Dashboard](dashboard.md)
