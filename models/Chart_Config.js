@@ -52,6 +52,8 @@ const chartConfigSchema = new Schema({
     timestamps: true
 });
 
+chartConfigSchema.index({order: 1});
+
 const ChartConfig = mongoose.model('ChartConfig', chartConfigSchema);
 
 export default ChartConfig;

@@ -55,29 +55,21 @@
             let originalSize = ALL_SIZE_CLASSES.find(c => chartCard.classList.contains(c)) || 'chart-regular';
             chartCard.dataset.originalSize = originalSize;
 
-            if (originalSize === 'chart-tiny') {
+            if (originalSize !== 'chart-massive') {
+
                 const wrapper = chartCard.closest('.tiny-group-wrapper');
                 if (wrapper) {
-                    // BUG FIX: Ensure the wrapper has an ID so we can find it later
                     if (!wrapper.id) {
                         wrapper.id = 'tiny-wrapper-' + Math.random().toString(36).substr(2, 9);
                     }
-
                     chartCard.dataset.wrapperId = wrapper.id;
                     wrapper.parentNode.insertBefore(chartCard, wrapper);
                 }
-                chartCard.classList.remove('chart-tiny');
-                chartCard.classList.add('chart-regular');
-            }
 
-            if (originalSize === 'chart-tiny') {
-                const wrapper = chartCard.closest('.tiny-group-wrapper');
-                if (wrapper) {
-                    chartCard.dataset.wrapperId = wrapper.id;
-                    wrapper.parentNode.insertBefore(chartCard, wrapper);
-                }
-                chartCard.classList.remove('chart-tiny');
-                chartCard.classList.add('chart-regular');
+                // Remove whatever size it currently has
+                chartCard.classList.remove(...ALL_SIZE_CLASSES);
+                // Force it to massive
+                chartCard.classList.add('chart-massive');
             }
 
             const canvas = chartCard.querySelector('canvas');
@@ -118,24 +110,41 @@
                 }
             }
 
+
+
+            chartCard.classList.add('is-editing'); // Signal for CSS
+
+            const timeframeOptions = window.CONSTANTS.ZOOM_LEVELS.map(z => `
+                <div class="timeframe-option">
+                    <input type="radio" id="edit-tf-${id}-${z}" name="edit-timeframe-${id}" value="${z}" ${config.chartTimeRange === z ? 'checked' : ''}>
+                    <label for="edit-tf-${id}-${z}">${z}</label>
+                </div>
+            `).join('');
+
             formContainer.innerHTML = `
-            <label for="edit-title-${id}">Chart Title:</label>
-            <input type="text" id="edit-title-${id}" value="${config.title}">
-            <label>Chart Size:</label>
-            <div class="size-selector">
-                <div><input type="radio" id="edit-size-tiny-${id}" name="edit-size-${id}" value="tiny" ${config.chartSize === 'tiny' ? 'checked' : ''}><label for="edit-size-tiny-${id}">Tiny</label></div>
-                <div><input type="radio" id="edit-size-regular-${id}" name="edit-size-${id}" value="regular" ${config.chartSize === 'regular' ? 'checked' : ''}><label for="edit-size-regular-${id}">Regular</label></div>
-                <div><input type="radio" id="edit-size-large-${id}" name="edit-size-${id}" value="large" ${config.chartSize === 'large' ? 'checked' : ''}><label for="edit-size-large-${id}">Large</label></div>
-                <div><input type="radio" id="edit-size-massive-${id}" name="edit-size-${id}" value="massive" ${config.chartSize === 'massive' ? 'checked' : ''}><label for="edit-size-massive-${id}">Massive</label></div>
-            </div>
+                <label for="edit-title-${id}">Chart Title:</label>
+                <input type="text" id="edit-title-${id}" value="${config.title}">
+                
+                <label>Timeframe Range:</label>
+                <div class="edit-timeframe-selector">
+                    ${timeframeOptions}
+                </div>
 
-            ${filterHtml}
+                <label>Chart Size:</label>
+                <div class="size-selector">
+                    <div><input type="radio" id="edit-size-tiny-${id}" name="edit-size-${id}" value="tiny" ${config.chartSize === 'tiny' ? 'checked' : ''}><label for="edit-size-tiny-${id}">Tiny</label></div>
+                    <div><input type="radio" id="edit-size-regular-${id}" name="edit-size-${id}" value="regular" ${config.chartSize === 'regular' ? 'checked' : ''}><label for="edit-size-regular-${id}">Regular</label></div>
+                    <div><input type="radio" id="edit-size-large-${id}" name="edit-size-${id}" value="large" ${config.chartSize === 'large' ? 'checked' : ''}><label for="edit-size-large-${id}">Large</label></div>
+                    <div><input type="radio" id="edit-size-massive-${id}" name="edit-size-${id}" value="massive" ${config.chartSize === 'massive' ? 'checked' : ''}><label for="edit-size-massive-${id}">Massive</label></div>
+                </div>
 
-            <div class="form-actions">
-                <button type="button" class="cancel-edit-btn" data-id="${id}">Cancel</button>
-                <button type="button" class="save-edit-btn" data-id="${id}">Save</button>
-            </div>
-        `;
+                ${filterHtml}
+
+                <div class="form-actions">
+                    <button type="button" class="cancel-edit-btn" data-id="${id}">Cancel</button>
+                    <button type="button" class="save-edit-btn" data-id="${id}">Save</button>
+                </div>
+            `;
             formContainer.style.display = 'flex';
         } catch (error) {
             console.error('Error opening edit form:', error);
@@ -172,6 +181,8 @@
 
         delete chartCard.dataset.originalSize;
 
+        chartCard.classList.remove('is-editing');
+
         // Restore Visibility
         if (canvas) canvas.style.display = 'block';
         if (kpiWrapper) kpiWrapper.style.display = 'flex';
@@ -184,6 +195,7 @@
     async function handleSaveEdit(id) {
         const newTitle = document.getElementById(`edit-title-${id}`).value;
         const newSize = document.querySelector(`input[name="edit-size-${id}"]:checked`).value;
+        const newTimeframe = document.querySelector(`input[name="edit-timeframe-${id}"]:checked`).value;
 
         let newIncludedValues = null; // Default to null if we aren't editing filters
         const checkboxes = document.querySelectorAll(`input[name="edit-filter-val-${id}"]:checked`);
@@ -196,12 +208,13 @@
 
         try {
             const response = await fetch('api/graph', {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id,
-                    newTitle,
-                    newSize,
+                    title: newTitle,
+                    size: newSize,
+                    chartTimeRange: newTimeframe,
                     includedValues: newIncludedValues
                 })
             });

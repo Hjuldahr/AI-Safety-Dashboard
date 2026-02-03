@@ -204,10 +204,10 @@ body {
     justify-content: center;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    
+
     /* Hide by default, shows on chart hover */
     opacity: 0;
-    
+
 
 }
 
@@ -307,6 +307,8 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+
+    /* padding-top: ; */
 }
 
 .edit-chart-form label {
@@ -350,6 +352,8 @@ body {
     overflow-y: auto;
     min-height: 60px;
 }
+
+/* --- Chart Editing --- */
 
 /* Target the form only inside a tiny card */
 .chart-tiny .edit-chart-form {
@@ -444,6 +448,51 @@ body {
     padding: 4px;
     font-size: 0.9rem;
     margin-bottom: 5px;
+}
+
+.chart-card.is-editing {
+    padding-top: 4rem;
+}
+
+/* Hide Zoom Buttons when editing, but keep the Label visible */
+.chart-card.is-editing .zoom-btn {
+    display: none !important;
+}
+
+.chart-card.is-editing .zoom-label {
+    opacity: 1;
+    /* Ensure it stays visible while editing */
+    margin-left: 10px;
+    background: var(--primary-light);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Style the Timeframe Selector in the Edit Form */
+.edit-timeframe-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding: 8px;
+    background: #f1f5f9;
+    border-radius: 6px;
+}
+
+.timeframe-option {
+    display: flex;
+    align-items: center;
+    font-size: 0.75rem;
+}
+
+.timeframe-option input {
+    margin-right: 4px;
+}
+
+/* Ensure the chart header doesn't overlap the form too much */
+.is-editing .chart-header {
+    background: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid #eee;
 }
 
 @media (max-width: 1500px) {

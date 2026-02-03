@@ -45,7 +45,7 @@
             },
             scales: {
                 x: { display: true, ticks: { font: { size: 12 } } },
-                y: { display: true, ticks: { font: { size: 12 }, min: 0 } }
+                y: { display: true, ticks: { font: { size: 12 } } }
             },
             devicePixelRatio: window.devicePixelRatio || 1 //ToDo: See if this is better than 3
             // devicePixelRatio: 3
@@ -181,7 +181,18 @@
 
         if (config.chartSize !== 'tiny' && chart.options.scales.y) {
             chart.options.scales.y.title = { display: true, text: yConfig.label };
-            chart.options.scales.y.min = 0;
+            
+            const allValues = newDatasets.flatMap(ds => ds.data).filter(v => v !== null);
+            const dataMin = Math.min(...allValues);
+
+            //show zero if the data is close / undefined
+            if (dataMin < 10 || dataMin === Infinity) {
+                chart.options.scales.y.min = Math.max(0, dataMin - (dataMin * 0.1));
+            } else {
+                delete chart.options.scales.y.min;
+                
+                chart.options.scales.y.suggestedMin = 0; 
+            }
         }
     }
 
