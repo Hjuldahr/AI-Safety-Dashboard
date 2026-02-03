@@ -3,6 +3,16 @@ import fs from 'fs';
 const CONFIG_DIR = new URL('../model_configs/', import.meta.url);
 
 const registry = {};
+const overrides = {};
+
+export function setOverride(modelName, config) {
+  overrides[modelName] = config;
+}
+
+export function clearOverride(modelName) {
+  delete overrides[modelName];
+}
+
 
 
 // Replace with lazy loader if many models are added later
@@ -23,6 +33,9 @@ for (const file of fs.readdirSync(CONFIG_DIR)) {
 }
 
 export function getModelConfig(name) {
+  if (overrides[name]) {
+    return overrides[name];
+  }
   if (!registry[name]) {
     throw new Error(`Unsupported model: ${name}`);
   }

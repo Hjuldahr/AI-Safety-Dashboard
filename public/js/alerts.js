@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         alertNameInput.value = ''; alertLevelSelect.value = ''; 
         if(modelSelect) modelSelect.value = '';
         rulesContainer.innerHTML = ''; addEmptyRuleRow();
-        selectedTags.length = 0; renderDualLists();
+        selectedTags.length = 0; renderTagInput();
     }
     openCreateBtn.addEventListener('click', () => { resetBuilderForm(); openBuilder(false); });
     closeBtns.forEach(b => b.addEventListener('click', closeBuilder));
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 Object.keys(tagsCache).forEach(k=>delete tagsCache[k]);
                 updated.forEach(t=>tagsCache[t._id]=t);
                 // Refresh UIs
-                renderDualLists(); 
+                renderTagInput(); 
                 populateModelDropdowns(); // updates filter
                 loadAlertHistory(currentHistoryPage);
                 tagsModal.style.display = 'none';
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         populateRuleBuilderFromRule(obj.alertRule);
         selectedTags.length = 0;
         if(obj.tags) obj.tags.forEach(t => selectedTags.push(t._id));
-        renderDualLists();
+        renderTagInput();
         manageModal.style.display = 'none';
         openBuilder(true);
     }
@@ -378,33 +378,86 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
 
-    // --- 6. DUAL LIST (RULE BUILDER) ---
-    function renderDualLists() {
-        const left = document.getElementById('tag-dual-left');
-        const right = document.getElementById('tag-dual-right');
-        if(!left) return;
-        left.innerHTML=''; right.innerHTML='';
-        Object.values(tagsCache).sort((a,b)=>a.name.localeCompare(b.name)).forEach(t => {
-            const el = document.createElement('div');
-            el.className = 'dual-item'; el.textContent = t.name; el.style.backgroundColor = t.color; el.dataset.id = t._id;
-            el.onclick = () => el.classList.toggle('selected');
-            if(selectedTags.includes(t._id)) right.appendChild(el); else left.appendChild(el);
+    // --- 6. MULTISELECT DROPDOWN (RULE BUILDER) ---
+    const tagsInputContainer = document.getElementById('tags-input-container');
+    const tagsSearchInput = document.getElementById('tags-search-input');
+    const tagsDropdown = document.getElementById('tags-dropdown-list');
+
+    function renderTagInput() {
+        if(!tagsInputContainer) return;
+        const pills = tagsInputContainer.querySelectorAll('.tag-input-pill');
+        pills.forEach(c => c.remove());
+
+        selectedTags.forEach(id => {
+            const t = tagsCache[id];
+            if(!t) return;
+            const pill = document.createElement('div');
+            pill.className = 'tag-input-pill';
+            pill.style.backgroundColor = t.color;
+            pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
+            tagsInputContainer.insertBefore(pill, tagsSearchInput);
+        });
+        
+        // Hide/Show placeholder based on selection
+        if(tagsSearchInput) tagsSearchInput.placeholder = selectedTags.length > 0 ? '' : 'Select tags...';
+    }
+
+    function renderTagDropdown() {
+        if(!tagsDropdown) return;
+        tagsDropdown.innerHTML = '';
+        const available = Object.values(tagsCache)
+            .filter(t => !selectedTags.includes(t._id))
+            .sort((a,b) => a.name.localeCompare(b.name));
+            
+        if(available.length === 0) {
+            tagsDropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
+            return;
+        }
+
+        available.forEach(t => {
+            const item = document.createElement('div');
+            item.className = 'tags-dropdown-item';
+            item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
+            item.addEventListener('click', () => {
+                selectedTags.push(t._id);
+                renderTagInput();
+                renderTagDropdown();
+                if(tagsSearchInput) {
+                    tagsSearchInput.value = '';
+                    tagsSearchInput.focus();
+                }
+            });
+            tagsDropdown.appendChild(item);
         });
     }
-    const moveTags = (srcId, isAll) => {
-        const src = document.getElementById(srcId);
-        const items = isAll ? src.querySelectorAll('.dual-item') : src.querySelectorAll('.dual-item.selected');
-        items.forEach(el => {
-            const id = el.dataset.id;
-            if(srcId.includes('left')) { if(!selectedTags.includes(id)) selectedTags.push(id); }
-            else { const idx=selectedTags.indexOf(id); if(idx>-1) selectedTags.splice(idx,1); }
+
+    // Event Listeners
+    if(tagsInputContainer) {
+        tagsInputContainer.addEventListener('click', (e) => {
+            if(e.target.classList.contains('remove-tag')) { 
+                const id = e.target.dataset.id;
+                const idx = selectedTags.indexOf(id);
+                if(idx > -1) selectedTags.splice(idx, 1);
+                renderTagInput();
+                // If dropdown is open, update it to show the removed tag
+                if(tagsDropdown.style.display === 'block') renderTagDropdown();
+                return;
+            }
+            // Toggle dropdown
+            if(tagsDropdown) {
+                const isVisible = tagsDropdown.style.display === 'block';
+                tagsDropdown.style.display = isVisible ? 'none' : 'block';
+                if(!isVisible) renderTagDropdown();
+            }
         });
-        renderDualLists();
-    };
-    document.getElementById('move-selected-right').onclick = () => moveTags('tag-dual-left', false);
-    document.getElementById('move-all-right').onclick = () => moveTags('tag-dual-left', true);
-    document.getElementById('move-selected-left').onclick = () => moveTags('tag-dual-right', false);
-    document.getElementById('move-all-left').onclick = () => moveTags('tag-dual-right', true);
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if(tagsInputContainer && tagsDropdown && !tagsInputContainer.contains(e.target) && !tagsDropdown.contains(e.target)) {
+            tagsDropdown.style.display = 'none';
+        }
+    });
 
     saveAlertBtn.addEventListener('click', async () => {
         const name = alertNameInput.value, level = alertLevelSelect.value, rule = buildRuleJSON();
@@ -418,7 +471,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
 
-    // --- 7. HISTORY TABLE (with + LOG TAGGING) ---
+    // --- 7. HISTORY TABLE ---
     async function loadAlertHistory(page = 1) {
         currentHistoryPage = page;
         if(alertLogBody) alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
@@ -452,7 +505,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         const alertName = log.alertName || snapshot.alertName || 'Alert';
         const modelName = log.modelName || snapshot.modelName || '-';
         
-        // Use server-sent humanRule, or fallback to snapshot (which might be raw for old logs)
+        // Use server-sent humanRule, or fallback to snapshot
         // Logic relying on backend format now.
         const humanRule = log.humanRule || (snapshot.alertRule ? JSON.stringify(snapshot.alertRule) : '');
 
@@ -495,14 +548,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         
         modal.innerHTML = `
             <div class="modal-header"><h2>Tag Alert Log</h2><button class="close-dyn-btn">&times;</button></div>
-            <div class="modal-body">
-                <div class="dual-list-container">
-                    <div class="dual-list-col"><span class="sub-label">Available</span><div id="dyn-left" class="dual-list-box"></div></div>
-                    <div class="dual-list-actions">
-                        <button id="dyn-mr" class="btn btn-secondary btn-icon">▶</button>
-                        <button id="dyn-ml" class="btn btn-secondary btn-icon">◀</button>
+            <div class="modal-body" style="min-height: 250px;">
+                <div class="multiselect-container">
+                    <div class="tags-input-container" id="dyn-tags-input">
+                        <input type="text" id="dyn-tags-search" class="tags-search-input" placeholder="Select tags..." readonly />
                     </div>
-                    <div class="dual-list-col"><span class="sub-label">Selected</span><div id="dyn-right" class="dual-list-box"></div></div>
+                    <div class="tags-dropdown" id="dyn-tags-dropdown" style="display: none;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -515,29 +566,77 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         // State for this modal
         const selected = [...currentTagIds];
-        const left = modal.querySelector('#dyn-left');
-        const right = modal.querySelector('#dyn-right');
+        const inputContainer = modal.querySelector('#dyn-tags-input');
+        const searchInput = modal.querySelector('#dyn-tags-search');
+        const dropdown = modal.querySelector('#dyn-tags-dropdown');
 
-        function renderDyn() {
-            left.innerHTML = ''; right.innerHTML = '';
-            Object.values(tagsCache).sort((a,b)=>a.name.localeCompare(b.name)).forEach(t => {
-                const el = document.createElement('div');
-                el.className = 'dual-item'; el.textContent = t.name; el.style.backgroundColor = t.color; el.dataset.id = t._id;
-                el.onclick = () => el.classList.toggle('selected');
-                if(selected.includes(t._id)) right.appendChild(el); else left.appendChild(el);
+        function renderDynInput() {
+            const pills = inputContainer.querySelectorAll('.tag-input-pill');
+            pills.forEach(c => c.remove());
+
+            selected.forEach(id => {
+                const t = tagsCache[id];
+                if(!t) return;
+                const pill = document.createElement('div');
+                pill.className = 'tag-input-pill';
+                pill.style.backgroundColor = t.color;
+                pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
+                inputContainer.insertBefore(pill, searchInput);
+            });
+            
+            searchInput.placeholder = selected.length > 0 ? '' : 'Select tags...';
+        }
+
+        function renderDynDropdown() {
+            dropdown.innerHTML = '';
+            const available = Object.values(tagsCache)
+                .filter(t => !selected.includes(t._id))
+                .sort((a,b) => a.name.localeCompare(b.name));
+                
+            if(available.length === 0) {
+                dropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
+                return;
+            }
+
+            available.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'tags-dropdown-item';
+                item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
+                item.addEventListener('click', () => {
+                    selected.push(t._id);
+                    renderDynInput();
+                    renderDynDropdown();
+                    searchInput.value = '';
+                    searchInput.focus();
+                });
+                dropdown.appendChild(item);
             });
         }
-        renderDyn();
 
-        // Handlers
-        modal.querySelector('#dyn-mr').onclick = () => {
-            left.querySelectorAll('.selected').forEach(el => { if(!selected.includes(el.dataset.id)) selected.push(el.dataset.id); });
-            renderDyn();
-        };
-        modal.querySelector('#dyn-ml').onclick = () => {
-            right.querySelectorAll('.selected').forEach(el => { const idx=selected.indexOf(el.dataset.id); if(idx>-1) selected.splice(idx,1); });
-            renderDyn();
-        };
+        // Event Listeners
+        inputContainer.addEventListener('click', (e) => {
+            if(e.target.classList.contains('remove-tag')) { 
+                const id = e.target.dataset.id;
+                const idx = selected.indexOf(id);
+                if(idx > -1) selected.splice(idx, 1);
+                renderDynInput();
+                if(dropdown.style.display === 'block') renderDynDropdown();
+                return;
+            }
+            const isVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+            if(!isVisible) renderDynDropdown();
+        });
+
+        // Close dropdown when clicking outside (scoped to this modal overlay)
+        overlay.addEventListener('click', (e) => {
+            if(e.target === overlay) return; // overlay click handled by close logic? mainly want to catch clicks outside dropdown
+            if(!inputContainer.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        renderDynInput();
         
         const close = () => { document.body.removeChild(overlay); };
         modal.querySelectorAll('.close-dyn-btn').forEach(b => b.onclick = close);
@@ -553,8 +652,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             } catch(e) { alert('Failed to update tags'); }
         };
     }
-
-    // --- PAGINATION (Function Removed - Uses Shared Component) ---
 
     if (historyFilterForm) {
         historyFilterForm.addEventListener('submit', e => { e.preventDefault(); loadAlertHistory(1); });
