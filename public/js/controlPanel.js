@@ -90,7 +90,7 @@ async function initAdminControls() {
     })
 
     refreshButton.addEventListener('click', () => {
-        window.myChartUtils.resetCharts();
+        loadChartsFromDatabase();
     })
 
     modelSelect.addEventListener('change', async (event) => {
