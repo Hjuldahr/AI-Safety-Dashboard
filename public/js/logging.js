@@ -204,13 +204,6 @@ function renderAiAccordion(logs, accordion) {
     });
 }
 
-
-/**
- * Renders pagination buttons using the shared Pagination component (window.Pagination).
- * See public/js/components/pagination.js
- */
-
-
 // --- HELPER FUNCTIONS ---
 
 /**
@@ -242,6 +235,7 @@ async function handleUserFilter(elements, page = 1) {
     const startVal = elements.userFilterForm.querySelector('#filter-start-date').value;
     const endVal = elements.userFilterForm.querySelector('#filter-end-date').value;
     const eventType = elements.userFilterForm.querySelector('#filter-event-type').value;
+    const searchVal = elements.userFilterForm.querySelector('#user-search').value;
 
     // Build URL query string
     const params = new URLSearchParams();
@@ -250,6 +244,7 @@ async function handleUserFilter(elements, page = 1) {
     if (startVal) params.set('startDate', startVal);
     if (endVal) params.set('endDate', endVal);
     if (eventType && eventType !== 'all') params.set('eventType', eventType);
+    if (searchVal) params.set('search', searchVal);
     // Note: We're not sending userID, so the backend will fetch logs for *all* users.
 
     try {
@@ -283,6 +278,9 @@ async function handleAiFilter(elements, page = 1) {
     elements.aiPaginationControls.innerHTML = ''; // Clear AI pagination
 
     const modelName = elements.aiFilterForm.querySelector('#filter-model').value;
+    const searchVal = elements.aiFilterForm.querySelector('#ai-search').value;
+    const startVal = elements.aiFilterForm.querySelector('#ai-filter-start-date').value;
+    const endVal = elements.aiFilterForm.querySelector('#ai-filter-end-date').value;
 
     // Build URL query string
     const params = new URLSearchParams();
@@ -291,6 +289,9 @@ async function handleAiFilter(elements, page = 1) {
     if (modelName && modelName !== 'all') {
         params.set('modelName', modelName);
     }
+    if (searchVal) params.set('search', searchVal);
+    if (startVal) params.set('startDate', startVal);
+    if (endVal) params.set('endDate', endVal);
 
     try {
         // Fetch data from the API
@@ -323,6 +324,9 @@ async function handleAiSummaryFilter(elements, page = 1) {
     elements.aiSummaryPaginationControls.innerHTML = ''; // Clear AI pagination
 
     const modelName = elements.aiSummaryFilterForm.querySelector('#summary-filter-model').value;
+    const searchVal = elements.aiSummaryFilterForm.querySelector('#ai-summary-search').value;
+    const startVal = elements.aiSummaryFilterForm.querySelector('#summary-filter-start-date').value;
+    const endVal = elements.aiSummaryFilterForm.querySelector('#summary-filter-end-date').value;
 
     // Build URL query string
     const params = new URLSearchParams();
@@ -331,6 +335,9 @@ async function handleAiSummaryFilter(elements, page = 1) {
     if (modelName && modelName !== 'all') {
         params.set('modelName', modelName);
     }
+    if (searchVal) params.set('search', searchVal);
+    if (startVal) params.set('startDate', startVal);
+    if (endVal) params.set('endDate', endVal);
 
     try {
         // Fetch data from the API
@@ -342,7 +349,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiSummaryAccordion);
-        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, elements, handleAiSummaryFilter);
+        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, (newPage) => handleAiSummaryFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch AI summaries:', error);

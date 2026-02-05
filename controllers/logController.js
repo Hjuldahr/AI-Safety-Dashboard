@@ -1,12 +1,13 @@
 import User_Log from '../models/User_Log.js';
 import AI_Log from '../models/AI_Log.js';
 import AI_Summary from "../models/AI_Summary.js"
+import User from '../models/user.js';
 import { Parser } from 'json2csv';
 import PDFDocument from 'pdfkit';
 
 
 // === Helper Query Builders ===
-const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
+const buildUserLogQuery = async ({ userID, eventType, startDate, endDate, search }) => {
     const query = {};
 
     if (userID) {
@@ -29,10 +30,33 @@ const buildUserLogQuery = ({ userID, eventType, startDate, endDate }) => {
         }
     }
 
+    if (search) {
+        const searchRegex = new RegExp(search, 'i');
+        const orConditions = [
+            { eventType: searchRegex },
+            { details: searchRegex }
+        ];
+
+        // Find users matching search
+        try {
+            const users = await User.find({
+                $or: [{ email: searchRegex }, { username: searchRegex }]
+            }).select('_id');
+
+            if (users.length > 0) {
+                orConditions.push({ userID: { $in: users.map(u => u._id) } });
+            }
+        } catch (err) {
+            console.error("Error searching users in logs:", err);
+        }
+
+        query.$or = orConditions;
+    }
+
     return query;
 };
 
-const buildAILogQuery = ({ modelName, startDate, endDate }) => {
+const buildAILogQuery = ({ modelName, startDate, endDate, search }) => {
     const query = {};
 
     // Add modelName filter if provided and not "all"
@@ -41,15 +65,44 @@ const buildAILogQuery = ({ modelName, startDate, endDate }) => {
     }
 
     if (startDate || endDate) {
-        query.createdAt = {};
+        query.responseTimestamp = {};
         if (startDate) {
-            query.createdAt.$gte = new Date(startDate);
+            query.responseTimestamp.$gte = new Date(startDate).getTime();
         }
         if (endDate) {
             const endOfDay = new Date(endDate);
             endOfDay.setHours(23, 59, 59, 999);
-            query.createdAt.$lte = endOfDay;
+            query.responseTimestamp.$lte = endOfDay.getTime();
         }
+    }
+
+    if (search) {
+        const searchRegex = new RegExp(search, 'i');
+        const orConditions = [
+            { modelName: searchRegex }
+        ];
+
+        // Numeric check
+        const searchNum = Number(search);
+        if (!isNaN(searchNum)) {
+            const numericFields = [
+                'policyCompliance', 'responseHelpfulness', 'responseTime', 
+                'energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 
+                'webLookups', 'toxicityScore', 'piiDetected', 'queryCount',
+                'responseTimestamp'
+            ];
+            numericFields.forEach(field => {
+                orConditions.push({ [field]: searchNum });
+            });
+        }
+        
+        if (query.$or) {
+             // If there was already an $or (unlikely here but good practice), we need to AND it?
+             // Simple override for now as date uses top level field.
+             // If date logic above used $or, this would overwrite.
+             // But date logic above uses query.createdAt.
+        }
+        query.$or = orConditions;
     }
 
     return query;
@@ -106,9 +159,10 @@ const exportCSV = (res, logs, filename) => {
 const exportUserLogCSV = async (req, res) => {
     try {
         const { _id: userID } = req.user;
-        const { eventType, startDate, endDate, page = 1, limit = 100 } = req.body || {};
+        const { eventType, startDate, endDate, search, page = 1, limit = 100 } = req.body || {};
 
-        const logs = await User_Log.find(buildUserLogQuery({ userID, eventType, startDate, endDate }))
+        const query = await buildUserLogQuery({ userID, eventType, startDate, endDate, search });
+        const logs = await User_Log.find(query)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
@@ -127,9 +181,10 @@ const exportUserLogCSV = async (req, res) => {
 const exportUserLogPDF = async (req, res) => {
     try {
         const { _id: userID } = req.user;
-        const { eventType, startDate, endDate, page = 1, limit = 100 } = req.body || {};
+        const { eventType, startDate, endDate, search, page = 1, limit = 100 } = req.body || {};
 
-        const logs = await User_Log.find(buildUserLogQuery({ userID, eventType, startDate, endDate }))
+        const query = await buildUserLogQuery({ userID, eventType, startDate, endDate, search });
+        const logs = await User_Log.find(query)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
@@ -149,9 +204,9 @@ const exportUserLogPDF = async (req, res) => {
 const exportAILogCSV = async (req, res) => {
     try {
         const { _id: modelID } = req.model;
-        const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 } = req.body || {};
+        const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, search, page = 1, limit = 100 } = req.body || {};
 
-        const logs = await AI_Log.find(buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate }))
+        const logs = await AI_Log.find(buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, search }))
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
@@ -170,9 +225,9 @@ const exportAILogCSV = async (req, res) => {
 const exportAILogPDF = async (req, res) => {
     try {
         const { _id: modelID } = req.model;
-        const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, page = 1, limit = 100 } = req.body || {};
+        const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, search, page = 1, limit = 100 } = req.body || {};
 
-        const logs = await AI_Log.find(buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate }))
+        const logs = await AI_Log.find(buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, search }))
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
@@ -196,6 +251,7 @@ const getFilteredUserLogs = async (req, res) => {
             eventType,
             startDate,
             endDate,
+            search,
             page = 1,
             limit = 10
         } = req.query;
@@ -203,7 +259,7 @@ const getFilteredUserLogs = async (req, res) => {
         const pageNum = Number(page);
         const limitNum = Number(limit);
 
-        const query = buildUserLogQuery({ userID, eventType, startDate, endDate });
+        const query = await buildUserLogQuery({ userID, eventType, startDate, endDate, search });
         const skip = (pageNum - 1) * limitNum;
 
         const logsQuery = User_Log.find(query)
@@ -236,6 +292,7 @@ const getFilteredAILogs = async (req, res) => {
             modelName,
             startDate,
             endDate,
+            search,
             page = 1,
             limit = 10
         } = req.query;
@@ -246,7 +303,8 @@ const getFilteredAILogs = async (req, res) => {
         const query = buildAILogQuery({
             modelName,
             startDate,
-            endDate
+            endDate,
+            search
         });
 
         const skip = (pageNum - 1) * limitNum;
@@ -280,6 +338,7 @@ const getFilteredAISummaries = async (req, res) => {
             modelName,
             startDate,
             endDate,
+            search,
             page = 1,
             limit = 10
         } = req.query;
@@ -290,7 +349,8 @@ const getFilteredAISummaries = async (req, res) => {
         const query = buildAILogQuery({
             modelName,
             startDate,
-            endDate
+            endDate,
+            search
         });
 
         const skip = (pageNum - 1) * limitNum;
