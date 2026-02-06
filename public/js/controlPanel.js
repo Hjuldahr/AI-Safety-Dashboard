@@ -237,9 +237,25 @@ const ChartWizard = {
                     <div id="split-checkboxes" class="checkbox-group"></div>
                 </div>`;
         } else if (type === 'bar') {
-            controls = `${createSelect('select-x-axis', 'Category (X)', cats)} ${createSelect('select-y-axis', 'Value (Y)', nums)}`;
+            controls = `
+            ${createSelect('select-x-axis', 'Category (X)', cats)}
+            ${createSelect('select-split-by', 'Split by (Optional)', cats)}
+                <div id="split-filter-container" class="filter-container" style="display:none;">
+                    <strong>Filter Sub-Items (Optional):</strong>
+                    <div id="split-checkboxes" class="checkbox-group"></div>
+                </div>
+            ${createSelect('select-y-axis', 'Value (Y)', nums)}`
+            ;
         } else if (type === 'pie') {
-            controls = createSelect('select-category', 'Category', cats);
+            // ToDo: Allow pie charts to take in a data type (policyCompliance, etc).
+            // ${createSelect('select-category', 'Category', cats)}
+            controls = `
+            ${createSelect('select-category', 'Split by', cats)}
+                <div id="split-filter-container" class="filter-container" style="display:none;">
+                    <strong>Filter Sub-Items (Optional):</strong>
+                    <div id="split-checkboxes" class="checkbox-group"></div>
+                </div>
+            `;
         } else {
             controls = createSelect('select-y-axis', 'KPI Value', nums);
         }
@@ -327,7 +343,7 @@ const ChartWizard = {
         }
 
         // C. Special Logic for Split-By Checkboxes
-        if (id === 'select-split-by') {
+        if (id === 'select-split-by' || id === 'select-category') {
             this.renderSplitCheckboxes(value); // Moved to helper for cleanliness
         }
 

@@ -191,7 +191,7 @@
             } else {
                 delete chart.options.scales.y.min;
                 
-                chart.options.scales.y.suggestedMin = 0; 
+                chart.options.scales.y.suggestedMin = 0;
             }
         }
     }
