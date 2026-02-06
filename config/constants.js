@@ -64,6 +64,7 @@ export const DATA_DICTIONARY = {
         label: "Model Name",
         dbPath: "modelName",
         dataType: "categorical",
+        summarize: "special",
         acceptedValues: KNOWN_MODELS,
         color: "#607D8B" // Blue Grey
     },
@@ -71,6 +72,7 @@ export const DATA_DICTIONARY = {
         label: "Topic",
         dbPath: "breakdown.topic",
         dataType: "categorical",
+        summarize: "remove",
         acceptedValues: Object.keys(TOPIC_HIERARCHY),
         color: "#9C27B0" // Purple
     },
@@ -78,6 +80,7 @@ export const DATA_DICTIONARY = {
         label: "Sub Topic",
         dbPath: "breakdown.sub_topic",
         dataType: "categorical",
+        summarize: "remove",
         acceptedValues: Object.values(TOPIC_HIERARCHY).flat(),
         color: "#E91E63" // Pink
     },
@@ -87,6 +90,7 @@ export const DATA_DICTIONARY = {
         label: "Policy Compliance (%)",
         dbPath: "policyCompliance",
         dataType: "numeric",
+        summarize: "avg",
         color: "#4CAF50", // Green
         // range: [0, 100]
     },
@@ -94,6 +98,7 @@ export const DATA_DICTIONARY = {
         label: "Response Helpfulness (1-5)",
         dbPath: "responseHelpfulness",
         dataType: "numeric",
+        summarize: "avg",
         color: "#2196F3", // Blue
         // range: [1, 5]
     },
@@ -101,6 +106,7 @@ export const DATA_DICTIONARY = {
         label: "Response Time (ms)",
         dbPath: "responseTime",
         dataType: "numeric",
+        summarize: "avg",
         color: "#FF9800", // Orange
         // range: [0, 5000] // Estimate: 0 to 5 seconds
     },
@@ -108,6 +114,7 @@ export const DATA_DICTIONARY = {
         label: "Energy Consumption (J)",
         dbPath: "energyConsumption",
         dataType: "numeric",
+        summarize: "sum",
         color: "#FFEB3B", // Yellow
         // range: [0, 50] // Estimate
     },
@@ -115,6 +122,7 @@ export const DATA_DICTIONARY = {
         label: "LLM Tokens Used",
         dbPath: "tokensUsed",
         dataType: "numeric",
+        summarize: "sum",
         color: "#673AB7", // Deep Purple
         // range: [0, 4096]
     },
@@ -122,6 +130,7 @@ export const DATA_DICTIONARY = {
         label: "Operations (GFLOPs)",
         dbPath: "gigaFlopsUsed",
         dataType: "numeric",
+        summarize: "sum",
         color: "#F44336", // Red
         // range: [0, 100] 
     },
@@ -129,6 +138,7 @@ export const DATA_DICTIONARY = {
         label: "Internet Lookups",
         dbPath: "webLookups",
         dataType: "numeric",
+        summarize: "sum",
         color: "#00BCD4", // Cyan
         // range: [0, 10]
     },
@@ -136,6 +146,7 @@ export const DATA_DICTIONARY = {
         label: "Toxicity Score (0-1)",
         dbPath: "toxicityScore",
         dataType: "numeric",
+        summarize: "avg",
         color: "#795548", // Brown
         // range: [0, 1]
     },
@@ -143,6 +154,7 @@ export const DATA_DICTIONARY = {
         label: "PII Detected (%)",
         dbPath: "piiDetected",
         dataType: "numeric",
+        summarize: "avg",
         color: "#D32F2F", // Dark Red
         // range: [0, 100]
     },
@@ -150,6 +162,7 @@ export const DATA_DICTIONARY = {
         label: "Query Count",
         dbPath: "queryCount",
         dataType: "numeric",
+        summarize: "sum",
         color: "#9E9E9E", // Grey
         // range: [0, 100]
     },
@@ -159,9 +172,11 @@ export const DATA_DICTIONARY = {
         label: "Timestamp",
         dbPath: "responseTimestamp",
         dataType: "timestamp",
+        summarize: "special",
         color: "#000000" // Black
     }
 };
+
 
 export default {
     KNOWN_MODELS,
@@ -170,5 +185,5 @@ export default {
     CHART_SIZES,
     DATA_DICTIONARY,
     TIMEFRAME_CONFIG,
-    ZOOM_LEVELS
+    ZOOM_LEVELS,
 }
