@@ -49,6 +49,8 @@
 [] Time Based Filtering
 [] Users can select which variables to include in Report - (?)
     - This has not been discussed with team yet.
+[] BUG - When selecting the date for a report, there is a mismatch between local and utc time or something - if you generate a report near the end of the 
+         day you will have to select the next day in order for the logs to appear.
 
 #### Report UI
 [] Report PDF's are look good.
@@ -97,10 +99,4 @@
     - Cannot load any other page until the offending page is closed.
     - This bug has been hard to track down - limited instances of finding this bug in a while.
     - Likely caused by a server side error that is not being logged. The fix is adding more try/catch statements
-
-## Docs
-[] OpenAPI on DanielBierman.ca - redirects to /docs instead of /dashboard/docs 
-- The Open API documentation does not seem to work on danielbierman.ca.
-- It incorrectly recirects to https://danielbierman.ca/docs instead of https://danielbierman.ca/dashboard/docs, 
-- which means it doesn't load the page.
-- However, the docs still work on localhost: http://localhost:2121/docs
+    

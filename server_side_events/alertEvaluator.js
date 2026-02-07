@@ -8,7 +8,7 @@ export default async function evaluateAlerts(data, options = {}) {
 
     let alerts;
     try {
-        alerts = await Alert.find().lean();
+        alerts = await Alert.find().populate('tags').lean();
     } catch (err) {
         console.error('[AlertEvaluator] Failed to fetch alerts:', err);
         return;
@@ -81,14 +81,16 @@ export default async function evaluateAlerts(data, options = {}) {
                     created: alert.created
                 };
                 try {
-                    const created = await AlertLog.create({ alert: alert._id, alertSnapshot: snapshot });
+                    const created = await AlertLog.create({ alert: alert._id, alertSnapshot: snapshot, tags: alert.tags || [] });
                     // Emit SSE 'alert' event with basic info
                     try {
                         const payload = {
                             _id: created._id,
                             alert: created.alert,
                             timestamp: created.timestamp,
-                            alertSnapshot: created.alertSnapshot
+                            alertSnapshot: created.alertSnapshot,
+                            humanRule: Alert.convertToHumanFormat(created.alertSnapshot.alertRule),
+                            tags: created.tags || []
                         };
                         broadcastEvent('alert', payload);
                     } catch (emitErr) {

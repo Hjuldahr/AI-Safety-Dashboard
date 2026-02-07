@@ -11,9 +11,9 @@ import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase, seedCharts } from './config/database.js';
-// import { swaggerSpec } from "./config/swaggerConfig.js";
-import swaggerUi from "swagger-ui-express";
-import YAML from 'yamljs';
+
+
+let shuttingDown = false;
 
 dotenv.config();
 
@@ -25,13 +25,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export const PROJECT_ROOT = __dirname;
 
-const domain = process.env.DOMAIN || "http://localhost:2121/";
-const publicURL = process.env.PUBLIC_URL || "/";
 const PORT = process.env.PORT || 2121;
-
 
 const startServer = async () => {
     const app = express();
+
+    app.set('trust proxy', 1);
 
     // Serve all public files in the public folder (must be done before mounting main routes)
     app.use(express.static(path.join(PROJECT_ROOT, "public")));
@@ -42,15 +41,18 @@ const startServer = async () => {
     app.use(cookieParser());
 
     app.use(session({
-        name: 'dashboard.sid',
+        name: 'dashboard_v2.sid',
         secret: process.env.SESSION_SECRET,
         resave: false,
         saveUninitialized: false,
         store: MongoStore.create({
-            mongoUrl: process.env.MONGO_URL // MongoDB connection string
+            mongoUrl: process.env.MONGO_URL, // MongoDB connection string
+            touchAfter: 24 * 3600
         }),
+        
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 1, // Cookie expires in 1 day
+            maxAge: 1000 * 60 * 60 * 24 * 7, // Cookie expires in 1 week
+            secure: process.env.NODE_ENV === 'production', //use https in production
         }
     }));
 
@@ -61,8 +63,6 @@ const startServer = async () => {
     app.set("views", path.join(PROJECT_ROOT, "views"));
     app.set("view engine", "ejs");
 
-    // Hook up SSE routes
-    scheduler.setupSSE(app);
     // Start background tasks
     scheduler.setupScheduler();
 
@@ -78,16 +78,45 @@ const startServer = async () => {
     //Mount all of the routes to /
     app.use("/", mainRouter);
 
-    // Swagger documentation
-    const swaggerDocument = YAML.load(path.join(__dirname, './documentation/openapi.yml'));
 
-    // Serve the Swagger API documentation at /docs
-    app.use(`${publicURL}docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
-    app.listen(PORT, () => {
-        //console.log(`Server running on port ${PORT}`);
-        console.log(`Server running on http://localhost:${PORT}`);
+    const server = app.listen(PORT, () => {
+        console.log(`Server running on [http://localhost:${PORT}/]`);
     });
+
+    const shutdown = async (signal) => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+
+        console.log(`\n[${signal}] Shutting down...`);
+
+        const forceExitTimer = setTimeout(() => {
+            console.error("Force exit");
+            process.exit(1);
+        }, 10_000);
+
+        try {
+            scheduler.stopScheduler();
+
+            await new Promise((resolve, reject) => {
+                server.close(err => (err ? reject(err) : resolve()));
+            });
+
+            server.closeAllConnections?.();
+            server.closeIdleConnections?.();
+
+            await mongoose.disconnect();
+
+            clearTimeout(forceExitTimer);
+            process.exit(0);
+        } catch (err) {
+            console.error("Shutdown failed:", err);
+            clearTimeout(forceExitTimer);
+            process.exit(1);
+        }
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
 }
 
 // Connect to the database and then start the server

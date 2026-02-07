@@ -45,11 +45,14 @@ const login = (req, res, next) => {
             if (err) {
                 return next(err);
             }
-            // If login is successful, send back a success message and user info
-            User_Log.addLog(req.user._id, 'Login', `Successful login from IP: ${req.ip}`).catch(err => console.error('Failed to write log:', err));
-            return res.status(200).json({
-                message: 'Login successful.',
-                user: { id: user.id, username: user.username, email: user.email }
+
+            req.session.save((err) => {
+                // If login is successful, send back a success message and user info
+                User_Log.addLog(req.user._id, 'Login', `Successful login from IP: ${req.ip}`).catch(err => console.error('Failed to write log:', err));
+                return res.status(200).json({
+                    message: 'Login successful.',
+                    user: { id: user.id, username: user.username, email: user.email }
+                });
             });
         });
     })(req, res, next);

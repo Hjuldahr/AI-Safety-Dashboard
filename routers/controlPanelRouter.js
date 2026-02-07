@@ -1,20 +1,22 @@
 import express from 'express';
-import controller from '../controllers/controlPanelController.js';
+import chartController from '../controllers/chartController.js';
+import indexController from '../controllers/indexController.js';
 import { isAuthenticated } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get("/api/getParams", controller.getParams)
-
-router.post('/api/updateParams', isAuthenticated, controller.updateParams);
+// Control Panel Parameters (Scheduler Settings)
+router.get("/api/params", indexController.getParams)
+router.patch('/api/params', isAuthenticated, indexController.updateParams);
 
 // Graph CRUD
-router.post("/api/graph", isAuthenticated, controller.saveGraph);
-router.put("/api/graph", isAuthenticated, controller.updateGraph);
-router.delete("/api/graph", isAuthenticated, controller.deleteGraph);
+router.post("/api/graph", isAuthenticated, chartController.saveGraph);
+router.put("/api/graph", isAuthenticated, chartController.updateGraph);
+router.patch("/api/graph", isAuthenticated, chartController.patchGraph);
+router.delete("/api/graph", isAuthenticated, chartController.deleteGraph);
 
-router.get("/api/getChartConfig/:id", isAuthenticated, controller.getChartConfig);
-router.post("/api/reorder", isAuthenticated, controller.reorderCharts);
+router.get("/api/getChartConfig/:id", isAuthenticated, chartController.getChartConfig);
+router.post("/api/reorder", isAuthenticated, chartController.reorderCharts);
 
 
 export default router;

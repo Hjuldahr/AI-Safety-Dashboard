@@ -1,6 +1,7 @@
 // --- GLOBAL STATE ---
 let currentLogsPage = 1;
 let currentAiLogsPage = 1;
+let currentAiSummariesPage = 1;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,16 +9,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const elements = {
         userLogsBtn: document.getElementById('user-logs-btn'),
         aiLogsBtn: document.getElementById('ai-logs-btn'),
+        aiSummariesBtn: document.getElementById('ai-summaries-btn'),
         userFilterForm: document.getElementById('user-filter-form'),
         aiFilterForm: document.getElementById('ai-filter-form'),
+        aiSummaryFilterForm: document.getElementById('ai-summary-filter-form'),
         userLogView: document.getElementById('user-log-view'),
         aiLogView: document.getElementById('ai-log-view'),
+        aiSummaryView: document.getElementById('ai-summary-view'),
         userLogTbody: document.getElementById('user-log-tbody'),
         aiLogAccordion: document.getElementById('ai-log-accordion'),
+        aiSummaryAccordion: document.getElementById('ai-summary-accordion'),
         userClearBtn: document.querySelector('#user-filter-form .clear-filters'),
         aiClearBtn: document.querySelector('#ai-filter-form .clear-filters'),
+        aiSummaryClearBtn: document.querySelector('#ai-summary-filter-form .clear-filters'),
         paginationControls: document.getElementById('pagination-controls'),
-        aiPaginationControls: document.getElementById('ai-pagination-controls')
+        aiPaginationControls: document.getElementById('ai-pagination-controls'),
+        aiSummaryPaginationControls: document.getElementById('ai-summary-pagination-controls'),
     };
 
     // --- EVENT LISTENERS ---
@@ -25,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tab switching
     elements.userLogsBtn.addEventListener('click', () => toggleViews('user', elements));
     elements.aiLogsBtn.addEventListener('click', () => toggleViews('ai', elements));
+    elements.aiSummariesBtn.addEventListener("click", () => toggleViews('summary', elements))
 
     // Filter form submission
     elements.userFilterForm.addEventListener('submit', (e) => {
@@ -38,20 +46,35 @@ document.addEventListener('DOMContentLoaded', () => {
         handleAiFilter(elements); // Stays as-is for now
     });
 
+
+    elements.aiSummaryFilterForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleAiSummaryFilter(elements); //ToDo:make this method
+    });
+
+
     // Clear filters buttons
     elements.userClearBtn.addEventListener('click', () => {
         elements.userFilterForm.reset();
         // Reset to page 1
         handleUserFilter(elements, 1);
     });
+
     elements.aiClearBtn.addEventListener('click', () => {
         elements.aiFilterForm.reset();
         handleAiFilter(elements);
     });
 
+    elements.aiSummaryClearBtn.addEventListener('click', () => {
+        elements.aiSummaryFilterForm.reset();
+        handleAiSummaryFilter(elements);
+    });
+
+
     // --- INITIAL RENDER ---
     handleUserFilter(elements, 1);
     handleAiFilter(elements, 1);
+    handleAiSummaryFilter(elements, 1);
 });
 
 
@@ -61,13 +84,46 @@ document.addEventListener('DOMContentLoaded', () => {
  * Toggles between 'user' and 'ai' log views
  */
 function toggleViews(viewToShow, elements) {
-    const isUser = viewToShow === 'user';
-    elements.userLogsBtn.classList.toggle('active', isUser);
-    elements.aiLogsBtn.classList.toggle('active', !isUser);
-    elements.userLogView.classList.toggle('hidden', !isUser);
-    elements.aiLogView.classList.toggle('hidden', isUser);
-    elements.userFilterForm.classList.toggle('hidden', !isUser);
-    elements.aiFilterForm.classList.toggle('hidden', isUser);
+    // ToDo: This is the stupidest fucking code ive ever written
+    if (viewToShow === "user") {
+        elements.userLogsBtn.classList.toggle('active', true);
+        elements.aiLogsBtn.classList.toggle('active', false);
+        elements.aiSummariesBtn.classList.toggle('active', false);
+
+        elements.userLogView.classList.toggle('hidden', false);
+        elements.aiLogView.classList.toggle('hidden', true);
+        elements.aiSummaryView.classList.toggle('hidden', true);
+
+        elements.userFilterForm.classList.toggle('hidden', false);
+        elements.aiFilterForm.classList.toggle('hidden', true);
+        elements.aiSummaryFilterForm.classList.toggle('hidden', true);
+    }
+    else if (viewToShow === "ai") {
+        elements.userLogsBtn.classList.toggle('active', false);
+        elements.aiLogsBtn.classList.toggle('active', true);
+        elements.aiSummariesBtn.classList.toggle('active', false);
+
+        elements.userLogView.classList.toggle('hidden', true);
+        elements.aiLogView.classList.toggle('hidden', false);
+        elements.aiSummaryView.classList.toggle('hidden', true);
+
+        elements.userFilterForm.classList.toggle('hidden', true);
+        elements.aiFilterForm.classList.toggle('hidden', false);
+        elements.aiSummaryFilterForm.classList.toggle('hidden', true);
+    }
+    else if (viewToShow === "summary") {
+        elements.userLogsBtn.classList.toggle('active', false);
+        elements.aiLogsBtn.classList.toggle('active', false);
+        elements.aiSummariesBtn.classList.toggle('active', true);
+
+        elements.userLogView.classList.toggle('hidden', true);
+        elements.aiLogView.classList.toggle('hidden', true);
+        elements.aiSummaryView.classList.toggle('hidden', false);
+
+        elements.userFilterForm.classList.toggle('hidden', true);
+        elements.aiFilterForm.classList.toggle('hidden', true);
+        elements.aiSummaryFilterForm.classList.toggle('hidden', false);
+    }
 }
 
 
@@ -107,9 +163,9 @@ function renderUserLogs(logs, tbody) {
 }
 
 /**
- * Populates the AI Logs accordion (still uses mock data)
+ * Populates the AI Logs + Summaries accordion
  */
-function renderAiLogs(logs, accordion) {
+function renderAiAccordion(logs, accordion) {
     accordion.innerHTML = '';
     if (logs.length === 0) {
         accordion.innerHTML = '<p>No AI logs found.</p>';
@@ -148,96 +204,11 @@ function renderAiLogs(logs, accordion) {
     });
 }
 
+
 /**
- * Renders pagination buttons in a specific container
- * @param {HTMLElement} container - The pagination div to populate
- * @param {number} totalPages - Total number of pages from API
- * @param {number} currentPage - Current page number from API
- * @param {object} elements - The DOM elements
- * @param {Function} handlerFunction - The fetch handler (handleUserFilter or handleAiFilter)
+ * Renders pagination buttons using the shared Pagination component (window.Pagination).
+ * See public/js/components/pagination.js
  */
-function renderPagination(container, totalPages, currentPage, elements, handlerFunction) {
-    container.innerHTML = ''; // Clear old buttons
-
-    if (totalPages <= 1) return;
-
-    // Helper: Creates a clickable page button
-    const createPageBtn = (page) => {
-        const btn = document.createElement('button');
-        btn.textContent = page;
-        if (page === currentPage) btn.classList.add('active');
-        btn.addEventListener('click', () => handlerFunction(elements, page));
-        return btn;
-    };
-
-    // Helper: Creates a non-clickable "..." span/button
-    const createDots = () => {
-        const span = document.createElement('span');
-        span.textContent = '...';
-        span.className = 'pagination-dots'; // Add CSS for styling if needed
-        return span;
-    };
-
-    // "Previous" Button
-    const prevBtn = document.createElement('button');
-    prevBtn.textContent = '« Prev';
-    prevBtn.disabled = currentPage === 1;
-    prevBtn.addEventListener('click', () => handlerFunction(elements, currentPage - 1));
-    container.appendChild(prevBtn);
-
-    // Logic to determine which numbers to show
-    const siblings = 1; 
-    
-    // If total pages is small (e.g., 7 or less), just show them all to avoid complex dot logic
-    if (totalPages <= 7) {
-        for (let i = 1; i <= totalPages; i++) {
-            container.appendChild(createPageBtn(i));
-        }
-    } else {
-        // Complex Logic: Start, End, Current, and Dots
-        const showLeftDots = currentPage > siblings + 2;
-        const showRightDots = currentPage < totalPages - (siblings + 1);
-
-        // Always show Page 1
-        container.appendChild(createPageBtn(1));
-
-        // Logic for Left "..."
-        if (showLeftDots) {
-            container.appendChild(createDots());
-        }
-
-        // Calculate the range of middle buttons
-        let start = Math.max(2, currentPage - siblings);
-        let end = Math.min(totalPages - 1, currentPage + siblings);
-
-        if (currentPage <= siblings + 2) end = siblings + 4; // Extend range if near start
-        if (currentPage >= totalPages - (siblings + 1)) start = totalPages - (siblings + 3); // Extend range if near end
-        
-        // Sanity check to keep bounds within 2 and total-1
-        start = Math.max(2, start);
-        end = Math.min(totalPages - 1, end);
-
-        // Render the middle range
-        for (let i = start; i <= end; i++) {
-            container.appendChild(createPageBtn(i));
-        }
-
-        // Logic for Right "..."
-        if (showRightDots) {
-            container.appendChild(createDots());
-        }
-
-        // Always show Last Page
-        container.appendChild(createPageBtn(totalPages));
-    }
-
-    // "Next" Button
-    const nextBtn = document.createElement('button');
-    nextBtn.textContent = 'Next »';
-    nextBtn.disabled = currentPage === totalPages;
-    nextBtn.addEventListener('click', () => handlerFunction(elements, currentPage + 1));
-    container.appendChild(nextBtn);
-}
 
 
 // --- HELPER FUNCTIONS ---
@@ -251,7 +222,7 @@ function getDotClass(eventType) {
         case 'Logout': return 'log-dot-logout';
         case 'Chart_Modified': case 'Alert_Created': case 'Alert_Modified': return 'log-dot-alert';
         case 'Chart_Created': case 'Report_Created': return 'log-dot-report';
-        case 'Alert_Deleted': case 'Report_Deleted': case 'Failed_Login': case 'Chart_Deleted':  return 'log-dot-delete';
+        case 'Alert_Deleted': case 'Report_Deleted': case 'Failed_Login': case 'Chart_Deleted': return 'log-dot-delete';
         default: return 'log-dot-default';
     }
 }
@@ -291,7 +262,7 @@ async function handleUserFilter(elements, page = 1) {
 
         // Render data and pagination
         renderUserLogs(data.logs, elements.userLogTbody);
-        renderPagination(elements.paginationControls, data.pages, data.page, elements, handleUserFilter);
+        Pagination.render(elements.paginationControls, data.pages, data.page, (newPage) => handleUserFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch logs:', error);
@@ -330,11 +301,51 @@ async function handleAiFilter(elements, page = 1) {
         const data = await response.json(); // { logs, total, page, pages }
 
         // Render data and pagination
-        renderAiLogs(data.logs, elements.aiLogAccordion);
-        renderPagination(elements.aiPaginationControls, data.pages, data.page, elements, handleAiFilter);
+        renderAiAccordion(data.logs, elements.aiLogAccordion);
+        Pagination.render(elements.aiPaginationControls, data.pages, data.page, (newPage) => handleAiFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch AI logs:', error);
         elements.aiLogAccordion.innerHTML = `<p>Error loading logs. ${error.message}</p>`;
+    }
+}
+
+/**
+ * Fetches and filters AI Summaries from the API
+ * @param {object} elements - The DOM elements
+ * @param {number} page - The page number to fetch
+ */
+async function handleAiSummaryFilter(elements, page = 1) {
+    currentAiSummariesPage = page; // Set AI page state
+
+    // Show loading state
+    elements.aiSummaryAccordion.innerHTML = '<p>Loading...</p>';
+    elements.aiSummaryPaginationControls.innerHTML = ''; // Clear AI pagination
+
+    const modelName = elements.aiSummaryFilterForm.querySelector('#summary-filter-model').value;
+
+    // Build URL query string
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('limit', 10); // Using same limit as user logs
+    if (modelName && modelName !== 'all') {
+        params.set('modelName', modelName);
+    }
+
+    try {
+        // Fetch data from the API
+        const response = await fetch(`logs/api/summary?${params.toString()}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const data = await response.json(); // { logs, total, page, pages }
+
+        // Render data and pagination
+        renderAiAccordion(data.logs, elements.aiSummaryAccordion);
+        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, elements, handleAiSummaryFilter);
+
+    } catch (error) {
+        console.error('Failed to fetch AI summaries:', error);
+        elements.aiSummaryAccordion.innerHTML = `<p>Error loading summaries. ${error.message}</p>`;
     }
 }

@@ -1,96 +1,33 @@
 import mongoose from 'mongoose';
-import { KNOWN_MODELS } from '../config/constants.js';
+import { KNOWN_MODELS, DATA_DICTIONARY } from '../config/constants.js';
 
 // === AI_Log Schema ===
-const AI_Log_Schema = new mongoose.Schema({
+const schemaDefinition = {};
 
-    modelName: {
-        type: String,
-        required: true,
-        enum: KNOWN_MODELS
-    },
-
-    // Core rating metrics
-    policyCompliance: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-    responseHelpfulness: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-    responseTime: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Energy usage (watt-seconds or joules)
-    energyConsumption: {
-        type: Number,
-        equired: true,
-        default: 0
-    },
-
-    // Token stats
-    tokensUsed: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Model compute estimates
-    gigaFlopsUsed: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Web lookup count
-    webLookups: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Toxicity Score
-    toxicityScore: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Personally Identifiable Information
-    piiDetected: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Summaries of Categorical Data, like topic and sub topic
-    breakdown: {
-        type: Object,
-        default: {}
-    },
-
-    queryCount: {
-        type: Number,
-        required: true,
-        default: 1
-    },
-
-    responseTimestamp: {
-        type: Number,
-        required: true,
-        default: () => Date.now()
+Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
+    if (key === 'responseTimestamp') {
+        schemaDefinition[key] = { type: Number, required: true, default: () => Date.now() };
+    } else if (config.dataType === 'numeric') {
+        schemaDefinition[key] = {
+            type: Number,
+            required: true,
+            default: key === 'queryCount' ? 1 : 0
+        };
+    }
+    else if (config.dataType === 'categorical') {
+        if (key === 'modelName') {
+            schemaDefinition[key] = { type: String, required: true, enum: config.acceptedValues };
+        } else {
+            // "breakdown" logic for other categoricals
+            schemaDefinition.breakdown = { type: Object, default: {} };
+        }
     }
 });
 
+const AI_Log_Schema = new mongoose.Schema(schemaDefinition);
+
 // ---------- INDEXES ----------
 AI_Log_Schema.index({ modelName: 1, responseTimestamp: -1 });
-
 
 
 // ---------- QUERIES ----------
@@ -130,6 +67,57 @@ AI_Log_Schema.statics.removeLogById = function (logID) {
 AI_Log_Schema.statics.removeLogsByModel = function (modelName) {
     return this.deleteMany({ modelName });
 };
+
+
+/**
+ * Summaries:
+ * Uses DATA_DICTIONARY from constants.js to figure out what
+ * values need to be averaged and which need to be summarized.
+ * @returns 
+ */
+AI_Log_Schema.statics.generateSixtySecondSummary = async function () {
+    const oneMinuteAgo = Date.now() - 60000;
+
+    // Group By Model Name
+    const groupStage = {
+        _id: "$modelName"
+    };
+
+    // Set the new ID, and timestamp
+    const projectStage = {
+        _id: 0,
+        modelName: "$_id",
+        responseTimestamp: { $literal: Date.now() }
+    };
+
+    // Iterate through the dictionary to populate stages
+    Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
+        // Skip fields that shouldn't be in the summary or are special
+        if (config.summarize === "remove" || config.summarize === "special") {
+            return;
+        }
+
+        // Map "avg" -> "$avg", "sum" -> "$sum"
+        const mongoOp = `$${config.summarize}`; 
+        
+        // Add to group stage: e.g., tokensUsed: { $sum: "$tokensUsed" }
+        groupStage[key] = { [mongoOp]: `$${key}` };
+
+        // Add to project stage: e.g., tokensUsed: 1
+        projectStage[key] = 1;
+    });
+
+    return await this.aggregate([
+        {
+            $match: {
+                responseTimestamp: { $gte: oneMinuteAgo }
+            }
+        },
+        { $group: groupStage },
+        { $project: projectStage }
+    ]);
+};
+
 
 // ---------- EXPORT ----------
 const AI_Log_Model = mongoose.model('AI_Logs', AI_Log_Schema);

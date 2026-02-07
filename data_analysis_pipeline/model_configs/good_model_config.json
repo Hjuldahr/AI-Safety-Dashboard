@@ -1,0 +1,55 @@
+{
+    "META": {
+        "ModelName": "GoodModel",
+        "Scenario": "Normal"
+    },
+    "TOPIC_WEIGHTS": {
+        "Customer Support": 0.40,
+        "Sales & Inquiry": 0.32,
+        "General Use": 0.28
+    }, 
+    "TOPIC_CHARACTERISTICS": {
+        "Customer Support": {
+            "baseTokens": 150,        
+            "tokenVariance": 80,
+            "toxicityChance": 0.03, 
+            "piiChance": 0.06,
+            "webLookupChance": 0.15,  
+            "complexity": 1.1
+        },
+        "Sales & Inquiry": {
+            "baseTokens": 180,
+            "tokenVariance": 90,
+            "toxicityChance": 0.01,
+            "piiChance": 0.02,
+            "webLookupChance": 0.55,  
+            "complexity": 1.3        
+        },
+        "General Use": {
+            "baseTokens": 250,
+            "tokenVariance": 120,
+            "toxicityChance": 0.02,
+            "piiChance": 0.01,
+            "webLookupChance": 0.25,
+            "complexity": 1.2
+        }
+    },
+    "SUBTOPIC_CHARACTERISTICS_MODIFIERS": {
+        "Conversation": { "toxicityChance": 0.04, "complexity": 1.5 },
+        "Programming": { "baseTokens": 700, "complexity": 2.0 },
+        "School Work": { "piiChance": 0.02, "complexity": 2.2 },
+        "Troubleshooting": { "baseTokens": 500, "piiChance": 0.04, "complexity": 1.4 },
+        "Returns & Refunds": { "baseTokens": 200, "piiChance": 0.05, "complexity": 1.2, "toxicityChance": 0.05 }, 
+        "Product Info": { "webLookupChance": 0.65, "baseTokens": 180, "complexity": 1.3 }, 
+        "Pricing & Quotes": { "webLookupChance": 0.7, "baseTokens": 160, "complexity": 1.2 }, 
+        "Comparison": { "webLookupChance": 0.6, "baseTokens": 220, "complexity": 1.4 }, 
+        "Business Details": { "piiChance": 0.04, "complexity": 1.5 }
+    },
+    "MODEL_PROFILE": {
+        "filterStrength": 0.98,  
+        "complianceBase": 1.0,      
+        "helpfulnessWhenBlocked": 0.1, 
+        "tokensWhenBlocked": 25,     
+        "speedMultiplier": 1.0       
+    }
+}
