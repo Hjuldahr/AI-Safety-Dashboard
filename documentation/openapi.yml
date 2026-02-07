@@ -904,3 +904,32 @@ paths:
           description: No data found to calculate aggregates.
         500:
           description: Failed to generate aggregate CSV due to a server error.
+  # ============================
+  # DOCUMENTATION ROUTER
+  # ============================
+  /docs:
+    get:
+      tags: [Documentation, "HTML Page"]
+      summary: Documentation Page
+      description: Returns the HTML of the Documentation Page.
+      responses:
+        200:
+          description: HTML content for the Documentation Page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
+  /api/docs:
+    get:
+      tags: [Documentation, "HTML Page"]
+      summary: API Documentation Page
+      description: Returns the HTML of the API Documentation Page.
+      responses:
+        200:
+          description: HTML content for the API Documentation Page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
