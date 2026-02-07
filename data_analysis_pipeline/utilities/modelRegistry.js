@@ -22,6 +22,13 @@ export function setScenario(modelName, scenario) {
   model_scenarios[modelName] = scenario;
 }
 
+export function getScenarios(modelName) {
+  if (!registry[modelName]) {
+    throw new Error(`Unsupported model: ${modelName}`);
+  }
+  return registry[modelName];
+}
+
 export function clearScenario(modelName) {
   if (!registry[modelName]) {
     throw new Error(`Unsupported model: ${modelName}`);

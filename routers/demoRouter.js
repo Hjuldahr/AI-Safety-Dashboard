@@ -1,10 +1,11 @@
 import express from 'express';
-import { renderDemoPage, goRogue, resetModel } from '../controllers/demoController.js';
+import { renderDemoPage, applyScenario, resetScenario } from '../controllers/demoController.js';
 
 const router = express.Router();
 
 router.get('/', renderDemoPage);
-router.post('/rogue', goRogue);
-router.post('/reset', resetModel);
+router.post('/apply', applyScenario);
+router.get('/list', listScenarios);
+router.post('/reset', resetScenario);
 
 export default router;

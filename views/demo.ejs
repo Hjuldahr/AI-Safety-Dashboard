@@ -26,9 +26,15 @@
                     <% }); %>
                 </select>
             
+                <select id="scenarioSelect">
+                    <% models.forEach(function(scenario) { %>
+                        <option value="<%= scenario %>"><%= scenario %></option>
+                    <% }); %>
+                </select>
+
                 <div class="btn-group">
-                    <button class="btn-rogue">Go Rogue</button>
-                    <button class="btn-reset">Reset Normal</button>
+                    <button class="btn-apply">Apply Scenario</button>
+                    <button class="btn-reset">Reset To Normal</button>
                 </div>
             
                 <div id="status"></div>
