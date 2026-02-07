@@ -213,10 +213,7 @@
             const chartOrElem = charts[config._id];
             if (!chartOrElem) continue;
 
-            // Determine which timeframe / data source to use
-            const timeframe = config.chartTimeRange || '10s';
-
-            callChartRenderer(chartOrElem, config, timeframe, activeModel);
+            callChartRenderer(chartOrElem, config, activeModel);
         }
     }
 
@@ -306,7 +303,7 @@
                     return; // Skip render for this chart this frame
                 }
 
-                callChartRenderer(chartOrElem, config, timeframe, activeModel);
+                callChartRenderer(chartOrElem, config, activeModel);
             });
 
             rafScheduled = false;
@@ -314,8 +311,9 @@
     }
 
     // Helper function used by setupSSE and populateAllCharts
-    function callChartRenderer(chartOrElem, config, timeframe, activeModel) {
+    function callChartRenderer(chartOrElem, config, activeModel) {
         // Prepare Data
+        const timeframe = config.chartTimeRange;
         const tfLogs = window.DashboardApp.logs[timeframe];
         const limit = TIMEFRAME_CONFIG[timeframe].limit;
 
@@ -341,7 +339,7 @@
 
         // Render
         switch (config.chartType) {
-            case 'line': window.DashboardApp.renderer.mapLineData(chartOrElem, config, relevantLogs, timeframe, limit); break;
+            case 'line': window.DashboardApp.renderer.mapLineData(chartOrElem, config, relevantLogs, limit); break;
             case 'bar': window.DashboardApp.renderer.mapBarData(chartOrElem, config, tfLogs, limit); break;
             case 'pie': window.DashboardApp.renderer.mapPieData(chartOrElem, config, tfLogs, limit); break;
             case 'measure': window.DashboardApp.renderer.mapMeasureData(chartOrElem, config, relevantLogs, limit); break;

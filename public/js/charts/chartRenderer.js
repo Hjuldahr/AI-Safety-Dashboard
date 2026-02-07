@@ -81,7 +81,8 @@
      * @param {Array|Object} logs - The data (already filtered to relevant models/timeframe)
      * @param {String} timeframe - e.g. '10s', '1h'
      */
-    function mapLineData(chart, config, logs, timeframe = '10s', limit = 30) {
+    function mapLineData(chart, config, logs, limit = 30) {
+        const timeframe = config.chartTimeRange;
         const yConfig = DATA_DICTIONARY[config.yAxis];
         let splitBy = config.splitBy;
         const splitConfig = config.splitBy ? DATA_DICTIONARY[config.splitBy] : null;
@@ -89,8 +90,9 @@
         if (!yConfig) return;
 
         // Breakdown charts above 15m are changed into regular charts by removing splitby
+        // ToDo: Add some way to determine this in constants.js / by the user
         const isLowFidelity = ['1h', '1d', '1w', '1mo'].includes(timeframe);
-        
+
         // If we are in low-fi and splitBy is NOT modelName, we force a standard chart
         const isBreakdownUnavailable = isLowFidelity && splitBy && splitBy !== 'modelName';
 
@@ -208,25 +210,39 @@
     }
 
     function mapBarData(chart, config, logs, limit = 30) {
-        const xConfig = DATA_DICTIONARY[config.xAxis];
+        let xAxisKey = config.xAxis;
         const yConfig = DATA_DICTIONARY[config.yAxis];
+        const timeframe = config.chartTimeRange || '10s';
 
-        if (!xConfig || !yConfig) return;
+        if (!yConfig) return;
+
+        // Breakdown charts above 15m are changed into regular charts by removing splitby
+        // ToDo: Add some way to determine this in constants.js / by the user
+        const isLowFidelity = ['1h', '1d', '1w', '1mo'].includes(timeframe);
+        const xConfigOriginal = DATA_DICTIONARY[xAxisKey];
+
+        // Check if the X-Axis normally requires the 'breakdown' object
+        const isXAxisBreakdown = xConfigOriginal && xConfigOriginal.dbPath.startsWith('breakdown.');
+
+        if (isLowFidelity && isXAxisBreakdown) {
+            xAxisKey = 'modelName'; // Fallback to Model Name since Breakdown is missing
+        }
+
+        const xConfig = DATA_DICTIONARY[xAxisKey];
+        if (!xConfig) return;
 
         const groups = {};
         const flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
         flatLogs.forEach(log => {
             const weight = log.queryCount || 1;
-            const isSummed = DATA_DICTIONARY[config.yAxis].summarize == "sum";
+            const isSummed = yConfig.summarize == "sum";
 
-            // Helper to accumulate weighted sums
             const addToGroup = (key, value) => {
                 if (!groups[key]) groups[key] = { weightedSum: 0, totalWeight: 0 };
-
                 if (isSummed) {
                     groups[key].weightedSum += value;
-                    groups[key].totalWeight = 1; // Divisor stays 1 (or effectively unused)
+                    groups[key].totalWeight = 1;
                 } else {
                     groups[key].weightedSum += (value * weight);
                     groups[key].totalWeight += weight;
@@ -258,7 +274,10 @@
                 const key = window.DashboardApp.utils.getValueFromPath(log, xConfig.dbPath) || 'unknown';
                 const val = window.DashboardApp.utils.getValueFromPath(log, yConfig.dbPath);
 
-                const isIncluded = !config.includedValues ||
+                const isPivoted = xAxisKey !== config.xAxis;
+
+                const isIncluded = isPivoted ||
+                    !config.includedValues ||
                     config.includedValues.length === 0 ||
                     config.includedValues.includes(key);
 
@@ -289,7 +308,21 @@
     }
 
     function mapPieData(chart, config, logs) {
-        const catConfig = DATA_DICTIONARY[config.category];
+        let categoryKey = config.category; // Local variable to avoid mutating config
+        const timeframe = config.chartTimeRange || '10s';
+
+        // ToDo: Add some way to determine this in constants.js / by the user
+        const isLowFidelity = ['1h', '1d', '1w', '1mo'].includes(timeframe);
+        const catConfigOriginal = DATA_DICTIONARY[categoryKey];
+
+        // Check if the current category relies on breakdown data
+        const isCategoryBreakdown = catConfigOriginal && catConfigOriginal.dbPath.startsWith('breakdown.');
+
+        if (isLowFidelity && isCategoryBreakdown) {
+            categoryKey = 'modelName'; // Pivot to Model Name
+        }
+
+        const catConfig = DATA_DICTIONARY[categoryKey];
         if (!catConfig) return;
 
         // Only get the very latest log from each model
@@ -331,7 +364,10 @@
                 const key = getValueFromPath(log, catConfig.dbPath) || 'unknown';
                 if (!groups[key]) groups[key] = { sum: 0 };
 
-                const isIncluded = !config.includedValues ||
+                const isPivoted = categoryKey !== config.category;
+
+                const isIncluded = isPivoted ||
+                    !config.includedValues ||
                     config.includedValues.length === 0 ||
                     config.includedValues.includes(key);
 

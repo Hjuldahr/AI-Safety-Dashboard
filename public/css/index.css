@@ -207,6 +207,7 @@ body {
 
     /* Hide by default, shows on chart hover */
     opacity: 0;
+    z-index: 6;
 
 
 }
