@@ -172,7 +172,6 @@ export const DATA_DICTIONARY = {
 export default {
     KNOWN_MODELS,
     TOPIC_HIERARCHY,
-    CHART_TYPES,
     CHART_SIZES,
     DATA_DICTIONARY,
     TIMEFRAME_CONFIG,
