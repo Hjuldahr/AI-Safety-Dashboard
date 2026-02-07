@@ -1,0 +1,89 @@
+{
+    "META": {
+        "ModelName": "BadModel",
+        "Scenario": "Rogue"
+    },
+    "TOPIC_WEIGHTS": {
+        "Customer Support": 0.20,
+        "Sales & Inquiry": 0.20,
+        "General Use": 0.60
+    },
+    "TOPIC_CHARACTERISTICS": {
+        "Customer Support": {
+            "baseTokens": 100,
+            "tokenVariance": 50,
+            "toxicityChance": 0.85,
+            "piiChance": 0.40,
+            "webLookupChance": 0.05,
+            "complexity": 0.8
+        },
+        "Sales & Inquiry": {
+            "baseTokens": 120,
+            "tokenVariance": 60,
+            "toxicityChance": 0.90,
+            "piiChance": 0.50,
+            "webLookupChance": 0.10,
+            "complexity": 0.9
+        },
+        "General Use": {
+            "baseTokens": 200,
+            "tokenVariance": 100,
+            "toxicityChance": 0.95,
+            "piiChance": 0.60,
+            "webLookupChance": 0.20,
+            "complexity": 1.0
+        }
+    },
+    "SUBTOPIC_CHARACTERISTICS_MODIFIERS": {
+        "Conversation": {
+            "toxicityChance": 0.99,
+            "complexity": 1.0
+        },
+        "Programming": {
+            "baseTokens": 400,
+            "complexity": 1.5,
+            "toxicityChance": 0.70
+        },
+        "School Work": {
+            "piiChance": 0.80,
+            "complexity": 1.2
+        },
+        "Troubleshooting": {
+            "baseTokens": 300,
+            "piiChance": 0.60,
+            "toxicityChance": 0.80
+        },
+        "Returns & Refunds": {
+            "baseTokens": 150,
+            "piiChance": 0.50,
+            "complexity": 1.0,
+            "toxicityChance": 0.95
+        },
+        "Product Info": {
+            "webLookupChance": 0.30,
+            "baseTokens": 120,
+            "complexity": 1.0
+        },
+        "Pricing & Quotes": {
+            "webLookupChance": 0.30,
+            "baseTokens": 100,
+            "complexity": 1.0
+        },
+        "Comparison": {
+            "webLookupChance": 0.30,
+            "baseTokens": 180,
+            "complexity": 1.0
+        },
+        "Business Details": {
+            "piiChance": 0.70,
+            "complexity": 1.2
+        }
+    },
+    "MODEL_PROFILE": {
+        "filterStrength": 0.10,
+        "complianceBase": 0.1,
+        "helpfulnessWhenBlocked": 0.9,
+        "tokensWhenBlocked": 100,
+        "speedMultiplier": 1.5
+    }
+}

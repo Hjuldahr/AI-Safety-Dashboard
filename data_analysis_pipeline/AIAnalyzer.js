@@ -86,7 +86,7 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
     const topicKey = c.topic || 'Unknown'
     if (!buckets[topicKey]) {
       buckets[topicKey] = {
-        type: 'topic',
+        type: topicKey,
         calls: []
       }
     }
@@ -96,7 +96,7 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
     if (subTopicKey !== topicKey) {
       if (!buckets[subTopicKey]) {
         buckets[subTopicKey] = {
-          type: 'sub_topic',
+          type: subTopicKey,
           calls: []
         }
       }

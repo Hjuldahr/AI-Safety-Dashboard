@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Demo</title>
+    <link rel="stylesheet" href="/css/fullSite.css">
+    <link rel="stylesheet" href="/css/header.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/demo.css">
+    <script src="/js/demo.js"></script>
+</head>
+<body>
+    <%- include('components/header') %>
+    <%- include('components/nav') %>
+
+    <main class="content">
+        <div class="main-container">
+            <div class="container">
+                <h1>Model Demo Controller</h1>
+                
+                <label for="modelSelect">Select Model:</label>
+                <select id="modelSelect">
+                    <% models.forEach(function(model) { %>
+                        <option value="<%= model %>"><%= model %></option>
+                    <% }); %>
+                </select>
+            
+                <div class="btn-group">
+                    <button class="btn-rogue">Go Rogue</button>
+                    <button class="btn-reset">Reset Normal</button>
+                </div>
+            
+                <div id="status"></div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
