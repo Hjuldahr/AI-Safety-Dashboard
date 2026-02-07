@@ -168,6 +168,26 @@
             chartHeader += `</div>`;
 
             card.innerHTML = chartHeader;
+
+            card.innerHTML += `
+                <div class="chart-degraded-overlay" id="overlay-${config._id}">
+                    Breakdown unavailable above 15min. Showing aggregate data.
+                </div>
+            `;
+
+            // Edit Form Container
+            card.innerHTML += `<div class="edit-chart-form" id="edit-form-${config._id}"></div>`;
+
+            // Content
+            if (config.chartType === 'measure') {
+                card.classList.add('kpi-card');
+                card.innerHTML += `<div class="kpi-content-wrapper"></div>`;
+            } else {
+                card.innerHTML += `<canvas id="${config._id}"></canvas>`;
+            }
+
+            card.customConfig = config;
+            return card;
         }
 
         // Edit Form Container
@@ -298,6 +318,18 @@
         // Prepare Data
         const tfLogs = window.DashboardApp.logs[timeframe];
         const limit = TIMEFRAME_CONFIG[timeframe].limit;
+
+        const isLowFidelity = ['1h', '1d', '1w', '1mo'].includes(timeframe);
+        const isBreakdownChart = config.splitBy && config.splitBy !== 'modelName';
+        const overlay = document.getElementById(`overlay-${config._id}`);
+
+        if (overlay) {
+            if (isLowFidelity && isBreakdownChart) {
+                overlay.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
 
         // Select specific logs based on chart needs
         // (Split by model = needs all logs. Split by topic = needs active model logs)

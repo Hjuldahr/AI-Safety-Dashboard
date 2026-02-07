@@ -289,9 +289,7 @@
             } else {
                 throw new Error("Unsupported zoom direction: ", direction);
             }
-
-            console.log("Zooming chart to: ", ZOOM_LEVELS[tfIndex]);
-
+            
             // Send update
             const response = await fetch('api/graph', {
                 method: 'PATCH',

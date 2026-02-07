@@ -83,9 +83,20 @@
      */
     function mapLineData(chart, config, logs, timeframe = '10s', limit = 30) {
         const yConfig = DATA_DICTIONARY[config.yAxis];
+        let splitBy = config.splitBy;
         const splitConfig = config.splitBy ? DATA_DICTIONARY[config.splitBy] : null;
 
         if (!yConfig) return;
+
+        // Breakdown charts above 15m are changed into regular charts by removing splitby
+        const isLowFidelity = ['1h', '1d', '1w', '1mo'].includes(timeframe);
+        
+        // If we are in low-fi and splitBy is NOT modelName, we force a standard chart
+        const isBreakdownUnavailable = isLowFidelity && splitBy && splitBy !== 'modelName';
+
+        if (isBreakdownUnavailable) {
+            splitBy = null; // This effectively pushes the code into the "STANDARD CHART" else block below
+        }
 
         let flatLogs = Array.isArray(logs) ? logs : Object.values(logs).flat();
 
@@ -112,7 +123,7 @@
         const newDatasets = [];
 
         // --- CASE A: SPLIT CHART ---
-        if (splitConfig && splitConfig.acceptedValues) {
+        if (splitBy && splitConfig && splitConfig.acceptedValues) {
 
             let valuesToRender = splitConfig.acceptedValues;
 
@@ -129,12 +140,12 @@
                     let val = null;
 
                     // Find the specific log in this bucket that matches our category
-                    if (config.splitBy === 'modelName') {
+                    if (splitBy === 'modelName') {
                         const match = logsAtThisTime.find(l => l.modelName === categoryValue);
                         if (match) val = getValueFromPath(match, yConfig.dbPath);
                     }
                     else {
-                        const match = logsAtThisTime.find(l => l.breakdown && l.breakdown[categoryValue] && l.breakdown[categoryValue].type === config.splitBy);
+                        const match = logsAtThisTime.find(l => l.breakdown && l.breakdown[categoryValue] && l.breakdown[categoryValue].type === splitBy);
                         if (match) val = match.breakdown[categoryValue][config.yAxis];
                     }
 
@@ -327,9 +338,9 @@
                 // For standard fields, we sum the queryCount of the log itself
                 // ToDo: Update this to be a value like policyCompliance, etc
                 const count = (typeof log.queryCount === 'number') ? log.queryCount : 1;
-                if(count && isIncluded){
+                if (count && isIncluded) {
                     groups[key].sum += count;
-                }   
+                }
             }
         });
 
