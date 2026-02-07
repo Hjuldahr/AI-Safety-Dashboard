@@ -319,6 +319,7 @@
     }
 
     // Merge logic helper merges target and source AI Logs / Summaries
+    // Logic should be identical to backend mergeLogData
     function mergeLogs(target, source) {
         const countA = target.queryCount || 1;
         const countB = source.queryCount || 1;
