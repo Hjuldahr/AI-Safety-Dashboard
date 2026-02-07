@@ -1,86 +1,28 @@
 import mongoose from 'mongoose';
-import { KNOWN_MODELS } from '../config/constants.js';
+import { KNOWN_MODELS, DATA_DICTIONARY } from '../config/constants.js';
 
 // === AI_Summary Schema ===
-const AI_Summary_Schema = new mongoose.Schema({
+const schemaDefinition = {};
 
-    modelName: {
-        type: String,
-        required: true,
-        enum: KNOWN_MODELS
-    },
-
-    // Core rating metrics
-    policyCompliance: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-    responseHelpfulness: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-    responseTime: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Energy usage (watt-seconds or joules)
-    energyConsumption: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Token stats
-    tokensUsed: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Model compute estimates
-    gigaFlopsUsed: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Web lookup count
-    webLookups: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Toxicity Score
-    toxicityScore: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    // Personally Identifiable Information
-    piiDetected: {
-        type: Number,
-        required: true,
-        default: 0
-    },
-
-    queryCount: {
-        type: Number,
-        required: true,
-        default: 1
-    },
-
-    responseTimestamp: {
-        type: Number,
-        required: true,
-        default: () => Date.now()
+Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
+    if (key === 'responseTimestamp') {
+        schemaDefinition[key] = { type: Number, required: true, default: () => Date.now() };
+    } else if (config.dataType === 'numeric') {
+        schemaDefinition[key] = {
+            type: Number,
+            required: true,
+            default: key === 'queryCount' ? 1 : 0
+        };
+    } else if (config.dataType === 'categorical') {
+        if (key === 'modelName') {
+            schemaDefinition[key] = { type: String, required: true, enum: config.acceptedValues };
+        } else{
+            // Do nothing - only modelName is saved, no topic or sub topic
+        }
     }
 });
+
+const AI_Summary_Schema = new mongoose.Schema(schemaDefinition);
 
 // ---------- INDEXES ----------
 AI_Summary_Schema.index({ modelName: 1, responseTimestamp: -1 });

@@ -2,7 +2,7 @@
 // GLOBAL STATE INITIALIZATION
 // ==========================================
 
-const { DATA_DICTIONARY, CHART_SIZES, KNOWN_MODELS } = window.CONSTANTS;
+const { DATA_DICTIONARY, CHART_SIZES, KNOWN_MODELS, TIMEFRAME_CONFIG } = window.CONSTANTS;
 
 // The three other files: chartDataManager.js, chartRenederer.js, chartAdmin.js all use this oject to inter-communicate.
 // The three files each run in an anonymous function, so they dont break each other's name spaces.

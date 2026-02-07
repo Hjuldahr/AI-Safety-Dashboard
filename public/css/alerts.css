@@ -342,45 +342,109 @@ body {
   gap: 0.5rem;
 }
 
-/* Dual List */
-.dual-list-container {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
+/* Multiselect Dropdown */
+.multiselect-container {
+  position: relative;
+  width: 100%;
 }
-.dual-list-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.dual-list-box {
-  border: 1px solid var(--border-color);
-  height: 180px;
-  overflow-y: auto;
-  border-radius: 4px;
-  padding: 4px;
+
+.tags-input-container {
   display: flex;
   flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 4px;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: #fff;
+  min-height: 42px;
+  cursor: text;
 }
-.dual-item {
-  padding: 4px 8px;
-  border-radius: 12px;
+
+.tags-input-container:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.tag-input-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background-color: var(--bg-color);
   color: #fff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  gap: 0.5rem;
+  user-select: none;
+}
+
+.tag-input-pill .remove-tag {
   cursor: pointer;
-  font-size: 0.8rem;
-  border: 2px solid transparent;
-}
-.dual-item.selected {
-  border-color: #000;
+  font-weight: bold;
   opacity: 0.8;
-}
-.dual-list-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 10px;
+}
+
+.tag-input-pill .remove-tag:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.tags-search-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 100px;
+  padding: 4px 0;
+  font-size: 0.9rem;
+  background: transparent;
+}
+
+.tags-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+
+.tags-dropdown-item {
+  padding: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.tags-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.tags-dropdown-item:hover {
+  background-color: #f9fafb;
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* Tag Manager Rows */
