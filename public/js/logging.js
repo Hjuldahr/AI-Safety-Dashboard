@@ -342,7 +342,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiSummaryAccordion);
-        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, elements, handleAiSummaryFilter);
+        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, (newPage) => handleAiSummaryFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch AI summaries:', error);
