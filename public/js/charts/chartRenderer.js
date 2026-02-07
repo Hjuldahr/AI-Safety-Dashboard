@@ -181,7 +181,7 @@
 
         if (config.chartSize !== 'tiny' && chart.options.scales.y) {
             chart.options.scales.y.title = { display: true, text: yConfig.label };
-            
+
             const allValues = newDatasets.flatMap(ds => ds.data).filter(v => v !== null);
             const dataMin = Math.min(...allValues);
 
@@ -190,7 +190,7 @@
                 chart.options.scales.y.min = Math.max(0, dataMin - (dataMin * 0.1));
             } else {
                 delete chart.options.scales.y.min;
-                
+
                 chart.options.scales.y.suggestedMin = 0;
             }
         }
@@ -207,14 +207,13 @@
 
         flatLogs.forEach(log => {
             const weight = log.queryCount || 1;
-            // ToDo: Update this to use Contants.js in the future
-            const isVolume = ['tokensUsed', 'energyConsumption', 'queryCount', 'webLookups'].includes(config.yAxis);
+            const isSummed = DATA_DICTIONARY[config.yAxis].summarize == "sum";
 
             // Helper to accumulate weighted sums
             const addToGroup = (key, value) => {
                 if (!groups[key]) groups[key] = { weightedSum: 0, totalWeight: 0 };
 
-                if (isVolume) {
+                if (isSummed) {
                     groups[key].weightedSum += value;
                     groups[key].totalWeight = 1; // Divisor stays 1 (or effectively unused)
                 } else {
@@ -230,12 +229,10 @@
                         const item = log.breakdown[key];
                         // Match the type
                         if (item.type === config.xAxis) {
-                            if (!groups[key]) groups[key] = { sum: 0, count: 0 };
-
-                            const val = item[config.yAxis]; // Value is inside the breakdown object
-
-                            // const itemWeight = item.queryCount || weight;
-                            if (val !== undefined) addToGroup(key, val * (isVolume ? 1 : 1));
+                            const val = item[config.yAxis];
+                            if (val !== undefined) {
+                                addToGroup(key, val);
+                            }
                         }
                     });
                 }
