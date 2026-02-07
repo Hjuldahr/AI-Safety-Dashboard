@@ -136,11 +136,34 @@ select {
     margin-top: 8px;
 }
 
+/* --- Timeframe Grid Styling --- */
 .timeframe-selector {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    display: grid;
+    /* This creates a grid with 3 equal columns */
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px 12px;
     margin-top: 10px;
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.timeframe-selector label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Overriding the block display from .wizard-step label */
+    margin-bottom: 0 !important;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.timeframe-selector input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
 }
 
 .primary-btn {
@@ -149,7 +172,33 @@ select {
     margin-top: 15px;
 }
 
+.input-with-action {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.secondary-btn-small {
+    background: #e0e0e0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.secondary-btn-small:hover {
+    background: #d0d0d0;
+}
+
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

@@ -62,9 +62,7 @@ async function initAdminControls() {
             const res = await fetch('api/params');
 
             const data = await res.json();
-            if (data.success) {
-                console.log('Server scheduler state received:', data.state);
-            } else {
+            if (!data.success) {
                 console.error('Did not receive server scheduler state.');
             }
 
@@ -99,29 +97,6 @@ async function initAdminControls() {
 
         await loadChartsFromDatabase()
     })
-
-
-    // Returns a fields that can be used for a type
-    function getFieldsByType(type) {
-        return Object.keys(DATA_DICTIONARY).filter(key => {
-            return DATA_DICTIONARY[key].dataType === type;
-        });
-    }
-
-    // Create a <select> dropdown
-    function createSelect(id, label, fieldKeys) {
-        let options = fieldKeys.map(key =>
-            `<option value="${key}">${DATA_DICTIONARY[key].label}</option>`
-        ).join('');
-
-        return `
-      <label for="${id}">${label}:</label>
-      <select id="${id}">
-        <option value="">-- Select an option --</option>
-        ${options}
-      </select>
-    `;
-    }
 }
 
 /**
@@ -143,7 +118,8 @@ const ChartWizard = {
             chartSize: 'regular',
             title: '',
             includedValues: []
-        }
+        },
+        userEditedTitle: false
     },
 
     init() {
@@ -160,6 +136,7 @@ const ChartWizard = {
             this.close();
         } else {
             this.container.classList.add("active");
+            // this.state.userEditedTitle = false;
             this.renderStep1();
         }
     },
@@ -168,12 +145,14 @@ const ChartWizard = {
         this.container.classList.remove("active");
         this.container.innerHTML = "";
         this.state.step = 1; // Reset
+        this.state.userEditedTitle = false;
     },
 
     // --- Rendering Engines ---
 
     renderStep1() {
         this.state.step = 1;
+        this.state.userEditedTitle = false;
         this.container.innerHTML = `
             <h3>Create a New Chart</h3>
             <div class="wizard-step" id="step-1">
@@ -230,34 +209,32 @@ const ChartWizard = {
         let controls = "";
         if (type === 'line') {
             controls = `
-                ${createSelect('select-y-axis', 'Value (Y-Axis)', nums)}
-                ${createSelect('select-split-by', 'Split by (Optional)', cats)}
-                <div id="split-filter-container" class="filter-container" style="display:none;">
-                    <strong>Filter Sub-Items (Optional):</strong>
-                    <div id="split-checkboxes" class="checkbox-group"></div>
-                </div>`;
+            ${createDataDictSelect('select-y-axis', 'Value (Y-Axis)', nums)}
+            ${createDataDictSelect('select-split-by', 'Split by (Optional)', cats)}
+            <div id="split-filter-container" class="filter-container" style="display:none;">
+                <strong>Filter Sub-Items:</strong>
+                <div id="split-checkboxes" class="checkbox-group"></div>
+            </div>`;
         } else if (type === 'bar') {
+            // For Bar: X-Axis is the categorical split. 
+            // We remove 'select-split-by' to avoid having two conflicting dropdowns.
             controls = `
-            ${createSelect('select-x-axis', 'Category (X)', cats)}
-            ${createSelect('select-split-by', 'Split by (Optional)', cats)}
-                <div id="split-filter-container" class="filter-container" style="display:none;">
-                    <strong>Filter Sub-Items (Optional):</strong>
-                    <div id="split-checkboxes" class="checkbox-group"></div>
-                </div>
-            ${createSelect('select-y-axis', 'Value (Y)', nums)}`
-            ;
+            ${createDataDictSelect('select-x-axis', 'Category (X-Axis)', cats)}
+            <div id="split-filter-container" class="filter-container" style="display:none;">
+                <strong>Filter Items shown on X-Axis:</strong>
+                <div id="split-checkboxes" class="checkbox-group"></div>
+            </div>
+            ${createDataDictSelect('select-y-axis', 'Value (Y-Axis)', nums)}`;
         } else if (type === 'pie') {
             // ToDo: Allow pie charts to take in a data type (policyCompliance, etc).
-            // ${createSelect('select-category', 'Category', cats)}
             controls = `
-            ${createSelect('select-category', 'Split by', cats)}
-                <div id="split-filter-container" class="filter-container" style="display:none;">
-                    <strong>Filter Sub-Items (Optional):</strong>
-                    <div id="split-checkboxes" class="checkbox-group"></div>
-                </div>
-            `;
+            ${createDataDictSelect('select-category', 'Split by', cats)}
+            <div id="split-filter-container" class="filter-container" style="display:none;">
+                <strong>Filter Pie Segments:</strong>
+                <div id="split-checkboxes" class="checkbox-group"></div>
+            </div>`;
         } else {
-            controls = createSelect('select-y-axis', 'KPI Value', nums);
+            controls = createDataDictSelect('select-y-axis', 'KPI Value', nums);
         }
 
         return `<div class="wizard-step" id="step-2"><label>2. Configuration:</label>${controls}</div>`;
@@ -265,35 +242,36 @@ const ChartWizard = {
 
     getStep3HTML() {
         return `
-            <div class="wizard-step" id="step-3">
-                <label for="chart-title">3. Give it a title:</label>
+        <div class="wizard-step" id="step-3">
+            <label for="chart-title">3. Give it a title:</label>
+            <div class="input-with-action">
                 <input type="text" id="chart-title" class="wizard-input-full" placeholder="e.g. 'Response Time for All Models'">
-                <button class="next-btn" data-trigger="step3" style="margin-top:10px;">Continue</button>
-            </div>`;
+                <button id="reset-title-btn" class="secondary-btn-small" title="Restore suggested title">🔄</button>
+            </div>
+            <button class="next-btn" data-trigger="step3" style="margin-top:10px;">Continue</button>
+        </div>`;
     },
 
     getStep4HTML() {
         const options = ZOOM_LEVELS.map(z => `
+        <label for="tf-${z}">
             <input type="radio" name="timeframe" value="${z}" id="tf-${z}">
-            <label for="tf-${z}">${z}</label>
-        `).join('');
+            ${z}
+        </label>
+    `).join('');
 
         return `
-            <div class="wizard-step" id="step-4">
-                <label>4. Select Timeframe:</label>
-                <div class="timeframe-selector">${options}</div>
-            </div>`;
+        <div class="wizard-step" id="step-4">
+            <label>4. Select Timeframe:</label>
+            <div class="timeframe-selector">${options}</div>
+        </div>`;
     },
 
     getStep5HTML() {
         return `
             <div class="wizard-step" id="step-5">
                 <label>5. Finalize:</label>
-                <select id="chart-size">
-                    <option value="tiny">Tiny</option>
-                    <option value="regular" selected>Regular</option>
-                    <option value="large">Large</option>
-                </select>
+                 ${createSelect('chart-size', 'Chart Size', CHART_SIZES)}
                 <br><br>
                 <button id="submit-new-chart" class="primary-btn">Add Chart to Dashboard</button>
             </div>`;
@@ -309,6 +287,12 @@ const ChartWizard = {
             document.getElementById("dynamic-steps-container").innerHTML = "";
             this.state.step = 1;
             this.renderNextStep();
+        }
+
+        // Handle Title Reset
+        if (e.target.id === 'reset-title-btn') {
+            this.state.userEditedTitle = false;
+            this.updateSuggestedTitle();
         }
 
         // Handle Manual "Continue" buttons (if needed for text inputs)
@@ -328,7 +312,7 @@ const ChartWizard = {
         const { id, value, name, type, checked } = e.target;
         const config = this.state.config;
 
-        // A. Sync basic selects to state
+        // Sync basic selects to state
         if (id === 'select-y-axis') config.yAxis = value;
         if (id === 'select-x-axis') config.xAxis = value;
         if (id === 'select-category') config.category = value;
@@ -336,23 +320,35 @@ const ChartWizard = {
         if (id === 'chart-size') config.chartSize = value;
         if (id === 'chart-title') config.title = value;
 
-        // B. Handle Radio Buttons (Timeframe)
+        // Handle Radio Buttons (Timeframe)
         if (name === 'timeframe') {
             config.timeframe = value;
             if (!document.getElementById('step-5')) this.renderNextStep();
         }
 
-        // C. Special Logic for Split-By Checkboxes
-        if (id === 'select-split-by' || id === 'select-category') {
-            this.renderSplitCheckboxes(value); // Moved to helper for cleanliness
+        // Special Logic for Split-By Checkboxes
+        const triggerIds = {
+            'line': 'select-split-by',
+            'bar': 'select-x-axis',
+            'pie': 'select-category'
+        };
+
+        if (id === triggerIds[config.chartType]) {
+            this.renderSplitCheckboxes(value);
         }
 
-        // D. Auto-Advance Step 2
+        // Auto-Advance Step 2
         if (this.state.step === 2 && this.isStep2Complete()) {
             if (!document.getElementById('step-3')) this.renderNextStep();
         }
 
-        // E. Keep Title Updated
+        // If the user edits the title, stop suggesting new ones
+        if (id === 'chart-title') {
+            this.state.config.title = value;
+            this.state.userEditedTitle = true; // Mark that the user has taken control
+        }
+
+        // Keep Title Updated
         if (this.state.step >= 2) {
             this.updateSuggestedTitle();
         }
@@ -383,10 +379,10 @@ const ChartWizard = {
     },
 
     isStep2Complete() {
-        const { chartType } = this.state.config;
-        if (chartType === 'line' || chartType === 'measure') return !!document.getElementById('select-y-axis').value;
-        if (chartType === 'bar') return !!document.getElementById('select-y-axis').value && !!document.getElementById('select-x-axis').value;
-        if (chartType === 'pie') return !!document.getElementById('select-category').value;
+        const { chartType, yAxis, xAxis, category } = this.state.config;
+        if (chartType === 'line' || chartType === 'measure') return !!yAxis;
+        if (chartType === 'bar') return !!yAxis && !!xAxis;
+        if (chartType === 'pie') return !!category;
         return false;
     },
 
@@ -394,6 +390,9 @@ const ChartWizard = {
     * Updates the chart title input with a suggested title
     */
     updateSuggestedTitle() {
+        // If a user has edited the title, do not suggest a new one
+        if (this.state.userEditedTitle) return;
+
         const titleInput = document.getElementById('chart-title');
         if (!titleInput) return;
 
@@ -469,12 +468,36 @@ const ChartWizard = {
 }
 
 /**
- * Helper: Build Select HTML
+ * Specialized Helper: Maps Data Dictionary keys to labels
  */
-function createSelect(id, label, fieldKeys) {
-    let options = fieldKeys.map(key => `<option value="${key}">${DATA_DICTIONARY[key].label}</option>`).join('');
-    return `<div class="field-group"><label>${label}:</label><select id="${id}"><option value="">-- Select --</option>${options}</select></div>`;
+function createDataDictSelect(id, label, fieldKeys) {
+    // Transform array of keys into a { key: label } object
+    const optionsMap = {};
+    fieldKeys.forEach(key => {
+        optionsMap[key] = DATA_DICTIONARY[key]?.label || key;
+    });
+
+    return createSelect(id, label, optionsMap);
 }
+/**
+ * Core Helper: Generates a select dropdown from an object map
+ * @param {Object} optionsMap - { value: "Display Label" }
+ */
+function createSelect(id, label, optionsMap) {
+    const options = Object.entries(optionsMap)
+        .map(([val, text]) => `<option value="${val}">${text}</option>`)
+        .join('');
+
+    return `
+        <div class="field-group">
+            <label for="${id}">${label}:</label>
+            <select id="${id}">
+                <option value="">-- Select --</option>
+                ${options}
+            </select>
+        </div>`;
+}
+
 
 function getFieldsByType(type) {
     return Object.keys(DATA_DICTIONARY).filter(key => DATA_DICTIONARY[key].dataType === type);

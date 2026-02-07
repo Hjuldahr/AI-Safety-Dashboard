@@ -22,17 +22,17 @@ export const TOPIC_HIERARCHY = {
 };
 
 export const CHART_TYPES = {
-    LINE: 'line',
-    BAR: 'bar',
-    PIE: 'pie',
-    MEASURE: 'measure'
+    line: 'Line',
+    bar: 'Bar',
+    pie: 'Pie',
+    measure: 'Measure'
 };
 
 export const CHART_SIZES = {
-    TINY: 'tiny',
-    REGULAR: 'regular',
-    LARGE: 'large',
-    MASSIVE: 'massive'
+    tiny: 'Tiny',
+    regular: 'Regular',
+    large: 'Large',
+    massive: 'Massive'
 };
 
 
