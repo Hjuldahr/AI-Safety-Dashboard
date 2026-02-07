@@ -51,6 +51,7 @@
         }
 
         try {
+            // CSS classes
             const ALL_SIZE_CLASSES = ['chart-tiny', 'chart-regular', 'chart-large', 'chart-massive'];
             let originalSize = ALL_SIZE_CLASSES.find(c => chartCard.classList.contains(c)) || 'chart-regular';
             chartCard.dataset.originalSize = originalSize;

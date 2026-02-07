@@ -324,53 +324,43 @@
         const countB = source.queryCount || 1;
         const total = countA + countB;
 
-        // ToDo: Update this to use Contants.js in the future
-        // 1. Weighted Averages (Quality)
-        ['policyCompliance', 'responseHelpfulness', 'responseTime', 'toxicityScore', 'piiDetected'].forEach(k => {
-            if (target[k] !== undefined && source[k] !== undefined) {
-                target[k] = ((target[k] * countA) + (source[k] * countB)) / total;
+        // Iterate through the dictionary once
+        Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
+            // Skip metadata/categorical fields
+            if (config.summarize === "remove" || config.dataType === "timestamp" || key === "modelName") return;
+
+            if (config.summarize === "avg") {
+                if (target[key] !== undefined && source[key] !== undefined) {
+                    target[key] = ((target[key] * countA) + (source[key] * countB)) / total;
+                }
+            } else if (config.summarize === "sum") {
+                target[key] = (target[key] || 0) + (source[key] || 0);
             }
         });
 
-        // ToDo: Update this to use Contants.js in the future
-        // 2. Sums (Volume)
-        ['energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 'webLookups'].forEach(k => {
-            target[k] = (target[k] || 0) + (source[k] || 0);
-        });
-
-        // 3. Update Total Count
         target.queryCount = total;
 
-        // 4. Breakdown Merge (Dense / Sparse Logic)
+        // Handle Breakdown (Nested logic)
         if (source.breakdown) {
             if (!target.breakdown) target.breakdown = {};
-
-            Object.keys(source.breakdown).forEach(key => {
-                const srcMetric = source.breakdown[key];
-                const tgtMetric = target.breakdown[key];
-
-                if (!tgtMetric) {
-                    // New key? Copy it.
-                    target.breakdown[key] = { ...srcMetric };
+            Object.keys(source.breakdown).forEach(topicKey => {
+                if (!target.breakdown[topicKey]) {
+                    target.breakdown[topicKey] = { ...source.breakdown[topicKey] };
                 } else {
-                    // Existing key? Merge it.
-                    // (We repeat the logic because Breakdown items are structured same as root log)
+                    // Recursively call a similar logic or repeat the loop for the sub-object
+                    const tgtMetric = target.breakdown[topicKey];
+                    const srcMetric = source.breakdown[topicKey];
                     const subCountA = tgtMetric.queryCount || 0;
                     const subCountB = srcMetric.queryCount || 0;
                     const subTotal = subCountA + subCountB;
 
-                    // ToDo: Update this to use Contants.js in the future
-                    ['policyCompliance', 'responseHelpfulness', 'responseTime', 'toxicityScore', 'piiDetected'].forEach(k => {
-                        if (tgtMetric[k] !== undefined && srcMetric[k] !== undefined) {
-                            tgtMetric[k] = ((tgtMetric[k] * subCountA) + (srcMetric[k] * subCountB)) / subTotal;
+                    Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
+                        if (config.summarize === "avg" && tgtMetric[key] !== undefined) {
+                            tgtMetric[key] = ((tgtMetric[key] * subCountA) + (srcMetric[key] * subCountB)) / subTotal;
+                        } else if (config.summarize === "sum") {
+                            tgtMetric[key] = (tgtMetric[key] || 0) + (srcMetric[key] || 0);
                         }
                     });
-
-                    // ToDo: Update this to use Contants.js in the future
-                    ['energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 'webLookups'].forEach(k => {
-                        tgtMetric[k] = (tgtMetric[k] || 0) + (srcMetric[k] || 0);
-                    });
-
                     tgtMetric.queryCount = subTotal;
                 }
             });
