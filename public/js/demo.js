@@ -46,7 +46,7 @@ class DemoManager {
         if (!modelName) return;
 
         try {
-            const response = await fetch('/demo/rogue', {
+            const response = await fetch('demo/rogue', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ modelName })
@@ -70,7 +70,7 @@ class DemoManager {
         if (!modelName) return;
 
         try {
-            const response = await fetch('/demo/reset', {
+            const response = await fetch('demo/reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ modelName })
