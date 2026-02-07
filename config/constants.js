@@ -21,13 +21,6 @@ export const TOPIC_HIERARCHY = {
     ]
 };
 
-export const CHART_TYPES = {
-    line: 'Line',
-    bar: 'Bar',
-    pie: 'Pie',
-    measure: 'Measure'
-};
-
 export const CHART_SIZES = {
     tiny: 'Tiny',
     regular: 'Regular',
