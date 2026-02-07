@@ -51,7 +51,7 @@ const startServer = async () => {
         }),
         
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 1, // Cookie expires in 1 day
+            maxAge: 1000 * 60 * 60 * 24 * 7, // Cookie expires in 1 week
             secure: process.env.NODE_ENV === 'production', //use https in production
         }
     }));
