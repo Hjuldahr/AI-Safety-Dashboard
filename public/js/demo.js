@@ -30,10 +30,18 @@ class DemoManager {
         const modelName = this.getModelName();
         if (!modelName) return;
 
-        const response = await fetch(`/demo/list?modelName=${encodeURIComponent(modelName)}`);
-        const { scenarios } = await response.json();
+        const response = await fetch('/demo/list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modelName })
+        });
 
-        this.scenarioSelect.innerHTML = scenarios.map(e => `<option value="${e}">${e}</option>`).join('\n');
+        const { scenarios, currentScenario } = await response.json();
+
+        const scenarioList = Array.isArray(scenarios) ? scenarios : [];
+        this.scenarioSelect.innerHTML = scenarioList
+            .map(e => `<option value="${e}" ${e === currentScenario ? "selected" : ""}>${e}</option>`)
+            .join('\n');
     }
 
     getModelName() {
@@ -44,17 +52,12 @@ class DemoManager {
         return this.scenarioSelect ? this.scenarioSelect.value : null;
     }
 
-    updateStatus(message, type) {
+    updateStatus(message, type = 'normal') {
         if (!this.statusDiv) return;
 
         this.statusDiv.textContent = message;
-        this.statusDiv.className = ''; // Clear previous classes
-
-        if (type === 'error') {
-            this.statusDiv.style.color = '#cf6679'; 
-        } else {
-             this.statusDiv.classList.add('status-normal');
-        }
+        this.statusDiv.className = ''; // clear previous classes
+        this.statusDiv.classList.add(type === 'error' ? 'status-error' : 'status-normal');
     }
 
     async applyScenario() {
@@ -99,6 +102,7 @@ class DemoManager {
             
             if (response.ok) {
                 this.updateStatus(data.message, 'normal');
+                await this.updateScenarioList();
             } else {
                 this.updateStatus('Error: ' + data.error, 'error');
             }
