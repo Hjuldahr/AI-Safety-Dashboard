@@ -28,8 +28,6 @@ export const CHART_SIZES = {
     massive: 'Massive'
 };
 
-
-
 export const TIMEFRAME_CONFIG = {
     // High Fidelity (AI_Log)
     '10s': { model: 'AI_Log', timerange: 10 * 1000, bucket: 1000, limit: 10 },           // 1 Second Buckets

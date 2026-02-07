@@ -82,32 +82,41 @@
             if (!response.ok) throw new Error('Failed to fetch config');
             const { config } = await response.json();
 
+            // Determine which field holds the category/split info
+            let splitField = null;
+            if (config.chartType === 'line') splitField = config.splitBy;
+            if (config.chartType === 'bar') splitField = config.xAxis;
+            if (config.chartType === 'pie') splitField = config.category;
+
             let filterHtml = '';
-            if (config.chartType === 'line' && config.splitBy) {
-                const dictEntry = window.CONSTANTS.DATA_DICTIONARY[config.splitBy];
+
+            // If we have a field to split by, check the Data Dictionary for sub-values
+            if (splitField) {
+                const dictEntry = window.CONSTANTS.DATA_DICTIONARY[splitField];
 
                 if (dictEntry && dictEntry.acceptedValues) {
                     const checkboxes = dictEntry.acceptedValues.map((val, idx) => {
-                        // If includedValues is empty, it means "Show All", so check everything.
-                        // If it has items, check only those items.
+                        // Check if this value was previously filtered
                         const isChecked = (!config.includedValues || config.includedValues.length === 0)
                             ? true
                             : config.includedValues.includes(val);
 
                         return `
-                        <div style="margin-bottom: 4px;">
-                            <input type="checkbox" id="edit-filter-${id}-${idx}" name="edit-filter-val-${id}" value="${val}" ${isChecked ? 'checked' : ''}>
-                            <label for="edit-filter-${id}-${idx}">${val}</label>
+                            <div style="margin-bottom: 4px;">
+                                <input type="checkbox" id="edit-filter-${id}-${idx}" 
+                                    name="edit-filter-val-${id}" value="${val}" 
+                                    ${isChecked ? 'checked' : ''}>
+                                <label for="edit-filter-${id}-${idx}">${val}</label>
+                            </div>
+                        `;
+                                }).join('');
+
+                                filterHtml = `
+                        <div class="card-edit-filter-form" style="margin-top:10px; padding:10px; background:#f9f9f9; border-radius:4px;">
+                            <strong style="display:block; margin-bottom:5px;">Filter ${dictEntry.label}:</strong>
+                            ${checkboxes}
                         </div>
                     `;
-                    }).join('');
-
-                    filterHtml = `
-                    <div class="card-edit-filter-form">
-                        <strong style="display:block; margin-bottom:5px;">Filter ${dictEntry.label}:</strong>
-                        ${checkboxes}
-                    </div>
-                `;
                 }
             }
 

@@ -227,8 +227,13 @@
                 if (log.breakdown) {
                     Object.keys(log.breakdown).forEach(key => {
                         const item = log.breakdown[key];
+
+                        const isIncluded = !config.includedValues ||
+                            config.includedValues.length === 0 ||
+                            config.includedValues.includes(key);
+
                         // Match the type
-                        if (item.type === config.xAxis) {
+                        if (item.type === config.xAxis && isIncluded) {
                             const val = item[config.yAxis];
                             if (val !== undefined) {
                                 addToGroup(key, val);
@@ -241,7 +246,12 @@
             else {
                 const key = window.DashboardApp.utils.getValueFromPath(log, xConfig.dbPath) || 'unknown';
                 const val = window.DashboardApp.utils.getValueFromPath(log, yConfig.dbPath);
-                if (val !== undefined) addToGroup(key, val);
+
+                const isIncluded = !config.includedValues ||
+                    config.includedValues.length === 0 ||
+                    config.includedValues.includes(key);
+
+                if (val !== undefined && isIncluded) addToGroup(key, val);
             }
         });
 
@@ -289,8 +299,12 @@
                     Object.keys(log.breakdown).forEach(key => {
                         const item = log.breakdown[key];
 
+                        const isIncluded = !config.includedValues ||
+                            config.includedValues.length === 0 ||
+                            config.includedValues.includes(key);
+
                         // Case-insensitive check + Type check
-                        if (item.type && item.type.toLowerCase() === config.category.toLowerCase()) {
+                        if (item.type && item.type.toLowerCase() === config.category.toLowerCase() && isIncluded) {
                             if (!groups[key]) groups[key] = { sum: 0 };
 
                             // Use queryCount (or fallback)
@@ -306,9 +320,16 @@
                 const key = getValueFromPath(log, catConfig.dbPath) || 'unknown';
                 if (!groups[key]) groups[key] = { sum: 0 };
 
+                const isIncluded = !config.includedValues ||
+                    config.includedValues.length === 0 ||
+                    config.includedValues.includes(key);
+
                 // For standard fields, we sum the queryCount of the log itself
+                // ToDo: Update this to be a value like policyCompliance, etc
                 const count = (typeof log.queryCount === 'number') ? log.queryCount : 1;
-                groups[key].sum += count;
+                if(count && isIncluded){
+                    groups[key].sum += count;
+                }   
             }
         });
 
