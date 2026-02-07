@@ -1,11 +1,12 @@
 import express from "express";
-import controller from "../controllers/indexController.js";
+import indexController from "../controllers/indexController.js";
+import chartController from "../controllers/chartController.js";
 import { isAuthenticated } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get("/", controller.getPage);
+router.get("/", indexController.getPage);
 
-router.get("/api/recentData", controller.getRecentData);
+router.get("/api/recentData", chartController.getRecentData);
 
 export default router;
