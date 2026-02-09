@@ -89,8 +89,6 @@
 [] Consistent Theming
     - All the pages should use the same theme.
 
-
-
 # Bugs
 
 ## Dashboard
