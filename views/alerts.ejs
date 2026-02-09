@@ -25,6 +25,9 @@
   </head>
 
   <body>
+    <script>
+      window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+    </script>
     <script id="constants-json" type="application/json">
       <%- JSON.stringify(constants || {}) %>
     </script>
