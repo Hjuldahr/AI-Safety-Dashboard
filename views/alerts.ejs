@@ -13,8 +13,11 @@
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/notifications.css">
 
-  <script src="js/alerts.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script>
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+  </script>
+  <script src="js/alerts.js" defer></script>
   <script src="js/notifications.js" defer></script>
 </head>
 

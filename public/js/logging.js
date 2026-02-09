@@ -3,6 +3,11 @@ let currentLogsPage = 1;
 let currentAiLogsPage = 1;
 let currentAiSummariesPage = 1;
 
+// --- PERMISSION CHECKS ---
+const hasPermission = (permission) => {
+    return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
+};
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     // Get all required elements

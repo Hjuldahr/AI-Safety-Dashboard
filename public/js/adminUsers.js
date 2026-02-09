@@ -1,8 +1,86 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const container = document.getElementById('users-container');
+  const usersContainer = document.getElementById('users-container');
+  const rolesContainer = document.getElementById('roles-list');
+  const permissionsListDiv = document.getElementById('permissions-list');
+  const createRoleForm = document.getElementById('create-role-form');
+  const roleMessagesDiv = document.getElementById('role-messages');
 
-  if (!container) return;
+  let availablePermissions = [];
 
+  // Fetch available permissions
+  async function fetchPermissions() {
+    try {
+      const res = await fetch('/admin/api/permissions');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.permissions || [];
+    } catch (err) {
+      console.error('Error fetching permissions:', err);
+      return [];
+    }
+  }
+
+  // Render permissions list
+  function renderPermissions(permissions) {
+    permissionsListDiv.innerHTML = permissions
+      .map(perm => `
+        <div class="permission-item">
+          <input type="checkbox" id="perm-${perm}" value="${perm}" name="permissions">
+          <label for="perm-${perm}">${perm}</label>
+        </div>
+      `).join('');
+  }
+
+  // Show message in role section
+  function showMessage(message, type = 'success') {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+    roleMessagesDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+    setTimeout(() => {
+      roleMessagesDiv.innerHTML = '';
+    }, 5000);
+  }
+
+  // Handle role creation
+  createRoleForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('role-name').value.trim();
+    const description = document.getElementById('role-description').value.trim();
+    const selectedPerms = Array.from(document.querySelectorAll('input[name="permissions"]:checked'))
+      .map(cb => cb.value);
+
+    if (!name || !description || selectedPerms.length === 0) {
+      showMessage('Please fill in all fields and select at least one permission.', 'error');
+      return;
+    }
+
+    try {
+      const res = await fetch('/admin/api/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          description,
+          permissions: selectedPerms
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showMessage(`Role "${name}" created successfully!`, 'success');
+        createRoleForm.reset();
+        loadRoles();
+      } else {
+        showMessage(data.message || 'Error creating role', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage('Error creating role', 'error');
+    }
+  });
+
+  // Fetch users from database
   async function fetchUsers() {
     const res = await fetch('/admin/api/users');
     if (!res.ok) return;
@@ -10,6 +88,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return data.users;
   }
 
+  // Fetch roles from database
+  async function fetchRoles() {
+    try {
+      const res = await fetch('/admin/api/roles');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.roles || [];
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+      return [];
+    }
+  }
+
+  // Render users table
   function renderTable(users) {
     const rows = users.map(u => {
       const currentRole = (u.roles && u.roles[0]) || '';
@@ -33,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }).join('');
 
-    container.innerHTML = `
+    usersContainer.innerHTML = `
       <table class="table">
         <thead><tr><th>Username</th><th>Email</th><th>Role</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
@@ -41,7 +133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     `;
 
     // Attach event listeners
-    container.querySelectorAll('.save-role').forEach(btn => {
+    usersContainer.querySelectorAll('.save-role').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tr = e.target.closest('tr');
         const userId = tr.dataset.userId;
@@ -71,10 +163,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Render roles list
+  function renderRoles(roles) {
+    const html = roles.map(role => `
+      <div class="role-item">
+        <div class="role-info">
+          <h4>${role.name}
+            ${role.isSystemRole ? '<span class="role-badge system">System</span>' : '<span class="role-badge">Custom</span>'}
+          </h4>
+          <p>${role.description}</p>
+          <p style="margin-top: 0.5rem; font-size: 0.85rem; color: #999;">
+            ${role.isCustom ? `<button class="btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" onclick="deleteRole('${role.name}')">Delete</button>` : 'Cannot delete system roles'}
+          </p>
+        </div>
+      </div>
+    `).join('');
+
+    rolesContainer.innerHTML = html || '<p>No roles found.</p>';
+  }
+
+  // Delete role function (global so onclick can access it)
+  window.deleteRole = async (roleName) => {
+    if (!confirm(`Are you sure you want to delete the "${roleName}" role?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/admin/api/roles/${roleName}`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showMessage(`Role "${roleName}" deleted successfully!`, 'success');
+        loadRoles();
+      } else {
+        showMessage(data.message || 'Error deleting role', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage('Error deleting role', 'error');
+    }
+  };
+
+  // Load all data
   async function load() {
     const users = await fetchUsers();
     if (users) renderTable(users);
   }
 
-  load();
+  // Load roles
+  async function loadRoles() {
+    const roles = await fetchRoles();
+    if (roles) renderRoles(roles);
+  }
+
+  // Initialize
+  if (usersContainer) {
+    // Load permissions and users
+    availablePermissions = await fetchPermissions();
+    renderPermissions(availablePermissions);
+    load();
+  }
+
+  // Load roles
+  if (rolesContainer) {
+    loadRoles();
+  }
 });

@@ -1,6 +1,13 @@
 document.addEventListener('DOMContentLoaded', async function () {
 
     // --------------------------------------------------
+    // Permission checks
+    // --------------------------------------------------
+    const hasPermission = (permission) => {
+        return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
+    };
+
+    // --------------------------------------------------
     // DOM references
     // --------------------------------------------------
     const addAlertBtn = document.getElementById('add-alert-btn');
@@ -11,6 +18,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     const alertNameInput = document.getElementById('alert-name');
     const alertLevelSelect = document.getElementById('alert-level');
     const modelSelect = document.getElementById('model-name');
+
+    // Hide add alert button if user doesn't have permission
+    if (addAlertBtn && !hasPermission('create:alert')) {
+        addAlertBtn.style.display = 'none';
+    }
 
     // History references
     const historyFilterForm = document.getElementById('history-filter-form');

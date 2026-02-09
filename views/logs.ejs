@@ -17,7 +17,10 @@
   <!-- Scripts -->
   <script src="js/logging.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
-  <script src="js/notifications.js" defer></script>s
+  <script>
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+  </script>
+  <script src="js/notifications.js" defer></script>
 </head>
 
 <body>
