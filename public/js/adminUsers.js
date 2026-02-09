@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Fetch available permissions
   async function fetchPermissions() {
     try {
-      const res = await fetch('/admin/api/permissions');
+      const res = await fetch('admin/api/permissions');
       if (!res.ok) return [];
       const data = await res.json();
       return data.permissions || [];
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-      const res = await fetch('/admin/api/roles', {
+      const res = await fetch('admin/api/roles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Fetch users from database
   async function fetchUsers() {
-    const res = await fetch('/admin/api/users');
+    const res = await fetch('admin/api/users');
     if (!res.ok) return;
     const data = await res.json();
     return data.users;
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Fetch roles from database
   async function fetchRoles() {
     try {
-      const res = await fetch('/admin/api/roles');
+      const res = await fetch('admin/api/roles');
       if (!res.ok) return [];
       const data = await res.json();
       return data.roles || [];
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const role = select.value;
 
         try {
-          const res = await fetch(`/admin/api/users/${userId}/roles`, {
+          const res = await fetch(`admin/api/users/${userId}/roles`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role })
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-      const res = await fetch(`/admin/api/roles/${roleName}`, {
+      const res = await fetch(`admin/api/roles/${roleName}`, {
         method: 'DELETE'
       });
 
