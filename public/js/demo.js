@@ -30,7 +30,7 @@ class DemoManager {
         const modelName = this.getModelName();
         if (!modelName) return;
 
-        const response = await fetch('/demo/list', {
+        const response = await fetch('demo/list', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ modelName })
@@ -68,7 +68,7 @@ class DemoManager {
         if (!scenarioName) return;
 
         try {
-            const response = await fetch('/demo/apply', {
+            const response = await fetch('demo/apply', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ modelName, scenarioName })
@@ -92,7 +92,7 @@ class DemoManager {
         if (!modelName) return;
 
         try {
-            const response = await fetch('/demo/reset', {
+            const response = await fetch('demo/reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ modelName })
