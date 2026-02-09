@@ -12,7 +12,6 @@ import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase, seedCharts } from './config/database.js';
 
-
 let shuttingDown = false;
 
 dotenv.config();
@@ -69,28 +68,44 @@ const startServer = async () => {
     // Connect to the database:
     try {
         await mongoose.connect(process.env.MONGO_URL);
-        console.log('MongoDB connected successfully.');
+        console.log('[App] MongoDB connected successfully.');
     } catch (error) {
-        console.error('MongoDB connection failed:', error.message);
+        console.error('[App] MongoDB connection failed:', error.message);
         process.exit(1);
     }
 
     //Mount all of the routes to /
     app.use("/", mainRouter);
 
-
     const server = app.listen(PORT, () => {
-        console.log(`Server running on [http://localhost:${PORT}/]`);
+        console.log(`[App] Server running on [http://localhost:${PORT}/]`);
+    });
+
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`[App] Port ${PORT} is already in use.`);
+        } else {
+            console.error('[App] Server Error', err);
+        }
+        process.exit(1);
+    });
+
+    // --- Reject new connections during shutdown ---
+    server.on('connection', (socket) => {
+        if (shuttingDown) {
+            socket.destroy();
+            console.log('[App] Client attempted to connect during shutdown');
+        }
     });
 
     const shutdown = async (signal) => {
         if (shuttingDown) return;
         shuttingDown = true;
 
-        console.log(`\n[${signal}] Shutting down...`);
+        console.log(`\n[App] Received ${signal}! Shutting down...`);
 
         const forceExitTimer = setTimeout(() => {
-            console.error("Force exit");
+            console.error("[App] Force exit");
             process.exit(1);
         }, 10_000);
 
@@ -109,7 +124,7 @@ const startServer = async () => {
             clearTimeout(forceExitTimer);
             process.exit(0);
         } catch (err) {
-            console.error("Shutdown failed:", err);
+            console.error("[App] Shutdown failed:", err);
             clearTimeout(forceExitTimer);
             process.exit(1);
         }
