@@ -83,6 +83,5 @@ export const authorize = (permission) => async (req, res, next) => {
 export const setTemplatePermissions = async (req, res, next) => {
   res.locals.user = req.user || null;
   res.locals.permissions = req.user ? Array.from(await getUserPermissions(req.user)) : [];
-  console.debug('[Auth] Template permissions set for user:', req.user ? req.user.username : 'anonymous', res.locals.permissions);
   next();
 };
