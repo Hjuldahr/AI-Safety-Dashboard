@@ -2,6 +2,11 @@
 let isGeneratingReport = false;
 let lastPdfUrl = null; // object URL of last generated PDF
 
+// --- PERMISSION CHECKS ---
+const hasPermission = (permission) => {
+    return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
+};
+
 // --- HELPER FUNCTION ---
 
 const setButtonState = (elements, disabled, text) => {
@@ -178,6 +183,23 @@ document.addEventListener('DOMContentLoaded', () => {
         previewFrame: document.getElementById('report-preview'),
         statusText: document.getElementById('report-status')
     };
+
+    // Check permissions and hide/disable buttons accordingly
+    if (elements.submitBtn && !hasPermission('create:report')) {
+        elements.submitBtn.style.display = 'none';
+    }
+    
+    if (elements.downloadBtn && !hasPermission('export:report')) {
+        elements.downloadBtn.style.display = 'none';
+    }
+    
+    if (elements.downloadCsvBtn && !hasPermission('export:report')) {
+        elements.downloadCsvBtn.style.display = 'none';
+    }
+    
+    if (elements.downloadAggregatesCsvBtn && !hasPermission('export:report')) {
+        elements.downloadAggregatesCsvBtn.style.display = 'none';
+    }
 
     // Bind events (guard for missing elements)
     if (elements.form) {

@@ -1,15 +1,3 @@
-:root {
-    --primary-color: #4f46e5;
-    --primary-light: #e0e7ff;
-    --green-color: #22c55e;
-    --border-color: #d1d5db;
-    --card-bg: #ffffff;
-    --body-bg: #f3f4f6;
-    --text-dark: #1f2937;
-    --text-light: #6b7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-}
-
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--body-bg);
@@ -50,6 +38,10 @@ body {
 .chart-card:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.chart-card:hover .zoom-btn {
+    opacity: 1;
 }
 
 .chart-card canvas {
@@ -106,11 +98,47 @@ body {
     min-height: 100px;
 }
 
+.chart-header {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 5px;
+}
+
+.left-chart-buttons {
+    /* position: absolute;
+    top: 0px;
+    left: 0px; */
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-self: flex-start;
+    gap: 10px;
+    border-radius: 8px;
+}
+
+.right-chart-buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-self: flex-end;
+    gap: 10px;
+
+    padding-right: 10px;
+}
 
 .delete-chart-btn {
-    position: absolute;
+    /* position: absolute;
     top: 8px;
-    right: 15px;
+    right: 15px; */
     font-size: 24px;
     font-weight: bold;
     color: #999;
@@ -122,6 +150,75 @@ body {
 
 .delete-chart-btn:hover {
     color: #f45b69;
+}
+
+/* Style for the edit button */
+.edit-chart-btn {
+    /* position: absolute;
+    top: 8px;
+    /* Position it next to the delete button */
+    right: 45px;
+    */ font-size: 15px;
+    color: #999;
+    cursor: pointer;
+    z-index: 10;
+    line-height: 1;
+    transition: color 0.2s ease;
+
+    display: flex;
+    align-items: center;
+
+    height: 2em;
+    /* width: 2em; */
+    text-align: center;
+}
+
+.edit-chart-btn:hover {
+    color: #007acc;
+}
+
+/* Zoom Buttons */
+.zoom-btn {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #333;
+    cursor: pointer;
+    font-size: 18px;
+    height: 32px;
+    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+    /* Hide by default, shows on chart hover */
+    opacity: 0;
+    z-index: 6;
+
+
+}
+
+.zoom-btn:hover {
+    background-color: #fdfdfd;
+    border-color: #bbb;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.zoom-btn:active {
+    transform: translateY(0);
+    background-color: #eee;
+}
+
+.zoom-label {
+    font-family: sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    user-select: none;
 }
 
 /* --- REGULAR --- */
@@ -194,36 +291,13 @@ body {
     margin-right: 15px;
 }
 
-/* Style for the new edit button */
-.edit-chart-btn {
-    position: absolute;
-    top: 8px;
-    /* Position it next to the delete button */
-    right: 45px;
-    font-size: 15px;
-    color: #999;
-    cursor: pointer;
-    z-index: 10;
-    line-height: 1;
-    transition: color 0.2s ease;
-
-    display: flex;
-    align-items: center;
-
-    height: 2em;
-    /* width: 2em; */
-    text-align: center;
-}
-
-.edit-chart-btn:hover {
-    color: #007acc;
-}
-
 /* The edit form container */
 .edit-chart-form {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+
+    /* padding-top: ; */
 }
 
 .edit-chart-form label {
@@ -258,15 +332,17 @@ body {
 }
 
 
-.card-edit-filter-form{
-    margin: 10px 0; 
-    padding: 10px; 
-    background: #f9f9f9; 
-    border: 1px solid #ddd; 
+.card-edit-filter-form {
+    margin: 10px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
     flex: 1 1 auto;
     overflow-y: auto;
     min-height: 60px;
 }
+
+/* --- Chart Editing --- */
 
 /* Target the form only inside a tiny card */
 .chart-tiny .edit-chart-form {
@@ -363,10 +439,81 @@ body {
     margin-bottom: 5px;
 }
 
-@media (max-width: 1500px) { 
-    
-    .tiny-group-wrapper{
+.chart-card.is-editing {
+    padding-top: 4rem;
+}
+
+/* Hide Zoom Buttons when editing, but keep the Label visible */
+.chart-card.is-editing .zoom-btn {
+    display: none !important;
+}
+
+.chart-card.is-editing .zoom-label {
+    opacity: 1;
+    /* Ensure it stays visible while editing */
+    margin-left: 10px;
+    background: var(--primary-light);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* Style the Timeframe Selector in the Edit Form */
+.edit-timeframe-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding: 8px;
+    background: #f1f5f9;
+    border-radius: 6px;
+}
+
+.timeframe-option {
+    display: flex;
+    align-items: center;
+    font-size: 0.75rem;
+}
+
+.timeframe-option input {
+    margin-right: 4px;
+}
+
+/* Ensure the chart header doesn't overlap the form too much */
+.is-editing .chart-header {
+    background: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid #eee;
+}
+
+
+/* The container for the message */
+.chart-degraded-overlay {
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    width: fit-content;
+    max-width: 80%;
+    padding: 2px 12px;
+    background: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 20px;
+
+    color: #856404;
+    font-size: 11px;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+
+    display: none;
+    z-index: 5;
+    pointer-events: none;
+}
+
+@media (max-width: 1500px) {
+
+    .tiny-group-wrapper {
         min-width: 400px;
     }
-    
- }
+
+}

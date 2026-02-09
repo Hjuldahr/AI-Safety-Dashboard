@@ -2,13 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <base href="<%= process.env.PUBLIC_URL || '/' %>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Model Demo</title>
-    <link rel="stylesheet" href="/css/fullSite.css">
-    <link rel="stylesheet" href="/css/header.css">
-    <link rel="stylesheet" href="/css/nav.css">
-    <link rel="stylesheet" href="/css/demo.css">
-    <script src="/js/demo.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/fullSite.css">
+    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/nav.css">
+    <link rel="stylesheet" href="css/demo.css">
+    
+    <!-- Scripts -->
+    <script src="js/demo.js"></script>
+    <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <%- include('components/header') %>
@@ -25,10 +31,17 @@
                         <option value="<%= model %>"><%= model %></option>
                     <% }); %>
                 </select>
-            
+                <br><br>
+                <label for="scenarioSelect">Select Scenario:</label>
+                <select id="scenarioSelect">
+                    <% scenarios.forEach(function(scenario) { %>
+                        <option value="<%= scenario %>" <%= (scenario === currentScenario) ? "selected" : "" %>><%= scenario %></option>
+                    <% }); %>
+                </select>
+                <br><br>
                 <div class="btn-group">
-                    <button class="btn-rogue">Go Rogue</button>
-                    <button class="btn-reset">Reset Normal</button>
+                    <button class="btn-apply">Apply Scenario</button>
+                    <button class="btn-reset">Reset To Normal</button>
                 </div>
             
                 <div id="status"></div>

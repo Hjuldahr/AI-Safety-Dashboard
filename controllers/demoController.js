@@ -1,69 +1,64 @@
-import { LOADED_MODELS, getModelConfig, setOverride, clearOverride } from '../data_analysis_pipeline/modelRegistry.js';
-import fs from 'fs';
-import path from 'path';
-import { PROJECT_ROOT } from '../app.js';
+import { LOADED_MODELS, setScenario, clearScenario, getScenarios, getCurrentScenario } from '../data_analysis_pipeline/utilities/modelRegistry.js';
 
 export const renderDemoPage = (req, res) => {
-    res.render('demo', { models: LOADED_MODELS, user: req.user });
+    // TODO set curret scenario as default
+    const firstModel = LOADED_MODELS[0];
+    const scenarioNames = Object.keys(getScenarios(firstModel));
+    const currentScenario = getCurrentScenario(firstModel);
+    res.render('demo', { 
+        models: LOADED_MODELS, 
+        scenarios: scenarioNames, 
+        currentScenario,
+        user: req.user 
+    });
 };
 
-export const goRogue = (req, res) => {
+export const listScenarios = (req, res) => {
     const { modelName } = req.body;
+
+    if (!modelName) {
+        return res.status(400).json({ error: 'Model name is required' });
+    }
+
+    const scenarios = getScenarios(modelName);
+    if (!scenarios || scenarios.length === 0) {
+        return res.status(400).json({ error: 'No scenarios found' });
+    }
+    const currentScenario = getCurrentScenario(modelName);
+
+    res.json({
+        scenarios: Object.keys(scenarios),
+        currentScenario
+    });
+};
+
+export const applyScenario = (req, res) => {
+    const { modelName, scenarioName } = req.body;
     
     if (!modelName) {
         return res.status(400).json({ error: 'Model name is required' });
     }
 
     try {
-        // Get original config
-        // clear override first to ensure we get the original
-        clearOverride(modelName); 
-        const originalConfig = getModelConfig(modelName);
-
-        // Load Rogue Config from file
-        const rogueConfigPath = path.join(PROJECT_ROOT, 'data_analysis_pipeline', 'model_configs', 'rogue_model_config.json');
+        setScenario(modelName, scenarioName);
+        console.log(`[Demo] Model ${modelName} set to ${scenarioName}.`);
+        res.json({ success: true, message: `${modelName} is now ${scenarioName}.` });
         
-        let rogueConfig;
-        if (fs.existsSync(rogueConfigPath)) {
-             rogueConfig = JSON.parse(fs.readFileSync(rogueConfigPath, 'utf-8'));
-        } else {
-            throw new Error('Rogue config file not found.');
-        }
-
-        // Adapt rogue config to the target model
-        // We want the system to think it's the original model, but using rogue stats.
-        // Keep the original ModelName, but append (ROGUE) for visibility.
-        rogueConfig.META.ModelName = `${modelName} (ROGUE)`;
-
-        // Set override
-        setOverride(modelName, rogueConfig);
-
-        console.log(`[Demo] Model ${modelName} has gone ROGUE using rogue_model_config.json.`);
-        res.json({ success: true, message: `${modelName} is now ROGUE.` });
-
     } catch (error) {
-        console.error('Error going rogue:', error);
+        console.error(`[Demo] Error setting to ${scenarioName}:`, error);
         res.status(500).json({ error: error.message });
     }
 };
 
-export const resetModel = (req, res) => {
+export const resetScenario = (req, res) => {
     const { modelName } = req.body;
 
-    if (!modelName) {
-         return res.status(400).json({ error: 'Model name is required' });
-    }
-
-    if (modelName === 'ALL') {
-        LOADED_MODELS.forEach(name => clearOverride(name));
-        return res.json({ success: true, message: 'All models reset to normal.' });
-    }
-
     try {
-        clearOverride(modelName);
+        clearScenario(modelName);
         console.log(`[Demo] Model ${modelName} reset to normal.`);
         res.json({ success: true, message: `${modelName} is back to normal.` });
     } catch (error) {
+        console.error('[Demo] Error going back to normal:', error);
         res.status(500).json({ error: error.message });
     }
 };

@@ -6,14 +6,12 @@ import { fileURLToPath } from 'url';
 import session from 'express-session';
 import passport from 'passport';
 import initializePassport from './config/passport-config.js';
+import { setTemplatePermissions } from './middleware/authorization.js';
 import MongoStore from 'connect-mongo';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase, seedCharts } from './config/database.js';
-// import { swaggerSpec } from "./config/swaggerConfig.js";
-import swaggerUi from "swagger-ui-express";
-import YAML from 'yamljs';
 
 let shuttingDown = false;
 
@@ -53,13 +51,16 @@ const startServer = async () => {
         }),
         
         cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 1, // Cookie expires in 1 day
+            maxAge: 1000 * 60 * 60 * 24 * 7, // Cookie expires in 1 week
             secure: process.env.NODE_ENV === 'production', //use https in production
         }
     }));
 
     app.use(passport.initialize());
     app.use(passport.session());
+
+    // Make computed permissions available to server-rendered views
+    app.use(setTemplatePermissions);
 
     // View engine setup
     app.set("views", path.join(PROJECT_ROOT, "views"));
@@ -71,32 +72,44 @@ const startServer = async () => {
     // Connect to the database:
     try {
         await mongoose.connect(process.env.MONGO_URL);
-        console.log('MongoDB connected successfully.');
+        console.log('[App] MongoDB connected successfully.');
     } catch (error) {
-        console.error('MongoDB connection failed:', error.message);
+        console.error('[App] MongoDB connection failed:', error.message);
         process.exit(1);
     }
 
     //Mount all of the routes to /
     app.use("/", mainRouter);
 
-    const swaggerDocument = YAML.load(path.join(__dirname, './documentation/openapi.yml'));
-
-    // Serve the Swagger API documentation at /docs
-    app.use(`/docs`, swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
     const server = app.listen(PORT, () => {
-        console.log(`Server running on [http://localhost:${PORT}/]`);
+        console.log(`[App] Server running on [http://localhost:${PORT}/]`);
+    });
+
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`[App] Port ${PORT} is already in use.`);
+        } else {
+            console.error('[App] Server Error', err);
+        }
+        process.exit(1);
+    });
+
+    // --- Reject new connections during shutdown ---
+    server.on('connection', (socket) => {
+        if (shuttingDown) {
+            socket.destroy();
+            console.log('[App] Client attempted to connect during shutdown');
+        }
     });
 
     const shutdown = async (signal) => {
         if (shuttingDown) return;
         shuttingDown = true;
 
-        console.log(`\n[${signal}] Shutting down...`);
+        console.log(`\n[App] Received ${signal}! Shutting down...`);
 
         const forceExitTimer = setTimeout(() => {
-            console.error("Force exit");
+            console.error("[App] Force exit");
             process.exit(1);
         }, 10_000);
 
@@ -115,7 +128,7 @@ const startServer = async () => {
             clearTimeout(forceExitTimer);
             process.exit(0);
         } catch (err) {
-            console.error("Shutdown failed:", err);
+            console.error("[App] Shutdown failed:", err);
             clearTimeout(forceExitTimer);
             process.exit(1);
         }

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="<%= process.env.PUBLIC_URL || '/' %>">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/usermanagement.css">
+  <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/fullSite.css">
+  <link rel="stylesheet" href="css/nav.css">
+  <link rel="stylesheet" href="css/notifications.css">
+
+  <!-- Scripts -->
+   <script>
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+  </script>  <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script src="js/notifications.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+</head>
+<body>
+  <%- include('../components/header') %>
+  <%- include('../components/nav') %>
+
+  <main class="content">
+    <h2>User Management</h2>
+
+    <div class="admin-panel">
+      <!-- Users Section -->
+      <div class="panel-section">
+        <h3>Users</h3>
+        <div id="users-container">
+          <!-- Table is rendered by client JS -->
+        </div>
+      </div>
+
+      <!-- Roles Section -->
+      <div class="panel-section">
+        <h3>Roles</h3>
+        
+        <!-- Create New Role Form -->
+        <div style="margin-bottom: 2rem;">
+          <h4 style="margin-top: 0;">Create New Role</h4>
+          
+          <div id="role-messages"></div>
+
+          <form id="create-role-form">
+            <div class="form-group">
+              <label for="role-name">Role Name:</label>
+              <input type="text" id="role-name" placeholder="e.g., moderator" required minlength="3" maxlength="50">
+            </div>
+
+            <div class="form-group">
+              <label for="role-description">Description:</label>
+              <textarea id="role-description" placeholder="Describe this role's purpose" required minlength="5" maxlength="500"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Permissions:</label>
+              <div class="permissions-list" id="permissions-list">
+                <!-- Permissions are loaded by client JS -->
+              </div>
+            </div>
+
+            <div class="button-group">
+              <button type="submit" class="btn-primary">Create Role</button>
+              <button type="reset" class="btn-secondary">Clear</button>
+            </div>
+          </form>
+        </div>
+
+        <hr>
+
+        <!-- Existing Roles -->
+        <h4>Existing Roles</h4>
+        <div id="roles-list" class="roles-list">
+          <!-- Roles are rendered by client JS -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    window.AVAILABLE_ROLES = <%- JSON.stringify(rolesList || []) %>;
+    window.CURRENT_USER_ID = "<%= user ? user._id : '' %>";
+  </script>
+  <script src="js/adminUsers.js" defer></script>
+</body>
+</html>

@@ -23,6 +23,7 @@
   <script>
     //Grab the constants sent on page load
     window.CONSTANTS = <%- JSON.stringify(constants) %>;
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
   </script>
 
   <!-- Chart Scripts -->
