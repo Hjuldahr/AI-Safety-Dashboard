@@ -22,7 +22,7 @@ const UserSchema = new mongoose.Schema({
     },
     roles: {
         type: [String],
-        default: ['viewer'] // Every new user is a 'viewer' by default
+        default: ['visitor'] // Every new user is a 'visitor' by default
     },
     // Timestamp of when user last saw notifications (server-side unread tracking)
     alertsLastSeen: {

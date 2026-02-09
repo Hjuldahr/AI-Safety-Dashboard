@@ -11,9 +11,9 @@ const router = express.Router();
 const swaggerDocument = YAML.load(path.join(__dirname, '../documentation/openapi.yml'));
 
 // Serve the Docsify Docs at /docs
-router.use("/docs", express.static('documentation'));
+router.use("/docs/", express.static('documentation'));
 
 // Serve the Swagger API documentation at /api/docs
-router.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+router.use("/api/docs/", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 export default router;
