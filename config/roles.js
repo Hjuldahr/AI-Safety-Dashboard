@@ -18,6 +18,8 @@ const roles = {
             ...Object.keys(permissions.logs),
             ...Object.keys(permissions.admin),
             ...Object.keys(permissions.common),
+            ...Object.keys(permissions.documentation),
+            ...Object.keys(permissions.demo),
         ]
     },
     user: {
@@ -28,6 +30,7 @@ const roles = {
             'view:alerts', 'create:alert', 'acknowledge:alert',
             'view:reports', 'create:report',
             'view:logs',
+            "read:docs",
             ...Object.keys(permissions.common),
         ]
     },
@@ -38,6 +41,7 @@ const roles = {
             'view:alerts',
             'view:reports',
             'view:logs',
+            "read:docs",
             ...Object.keys(permissions.common),
         ]
     },
@@ -46,6 +50,7 @@ const roles = {
         permissions: [
             'view:dashboard',
             'view:profile',
+            "read:docs",
         ]
     }
 };
