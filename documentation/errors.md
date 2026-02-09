@@ -1,3 +1,4 @@
+# Error Handling
 Currently there is no centralized error handler. Errors that are thrown can be found in one of three locations:
 
 ## Client Side - Handled
@@ -10,3 +11,6 @@ Currently there is no centralized error handler. Errors that are thrown can be f
 
 ## Server Side:
 - Server side errors will appear in the running server console, and depending on whether they are handled or not may cause a server crash.
+
+## Read Next
+* [API Documentation](http://localhost:2121/api/docs)

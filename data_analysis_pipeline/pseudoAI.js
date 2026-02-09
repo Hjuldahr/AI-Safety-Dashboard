@@ -1,6 +1,6 @@
-import random from './random.js';
+import random from './utilities/random.js'
 import { TOPIC_HIERARCHY } from '../config/constants.js';
-import { getModelConfig, LOADED_MODELS } from './modelRegistry.js';
+import { getModelConfig, LOADED_MODELS } from './utilities/modelRegistry.js';
 import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' with { type: 'json' };
 
 function applyGeneralizationBias(topicWeights, previousGeneralization) {
@@ -162,7 +162,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
 
     let flaggedOutput = null;
     if (isToxic && isChaos) {
-      flaggedOutput = random.getRandomArrayElement(flaggedOutputPool[topic][sub_topic]);
+      flaggedOutput = random.getRandomArrayElement(flaggedOutputPool['mild'][topic][sub_topic]);
     }
 
     calls.push({

@@ -1,6 +1,7 @@
 {
     "META": {
-        "ModelName": "BadModel"
+        "ModelName": "BadModel",
+        "Scenario": "Normal"
     },
     "TOPIC_WEIGHTS": {
         "Customer Support": 0.40,

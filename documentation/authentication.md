@@ -1,3 +1,4 @@
+# Authenticating Yourself
 In order to access many of the API endpoints, and sections of the web application, you must first authenticate yourself.
 
 Authentication can be done in two ways.
@@ -17,3 +18,7 @@ Send `multipart/form-data`:
 	"password": "securePassword123"
 }
 ```
+
+## Read Next
+* [API Documentation](http://localhost:2121/api/docs)
+* [Errors](errors.md)

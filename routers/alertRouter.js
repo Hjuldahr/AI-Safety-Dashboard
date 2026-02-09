@@ -11,6 +11,8 @@ router.post("/", isAuthenticated, authorize('create:alert'), controller.createAl
 router.get("/live", isAuthenticated, authorize('view:alerts'), controller.getLiveAlerts);
 // Return full alert history (Paginated/Filtered)
 router.get("/api/history", isAuthenticated, authorize('view:alerts'), controller.getAlertHistory);
+// Return dashboard stats
+roter.get("/api/stats", isAuuthenticated, controller.getAlertStats);
 // Return unread count for current user
 router.get('/unread-count', isAuthenticated, authorize('view:alerts'), controller.getUnreadCount);
 // Mark alerts as read for current user

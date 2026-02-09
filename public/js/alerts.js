@@ -1,1022 +1,716 @@
 document.addEventListener('DOMContentLoaded', async function () {
-
-    // --------------------------------------------------
-    // Permission checks
-    // --------------------------------------------------
+  
     const hasPermission = (permission) => {
         return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
     };
-
-    // --------------------------------------------------
-    // DOM references
-    // --------------------------------------------------
+    
+    // --- DOM REFERENCES ---
     const addAlertBtn = document.getElementById('add-alert-btn');
-    const alertLogBody = document.getElementById('alert-log-body');
-    const liveAlertsList = document.getElementById('live-alerts-list');
-    const rulesContainer = document.getElementById('rules-container');
-    const logicalOperatorsContainer = document.querySelector('.logical-operators-container');
+    const alertModal = document.getElementById('alert-modal');
+    const manageModal = document.getElementById('manage-modal');
+    const tagsModal = document.getElementById('tags-modal');
+    const modalTitle = document.getElementById('modal-title');
+    
+    const openCreateBtn = document.getElementById('open-create-modal-btn');
+    const openManageBtn = document.getElementById('open-manage-modal-btn');
+    const openTagsBtn = document.getElementById('open-tags-modal-btn');
+    const saveAlertBtn = document.getElementById('save-alert-btn');
+    const saveTagsBtn = document.getElementById('save-tags-btn');
+    
+    // Close Buttons
+    const closeBtns = document.querySelectorAll('.close-modal-btn');
+    const closeManageBtns = document.querySelectorAll('.close-manage-btn');
+    const closeTagsBtns = document.querySelectorAll('.close-tags-btn');
+
+    // Stats
+    const countCrit = document.getElementById('count-critical');
+    const countHigh = document.getElementById('count-high');
+    const countMed = document.getElementById('count-medium');
+    const countInfo = document.getElementById('count-info');
+    const statCards = document.querySelectorAll('.stat-card');
+
+    // Builder
     const alertNameInput = document.getElementById('alert-name');
     const alertLevelSelect = document.getElementById('alert-level');
     const modelSelect = document.getElementById('model-name');
+    const rulesContainer = document.getElementById('rules-container');
+    const logicalOperatorsContainer = document.querySelector('.logical-operators-container');
+    
+    // Manage/History
+    const liveAlertsList = document.getElementById('live-alerts-list');
+    const alertLogBody = document.getElementById('alert-log-body');
+    const historyPagination = document.getElementById('history-pagination');
+    const historyFilterForm = document.getElementById('history-filter-form');
+    const tagManagerRows = document.getElementById('tag-manager-rows');
+    const addTagRowBtn = document.getElementById('add-tag-row-btn');
 
-    // Hide add alert button if user doesn't have permission
+    // State
+    const liveAlertsCache = {};
+    const tagsCache = {};
+    const selectedTags = []; // For Rule Builder
+    let currentEditId = null;
+    let currentHistoryPage = 1;
+    let deletedTagIds = []; // For Tag Manager
+
+    // Constants
+    const { DATA_DICTIONARY, KNOWN_MODELS } = window.CONSTANTS || { DATA_DICTIONARY: {}, KNOWN_MODELS: [] };
+    
+    // OPERATORS (Includes 'eq' / Equal To)
+    const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte', 'eq': '$eq' };
+    const OP_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
+  
+   // Hide add alert button if user doesn't have permission
     if (addAlertBtn && !hasPermission('create:alert')) {
         addAlertBtn.style.display = 'none';
     }
-
-    // History references
-    const historyFilterForm = document.getElementById('history-filter-form');
-    const historyClearBtn = document.querySelector('#history-filter-form .clear-filters');
-    const historyPagination = document.getElementById('history-pagination');
-
-    // Buttons used for edit flow (created once)
-    const saveBtn = document.createElement('button');
-    saveBtn.id = 'save-alert-btn';
-    saveBtn.className = 'btn btn-primary';
-    saveBtn.textContent = 'Save';
-    saveBtn.style.display = 'none';
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.id = 'cancel-edit-btn';
-    cancelBtn.className = 'btn btn-secondary';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.display = 'none';
+  
 
 
-    if (addAlertBtn && addAlertBtn.parentElement) {
-        const actionWrapper = document.createElement('div');
-        actionWrapper.className = 'alert-action-buttons';
-        actionWrapper.style.display = 'inline-flex';
-        actionWrapper.style.gap = '8px';
-        actionWrapper.appendChild(cancelBtn);
-        actionWrapper.appendChild(saveBtn);
-        addAlertBtn.parentElement.appendChild(actionWrapper);
+    // --- 1. INITIALIZATION ---
+    async function init() {
+        try {
+            const tData = await apiListTags();
+            (tData || []).forEach(t => tagsCache[t._id] = t);
+        } catch (e) { console.warn('Tags load failed', e); }
+
+        // Populate dropdowns AFTER tags are loaded
+        populateModelDropdowns();
+
+        await loadLiveAlerts();
+        await loadLiveAlerts();
+        await loadLiveAlerts();
+        await loadAlertHistory(1);
+        await initCharts();
+        setupLiveUpdates();
     }
 
-    // Client-side cache and edit state
-    const liveAlertsCache = {};
-    const tagsCache = {};
-    const selectedTags = [];
-    let currentEditId = null;
-    let currentHistoryPage = 1;
+    // --- CHART LOGIC ---
+    const chartRangeSelect = document.getElementById('chart-range-select');
 
-    // --------------------------------------------------
-    // Config / constant mappings
-    // --------------------------------------------------
-    // Field mappings were removed — the rule builder uses `DATA_DICTIONARY` directly.
-
-    const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte' };
-    const OPERATOR_READABLE = { 'gt': 'greater than', 'gte': 'greater than or equal to', 'lt': 'less than', 'lte': 'less than or equal to' };
-    const OP_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte' };
-
-    // --------------------------------------------------
-    // Small helpers
-    // --------------------------------------------------
-    function isNumberLike(v) {
-        return !Number.isNaN(Number(v));
-    }
-
-    function formatTimeISO(ts) {
-        const d = ts ? new Date(ts) : new Date();
-        return d.toLocaleString('en-CA', { hour12: true }).replace(',', '');
-    }
-
-
-    // --------------------------------------------------
-    // Rule-builder helpers
-    // --------------------------------------------------
-    function createRuleRowHTML(logicalOperator) {
-        const deleteBtn = logicalOperator ? '<button class="delete-rule-btn">&times;</button>' : '';
-        
-        // Dynamically insert options
-        const optionsHtml = getDataTypeOptions();
-
-        return `
-      <span class="logic-separator">${logicalOperator}</span>
-      <select class="data-type">
-          <option value="">-- select data type --</option>
-          ${optionsHtml}
-      </select>
-      <select class="operator-type">
-          <option value="">-- select operator --</option>
-          <option value="gt">Greater Than</option>
-          <option value="gte">Greater Than or Equal To</option>
-          <option value="lte">Less Than or Equal To</option>
-          <option value="lt">Less Than</option>
-      </select>
-      <input type="text" placeholder="value" class="value-input">
-      ${deleteBtn}
-    `;
-    }
-
-    /**
-     * Build a MongoDB-style rule object from the UI. Returns null and alerts
-     * on validation errors.
-     */
-    function buildRuleJSON() {
-        const ruleRows = rulesContainer.querySelectorAll('.rule-row');
-        const conditions = [];
-        let firstLogicOperator = null;
-        let hasIncompleteRow = false;
-
-        ruleRows.forEach((row, index) => {
-            const dataTypeSelect = row.querySelector('.data-type');
-            const operatorSelect = row.querySelector('.operator-type');
-            const valueInput = row.querySelector('.value-input');
-            const logicalOperatorSpan = row.querySelector('.logic-separator');
-
-            // dataType is now the DICTIONARY KEY (e.g., 'responseHelpfulness')
-            const dictKey = dataTypeSelect ? dataTypeSelect.value : '';
-            const operatorValue = operatorSelect ? operatorSelect.value : '';
-            const rawValue = valueInput ? valueInput.value : '';
-
-            if (index > 0 && logicalOperatorSpan && !firstLogicOperator) {
-                firstLogicOperator = logicalOperatorSpan.textContent.trim().toLowerCase() === 'and' ? '$and' : '$or';
-            }
-
-            if (dictKey && operatorValue && rawValue) {
-                // LOOKUP: Get the actual DB path from the dictionary
-                const dictEntry = DATA_DICTIONARY[dictKey];
-                if (!dictEntry) {
-                    alert('Invalid data type selected');
-                    return;
-                }
-                const dbField = dictEntry.dbPath;
-                const mongoOperator = OPERATOR_MAP[operatorValue];
-                const numericValue = parseFloat(rawValue);
-
-                if (!dbField || !mongoOperator || Number.isNaN(numericValue)) {
-                    alert(`Invalid data in rule ${index + 1}.`);
-                    hasIncompleteRow = true;
-                    return;
-                }
-
-                const condition = {};
-                condition[dbField] = {};
-                condition[dbField][mongoOperator] = numericValue;
-                conditions.push(condition);
-
-            } else if (dictKey || operatorValue || rawValue) {
-                hasIncompleteRow = true;
-            }
-        });
-
-        if (hasIncompleteRow) {
-            alert('Please fill out all fields for every rule, or remove incomplete rules.');
-            return null;
+    async function initCharts() {
+        if(chartRangeSelect) {
+            chartRangeSelect.addEventListener('change', () => fetchAndRenderCharts());
         }
-        if (conditions.length === 0) {
-            alert('Please define at least one valid rule for the alert.');
-            return null;
-        }
-        if (conditions.length === 1) return conditions[0];
-        
-        const topLevelOperator = firstLogicOperator || '$and';
-        const finalRule = {};
-        finalRule[topLevelOperator] = conditions;
-        return finalRule;
+        await fetchAndRenderCharts();
     }
 
-    function formatRuleReadableFromUI() {
-        const ruleRows = rulesContainer.querySelectorAll('.rule-row');
-        const parts = [];
-        ruleRows.forEach((row, index) => {
-            const dataTypeSelect = row.querySelector('.data-type');
-            const operatorSelect = row.querySelector('.operator-type');
-            const valueInput = row.querySelector('.value-input');
-            const logicalOperatorSpan = row.querySelector('.logic-separator');
+    async function fetchAndRenderCharts() {
+        try {
+            const range = chartRangeSelect ? chartRangeSelect.value : '24h';
+            const end = new Date();
+            let start = new Date();
+            if(range === '24h') start.setTime(end.getTime() - 24*60*60*1000);
+            else if(range === '7d') start.setTime(end.getTime() - 7*24*60*60*1000);
+            else if(range === '30d') start.setTime(end.getTime() - 30*24*60*60*1000);
 
-            // Use the TEXT of the option (The Label) for readability
-            const dataTypeLabel = dataTypeSelect.options[dataTypeSelect.selectedIndex]?.text;
-            const operatorValue = operatorSelect ? operatorSelect.value : '';
-            const value = valueInput ? valueInput.value : '';
+            const params = new URLSearchParams({ 
+                startDate: start.toISOString(), 
+                endDate: end.toISOString() 
+            });
 
-            if (dataTypeLabel && operatorValue && value) {
-                const prefix = (index > 0 && logicalOperatorSpan) ? ` ${logicalOperatorSpan.textContent} ` : '';
-                parts.push(prefix + `"${dataTypeLabel}" ${OPERATOR_READABLE[operatorValue]} ${value}`);
-            }
-        });
-        return parts.join('').trim() + '.';
-    }
-
-    function resetAlertBuilder() {
-        alertNameInput.value = '';
-        alertLevelSelect.selectedIndex = 0;
-        if (modelSelect) modelSelect.value = '';
-        while (rulesContainer.children.length > 1) rulesContainer.removeChild(rulesContainer.lastChild);
-        
-        // Reset first row
-        const firstRow = rulesContainer.querySelector('.rule-row');
-        if(firstRow) firstRow.remove();
-        
-        const freshRow = document.createElement('div');
-        freshRow.className = 'rule-row';
-        freshRow.innerHTML = createRuleRowHTML('');
-        rulesContainer.appendChild(freshRow);
-    }
-
-    function populateRuleBuilderFromRule(ruleObj) {
-        while (rulesContainer.firstChild) rulesContainer.removeChild(rulesContainer.firstChild);
-        let parts = [];
-        // Flatten Mongo Query Structure
-        if (ruleObj && typeof ruleObj === 'object') {
-            const keys = Object.keys(ruleObj);
-            if (keys.length === 1 && (keys[0] === '$and' || keys[0] === '$or')) parts = ruleObj[keys[0]];
-            else parts = [ruleObj];
-        }
-
-        parts.forEach((cond, idx) => {
-            const dbField = Object.keys(cond)[0];
-            const opObj = cond[dbField];
-            const opKey = Object.keys(opObj)[0];
-            const val = opObj[opKey];
-
-            // REVERSE LOOKUP: Find which dictionary key matches this dbPath
-            const dictKey = Object.keys(DATA_DICTIONARY).find(k => DATA_DICTIONARY[k].dbPath === dbField);
+            const res = await fetch(`alerts/api/stats?${params.toString()}`);
+            const data = await res.json();
             
-            const operator = OP_REVERSE_MAP[opKey] || 'gt';
-            const logic = idx > 0 ? (ruleObj && ruleObj.$or ? 'OR' : 'AND') : '';
-
-            const newRuleRow = document.createElement('div');
-            newRuleRow.className = 'rule-row';
-            newRuleRow.innerHTML = createRuleRowHTML(logic);
-            rulesContainer.appendChild(newRuleRow);
-
-            const dataTypeSelect = newRuleRow.querySelector('.data-type');
-            const operatorSelect = newRuleRow.querySelector('.operator-type');
-            const valueInput = newRuleRow.querySelector('.value-input');
-
-            if (dataTypeSelect && dictKey) dataTypeSelect.value = dictKey;
-            if (operatorSelect) operatorSelect.value = operator;
-            if (valueInput) valueInput.value = val;
-        });
-
-        // Add empty row if none existed
-        if (rulesContainer.children.length === 0) {
-            const firstRow = document.createElement('div');
-            firstRow.className = 'rule-row';
-            firstRow.innerHTML = createRuleRowHTML('');
-            rulesContainer.appendChild(firstRow);
-        }
-    }
-
-    // --------------------------------------------------
-    // Rendering helpers
-    // --------------------------------------------------
-    function renderLiveAlertsList(alerts) {
-        const categories = { Critical: [], High: [], Medium: [], Info: [] };
-        alerts.forEach(alert => {
-            const level = alert.alertLevel || 'Info';
-            if (!categories[level]) categories[level] = [];
-            categories[level].push(alert);
-            liveAlertsCache[alert._id] = alert;
-        });
-        const order = ['Critical', 'High', 'Medium', 'Info'];
-        let html = '';
-        order.forEach(level => {
-            const items = (categories[level] || []).map(a => `<li data-id="${a._id}"><span>${a.alertName}</span><div class="alert-actions"><button class="edit-btn">✎</button><button class="delete-btn">&times;</button></div></li>`).join('');
-            const cls = level.toLowerCase();
-            html += `<li><h3 class="alert-category ${cls}"><span class="color-dot"></span>${level} Alerts</h3><ul class="alert-items">${items}</ul></li>`;
-        });
-        liveAlertsList.innerHTML = html;
+            // Use new AlertCharts builder
+            if (window.AlertCharts) {
+                window.AlertCharts.render(data);
+            }
+        } catch(e) { console.error('Chart load failed', e); }
     }
 
     function populateModelDropdowns() {
-        // Find all selects marked with our class
         const selects = document.querySelectorAll('.model-select-dynamic');
         selects.forEach(sel => {
             const isFilter = sel.id.includes('filter');
-            let html = isFilter ? '<option value="all">All Models</option>' : '<option value="">-- all models --</option>';
-            
-            KNOWN_MODELS.forEach(m => {
-                html += `<option value="${m}">${m}</option>`;
-            });
+            let html = isFilter ? '<option value="all">All Models</option>' : '<option value="">-- All Models --</option>';
+            KNOWN_MODELS.forEach(m => html += `<option value="${m}">${m}</option>`);
             sel.innerHTML = html;
         });
-        // Populate tag filter dropdown if present
         const tagFilter = document.getElementById('filter-tag');
         if (tagFilter) {
             let html = '<option value="all">All Tags</option>';
-            Object.values(tagsCache).forEach(t => {
-                html += `<option value="${t._id}">${t.name}</option>`;
-            });
+            // Sort tags alphabetically
+            const sorted = Object.values(tagsCache).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+            sorted.forEach(t => html += `<option value="${t._id}">${t.name}</option>`);
             tagFilter.innerHTML = html;
         }
     }
 
-    // Generate <option> tags for Numeric fields only (alerts usually need math)
-    function getDataTypeOptions() {
-        return Object.keys(DATA_DICTIONARY)
-            .filter(key => DATA_DICTIONARY[key].dataType === 'numeric')
-            .map(key => `<option value="${key}">${DATA_DICTIONARY[key].label}</option>`)
-            .join('');
-    }
 
-    // --------------------------------------------------
-    // API wrappers
-    // --------------------------------------------------
-    async function apiCreateAlert(payload) {
-        const resp = await fetch('alerts', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+    // --- 2. MODAL CONTROLS ---
+
+    // Rule Builder
+    function openBuilder(isEdit = false) {
+        alertModal.style.display = 'flex';
+        modalTitle.textContent = isEdit ? 'Edit Alert Rule' : 'Create New Alert Rule';
+        saveAlertBtn.textContent = isEdit ? 'Update Alert' : 'Save Alert';
+    }
+    function closeBuilder() {
+        alertModal.style.display = 'none';
+        currentEditId = null;
+        resetBuilderForm();
+    }
+    function resetBuilderForm() {
+        alertNameInput.value = ''; alertLevelSelect.value = ''; 
+        if(modelSelect) modelSelect.value = '';
+        rulesContainer.innerHTML = ''; addEmptyRuleRow();
+        selectedTags.length = 0; renderTagInput();
+    }
+    openCreateBtn.addEventListener('click', () => { resetBuilderForm(); openBuilder(false); });
+    closeBtns.forEach(b => b.addEventListener('click', closeBuilder));
+
+    // Manage Rules Modal
+    openManageBtn.addEventListener('click', () => { manageModal.style.display = 'flex'; });
+    closeManageBtns.forEach(b => b.addEventListener('click', () => { manageModal.style.display = 'none'; }));
+
+    // Tag Manager Modal
+    if (openTagsBtn) {
+        openTagsBtn.addEventListener('click', () => {
+            deletedTagIds = [];
+            renderTagManager();
+            tagsModal.style.display = 'flex';
         });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to create');
-        return data;
+    }
+    closeTagsBtns.forEach(b => b.addEventListener('click', () => { tagsModal.style.display = 'none'; }));
+
+
+    // --- 3. TAG MANAGER LOGIC ---
+    function renderTagManager() {
+        tagManagerRows.innerHTML = '';
+        const tags = Object.values(tagsCache).sort((a,b)=>a.name.localeCompare(b.name));
+        tags.forEach(t => addTagRowUI(t._id, t.name, t.color));
+        if(tags.length === 0) addTagRowUI(null, '', '#888888');
     }
 
-    async function apiListTags() {
-        const resp = await fetch('tags');
-        if (!resp.ok) throw new Error('Failed to load tags');
-        const data = await resp.json();
-        return data.tags || [];
-    }
-
-    async function apiCreateTag(payload) {
-        const resp = await fetch('tags', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+    function addTagRowUI(id, name, color) {
+        const row = document.createElement('div');
+        row.className = 'tag-edit-row';
+        row.innerHTML = `
+            <input type="text" placeholder="Tag Name" value="${name||''}" class="tag-name-input" data-original-id="${id||''}">
+            <input type="color" value="${color||'#888888'}" class="tag-color-input">
+            <button class="btn btn-secondary delete-tag-btn"><i class="fa-solid fa-trash"></i></button>
+        `;
+        row.querySelector('.delete-tag-btn').addEventListener('click', () => {
+            if(id) deletedTagIds.push(id);
+            row.remove();
         });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data.message || 'Failed to create tag');
-        return data.tag;
+        tagManagerRows.appendChild(row);
     }
 
-    async function apiSyncTags(payload) {
-        const resp = await fetch('tags/sync', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+    if (addTagRowBtn) {
+        addTagRowBtn.addEventListener('click', () => {
+            addTagRowUI(null, '', '#888888');
+            tagManagerRows.scrollTop = tagManagerRows.scrollHeight;
         });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data.message || 'Failed to sync tags');
-        return data.tags || [];
-    }
-    async function apiGetLiveAlerts() {
-        const resp = await fetch('alerts/live');
-        if (!resp.ok) throw new Error('Failed to load live alerts');
-        return resp.json();
     }
 
-    async function apiDeleteAlert(id) {
-        const resp = await fetch(`alerts/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'same-origin' });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to delete');
-        return data;
-    }
-
-    async function apiUpdateAlert(id, payload) {
-        const resp = await fetch(`alerts/${encodeURIComponent(id)}`, {
-            method: 'PUT',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) throw new Error(data.message || resp.statusText || 'Failed to update');
-        return data;
-    }
-
-    // --------------------------------------------------
-    // History & Pagination Logic
-    // --------------------------------------------------
-    
-    function renderPagination(container, totalPages, currentPage, handlerFunction) {
-        container.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        // Prev Button
-        const prevBtn = document.createElement('button');
-        prevBtn.textContent = '« Prev';
-        prevBtn.disabled = currentPage === 1;
-        prevBtn.addEventListener('click', () => handlerFunction(currentPage - 1));
-        container.appendChild(prevBtn);
-
-        // Page Numbers
-        for (let i = 1; i <= totalPages; i++) {
-            const pageBtn = document.createElement('button');
-            pageBtn.textContent = i;
-            if (i === currentPage) pageBtn.classList.add('active');
-            pageBtn.addEventListener('click', () => handlerFunction(i));
-            container.appendChild(pageBtn);
-        }
-
-        // Next Button
-        const nextBtn = document.createElement('button');
-        nextBtn.textContent = 'Next »';
-        nextBtn.disabled = currentPage === totalPages;
-        nextBtn.addEventListener('click', () => handlerFunction(currentPage + 1));
-        container.appendChild(nextBtn);
-    }
-
-    function renderHistoryTable(logs) {
-        alertLogBody.innerHTML = ''; // clear existing
-        if (!logs || logs.length === 0) {
-            alertLogBody.innerHTML = '<tr><td colspan="6">No alert history found.</td></tr>';
-            return;
-        }
-
-        logs.forEach(log => {
-            const newRow = document.createElement('tr');
-            const createdTs = log.created ? new Date(log.created) : new Date();
-            const timeString = createdTs.toLocaleString('en-CA', { hour12: true }).replace(',', '');
-            const level = log.level || 'Info';
+    if (saveTagsBtn) {
+        saveTagsBtn.addEventListener('click', async () => {
+            const rows = tagManagerRows.querySelectorAll('.tag-edit-row');
+            const originalIds = [], newNames = [], colors = [];
+            let isValid = true; const seen = new Set();
             
-            const tagsHtml = (log.tags || []).map(t => `
-                <span class="tag-pill" style="background:${t.color || '#888888'}">${t.name || ''}</span>`).join(' ');
-                const tagIds = (log.tags || []).map(t=>t._id).join(',');
-                newRow.innerHTML = `
-                <td><span class="level-tag ${level.toLowerCase()}">${level}</span></td>
-                <td class="time-cell">${timeString} <span>Eastern Standard Time</span></td>
-                <td>${log.alertName || ''}</td>
-                <td class="model-cell">${log.modelName || '-'}</td>
-                <td class="details-cell">${log.humanRule || ''}</td>
-                    <td class="tags-cell">${tagsHtml} <button class="edit-log-tags btn btn-secondary" data-id="${log._id}" data-tags="${tagIds}">Edit</button></td>
-            `;
-            alertLogBody.appendChild(newRow);
+            rows.forEach(r => {
+                const name = r.querySelector('.tag-name-input').value.trim();
+                const color = r.querySelector('.tag-color-input').value;
+                const oid = r.querySelector('.tag-name-input').dataset.originalId || null;
+                if(!name) return;
+                if(seen.has(name.toLowerCase())) { alert(`Duplicate: ${name}`); isValid = false; return; }
+                seen.add(name.toLowerCase());
+                newNames.push(name); colors.push(color); originalIds.push(oid);
+            });
+            if(!isValid) return;
+
+            try {
+                await apiSyncTags({ originalIds, newNames, colors, deletions: deletedTagIds });
+                // Reload Tags
+                const updated = await apiListTags();
+                Object.keys(tagsCache).forEach(k=>delete tagsCache[k]);
+                updated.forEach(t=>tagsCache[t._id]=t);
+                // Refresh UIs
+                renderTagInput(); 
+                populateModelDropdowns(); // updates filter
+                loadAlertHistory(currentHistoryPage);
+                tagsModal.style.display = 'none';
+                alert('Tags saved.');
+            } catch(e) { alert('Save failed: '+e.message); }
         });
     }
 
-    async function loadAlertHistory(page = 1) {
-        currentHistoryPage = page;
-        
-        // UI Loading state
-        alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
-        historyPagination.innerHTML = '';
 
-        // Get filter values
-        const level = document.getElementById('filter-level').value;
-        const model = document.getElementById('filter-model').value;
-        const tag = document.getElementById('filter-tag') ? document.getElementById('filter-tag').value : '';
-        const startDate = document.getElementById('filter-start-date') ? document.getElementById('filter-start-date').value : '';
-        const endDate = document.getElementById('filter-end-date') ? document.getElementById('filter-end-date').value : '';
-
-        // Build Params
-        const params = new URLSearchParams();
-        params.set('page', page);
-        params.set('limit', 10); // Standard limit
-        if (level && level !== 'all') params.set('level', level);
-        if (model && model !== 'all') params.set('modelName', model);
-        if (tag && tag !== 'all') params.set('tag', tag);
-        if (startDate) params.set('startDate', startDate);
-        if (endDate) params.set('endDate', endDate);
-
-        try {
-            const resp = await fetch(`alerts/api/history?${params.toString()}`);
-            if (!resp.ok) throw new Error('Failed to fetch history');
-            
-            const data = await resp.json(); // { logs: [], total: X, pages: Y, page: Z }
-            
-            renderHistoryTable(data.logs);
-            renderPagination(historyPagination, data.pages, data.page, loadAlertHistory);
-        } catch (err) {
-            console.error('History load error:', err);
-            alertLogBody.innerHTML = `<tr><td colspan="6">Error loading history: ${err.message}</td></tr>`;
-        }
-    }
-
-    // --------------------------------------------------
-    // Event handlers
-    // --------------------------------------------------
+    // --- 4. LIVE ALERTS (STATS & LIST) ---
     async function loadLiveAlerts() {
         try {
             const data = await apiGetLiveAlerts();
             const alerts = data.alerts || [];
-            renderLiveAlertsList(alerts);
-        } catch (err) {
-            console.error('Error loading live alerts:', err);
-        }
+            Object.keys(liveAlertsCache).forEach(k=>delete liveAlertsCache[k]);
+            alerts.forEach(a => liveAlertsCache[a._id] = a);
+
+            const counts = { Critical: 0, High: 0, Medium: 0, Info: 0 };
+            alerts.forEach(a => { if(counts[a.alertLevel] !== undefined) counts[a.alertLevel]++; });
+            
+            countCrit.innerText = counts.Critical;
+            countHigh.innerText = counts.High;
+            countMed.innerText = counts.Medium;
+            countInfo.innerText = counts.Info;
+
+            renderManageList(alerts);
+        } catch(e) { console.error(e); }
     }
 
-    addAlertBtn.addEventListener('click', async function () {
-        const alertName = alertNameInput.value || 'New Alert';
-        const alertLevel = alertLevelSelect.value;
-        const modelName = modelSelect ? (modelSelect.value || null) : null;
-        if (!alertLevel) { alert('Please select an alert level.'); return; }
-        const ruleJSON = buildRuleJSON();
-        if (!ruleJSON) return;
-        const uiReadable = formatRuleReadableFromUI();
-        const created = Date.now();
-        try {
-            const data = await apiCreateAlert({ alertName, alertLevel, alertRule: ruleJSON, created, modelName, tags: selectedTags });
-            await loadLiveAlerts();
-            
-            // Reload history to show the new alert log (if triggered immediately or just to refresh state)
-            await loadAlertHistory(1);
-
-            // Visual flash for critical alerts (based on UI selection)
-            if ((data && data.alert && data.alert.alertLevel || alertLevel) === 'Critical') {
-                document.body.classList.add('critical-flash');
-                setTimeout(() => document.body.classList.remove('critical-flash'), 1500);
-            }
-            resetAlertBuilder();
-        } catch (err) {
-            console.error('Error creating alert:', err);
-            alert('Error creating alert: ' + err.message);
-        }
-    });
-
-    logicalOperatorsContainer.addEventListener('click', function (e) {
-        if (e.target.classList.contains('add-rule-btn')) {
-            const logicalOperator = e.target.dataset.logic;
-            const newRuleRow = document.createElement('div');
-            newRuleRow.className = 'rule-row';
-            newRuleRow.innerHTML = createRuleRowHTML(logicalOperator);
-            rulesContainer.appendChild(newRuleRow);
-        }
-    });
-
-    rulesContainer.addEventListener('click', function (e) {
-        if (e.target.classList.contains('delete-rule-btn')) {
-            const rows = rulesContainer.querySelectorAll('.rule-row');
-            if (!rows || rows.length <= 1) {
-                // Prevent deleting the last remaining rule
-                alert('At least one rule must remain.');
-                return;
-            }
-            e.target.parentElement.remove();
-        }
-    });
-
-    liveAlertsList.addEventListener('click', async function (e) {
-        // DELETE
-        if (e.target && e.target.classList.contains('delete-btn')) {
-            const li = e.target.closest('li[data-id]');
-            if (!li) { e.target.parentElement.remove(); return; }
-            const alertId = li.getAttribute('data-id');
-            try {
-                await apiDeleteAlert(alertId);
-                li.remove();
-                delete liveAlertsCache[alertId];
-            } catch (err) {
-                console.error('Failed to delete alert:', err);
-                alert('Failed to delete alert: ' + err.message);
-            }
-            return;
-        }
-        // EDIT
-        if (e.target && e.target.classList.contains('edit-btn')) {
-            const li = e.target.closest('li[data-id]');
-            if (!li) return;
-            const alertId = li.getAttribute('data-id');
-            const alertObj = liveAlertsCache[alertId];
-            if (!alertObj) { alert('Alert data not available for editing. Please reload the page.'); return; }
-            startEdit(alertObj);
-        }
-    });
-
-    // Handle tagging a specific alert log (delegated)
-    alertLogBody.addEventListener('click', async function (e) {
-        
-        // Edit tags for a specific alert log (open modal dual-list)
-        if (e.target && e.target.classList.contains('edit-log-tags')) {
-            const logId = e.target.dataset.id;
-            const tagsCsv = e.target.dataset.tags || '';
-            const initialSelected = tagsCsv ? tagsCsv.split(',').filter(Boolean) : [];
-
-            // create modal overlay
-            const overlay = document.createElement('div');
-            overlay.className = 'modal-overlay';
-            overlay.style.position = 'fixed'; overlay.style.left = 0; overlay.style.top = 0; overlay.style.right = 0; overlay.style.bottom = 0;
-            overlay.style.background = 'rgba(0,0,0,0.4)'; overlay.style.display = 'flex'; overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center';
-
-            const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.style.background = '#fff'; modal.style.padding = '16px'; modal.style.borderRadius = '6px'; modal.style.width = '640px'; modal.style.maxWidth = '95%';
-
-            modal.innerHTML = `
-                <h3>Edit Tags</h3>
-                <div style="display:flex; gap:0.5rem; align-items:center;">
-                  <div style="flex:1;">
-                    <div class="dual-list-label">Available</div>
-                                        <div id="modal-tag-left" class="dual-list-box" style="width:100%"></div>
-                  </div>
-                  <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
-                    <button id="modal-move-selected-right" class="btn btn-secondary">▶</button>
-                    <button id="modal-move-all-right" class="btn btn-secondary">≫</button>
-                    <button id="modal-move-selected-left" class="btn btn-secondary">◀</button>
-                    <button id="modal-move-all-left" class="btn btn-secondary">≪</button>
-                  </div>
-                  <div style="flex:1;">
-                    <div class="dual-list-label">Selected</div>
-                                        <div id="modal-tag-right" class="dual-list-box" style="width:100%"></div>
-                  </div>
-                </div>
-                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
-                  <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
-                  <button id="modal-confirm" class="btn btn-primary">Confirm</button>
+    function renderManageList(alerts) {
+        liveAlertsList.innerHTML = '';
+        if(alerts.length === 0) { liveAlertsList.innerHTML = '<li style="color:#888;">No active rules.</li>'; return; }
+        alerts.forEach(a => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div><span class="level-badge ${a.alertLevel.toLowerCase()}">${a.alertLevel}</span> <strong>${a.alertName}</strong></div>
+                <div class="alert-actions">
+                    <button class="btn btn-secondary btn-icon edit-alert-btn" data-id="${a._id}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn btn-secondary btn-icon delete-alert-btn" data-id="${a._id}" style="color:#dc2626;"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `;
+            liveAlertsList.appendChild(li);
+        });
+    }
 
-            overlay.appendChild(modal);
-            document.body.appendChild(overlay);
+    liveAlertsList.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if(!btn) return;
+        const id = btn.dataset.id;
+        if(btn.classList.contains('delete-alert-btn')) {
+            if(confirm('Delete rule?')) { await apiDeleteAlert(id); await loadLiveAlerts(); }
+        }
+        if(btn.classList.contains('edit-alert-btn')) {
+            const obj = liveAlertsCache[id];
+            if(obj) startEdit(obj);
+        }
+    });
 
-            const left = modal.querySelector('#modal-tag-left');
-            const right = modal.querySelector('#modal-tag-right');
-            const mMoveSelR = modal.querySelector('#modal-move-selected-right');
-            const mMoveAllR = modal.querySelector('#modal-move-all-right');
-            const mMoveSelL = modal.querySelector('#modal-move-selected-left');
-            const mMoveAllL = modal.querySelector('#modal-move-all-left');
-            const mCancel = modal.querySelector('#modal-cancel');
-            const mConfirm = modal.querySelector('#modal-confirm');
+    function startEdit(obj) {
+        currentEditId = obj._id;
+        alertNameInput.value = obj.alertName;
+        alertLevelSelect.value = obj.alertLevel;
+        if(modelSelect) modelSelect.value = obj.modelName || '';
+        rulesContainer.innerHTML = '';
+        populateRuleBuilderFromRule(obj.alertRule);
+        selectedTags.length = 0;
+        if(obj.tags) obj.tags.forEach(t => selectedTags.push(t._id));
+        renderTagInput();
+        manageModal.style.display = 'none';
+        openBuilder(true);
+    }
+    
+    statCards.forEach(c => c.addEventListener('click', () => {
+        document.getElementById('filter-level').value = c.dataset.level;
+        loadAlertHistory(1);
+    }));
 
-            function renderModalLists() {
-                left.innerHTML = '';
-                right.innerHTML = '';
-                const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-                ordered.forEach(t => {
-                    const pill = createTagPill(t);
-                    // toggle selection if currently in initialSelected
-                    if (initialSelected.includes(t._id)) {
-                        pill.classList.add('selected');
-                        right.appendChild(pill);
-                    } else {
-                        left.appendChild(pill);
-                    }
+
+    // --- 5. RULE BUILDER ---
+    function createRuleRowHTML(op) {
+        const del = op ? '<button class="btn btn-secondary btn-icon delete-rule-btn">&times;</button>' : '';
+        const opts = Object.keys(DATA_DICTIONARY).filter(k=>DATA_DICTIONARY[k].dataType==='numeric')
+            .map(k=>`<option value="${k}">${DATA_DICTIONARY[k].label}</option>`).join('');
+        
+        // English operators
+        return `
+            <span class="logic-separator" style="font-weight:bold; font-size:0.8rem; margin-right:8px;">${op}</span>
+            <select class="data-type"><option value="">-- Data --</option>${opts}</select>
+            <select class="operator-type">
+                <option value="">-- Operator --</option>
+                <option value="gt">Greater Than</option>
+                <option value="gte">Greater Than or Equal To</option>
+                <option value="lt">Less Than</option>
+                <option value="lte">Less Than or Equal To</option>
+                <option value="eq">Equal To</option>
+            </select>
+            <input type="text" placeholder="Value" class="value-input" style="width:80px;">
+            ${del}
+        `;
+    }
+    function addEmptyRuleRow() {
+        const d = document.createElement('div'); d.className='rule-row'; d.innerHTML=createRuleRowHTML('');
+        rulesContainer.appendChild(d);
+    }
+    logicalOperatorsContainer.addEventListener('click', e => {
+        if(e.target.classList.contains('add-rule-btn')) {
+            const d = document.createElement('div'); d.className='rule-row';
+            d.innerHTML=createRuleRowHTML(e.target.dataset.logic);
+            rulesContainer.appendChild(d);
+        }
+    });
+    rulesContainer.addEventListener('click', e => {
+        if(e.target.classList.contains('delete-rule-btn')) e.target.closest('.rule-row').remove();
+    });
+
+    function buildRuleJSON() {
+        const rows = rulesContainer.querySelectorAll('.rule-row');
+        const conds = []; let logic = null; let valid = true;
+        rows.forEach((r, i) => {
+            const type = r.querySelector('.data-type').value;
+            const op = r.querySelector('.operator-type').value;
+            const val = r.querySelector('.value-input').value;
+            const sep = r.querySelector('.logic-separator');
+            if(i>0 && sep && !logic) logic = sep.textContent.trim()==='AND'?'$and':'$or';
+            if(type && op && val) {
+                const c = {}; c[DATA_DICTIONARY[type].dbPath] = {}; c[DATA_DICTIONARY[type].dbPath][OPERATOR_MAP[op]] = parseFloat(val);
+                conds.push(c);
+            } else valid = false;
+        });
+        if(!valid || conds.length===0) return null;
+        if(conds.length===1) return conds[0];
+        const f = {}; f[logic||'$and'] = conds;
+        return f;
+    }
+
+    function populateRuleBuilderFromRule(rule) {
+        let parts = [];
+        if (rule.$and) parts = rule.$and.map(x => ({...x, logic: 'AND'}));
+        else if (rule.$or) parts = rule.$or.map(x => ({...x, logic: 'OR'}));
+        else parts = [{...rule, logic: ''}];
+
+        parts.forEach((p, i) => {
+            const dbField = Object.keys(p).find(k => k !== 'logic');
+            const inner = p[dbField];
+            const mongoOp = Object.keys(inner)[0];
+            const val = inner[mongoOp];
+            const dictKey = Object.keys(DATA_DICTIONARY).find(k => DATA_DICTIONARY[k].dbPath === dbField);
+            
+            const row = document.createElement('div');
+            row.className = 'rule-row';
+            row.innerHTML = createRuleRowHTML(i > 0 ? (i===1 ? (rule.$and?'AND':'OR') : 'AND') : ''); 
+            if(dictKey) row.querySelector('.data-type').value = dictKey;
+            if(OP_REVERSE_MAP[mongoOp]) row.querySelector('.operator-type').value = OP_REVERSE_MAP[mongoOp];
+            row.querySelector('.value-input').value = val;
+            rulesContainer.appendChild(row);
+        });
+        if(parts.length === 0) addEmptyRuleRow();
+    }
+
+
+    // --- 6. MULTISELECT DROPDOWN (RULE BUILDER) ---
+    const tagsInputContainer = document.getElementById('tags-input-container');
+    const tagsSearchInput = document.getElementById('tags-search-input');
+    const tagsDropdown = document.getElementById('tags-dropdown-list');
+
+    function renderTagInput() {
+        if(!tagsInputContainer) return;
+        const pills = tagsInputContainer.querySelectorAll('.tag-input-pill');
+        pills.forEach(c => c.remove());
+
+        selectedTags.forEach(id => {
+            const t = tagsCache[id];
+            if(!t) return;
+            const pill = document.createElement('div');
+            pill.className = 'tag-input-pill';
+            pill.style.backgroundColor = t.color;
+            pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
+            tagsInputContainer.insertBefore(pill, tagsSearchInput);
+        });
+        
+        // Hide/Show placeholder based on selection
+        if(tagsSearchInput) tagsSearchInput.placeholder = selectedTags.length > 0 ? '' : 'Select tags...';
+    }
+
+    function renderTagDropdown() {
+        if(!tagsDropdown) return;
+        tagsDropdown.innerHTML = '';
+        const available = Object.values(tagsCache)
+            .filter(t => !selectedTags.includes(t._id))
+            .sort((a,b) => a.name.localeCompare(b.name));
+            
+        if(available.length === 0) {
+            tagsDropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
+            return;
+        }
+
+        available.forEach(t => {
+            const item = document.createElement('div');
+            item.className = 'tags-dropdown-item';
+            item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
+            item.addEventListener('click', () => {
+                selectedTags.push(t._id);
+                renderTagInput();
+                renderTagDropdown();
+                if(tagsSearchInput) {
+                    tagsSearchInput.value = '';
+                    tagsSearchInput.focus();
+                }
+            });
+            tagsDropdown.appendChild(item);
+        });
+    }
+
+    // Event Listeners
+    if(tagsInputContainer) {
+        tagsInputContainer.addEventListener('click', (e) => {
+            if(e.target.classList.contains('remove-tag')) { 
+                const id = e.target.dataset.id;
+                const idx = selectedTags.indexOf(id);
+                if(idx > -1) selectedTags.splice(idx, 1);
+                renderTagInput();
+                // If dropdown is open, update it to show the removed tag
+                if(tagsDropdown.style.display === 'block') renderTagDropdown();
+                return;
+            }
+            // Toggle dropdown
+            if(tagsDropdown) {
+                const isVisible = tagsDropdown.style.display === 'block';
+                tagsDropdown.style.display = isVisible ? 'none' : 'block';
+                if(!isVisible) renderTagDropdown();
+            }
+        });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if(tagsInputContainer && tagsDropdown && !tagsInputContainer.contains(e.target) && !tagsDropdown.contains(e.target)) {
+            tagsDropdown.style.display = 'none';
+        }
+    });
+
+    saveAlertBtn.addEventListener('click', async () => {
+        const name = alertNameInput.value, level = alertLevelSelect.value, rule = buildRuleJSON();
+        if(!name || !level || !rule) return alert('Fill required fields');
+        const payload = { alertName: name, alertLevel: level, alertRule: rule, modelName: modelSelect.value, tags: selectedTags };
+        try {
+            if(currentEditId) await apiUpdateAlert(currentEditId, payload);
+            else { payload.created=Date.now(); await apiCreateAlert(payload); }
+            closeBuilder(); await loadLiveAlerts(); await loadAlertHistory(1);
+        } catch(e) { alert(e.message); }
+    });
+
+
+    // --- 7. HISTORY TABLE ---
+    async function loadAlertHistory(page = 1) {
+        currentHistoryPage = page;
+        if(alertLogBody) alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+        const params = new URLSearchParams(new FormData(historyFilterForm));
+        params.set('page', page); params.set('limit', 10);
+        try {
+            const res = await fetch(`alerts/api/history?${params.toString()}`);
+            const data = await res.json();
+            if(alertLogBody) {
+                alertLogBody.innerHTML = '';
+                if(!data.logs || data.logs.length===0) { alertLogBody.innerHTML = '<tr><td colspan="6">No history.</td></tr>'; return; }
+                
+                data.logs.forEach(log => {
+                    const tr = createAlertRow(log);
+                    alertLogBody.appendChild(tr);
                 });
             }
+            if(historyPagination) Pagination.render(historyPagination, data.pages, data.page, (newPage) => loadAlertHistory(newPage));
+        } catch(e) { console.error(e); }
+    }
 
-            mMoveSelR.addEventListener('click', () => {
-                const toMove = Array.from(left.querySelectorAll('.dual-item.selected')).map(el=>el.dataset.id);
-                toMove.forEach(id => { if (!initialSelected.includes(id)) initialSelected.push(id); });
-                renderModalLists();
-            });
-            mMoveAllR.addEventListener('click', () => {
-                const all = Array.from(left.querySelectorAll('.dual-item')).map(el=>el.dataset.id);
-                all.forEach(id => { if (!initialSelected.includes(id)) initialSelected.push(id); });
-                renderModalLists();
-            });
-            mMoveSelL.addEventListener('click', () => {
-                const toMove = Array.from(right.querySelectorAll('.dual-item.selected')).map(el=>el.dataset.id);
-                toMove.forEach(id => { const idx = initialSelected.indexOf(id); if (idx>=0) initialSelected.splice(idx,1); });
-                renderModalLists();
-            });
-            mMoveAllL.addEventListener('click', () => { initialSelected.length = 0; renderModalLists(); });
+    function createAlertRow(log) {
+        const tr = document.createElement('tr');
+        const date = new Date(log.created || log.timestamp).toLocaleString('en-CA', {hour12:true}).replace(',','');
+        const tagsHtml = (log.tags||[]).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
+        const tagIds = (log.tags||[]).map(t=>t._id).join(',');
+        const snapshot = log.alertSnapshot || {}; 
+        
+        // Handle flattened or nested structure
+        const level = log.level || snapshot.alertLevel || 'Info';
+        const alertName = log.alertName || snapshot.alertName || 'Alert';
+        const modelName = log.modelName || snapshot.modelName || '-';
+        
+        // Use server-sent humanRule, or fallback to snapshot
+        // Logic relying on backend format now.
+        const humanRule = log.humanRule || (snapshot.alertRule ? JSON.stringify(snapshot.alertRule) : '');
 
-            mCancel.addEventListener('click', () => overlay.remove());
-            mConfirm.addEventListener('click', async () => {
-                try {
-                    const resp = await fetch(`alerts/api/logs/${encodeURIComponent(logId)}/tags`, {
-                        method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type':'application/json' },
-                        body: JSON.stringify({ tags: initialSelected })
-                    });
-                    const data = await resp.json().catch(()=>({}));
-                    if (!resp.ok) throw new Error(data.message || 'Failed to update tags');
-                    overlay.remove();
-                    await loadAlertHistory(currentHistoryPage);
-                } catch (err) {
-                    console.error('Failed to set tags on log:', err);
-                    alert('Failed to update tags: ' + err.message);
-                }
-            });
+        tr.innerHTML = `
+            <td data-label="Level"><span class="level-badge ${level.toLowerCase()}">${level}</span></td>
+            <td data-label="Time">${date}</td>
+            <td data-label="Alert">${alertName}</td>
+            <td data-label="Model">${modelName}</td>
+            <td data-label="Triggered By">${humanRule}</td>
+            <td data-label="Tags">
+                <div class="tags-cell">
+                    ${tagsHtml}
+                    <button class="add-log-tag-btn" data-id="${log._id}" data-tags="${tagIds}">+</button>
+                </div>
+            </td>
+        `;
+        // Add animation class for new rows
+        tr.classList.add('fade-in-row');
+        return tr;
+    }
 
-            renderModalLists();
+    // --- 8. LOG TAGGING MODAL (Dynamic) ---
+    if (alertLogBody) {
+        alertLogBody.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('add-log-tag-btn')) return;
+            const logId = e.target.dataset.id;
+            const currentIds = (e.target.dataset.tags || '').split(',').filter(Boolean);
+            openLogTagModal(logId, currentIds);
+        });
+    }
+
+    function openLogTagModal(logId, currentTagIds) {
+        // Create a temporary modal in the DOM
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.style.display = 'flex';
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal-content medium-modal';
+        
+        modal.innerHTML = `
+            <div class="modal-header"><h2>Tag Alert Log</h2><button class="close-dyn-btn">&times;</button></div>
+            <div class="modal-body" style="min-height: 250px;">
+                <div class="multiselect-container">
+                    <div class="tags-input-container" id="dyn-tags-input">
+                        <input type="text" id="dyn-tags-search" class="tags-search-input" placeholder="Select tags..." readonly />
+                    </div>
+                    <div class="tags-dropdown" id="dyn-tags-dropdown" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary close-dyn-btn">Cancel</button>
+                <button id="dyn-save" class="btn btn-primary">Save Tags</button>
+            </div>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        // State for this modal
+        const selected = [...currentTagIds];
+        const inputContainer = modal.querySelector('#dyn-tags-input');
+        const searchInput = modal.querySelector('#dyn-tags-search');
+        const dropdown = modal.querySelector('#dyn-tags-dropdown');
+
+        function renderDynInput() {
+            const pills = inputContainer.querySelectorAll('.tag-input-pill');
+            pills.forEach(c => c.remove());
+
+            selected.forEach(id => {
+                const t = tagsCache[id];
+                if(!t) return;
+                const pill = document.createElement('div');
+                pill.className = 'tag-input-pill';
+                pill.style.backgroundColor = t.color;
+                pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
+                inputContainer.insertBefore(pill, searchInput);
+            });
+            
+            searchInput.placeholder = selected.length > 0 ? '' : 'Select tags...';
         }
-    });
 
-    function startEdit(alertObj) {
-        if (!alertObj) return;
-        currentEditId = alertObj._id;
-        alertNameInput.value = alertObj.alertName || '';
-        alertLevelSelect.value = alertObj.alertLevel || 'Info';
-        if (modelSelect) modelSelect.value = alertObj.modelName || '';
-        populateRuleBuilderFromRule(alertObj.alertRule || {});
-        // populate selected tags for editing
-        selectedTags.length = 0;
-        if (alertObj.tags && Array.isArray(alertObj.tags)) {
-            alertObj.tags.forEach(t => {
-                if (t && t._id) {
-                    tagsCache[t._id] = t;
-                    selectedTags.push(t._id);
-                }
+        function renderDynDropdown() {
+            dropdown.innerHTML = '';
+            const available = Object.values(tagsCache)
+                .filter(t => !selected.includes(t._id))
+                .sort((a,b) => a.name.localeCompare(b.name));
+                
+            if(available.length === 0) {
+                dropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
+                return;
+            }
+
+            available.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'tags-dropdown-item';
+                item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
+                item.addEventListener('click', () => {
+                    selected.push(t._id);
+                    renderDynInput();
+                    renderDynDropdown();
+                    searchInput.value = '';
+                    searchInput.focus();
+                });
+                dropdown.appendChild(item);
             });
         }
-        renderSelectedTags();
-        addAlertBtn.style.display = 'none';
-        saveBtn.style.display = '';
-        cancelBtn.style.display = '';
-        const builderEl = document.querySelector('.alert-builder');
-        if (builderEl && typeof builderEl.scrollIntoView === 'function') builderEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        else window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
 
-    function cancelEdit() {
-        currentEditId = null;
-        resetAlertBuilder();
-        addAlertBtn.style.display = '';
-        saveBtn.style.display = 'none';
-        cancelBtn.style.display = 'none';
-    }
-
-    saveBtn.addEventListener('click', async function () {
-        if (!currentEditId) return alert('No alert selected for editing');
-        const alertName = alertNameInput.value || 'New Alert';
-        const alertLevel = alertLevelSelect.value;
-        const modelName = modelSelect ? (modelSelect.value || null) : null;
-        if (!alertLevel) return alert('Please select an alert level.');
-        const ruleJSON = buildRuleJSON();
-        if (!ruleJSON) return;
-        try {
-            await apiUpdateAlert(currentEditId, { alertName, alertLevel, alertRule: ruleJSON, modelName, tags: selectedTags });
-            await loadLiveAlerts();
-            cancelEdit();
-        } catch (err) {
-            console.error('Failed to save alert edits:', err);
-            alert('Failed to save edits: ' + err.message);
-        }
-    });
-
-    cancelBtn.addEventListener('click', function () { cancelEdit(); });
-
-    // --------------------------------------------------
-    // History Filter Events
-    // --------------------------------------------------
-    if (historyFilterForm) {
-        historyFilterForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            loadAlertHistory(1); // Reset to page 1 on filter
+        // Event Listeners
+        inputContainer.addEventListener('click', (e) => {
+            if(e.target.classList.contains('remove-tag')) { 
+                const id = e.target.dataset.id;
+                const idx = selected.indexOf(id);
+                if(idx > -1) selected.splice(idx, 1);
+                renderDynInput();
+                if(dropdown.style.display === 'block') renderDynDropdown();
+                return;
+            }
+            const isVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isVisible ? 'none' : 'block';
+            if(!isVisible) renderDynDropdown();
         });
 
-        historyClearBtn.addEventListener('click', () => {
-            historyFilterForm.reset();
-            loadAlertHistory(1);
-        });
-    }
-
-    // --------------------------------------------------
-    // Initialization
-    // --------------------------------------------------
-    // Load existing tags and wire up tag builder/editor
-    try {
-        const existing = await apiListTags();
-        existing.forEach(t => { tagsCache[t._id] = t; });
-        // initialize dual-list UI
-        renderDualLists();
-    } catch (e) {
-        console.warn('Failed to load tags at startup:', e);
-    }
-
-    function renderSelectedTags() {
-        const container = document.getElementById('selected-tags');
-        if (!container) return;
-        container.innerHTML = '';
-        selectedTags.forEach(t => {
-            const tag = tagsCache[t] || { _id: t, name: t, color: '#888888' };
-            const span = document.createElement('span');
-            span.className = 'tag-pill';
-            span.style.background = tag.color || '#888888';
-            span.textContent = tag.name || '';
-            const rem = document.createElement('button');
-            rem.className = 'remove-tag-btn';
-            rem.textContent = '×';
-            rem.dataset.id = t;
-            rem.addEventListener('click', () => {
-                const idx = selectedTags.indexOf(t);
-                if (idx >= 0) selectedTags.splice(idx, 1);
-                renderSelectedTags();
-            });
-            span.appendChild(rem);
-            container.appendChild(span);
-        });
-    }
-
-    // Dual-list tag selector handlers
-    function createTagPill(tag) {
-        const span = document.createElement('span');
-        span.className = 'dual-item';
-        span.dataset.id = tag._id;
-        span.textContent = tag.name || '';
-        span.style.background = tag.color || '#888888';
-        span.tabIndex = 0;
-        span.addEventListener('click', (e) => {
-            span.classList.toggle('selected');
-        });
-        span.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); span.classList.toggle('selected'); }
-        });
-        return span;
-    }
-
-    function renderDualLists() {
-        const left = document.getElementById('tag-dual-left');
-        const right = document.getElementById('tag-dual-right');
-        if (!left || !right) return;
-        left.innerHTML = '';
-        right.innerHTML = '';
-        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-        const selSet = new Set(selectedTags);
-        ordered.forEach(t => {
-            const pill = createTagPill(t);
-            if (selSet.has(t._id)) right.appendChild(pill);
-            else left.appendChild(pill);
-        });
-    }
-
-    const moveSelectedRightBtn = document.getElementById('move-selected-right');
-    const moveAllRightBtn = document.getElementById('move-all-right');
-    const moveSelectedLeftBtn = document.getElementById('move-selected-left');
-    const moveAllLeftBtn = document.getElementById('move-all-left');
-
-    if (moveSelectedRightBtn) moveSelectedRightBtn.addEventListener('click', (e) => {
-        const left = document.getElementById('tag-dual-left');
-        if (!left) return;
-        const toMove = Array.from(left.querySelectorAll('.dual-item.selected')).map(el => el.dataset.id);
-        toMove.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
-        renderDualLists(); renderSelectedTags();
-    });
-    if (moveAllRightBtn) moveAllRightBtn.addEventListener('click', (e) => {
-        const left = document.getElementById('tag-dual-left');
-        if (!left) return;
-        const all = Array.from(left.querySelectorAll('.dual-item')).map(el => el.dataset.id);
-        all.forEach(id => { if (!selectedTags.includes(id)) selectedTags.push(id); });
-        renderDualLists(); renderSelectedTags();
-    });
-    if (moveSelectedLeftBtn) moveSelectedLeftBtn.addEventListener('click', (e) => {
-        const right = document.getElementById('tag-dual-right');
-        if (!right) return;
-        const toMove = Array.from(right.querySelectorAll('.dual-item.selected')).map(el => el.dataset.id);
-        toMove.forEach(id => { const idx = selectedTags.indexOf(id); if (idx>=0) selectedTags.splice(idx,1); });
-        renderDualLists(); renderSelectedTags();
-    });
-    if (moveAllLeftBtn) moveAllLeftBtn.addEventListener('click', (e) => {
-        selectedTags.length = 0;
-        renderDualLists(); renderSelectedTags();
-    });
-
-    // Tag editor elements (under live alerts panel)
-    const tagEditorPills = document.getElementById('tag-editor-pills');
-    const editTagsBtn = document.getElementById('edit-tags-btn');
-    const confirmTagsBtn = document.getElementById('confirm-tags-btn');
-    const cancelTagsBtn = document.getElementById('cancel-tags-btn');
-    const tagEditorRows = document.getElementById('tag-editor-rows');
-    const addTagRowBtn = document.getElementById('add-tag-row-btn');
-    let originalTagIds = [];
-    let originalTagNames = [];
-    let deletedTagIds = [];
-
-    function refreshTagEditorFromCache() {
-        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-        originalTagIds = ordered.map(t=>t._id);
-        originalTagNames = ordered.map(t=>t.name);
-        if (tagEditorPills) tagEditorPills.innerHTML = ordered.map(t => `<span class="tag-pill" style="background:${t.color||'#888888'}">${t.name}</span>`).join(' ');
-    }
-
-    function renderTagEditorRows() {
-        if (!tagEditorRows) return;
-        tagEditorRows.innerHTML = '';
-        const ordered = Object.values(tagsCache).sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-        // create inputs for each existing tag
-        ordered.forEach(t => {
-            const row = document.createElement('div');
-            row.className = 'tag-editor-row';
-            row.style.display = 'flex';
-            row.style.gap = '8px';
-            row.style.alignItems = 'center';
-            row.style.marginBottom = '6px';
-            const nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.value = t.name || '';
-            nameInput.dataset.id = t._id;
-            nameInput.style.flex = '1';
-            const colorInput = document.createElement('input');
-            colorInput.type = 'color';
-            colorInput.value = t.color || '#888888';
-            colorInput.style.width = '54px';
-            const del = document.createElement('button'); del.className = 'btn btn-secondary'; del.textContent = 'Remove'; del.style.flex = '0 0 auto';
-            del.addEventListener('click', () => {
-                // if this row corresponds to an existing tag, mark it for deletion
-                const existingId = nameInput.dataset.id;
-                if (existingId) deletedTagIds.push(existingId);
-                row.remove();
-            });
-            row.appendChild(nameInput); row.appendChild(colorInput); row.appendChild(del);
-            tagEditorRows.appendChild(row);
-        });
-        // If no tags, show one empty row
-        if (ordered.length === 0) {
-            addEmptyTagEditorRow();
-        }
-    }
-
-    function addEmptyTagEditorRow() {
-        if (!tagEditorRows) return;
-        const row = document.createElement('div');
-        row.className = 'tag-editor-row';
-        row.style.display = 'flex'; row.style.gap = '8px'; row.style.alignItems = 'center'; row.style.marginBottom = '6px';
-        const nameInput = document.createElement('input'); nameInput.type = 'text'; nameInput.value = ''; nameInput.style.flex = '1';
-        const colorInput = document.createElement('input'); colorInput.type = 'color'; colorInput.value = '#888888'; colorInput.style.width = '54px';
-        const del = document.createElement('button'); del.className = 'btn btn-secondary'; del.textContent = 'Remove'; del.style.flex = '0 0 auto';
-        del.addEventListener('click', () => {
-            const existingId = nameInput.dataset.id;
-            if (existingId) deletedTagIds.push(existingId);
-            row.remove();
-        });
-        row.appendChild(nameInput); row.appendChild(colorInput); row.appendChild(del);
-        tagEditorRows.appendChild(row);
-    }
-
-    if (editTagsBtn) {
-        editTagsBtn.addEventListener('click', (e) => {
-            // switch to rows editor
-            if (!tagEditorRows || !tagEditorPills) return;
-            // reset deleted ids for this edit session
-            deletedTagIds = [];
-            renderTagEditorRows();
-            tagEditorPills.style.display = 'none';
-            tagEditorRows.style.display = '';
-            addTagRowBtn.style.display = '';
-            editTagsBtn.style.display = 'none';
-            confirmTagsBtn.style.display = '';
-            cancelTagsBtn.style.display = '';
-        });
-    }
-    if (cancelTagsBtn) {
-        cancelTagsBtn.addEventListener('click', (e) => {
-            if (!tagEditorPills || !tagEditorRows) return;
-            // restore pill view
-            tagEditorPills.style.display = '';
-            tagEditorRows.style.display = 'none';
-            // discard any pending deletions
-            deletedTagIds = [];
-            addTagRowBtn.style.display = 'none';
-            editTagsBtn.style.display = '';
-            confirmTagsBtn.style.display = 'none';
-            cancelTagsBtn.style.display = 'none';
-        });
-    }
-    if (confirmTagsBtn) {
-        confirmTagsBtn.addEventListener('click', async (e) => {
-            try {
-                // if rows editor visible, gather names, colors, and original ids from rows
-                let parts = [];
-                let colors = [];
-                let originalIdsFromRows = [];
-                if (tagEditorRows && tagEditorRows.style.display !== 'none') {
-                    const rows = tagEditorRows.querySelectorAll('.tag-editor-row');
-                    rows.forEach(r => {
-                        const ni = r.querySelector('input[type="text"]');
-                        const ci = r.querySelector('input[type="color"]');
-                        if (ni && ni.value && ni.value.trim()) {
-                            parts.push(ni.value.trim());
-                            colors.push(ci && ci.value ? ci.value : '#888888');
-                            // preserve original id if present on the input
-                            originalIdsFromRows.push(ni.dataset.id || null);
-                        }
-                    });
-                } else {
-                    // not editing rows: derive names from current cache / originalTagNames
-                    parts = originalTagNames.slice();
-                }
-                // validate unique
-                const low = parts.map(p=>p.toLowerCase());
-                const dup = low.find((v,i)=> low.indexOf(v)!==i);
-                if (dup) return alert('Tag names must be unique');
-
-                const payload = { originalIds: (originalIdsFromRows.length ? originalIdsFromRows : originalTagIds), newNames: parts };
-                if (colors && colors.length) payload.colors = colors;
-                if (deletedTagIds && deletedTagIds.length) payload.deletions = deletedTagIds;
-
-                const updated = await apiSyncTags(payload);
-                // refresh cache
-                Object.keys(tagsCache).forEach(k=>delete tagsCache[k]);
-                updated.forEach(t=>{ tagsCache[t._id]=t; });
-                refreshTagEditorFromCache();
-                populateModelDropdowns();
-                // update dual-list UI
-                renderDualLists();
-                // hide editor rows and show pill view
-                if (tagEditorRows) { tagEditorRows.style.display = 'none'; tagEditorRows.innerHTML = ''; }
-                if (tagEditorPills) { tagEditorPills.style.display = ''; }
-                if (addTagRowBtn) addTagRowBtn.style.display = 'none';
-                editTagsBtn.style.display = '';
-                confirmTagsBtn.style.display = 'none';
-                cancelTagsBtn.style.display = 'none';
-                // clear pending deletions after successful sync
-                deletedTagIds = [];
-                // refresh UI
-                await loadLiveAlerts();
-                await loadAlertHistory(currentHistoryPage);
-            } catch (err) {
-                console.error('Failed to sync tags:', err);
-                alert('Failed to sync tags: ' + err.message);
+        // Close dropdown when clicking outside (scoped to this modal overlay)
+        overlay.addEventListener('click', (e) => {
+            if(e.target === overlay) return; // overlay click handled by close logic? mainly want to catch clicks outside dropdown
+            if(!inputContainer.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
             }
         });
+
+        renderDynInput();
+        
+        const close = () => { document.body.removeChild(overlay); };
+        modal.querySelectorAll('.close-dyn-btn').forEach(b => b.onclick = close);
+
+        modal.querySelector('#dyn-save').onclick = async () => {
+            try {
+                await fetch(`alerts/api/logs/${logId}/tags`, {
+                    method: 'PUT', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ tags: selected })
+                });
+                close();
+                loadAlertHistory(currentHistoryPage);
+            } catch(e) { alert('Failed to update tags'); }
+        };
     }
 
-    if (addTagRowBtn) {
-        addTagRowBtn.addEventListener('click', (e) => {
-            addEmptyTagEditorRow();
-        });
+    if (historyFilterForm) {
+        historyFilterForm.addEventListener('submit', e => { e.preventDefault(); loadAlertHistory(1); });
+        document.querySelector('.clear-filters').addEventListener('click', () => { historyFilterForm.reset(); loadAlertHistory(1); });
     }
 
-    refreshTagEditorFromCache();
-    populateModelDropdowns();
-    resetAlertBuilder();
-    loadLiveAlerts();
-    loadAlertHistory(1);
+    // --- 9. LIVE UPDATES (SSE) ---
+    function setupLiveUpdates() {
+        try {
+            const evtSource = new EventSource('events');
+            
+            evtSource.addEventListener('alert', (event) => {
+                try {
+                    const alertData = JSON.parse(event.data);
+                    
+                    // 1. Live Counters & Charts
+                    loadLiveAlerts();
+                    fetchAndRenderCharts();
+
+                    // 2. Log Table (Prepend if on page 1)
+                    if (currentHistoryPage === 1 && alertLogBody) {
+                        // Remove "No history" row if present
+                        if(alertLogBody.children.length === 1 && alertLogBody.firstElementChild.innerText.includes('No history')) {
+                            alertLogBody.innerHTML = '';
+                        }
+                        
+                        const tr = createAlertRow(alertData);
+                        alertLogBody.prepend(tr);
+
+                        // Keep list size managed
+                        if(alertLogBody.children.length > 10) {
+                            alertLogBody.lastElementChild.remove();
+                        }
+                    }
+                } catch(e) { console.error('SSE Error', e); }
+            });
+
+            window.addEventListener('beforeunload', () => evtSource.close());
+        } catch(e) { console.error('SSE Setup Failed', e); }
+    }
+
+    // --- API WRAPPERS ---
+    async function apiGetLiveAlerts() { return fetch('alerts/live').then(r=>r.json()); }
+    async function apiListTags() { return fetch('/tags').then(r=>r.json()).then(d=>d.tags); }
+    async function apiCreateAlert(p) { return fetch('alerts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
+    async function apiUpdateAlert(id, p) { return fetch(`alerts/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
+    async function apiDeleteAlert(id) { return fetch(`alerts/${id}`, {method:'DELETE'}).then(r=>r.json()); }
+    async function apiSyncTags(p) { return fetch('/tags/sync', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
+
+    init();
 });

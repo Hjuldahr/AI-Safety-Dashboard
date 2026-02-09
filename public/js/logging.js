@@ -211,95 +211,9 @@ function renderAiAccordion(logs, accordion) {
 
 
 /**
- * Renders pagination buttons in a specific container
- * @param {HTMLElement} container - The pagination div to populate
- * @param {number} totalPages - Total number of pages from API
- * @param {number} currentPage - Current page number from API
- * @param {object} elements - The DOM elements
- * @param {Function} handlerFunction - The fetch handler (handleUserFilter or handleAiFilter)
+ * Renders pagination buttons using the shared Pagination component (window.Pagination).
+ * See public/js/components/pagination.js
  */
-function renderPagination(container, totalPages, currentPage, elements, handlerFunction) {
-    container.innerHTML = ''; // Clear old buttons
-
-    if (totalPages <= 1) return;
-
-    // Helper: Creates a clickable page button
-    const createPageBtn = (page) => {
-        const btn = document.createElement('button');
-        btn.textContent = page;
-        if (page === currentPage) btn.classList.add('active');
-        btn.addEventListener('click', () => handlerFunction(elements, page));
-        return btn;
-    };
-
-    // Helper: Creates a non-clickable "..." span/button
-    const createDots = () => {
-        const span = document.createElement('span');
-        span.textContent = '...';
-        span.className = 'pagination-dots'; // Add CSS for styling if needed
-        return span;
-    };
-
-    // "Previous" Button
-    const prevBtn = document.createElement('button');
-    prevBtn.textContent = '« Prev';
-    prevBtn.disabled = currentPage === 1;
-    prevBtn.addEventListener('click', () => handlerFunction(elements, currentPage - 1));
-    container.appendChild(prevBtn);
-
-    // Logic to determine which numbers to show
-    const siblings = 1;
-
-    // If total pages is small (e.g., 7 or less), just show them all to avoid complex dot logic
-    if (totalPages <= 7) {
-        for (let i = 1; i <= totalPages; i++) {
-            container.appendChild(createPageBtn(i));
-        }
-    } else {
-        // Complex Logic: Start, End, Current, and Dots
-        const showLeftDots = currentPage > siblings + 2;
-        const showRightDots = currentPage < totalPages - (siblings + 1);
-
-        // Always show Page 1
-        container.appendChild(createPageBtn(1));
-
-        // Logic for Left "..."
-        if (showLeftDots) {
-            container.appendChild(createDots());
-        }
-
-        // Calculate the range of middle buttons
-        let start = Math.max(2, currentPage - siblings);
-        let end = Math.min(totalPages - 1, currentPage + siblings);
-
-        if (currentPage <= siblings + 2) end = siblings + 4; // Extend range if near start
-        if (currentPage >= totalPages - (siblings + 1)) start = totalPages - (siblings + 3); // Extend range if near end
-
-        // Sanity check to keep bounds within 2 and total-1
-        start = Math.max(2, start);
-        end = Math.min(totalPages - 1, end);
-
-        // Render the middle range
-        for (let i = start; i <= end; i++) {
-            container.appendChild(createPageBtn(i));
-        }
-
-        // Logic for Right "..."
-        if (showRightDots) {
-            container.appendChild(createDots());
-        }
-
-        // Always show Last Page
-        container.appendChild(createPageBtn(totalPages));
-    }
-
-    // "Next" Button
-    const nextBtn = document.createElement('button');
-    nextBtn.textContent = 'Next »';
-    nextBtn.disabled = currentPage === totalPages;
-    nextBtn.addEventListener('click', () => handlerFunction(elements, currentPage + 1));
-    container.appendChild(nextBtn);
-}
 
 
 // --- HELPER FUNCTIONS ---
@@ -353,7 +267,7 @@ async function handleUserFilter(elements, page = 1) {
 
         // Render data and pagination
         renderUserLogs(data.logs, elements.userLogTbody);
-        renderPagination(elements.paginationControls, data.pages, data.page, elements, handleUserFilter);
+        Pagination.render(elements.paginationControls, data.pages, data.page, (newPage) => handleUserFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch logs:', error);
@@ -393,7 +307,7 @@ async function handleAiFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiLogAccordion);
-        renderPagination(elements.aiPaginationControls, data.pages, data.page, elements, handleAiFilter);
+        Pagination.render(elements.aiPaginationControls, data.pages, data.page, (newPage) => handleAiFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch AI logs:', error);
@@ -433,7 +347,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiSummaryAccordion);
-        renderPagination(elements.aiSummaryPaginationControls, data.pages, data.page, elements, handleAiSummaryFilter);
+        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, (newPage) => handleAiSummaryFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch AI summaries:', error);

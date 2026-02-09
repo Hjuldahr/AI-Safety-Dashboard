@@ -8,6 +8,8 @@ import controlPanelRouter from './controlPanelRouter.js';
 import tagRouter from './tagRouter.js';
 import schedulerRouter from "./schedulerRouter.js";
 import adminRouter from "./adminRouter.js";
+import demoRouter from "./demoRouter.js";
+import docsRouter from "./docsRouter.js";
 
 const router = express.Router();
 
@@ -19,6 +21,8 @@ router.use("/reports", reportRouter);
 router.use("/", controlPanelRouter);
 router.use('/tags', tagRouter);
 router.use("/", schedulerRouter);
+router.use("/demo", demoRouter);
+router.use("/", docsRouter);
 
 // Admin user management
 router.use('/admin', adminRouter);
