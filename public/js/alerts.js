@@ -1,6 +1,11 @@
 document.addEventListener('DOMContentLoaded', async function () {
-
+  
+    const hasPermission = (permission) => {
+        return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
+    };
+    
     // --- DOM REFERENCES ---
+    const addAlertBtn = document.getElementById('add-alert-btn');
     const alertModal = document.getElementById('alert-modal');
     const manageModal = document.getElementById('manage-modal');
     const tagsModal = document.getElementById('tags-modal');
@@ -53,6 +58,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     // OPERATORS (Includes 'eq' / Equal To)
     const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte', 'eq': '$eq' };
     const OP_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
+  
+   // Hide add alert button if user doesn't have permission
+    if (addAlertBtn && !hasPermission('create:alert')) {
+        addAlertBtn.style.display = 'none';
+    }
+  
 
 
     // --- 1. INITIALIZATION ---

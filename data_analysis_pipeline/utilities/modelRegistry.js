@@ -12,21 +12,32 @@ export function setScenario(modelName, scenario) {
   if (!registry[modelName]) {
     throw new Error(`Unsupported model: ${modelName}`);
   }
-
   if (!registry[modelName][scenario]) {
     throw new Error(
       `Scenario "${scenario}" not found for model "${modelName}"`
     );
   }
-
   model_scenarios[modelName] = scenario;
+}
+
+export function getScenarios(modelName) {
+  if (!registry[modelName]) {
+    throw new Error(`Unsupported model: ${modelName}`);
+  }
+  return registry[modelName];
+}
+
+export function getCurrentScenario(modelName) {
+  if (!registry[modelName]) {
+    throw new Error(`Unsupported model: ${modelName}`);
+  }
+  return model_scenarios[modelName] || DEFAULT_SCENARIO;
 }
 
 export function clearScenario(modelName) {
   if (!registry[modelName]) {
     throw new Error(`Unsupported model: ${modelName}`);
   }
-
   delete model_scenarios[modelName];
 }
 

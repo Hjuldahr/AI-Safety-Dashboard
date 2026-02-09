@@ -6,56 +6,78 @@
 class DemoManager {
     constructor() {
         this.modelSelect = document.getElementById('modelSelect');
+        this.scenarioSelect = document.getElementById('scenarioSelect');
         this.statusDiv = document.getElementById('status');
-        this.rogueBtn = document.querySelector('.btn-rogue');
+        this.applyBtn = document.querySelector('.btn-apply');
         this.resetBtn = document.querySelector('.btn-reset');
 
         this.initEventListeners();
     }
 
     initEventListeners() {
-        if (this.rogueBtn) {
-            this.rogueBtn.addEventListener('click', () => this.goRogue());
+        if (this.applyBtn) {
+            this.applyBtn.addEventListener('click', () => this.applyScenario());
         }
         if (this.resetBtn) {
             this.resetBtn.addEventListener('click', () => this.resetModel());
         }
+        if (this.modelSelect) {
+            this.modelSelect.addEventListener('change', () => this.updateScenarioList());
+        }
+    }
+
+    async updateScenarioList() {
+        const modelName = this.getModelName();
+        if (!modelName) return;
+
+        const response = await fetch('/demo/list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modelName })
+        });
+
+        const { scenarios, currentScenario } = await response.json();
+
+        const scenarioList = Array.isArray(scenarios) ? scenarios : [];
+        this.scenarioSelect.innerHTML = scenarioList
+            .map(e => `<option value="${e}" ${e === currentScenario ? "selected" : ""}>${e}</option>`)
+            .join('\n');
     }
 
     getModelName() {
         return this.modelSelect ? this.modelSelect.value : null;
     }
 
-    updateStatus(message, type) {
+    getScenarioName() {
+        return this.scenarioSelect ? this.scenarioSelect.value : null;
+    }
+
+    updateStatus(message, type = 'normal') {
         if (!this.statusDiv) return;
 
         this.statusDiv.textContent = message;
-        this.statusDiv.className = ''; // Clear previous classes
-        
-        if (type === 'rogue') {
-            this.statusDiv.classList.add('status-rogue');
-        } else if (type === 'normal') {
-            this.statusDiv.classList.add('status-normal');
-        } else if (type === 'error') {
-            this.statusDiv.style.color = '#cf6679'; 
-        }
+        this.statusDiv.className = ''; // clear previous classes
+        this.statusDiv.classList.add(type === 'error' ? 'status-error' : 'status-normal');
     }
 
-    async goRogue() {
+    async applyScenario() {
         const modelName = this.getModelName();
         if (!modelName) return;
 
+        const scenarioName = this.getScenarioName();
+        if (!scenarioName) return;
+
         try {
-            const response = await fetch('demo/rogue', {
+            const response = await fetch('/demo/apply', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ modelName })
+                body: JSON.stringify({ modelName, scenarioName })
             });
             
             const data = await response.json();
             
             if (response.ok) {
-                this.updateStatus(data.message, 'rogue');
+                this.updateStatus(data.message, scenarioName);
             } else {
                 this.updateStatus('Error: ' + data.error, 'error');
             }
@@ -80,6 +102,7 @@ class DemoManager {
             
             if (response.ok) {
                 this.updateStatus(data.message, 'normal');
+                await this.updateScenarioList();
             } else {
                 this.updateStatus('Error: ' + data.error, 'error');
             }
