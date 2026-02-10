@@ -4,7 +4,7 @@ import AlertLog from "../models/alert_log.js";
 import User from "../models/user.js";
 import AI_Log from "../models/AI_Log.js";
 import Tag from "../models/tag.js";
-import constants from "../config/constants.js";
+import chartConstants from "../constants/charts.js";
 
 const getPage = async (req, res) => {
   try {
@@ -23,7 +23,7 @@ const getPage = async (req, res) => {
       alerts: alerts,
       alertLogs: [],
       models: modelNames,
-      constants: constants,
+      constants: chartConstants,
     });
   } catch (error) {
     console.error("Error fetching alert page:", error);

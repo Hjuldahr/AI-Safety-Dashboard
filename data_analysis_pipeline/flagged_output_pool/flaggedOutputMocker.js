@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import random from "../utilities/random.js";
-import { TOPIC_HIERARCHY } from "../../config/constants.js";
+import { TOPIC_HIERARCHY } from "../../constants/charts.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -2,7 +2,7 @@ import User from '../models/user.js';
 import Chart_Config from '../models/Chart_Config.js';
 import mongoose from 'mongoose';
 import defaultCharts from './seed_data/defaultCharts.json' with { type: 'json' };
-import { seedDefaultRoles } from './seed_data/seedRoles.js';
+import { seedDefaultRoles } from './seedRoles.js';
 
 
 const connectDB = async () => {

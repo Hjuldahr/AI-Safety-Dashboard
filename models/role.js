@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { permissions } from '../config/permissions.js';
+import { permissions } from '../constants/permissions.js';
 
 // Get all valid permission keys
 const validPermissions = Object.values(permissions).flatMap(p => Object.keys(p));

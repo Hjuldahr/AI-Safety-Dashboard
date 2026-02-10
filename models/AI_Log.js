@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { KNOWN_MODELS, DATA_DICTIONARY } from '../config/constants.js';
+import { KNOWN_MODELS, DATA_DICTIONARY } from "../constants/charts.js";
 
 // === AI_Log Schema ===
 const schemaDefinition = {};
