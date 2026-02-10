@@ -2,7 +2,7 @@ import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
 import ChartConfig from '../models/Chart_Config.js';
 import User_Log from '../models/User_Log.js';
-import { TIMEFRAME_CONFIG, KNOWN_MODELS, DATA_DICTIONARY } from "../config/constants.js";
+import { TIMEFRAME_CONFIG, KNOWN_MODELS, DATA_DICTIONARY } from "../constants/charts.js";
 
 
 const saveGraph = async (req, res) => {

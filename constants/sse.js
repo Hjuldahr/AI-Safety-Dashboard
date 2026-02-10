@@ -1,3 +1,7 @@
+/*
+* This file defines the constant values used in the scheduler.
+*/
+
 export const HEARTBEAT = 15000;
 
 
