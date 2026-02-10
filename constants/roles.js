@@ -1,3 +1,5 @@
+// Todo: Figure out the use of this file
+// Is it only for seeding roles? Is it also for checking roles on the fly?
 import { permissions } from "./permissions.js"
 
 const roles = {
