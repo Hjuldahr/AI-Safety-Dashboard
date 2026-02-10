@@ -1,4 +1,4 @@
-import { permissions } from './permissions.js';
+import { permissions } from "../config/permissions.js"
 
 const roles = {
     owner: {
