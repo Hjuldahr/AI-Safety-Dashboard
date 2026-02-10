@@ -1,5 +1,66 @@
-document.addEventListener('DOMContentLoaded', () => {
+import doc from "pdfkit";
 
+let isBannerVisible = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    //reference: https://github.com/ohly0001/CST8414-Applied-Research-Project/blob/Robert-II/public/js/motd.js 
+    
+    const banner = document.getElementById('notificationBanner');
+
+    const appear = () => {
+        banner.classList.remove('hidden');
+        banner.animate([
+            { transform: "translateX(300px)" },
+            { transform: "translateX(0px)" }
+        ], {
+            duration: 1000,
+            iterations: 1
+        });
+    };
+    const disappear = () => {
+        banner.animate([
+            { transform: "translateX(-300px)" },
+            { transform: "translateX(0px)" }
+        ], {
+            duration: 1000,
+            iterations: 1
+        });
+        banner.classList.add('hidden');
+    };
+
+    banner.addEventListener('click', () => {
+        //Navigate to Alert
+    })
+
+    //click anywhere but the banner
+    document.body.addEventListener('click', () => {
+        if (isBannerVisible) {
+            disappear();
+            isBannerVisible = false;
+        }
+    })
+
+    const evtSource = new EventSource("/events");
+    evtSource.addEventListener("notifications", (event) => {
+        try {
+            const json = JSON.parse(event.data);
+
+            // Reset dismissal only when a NEW message arrives
+            localStorage.setItem("notificationDismissed", "false");
+
+            updateBanner(json);
+        } catch (err) {
+        console.error("Error processing SSE message:", err);
+        }
+    });
+    evtSource.onerror = () => {
+        console.warn("SSE disconnected.");
+        evtSource.close();
+    };
+
+    //TODO
+
+    /*
     // Notification Bell & History Logic
 
     // Fetch recent alert logs from server
@@ -192,5 +253,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     populateAlertHistory();
-
+    */
 });
