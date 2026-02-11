@@ -26,6 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // HELPERS
     
+    const isNotificationShown = (id) => {
+        return localStorage.getItem(`previousNotificationId`) === id;
+    };
+
+    const markNotificationShown = (id) => {
+        localStorage.setItem(`previousNotificationId`, id);
+    };
+
     const safeJSON = async (resp) => {
         try { return await resp.json(); }
         catch { return null; }
@@ -70,21 +78,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 350); // match CSS transition time
     };
 
-    const showNotification = (json) => {
+    const showNotification = async (json) => {
         if (!json || !json.message) return;
 
-        currentNotification = json;
+        // Already shown?
+        if (json.id && isNotificationShown(json.id)) return;
+
         content.textContent = json.message;
-        //container.style.borderLeft = `5px solid ${json.trim}`;
         container.style.backgroundColor = json.trim;
 
-        // reset state
         container.classList.remove('hidden');
-
-        // force reflow so animation always triggers
         container.offsetHeight;
-
         container.classList.add('show');
+
+        currentNotification = json;
+
+        if (json.id) markNotificationShown(json.id);
+
+        // Automatically mark read on server for non-dismissible notifications
+        if (json.dismissible === false) {
+            try {
+                await fetch('/notifications/mark-read', { method: 'POST' });
+            } catch(e) { console.error(e); }
+        }
 
         if (dismissTimer) clearTimeout(dismissTimer);
 
@@ -103,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!currentNotification) return;
 
-        //TODO replace with specific URL of Alert
         if (currentNotification.redirectUrl) {
             window.location.href = currentNotification.redirectUrl;
             return;

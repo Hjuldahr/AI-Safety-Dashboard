@@ -29,6 +29,7 @@ const latest = async (req, res) => {
 
         // Map DB fields to frontend-friendly format
         const response = {
+            id: notif._id.toString('base64'),
             message: notif.message,
             redirectUrl: notif.redirectUrl || null,
             timeout: notif.timeout ?? 10,
@@ -123,6 +124,7 @@ const history = async (req, res) => {
 
         // Map to frontend-friendly format
         const mapped = notifications.map(n => ({
+            id: n._id.toString('base64'),
             message: n.message,
             redirectUrl: n.redirectUrl || null,
             timeout: n.timeout ?? 10,
@@ -171,6 +173,7 @@ export async function sendNotification(json) {
         const notification = new Notification(json);
         await notification.save();
 
+        json.id = notification._id.toString('base64');
         broadcastEvent("notification", json);
     }
 };
