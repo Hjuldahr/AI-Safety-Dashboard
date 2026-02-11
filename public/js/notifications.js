@@ -64,7 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dismissTimer = null;
         }
 
-        currentNotification = null;
+        // wait for animation to finish before clearing
+        setTimeout(() => {
+            currentNotification = null;
+        }, 350); // match CSS transition time
     };
 
     const showNotification = (json) => {
@@ -73,8 +76,13 @@ document.addEventListener('DOMContentLoaded', () => {
         currentNotification = json;
         content.textContent = json.message;
         container.style.background = json.background || '';
+
+        // reset state
         container.classList.remove('hidden');
+
+        // force reflow so animation always triggers
         container.offsetHeight;
+
         container.classList.add('show');
 
         if (dismissTimer) clearTimeout(dismissTimer);

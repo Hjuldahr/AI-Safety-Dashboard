@@ -170,14 +170,28 @@
     border-radius: 25px 0px 0px 25px;
     color: white;
     padding: 15px 25px;
-    position: absolute;
+    position: fixed;
     z-index: 1000;
-    right: 0px;
+    right: 0;
     top: 75px;
+
+    /* animation base */
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.45s cubic-bezier(.22,.9,.31,1), opacity 0.3s ease;
+    pointer-events: none;
 }
+
+/* visible state (slides in) */
 .notification-slide.show {
-    display: inline;
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
 }
+
+/* hidden but still animatable */
 .notification-slide.hidden {
-    display: none;
+    transform: translateX(120%);
+    opacity: 0;
+    pointer-events: none;
 }
