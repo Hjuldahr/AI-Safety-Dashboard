@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
             li.className = 'notification-history-item';
 
             const link = document.createElement('a');
-            link.href = n.redirectUrl || 'alerts';
+            link.href = n.redirectUrl;
 
             const text = document.createElement('span');
             text.className = 'alert-text';
