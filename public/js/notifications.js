@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // SLIDE NOTIFICATION UI
     
+    /*
     let currentNotification = null;
     let dismissTimer = null;
 
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const content = document.createElement('div');
     content.className = 'notification-content';
     container.appendChild(content);
+    */
 
     // HELPERS
     
@@ -169,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             li.className = 'notification-history-item';
 
             const link = document.createElement('a');
-            link.href = n.redirectUrl;
+            if (n.redirectUrl) link.href = n.redirectUrl;
 
             const text = document.createElement('span');
             text.className = 'alert-text';
