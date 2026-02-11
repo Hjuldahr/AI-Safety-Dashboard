@@ -1,10 +1,7 @@
 // notification.js
 document.addEventListener('DOMContentLoaded', () => {
-
-    ////////////////////////////////////////////////////////////
     // CONFIG
-    ////////////////////////////////////////////////////////////
-
+    
     const API = {
         latest: '/notifications/latest',        // get latest active notification
         history: '/notifications/history',      // paginated history
@@ -13,10 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
         events: '/events'                           // SSE endpoint
     };
 
-    ////////////////////////////////////////////////////////////
     // SLIDE NOTIFICATION UI
-    ////////////////////////////////////////////////////////////
-
+    
     let currentNotification = null;
     let dismissTimer = null;
 
@@ -29,10 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     content.className = 'notification-content';
     container.appendChild(content);
 
-    ////////////////////////////////////////////////////////////
     // HELPERS
-    ////////////////////////////////////////////////////////////
-
+    
     const safeJSON = async (resp) => {
         try { return await resp.json(); }
         catch { return null; }
@@ -60,9 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    ////////////////////////////////////////////////////////////
     // SHOW / HIDE NOTIFICATION
-    ////////////////////////////////////////////////////////////
 
     const hideNotification = () => {
         container.classList.remove('show');
@@ -95,9 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    ////////////////////////////////////////////////////////////
     // CLICK BEHAVIOUR
-    ////////////////////////////////////////////////////////////
 
     // clicking notification itself → redirect
     container.addEventListener('click', (e) => {
@@ -126,10 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
         hideNotification();
     });
 
-    ////////////////////////////////////////////////////////////
     // NOTIFICATION BELL + HISTORY
-    ////////////////////////////////////////////////////////////
-
+    
     const bellButton = document.querySelector('.notification-bell');
     const historyContainer = document.getElementById('notification-history');
     const badgeEl = document.getElementById('notification-badge');
@@ -231,10 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    ////////////////////////////////////////////////////////////
     // INITIAL LOAD
-    ////////////////////////////////////////////////////////////
-
+    
     (async () => {
         const notif = await fetchLatestNotification();
         if (notif) showNotification(notif);
@@ -243,9 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBadge(unread);
     })();
 
-    ////////////////////////////////////////////////////////////
     // SSE LIVE EVENTS
-    ////////////////////////////////////////////////////////////
 
     let evtSource = null;
 
