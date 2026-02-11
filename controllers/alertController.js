@@ -52,7 +52,7 @@ const getAlertHistory = async (req, res) => {
       query["alertSnapshot.modelName"] = modelName;
     }
 
-    f (req.query.tag && req.query.tag !== "all") {
+    if (req.query.tag && req.query.tag !== "all") {
       const tagId = req.query.tag;
       query.tags = tagId;
     }i

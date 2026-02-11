@@ -4,9 +4,9 @@ import { isAuthenticated } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get("/api/notifications/latest", isAuthenticated, controller.latest);
-router.get("/api/notifications/history", isAuthenticated, controller.history);
-router.get("/api/notifications/unread", isAuthenticated, controller.unread);
-router.get("/api/notifications/mark-read", isAuthenticated, controller.markRead);
+router.get("/latest", isAuthenticated, controller.latest);
+router.get("/history", isAuthenticated, controller.history);
+router.get("/unread", isAuthenticated, controller.unread);
+router.get("/mark-read", isAuthenticated, controller.markRead);
 
 export default router;

@@ -12,6 +12,7 @@ import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase, seedCharts } from './config/database.js';
+import { sendNotification } from './controllers/notificationController.js';
 
 let shuttingDown = false;
 
@@ -107,6 +108,15 @@ const startServer = async () => {
         shuttingDown = true;
 
         console.log(`\n[Shutdown] Received ${signal}! Shutting down...`);
+
+        await sendNotification({
+            message: "The Server is now shutting down",
+            category: "server",
+            dismissible: false,
+            background: "#b35d00"
+        });
+
+        new Promise(resolve => setTimeout(resolve, 5000));
 
         const forceExitTimer = setTimeout(() => {
             console.error("[Shutdown] Force exit");

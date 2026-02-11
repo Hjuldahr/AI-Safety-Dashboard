@@ -9,6 +9,7 @@ import tagRouter from './tagRouter.js';
 import schedulerRouter from "./schedulerRouter.js";
 import demoRouter from "./demoRouter.js";
 import docsRouter from "./docsRouter.js";
+import notificationRouter from "./notificationRouter.js";
 
 const router = express.Router();
 
@@ -22,5 +23,6 @@ router.use('/tags', tagRouter);
 router.use("/", schedulerRouter);
 router.use("/demo", demoRouter);
 router.use("/", docsRouter);
+router.use("/notifications", notificationRouter);
 
 export default router;

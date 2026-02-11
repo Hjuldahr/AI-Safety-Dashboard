@@ -6,10 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ////////////////////////////////////////////////////////////
 
     const API = {
-        latest: '/api/notifications/latest',        // get latest active notification
-        history: '/api/notifications/history',      // paginated history
-        unreadCount: '/api/notifications/unread',   // unread count
-        markRead: '/api/notifications/mark-read',   // mark read
+        latest: '/notifications/latest',        // get latest active notification
+        history: '/notifications/history',      // paginated history
+        unreadCount: '/notifications/unread',   // unread count
+        markRead: '/notifications/mark-read',   // mark read
         events: '/events'                           // SSE endpoint
     };
 
@@ -252,6 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
         evtSource = new EventSource(API.events);
+        console.log(evtSource);
 
         evtSource.addEventListener('notification', async (ev) => {
             try {
@@ -281,5 +282,4 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('beforeunload', () => {
         try { evtSource?.close(); } catch {}
     });
-
 });

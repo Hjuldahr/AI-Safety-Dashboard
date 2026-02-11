@@ -8,7 +8,7 @@ const RoleSchema = new mongoose.Schema({
     name: {
         type: String,
         required: [true, 'Role name is required'],
-        unique: true,
+        unique: true, //automatically indexed
         lowercase: true,
         trim: true,
         minlength: [3, 'Role name must be at least 3 characters'],
@@ -37,9 +37,6 @@ const RoleSchema = new mongoose.Schema({
         default: false // System roles (owner, admin) cannot be deleted
     }
 }, { timestamps: true });
-
-// Index for name for faster lookups
-RoleSchema.index({ name: 1 });
 
 // Prevent system roles from being modified
 RoleSchema.pre('save', async function(next) {

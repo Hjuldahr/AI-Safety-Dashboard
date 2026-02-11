@@ -1,262 +1,186 @@
-// notification.js
-document.addEventListener('DOMContentLoaded', () => {
+// notificationsController.js
+import Notification from "../models/Notification.js";
+import User from "../models/User.js";
+import { broadcastEvent } from "../server_side_events/scheduler.js";
 
-    ////////////////////////////////////////////////////////////
-    // CONFIG
-    ////////////////////////////////////////////////////////////
-
-    const API = {
-        latest: '/api/notifications/latest',
-        history: '/api/notifications/history',
-        unreadCount: '/api/notifications/unread',
-        markRead: '/api/notifications/mark-read',
-        events: '/events'
-    };
-
-    ////////////////////////////////////////////////////////////
-    // SLIDE NOTIFICATION UI
-    ////////////////////////////////////////////////////////////
-
-    let currentNotification = null;
-    let dismissTimer = null;
-
-    const container = document.createElement('div');
-    container.id = 'global-notification';
-    container.className = 'notification-slide hidden';
-    document.body.appendChild(container);
-
-    const content = document.createElement('div');
-    content.className = 'notification-content';
-    container.appendChild(content);
-
-    ////////////////////////////////////////////////////////////
-    // HELPERS
-    ////////////////////////////////////////////////////////////
-
-    const safeJSON = async (resp) => {
-        try { return await resp.json(); } catch { return null; }
-    };
-
-    const fetchLatestNotification = async () => {
-        try {
-            const resp = await fetch(API.latest);
-            if (!resp.ok) return null;
-            return await safeJSON(resp);
-        } catch (e) {
-            console.error('Failed to fetch latest notification:', e);
-            return null;
-        }
-    };
-
-    const fetchUnreadCount = async () => {
-        try {
-            const resp = await fetch(API.unreadCount);
-            if (!resp.ok) return 0;
-            const json = await safeJSON(resp);
-            return Number(json?.unread || 0);
-        } catch {
-            return 0;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////
-    // SHOW / HIDE NOTIFICATION
-    ////////////////////////////////////////////////////////////
-
-    const hideNotification = () => {
-        container.classList.remove('show');
-        container.classList.add('hidden');
-
-        if (dismissTimer) {
-            clearTimeout(dismissTimer);
-            dismissTimer = null;
-        }
-
-        currentNotification = null;
-    };
-
-    const showNotification = (notif) => {
-        if (!notif || !notif.message) return;
-
-        currentNotification = notif;
-        content.textContent = notif.message;
-
-        container.style.background = notif.background || '';
-        container.classList.remove('hidden');
-
-        container.offsetHeight; // force reflow for animation
-        container.classList.add('show');
-
-        if (dismissTimer) clearTimeout(dismissTimer);
-
-        if (notif.timeout && notif.dismissible !== false) {
-            dismissTimer = setTimeout(() => {
-                hideNotification();
-            }, notif.timeout * 1000);
-        }
-    };
-
-    ////////////////////////////////////////////////////////////
-    // CLICK BEHAVIOUR
-    ////////////////////////////////////////////////////////////
-
-    container.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!currentNotification) return;
-
-        if (currentNotification.redirectUrl) {
-            window.location.href = currentNotification.redirectUrl;
-            return;
-        }
-
-        if (currentNotification.dismissible !== false) hideNotification();
-    });
-
-    document.body.addEventListener('click', (e) => {
-        if (!currentNotification) return;
-        if (container.contains(e.target)) return;
-        if (currentNotification.dismissible === false) return;
-
-        hideNotification();
-    });
-
-    ////////////////////////////////////////////////////////////
-    // NOTIFICATION BELL + HISTORY
-    ////////////////////////////////////////////////////////////
-
-    const bellButton = document.querySelector('.notification-bell');
-    const historyContainer = document.getElementById('notification-history');
-    const badgeEl = document.getElementById('notification-badge');
-
-    const updateBadge = (unread) => {
-        if (!badgeEl) return;
-        if (unread > 0) {
-            badgeEl.textContent = unread > 99 ? '99+' : String(unread);
-            badgeEl.classList.add('show');
-        } else {
-            badgeEl.textContent = '';
-            badgeEl.classList.remove('show');
-        }
-    };
-
-    const fetchHistory = async (limit = 10) => {
-        try {
-            const params = new URLSearchParams({ page: '1', limit: String(limit) });
-            const resp = await fetch(`${API.history}?${params}`);
-            if (!resp.ok) return [];
-            const data = await safeJSON(resp);
-            return Array.isArray(data?.notifications) ? data.notifications : [];
-        } catch (e) {
-            console.error('Failed to fetch history:', e);
-            return [];
-        }
-    };
-
-    const formatTime = (date) => {
-        return new Date(date).toLocaleString();
-    };
-
-    const populateHistory = async () => {
-        if (!historyContainer) return;
-        historyContainer.innerHTML = '';
-
-        const header = document.createElement('div');
-        header.className = 'notification-history-header';
-        header.textContent = 'Recent Notifications';
-        historyContainer.appendChild(header);
-
-        const list = document.createElement('ul');
-        const logs = await fetchHistory(10);
-
-        logs.forEach(n => {
-            const li = document.createElement('li');
-            li.className = 'notification-history-item';
-
-            const link = document.createElement('a');
-            link.href = n.redirectUrl || '#';
-
-            const text = document.createElement('span');
-            text.className = 'alert-text';
-            text.textContent = n.message || 'Notification';
-
-            const time = document.createElement('span');
-            time.className = 'alert-time';
-            time.textContent = formatTime(n.createdAt || Date.now());
-
-            link.appendChild(text);
-            link.appendChild(time);
-            li.appendChild(link);
-            list.appendChild(li);
-        });
-
-        historyContainer.appendChild(list);
-
-        const unread = await fetchUnreadCount();
-        updateBadge(unread);
-    };
-
-    if (bellButton && historyContainer) {
-        bellButton.addEventListener('click', async (e) => {
-            e.stopPropagation();
-
-            const willShow = !historyContainer.classList.contains('show');
-            if (willShow) {
-                await populateHistory();
-                historyContainer.classList.add('show');
-
-                try { await fetch(API.markRead, { method: 'POST' }); } catch {}
-                updateBadge(0);
-            } else {
-                historyContainer.classList.remove('show');
-            }
-        });
-
-        document.addEventListener('click', () => {
-            historyContainer.classList.remove('show');
-        });
-    }
-
-    ////////////////////////////////////////////////////////////
-    // INITIAL LOAD
-    ////////////////////////////////////////////////////////////
-
-    (async () => {
-        const notif = await fetchLatestNotification();
-        if (notif) showNotification(notif);
-
-        const unread = await fetchUnreadCount();
-        updateBadge(unread);
-    })();
-
-    ////////////////////////////////////////////////////////////
-    // SSE LIVE EVENTS
-    ////////////////////////////////////////////////////////////
-
-    let evtSource = null;
+/**
+ * GET /api/notifications/latest
+ * Fetch the most recent unseen notification for the user
+ */
+const latest = async (req, res) => {
     try {
-        evtSource = new EventSource(API.events);
+        if (!req.user?._id) return res.status(200).json({});
 
-        evtSource.addEventListener('notification', async (ev) => {
-            try {
-                const json = JSON.parse(ev.data);
-                showNotification(json);
+        const user = await User.findById(req.user._id)
+            .select("notificationsLastSeen")
+            .lean();
 
-                const unread = await fetchUnreadCount();
-                updateBadge(unread);
-            } catch (err) {
-                console.error('Notification SSE parse error:', err);
-            }
+        if (!user) return res.status(200).json({});
+
+        const lastSeen = user.notificationsLastSeen ? new Date(user.notificationsLastSeen) : new Date(0);
+
+        // Find newest notification created after lastSeen
+        const notif = await Notification.findOne({ createdAt: { $gt: lastSeen } })
+            .sort({ createdAt: -1 })
+            .populate("tags")
+            .lean();
+
+        if (!notif) return res.status(200).json({});
+
+        // Map DB fields to frontend-friendly format
+        const response = {
+            message: notif.message,
+            redirectUrl: notif.redirectUrl || null,
+            timeout: notif.timeout ?? 10,
+            dismissible: notif.dismissible ?? true,
+            background: notif.background || "#ffffff",
+            tags: notif.tags || []
+        };
+
+        return res.status(200).json(response);
+
+    } catch (error) {
+        console.error("Error fetching latest notification:", error);
+        return res.status(500).json({});
+    }
+};
+
+/**
+ * GET /api/notifications/unread
+ * Count number of unseen notifications
+ */
+const unread = async (req, res) => {
+    try {
+        if (!req.user?._id) return res.status(200).json({ unread: 0 });
+
+        const user = await User.findById(req.user._id)
+            .select("notificationsLastSeen")
+            .lean();
+
+        const lastSeen = user?.notificationsLastSeen ? new Date(user.notificationsLastSeen) : new Date(0);
+
+        const count = await Notification.countDocuments({
+            createdAt: { $gt: lastSeen }
         });
 
-        evtSource.onerror = () => {
-            console.warn('Notification SSE disconnected.');
-            evtSource.close();
-        };
-    } catch (e) {
-        console.error('Failed to init SSE:', e);
-    }
+        return res.status(200).json({ unread: count });
 
-    window.addEventListener('beforeunload', () => {
-        try { evtSource?.close(); } catch {}
-    });
-});
+    } catch (error) {
+        console.error("Error fetching unread count:", error);
+        return res.status(500).json({ unread: 0 });
+    }
+};
+
+/**
+ * GET /api/notifications/history
+ * Paginated history of notifications with optional filters
+ * Query params:
+ *  - page, limit
+ *  - category
+ *  - tag
+ *  - startDate, endDate
+ */
+const history = async (req, res) => {
+    try {
+        // Pagination
+        const page = Math.max(parseInt(req.query.page) || 1, 1);
+        const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
+        const skip = (page - 1) * limit;
+
+        // Build query filters
+        const query = {};
+
+        if (req.query.category && req.query.category !== "any") query.category = req.query.category;
+        if (req.query.tag && req.query.tag !== "all") query.tags = req.query.tag;
+
+        if (req.query.startDate || req.query.endDate) {
+            query.createdAt = {};
+            if (req.query.startDate) {
+                const sd = new Date(req.query.startDate);
+                if (!Number.isNaN(sd.getTime())) query.createdAt.$gte = sd;
+            }
+            if (req.query.endDate) {
+                const ed = new Date(req.query.endDate);
+                if (!Number.isNaN(ed.getTime())) {
+                    ed.setHours(23, 59, 59, 999);
+                    query.createdAt.$lte = ed;
+                }
+            }
+            if (!Object.keys(query.createdAt).length) delete query.createdAt;
+        }
+
+        // Run queries in parallel
+        const [total, notifications] = await Promise.all([
+            Notification.countDocuments(query),
+            Notification.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .populate("tags")
+                .lean()
+        ]);
+
+        // Map to frontend-friendly format
+        const mapped = notifications.map(n => ({
+            message: n.message,
+            redirectUrl: n.redirectUrl || null,
+            timeout: n.timeout ?? 10,
+            dismissible: n.dismissible ?? true,
+            background: n.background || "#ffffff",
+            tags: n.tags || [],
+            createdAt: n.createdAt
+        }));
+
+        return res.status(200).json({
+            notifications: mapped,
+            total,
+            page,
+            pages: Math.ceil(total / limit),
+            limit
+        });
+
+    } catch (error) {
+        console.error("Error fetching notification history:", error);
+        return res.status(500).json({ message: "Error fetching history." });
+    }
+};
+
+const markRead = async (req, res) => {
+    try {
+        if (!req.user?._id) 
+            return res.status(401).json({ message: "Not authenticated" });
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user._id,
+            { $set: { notificationsLastSeen: new Date() } },
+            { new: true, select: 'notificationsLastSeen' }
+        );
+
+        return res.status(200).json({
+            message: "Marked read",
+            lastSeen: updatedUser?.notificationsLastSeen
+        });
+
+    } catch (error) {
+        console.error("Error marking notifications read:", error);
+        return res.status(500).json({ message: "Failed to mark read" });
+    }
+};
+
+export async function sendNotification(json) {
+    if ('message' in json) {
+        const notification = new Notification(json);
+        await notification.save();
+
+        broadcastEvent("notification", json);
+        //return res.status(200).json({ message: "Broadcasted custom MOTD" });
+    }
+    //return res.status(400).json({ message: "Missing required fields: message" });
+};
+
+export default {
+    markRead,
+    unread,
+    history,
+    latest
+}

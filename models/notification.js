@@ -4,7 +4,7 @@ const NotificationSchema = new mongoose.Schema({
   message: { type: String, required: true },
   category: { 
     type: String, 
-    enum: ['generic', 'alert', 'server'],
+    enum: ['generic', 'alert', 'demo', 'server'],
     default: 'generic'
   },
   redirectUrl: { type: String, default: null },
