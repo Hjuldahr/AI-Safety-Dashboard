@@ -6,11 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
     ////////////////////////////////////////////////////////////
 
     const API = {
-        latest: '/api/notifications/latest',        // get latest active notification
-        history: '/api/notifications/history',      // paginated history
-        unreadCount: '/api/notifications/unread',   // unread count
-        markRead: '/api/notifications/mark-read',   // mark read
-        events: '/events'                           // SSE endpoint
+        latest: '/api/notifications/latest',
+        history: '/api/notifications/history',
+        unreadCount: '/api/notifications/unread',
+        markRead: '/api/notifications/mark-read',
+        events: '/events'
     };
 
     ////////////////////////////////////////////////////////////
@@ -34,8 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ////////////////////////////////////////////////////////////
 
     const safeJSON = async (resp) => {
-        try { return await resp.json(); }
-        catch { return null; }
+        try { return await resp.json(); } catch { return null; }
     };
 
     const fetchLatestNotification = async () => {
@@ -76,25 +75,24 @@ document.addEventListener('DOMContentLoaded', () => {
         currentNotification = null;
     };
 
-    const showNotification = (json) => {
-        if (!json || !json.message) return;
+    const showNotification = (notif) => {
+        if (!notif || !notif.message) return;
 
-        currentNotification = json;
-        content.textContent = json.message;
+        currentNotification = notif;
+        content.textContent = notif.message;
 
-        container.style.background = json.background || '';
+        container.style.background = notif.background || '';
         container.classList.remove('hidden');
 
-        // force reflow so animation triggers
-        container.offsetHeight;
+        container.offsetHeight; // force reflow for animation
         container.classList.add('show');
 
         if (dismissTimer) clearTimeout(dismissTimer);
 
-        if (json.timeout) {
+        if (notif.timeout && notif.dismissible !== false) {
             dismissTimer = setTimeout(() => {
-                if (json.dismissible !== false) hideNotification();
-            }, json.timeout * 1000);
+                hideNotification();
+            }, notif.timeout * 1000);
         }
     };
 
@@ -102,27 +100,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // CLICK BEHAVIOUR
     ////////////////////////////////////////////////////////////
 
-    // clicking notification itself → redirect
     container.addEventListener('click', (e) => {
         e.stopPropagation();
-
         if (!currentNotification) return;
 
-        //TODO replace with specific URL of Alert
         if (currentNotification.redirectUrl) {
             window.location.href = currentNotification.redirectUrl;
             return;
         }
 
-        if (currentNotification.dismissible !== false) {
-            hideNotification();
-        }
+        if (currentNotification.dismissible !== false) hideNotification();
     });
 
-    // clicking anywhere else → dismiss if allowed
     document.body.addEventListener('click', (e) => {
         if (!currentNotification) return;
-
         if (container.contains(e.target)) return;
         if (currentNotification.dismissible === false) return;
 
@@ -139,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateBadge = (unread) => {
         if (!badgeEl) return;
-
         if (unread > 0) {
             badgeEl.textContent = unread > 99 ? '99+' : String(unread);
             badgeEl.classList.add('show');
@@ -163,13 +153,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const formatTime = (date) => {
-        const d = new Date(date);
-        return d.toLocaleString();
+        return new Date(date).toLocaleString();
     };
 
     const populateHistory = async () => {
         if (!historyContainer) return;
-
         historyContainer.innerHTML = '';
 
         const header = document.createElement('div');
@@ -185,15 +173,15 @@ document.addEventListener('DOMContentLoaded', () => {
             li.className = 'notification-history-item';
 
             const link = document.createElement('a');
-            link.href = n.redirectUrl || 'alerts';
+            link.href = n.redirectUrl || '#';
 
             const text = document.createElement('span');
             text.className = 'alert-text';
-            text.textContent = n.title || n.message || 'Notification';
+            text.textContent = n.message || 'Notification';
 
             const time = document.createElement('span');
             time.className = 'alert-time';
-            time.textContent = formatTime(n.timestamp || Date.now());
+            time.textContent = formatTime(n.createdAt || Date.now());
 
             link.appendChild(text);
             link.appendChild(time);
@@ -212,15 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
 
             const willShow = !historyContainer.classList.contains('show');
-
             if (willShow) {
                 await populateHistory();
                 historyContainer.classList.add('show');
 
-                try {
-                    await fetch(API.markRead, { method: 'POST' });
-                } catch {}
-
+                try { await fetch(API.markRead, { method: 'POST' }); } catch {}
                 updateBadge(0);
             } else {
                 historyContainer.classList.remove('show');
@@ -249,21 +233,16 @@ document.addEventListener('DOMContentLoaded', () => {
     ////////////////////////////////////////////////////////////
 
     let evtSource = null;
-
     try {
         evtSource = new EventSource(API.events);
 
         evtSource.addEventListener('notification', async (ev) => {
             try {
                 const json = JSON.parse(ev.data);
-
-                // show new notification immediately
                 showNotification(json);
 
-                // refresh badge
                 const unread = await fetchUnreadCount();
                 updateBadge(unread);
-
             } catch (err) {
                 console.error('Notification SSE parse error:', err);
             }
@@ -273,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Notification SSE disconnected.');
             evtSource.close();
         };
-
     } catch (e) {
         console.error('Failed to init SSE:', e);
     }
@@ -281,5 +259,4 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('beforeunload', () => {
         try { evtSource?.close(); } catch {}
     });
-
 });

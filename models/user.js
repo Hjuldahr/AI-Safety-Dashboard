@@ -25,7 +25,7 @@ const UserSchema = new mongoose.Schema({
         default: ['viewer'] // Every new user is a 'viewer' by default
     },
     // Timestamp of when user last saw notifications (server-side unread tracking)
-    alertsLastSeen: {
+    notificationsLastSeen: {
         type: Date,
         required: false,
         default: null
