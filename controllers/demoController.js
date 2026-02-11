@@ -50,7 +50,8 @@ export const applyScenario = (req, res) => {
             category: "demo",
             dismissible: true,
             timeout: 5,
-            background: "#005db3"
+            trim: "#3b82f6",
+            background: "#bad1f5"
         });
         
     } catch (error) {
@@ -72,7 +73,8 @@ export const resetScenario = (req, res) => {
             category: "demo",
             dismissible: true,
             timeout: 5,
-            background: "#005db3"
+            trim: "#3b82f6",
+            background: "#bad1f5"
         });
 
     } catch (error) {

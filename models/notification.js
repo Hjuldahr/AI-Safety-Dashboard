@@ -9,6 +9,7 @@ const NotificationSchema = new mongoose.Schema({
   },
   redirectUrl: { type: String, default: null },
   background: { type: String, default: '#ffffff' },
+  trim: { type: String, default: '#ffffff' },
   timeout: { type: Number, default: 10 }, // seconds
   dismissible: { type: Boolean, default: true },
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag" }]

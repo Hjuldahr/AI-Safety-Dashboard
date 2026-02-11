@@ -75,7 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentNotification = json;
         content.textContent = json.message;
-        container.style.background = json.background || '';
+        //container.style.borderLeft = `5px solid ${json.trim}`;
+        container.style.backgroundColor = json.trim;
 
         // reset state
         container.classList.remove('hidden');
@@ -175,6 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
         logs.forEach(n => {
             const li = document.createElement('li');
             li.className = 'notification-history-item';
+            li.style.borderLeft = `5px solid ${n.trim}`;
+            li.style.backgroundColor = n.background;
 
             const link = document.createElement('a');
             if (n.redirectUrl) link.href = n.redirectUrl;

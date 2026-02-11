@@ -1,6 +1,6 @@
 // notificationsController.js
 import Notification from "../models/Notification.js";
-import User from "../models/User.js";
+import User from "../models/user.js";
 import { broadcastEvent } from "../server_side_events/scheduler.js";
 
 /**
@@ -33,6 +33,7 @@ const latest = async (req, res) => {
             redirectUrl: notif.redirectUrl || null,
             timeout: notif.timeout ?? 10,
             dismissible: notif.dismissible ?? true,
+            trim: notif.trim || "#ffffff",
             background: notif.background || "#ffffff",
             tags: notif.tags || []
         };
@@ -126,6 +127,7 @@ const history = async (req, res) => {
             redirectUrl: n.redirectUrl || null,
             timeout: n.timeout ?? 10,
             dismissible: n.dismissible ?? true,
+            trim: n.trim || "#ffffff",
             background: n.background || "#ffffff",
             tags: n.tags || [],
             createdAt: n.createdAt

@@ -113,7 +113,8 @@ const startServer = async () => {
             message: "The Server is now shutting down",
             category: "server",
             dismissible: false,
-            background: "#b35d00"
+            trim: "#CC0202",
+            background: "#cccaca"
         });
 
         new Promise(resolve => setTimeout(resolve, 5000));
