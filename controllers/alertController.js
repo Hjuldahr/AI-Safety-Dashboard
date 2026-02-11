@@ -55,7 +55,7 @@ const getAlertHistory = async (req, res) => {
     if (req.query.tag && req.query.tag !== "all") {
       const tagId = req.query.tag;
       query.tags = tagId;
-    }i
+    }
 
     if (start || end) query.timestamp = {};
 

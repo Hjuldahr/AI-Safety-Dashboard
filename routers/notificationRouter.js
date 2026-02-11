@@ -7,6 +7,6 @@ const router = express.Router();
 router.get("/latest", isAuthenticated, controller.latest);
 router.get("/history", isAuthenticated, controller.history);
 router.get("/unread", isAuthenticated, controller.unread);
-router.get("/mark-read", isAuthenticated, controller.markRead);
+router.post("/mark-read", isAuthenticated, controller.markRead);
 
 export default router;

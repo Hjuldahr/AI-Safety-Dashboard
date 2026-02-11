@@ -145,20 +145,17 @@ const history = async (req, res) => {
     }
 };
 
+//doesnt seem to be marking as read correctly.
 const markRead = async (req, res) => {
     try {
         if (!req.user?._id) 
             return res.status(401).json({ message: "Not authenticated" });
 
-        const updatedUser = await User.findByIdAndUpdate(
-            req.user._id,
-            { $set: { notificationsLastSeen: new Date() } },
-            { new: true, select: 'notificationsLastSeen' }
-        );
+        // Fetch the user as a Mongoose document
+        await User.findByIdAndUpdate(req.user._id, { $set: { notificationsLastSeen: new Date() } });
 
         return res.status(200).json({
-            message: "Marked read",
-            lastSeen: updatedUser?.notificationsLastSeen
+            message: "Marked read"
         });
 
     } catch (error) {
@@ -173,9 +170,7 @@ export async function sendNotification(json) {
         await notification.save();
 
         broadcastEvent("notification", json);
-        //return res.status(200).json({ message: "Broadcasted custom MOTD" });
     }
-    //return res.status(400).json({ message: "Missing required fields: message" });
 };
 
 export default {

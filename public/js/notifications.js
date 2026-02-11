@@ -81,11 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentNotification = json;
         content.textContent = json.message;
-
         container.style.background = json.background || '';
         container.classList.remove('hidden');
-
-        // force reflow so animation triggers
         container.offsetHeight;
         container.classList.add('show');
 
@@ -219,7 +216,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 try {
                     await fetch(API.markRead, { method: 'POST' });
-                } catch {}
+                } catch(e) {
+                    console.log(e)
+                }
 
                 updateBadge(0);
             } else {
