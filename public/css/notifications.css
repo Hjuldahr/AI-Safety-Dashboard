@@ -165,3 +165,19 @@
     background-color: #dbeafe;
     border-left: 4px solid #3b82f6;
 }
+
+.notification-slide {
+    border-radius: 25px 0px 0px 25px;
+    color: white;
+    padding: 15px 25px;
+    position: absolute;
+    z-index: 1000;
+    right: 0px;
+    top: 75px;
+}
+.notification-slide.show {
+    display: inline;
+}
+.notification-slide.hidden {
+    display: none;
+}

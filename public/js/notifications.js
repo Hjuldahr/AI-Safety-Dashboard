@@ -12,19 +12,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // SLIDE NOTIFICATION UI
     
-    /*
     let currentNotification = null;
     let dismissTimer = null;
 
     const container = document.createElement('div');
-    container.id = 'global-notification';
+    container.id = 'notificationBanner';
     container.className = 'notification-slide hidden';
     document.body.appendChild(container);
 
     const content = document.createElement('div');
-    content.className = 'notification-content';
+    content.className = 'notificationBannerContent';
     container.appendChild(content);
-    */
 
     // HELPERS
     
@@ -236,7 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
         evtSource = new EventSource(API.events);
-        console.log(evtSource);
 
         evtSource.addEventListener('notification', async (ev) => {
             try {
