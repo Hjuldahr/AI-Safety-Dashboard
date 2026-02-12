@@ -2,9 +2,9 @@ import Alert from "../models/alert_model.js";
 import AlertLog from "../models/alert_log.js";
 import { broadcastEvent } from './scheduler.js';
 
-export default async function evaluateAlerts(data, options = {}) {
+export default async function evaluateAlerts(logsMap, options = {}) {
     const { cooldownMs = 60000 } = options;
-    if (!data || typeof data !== 'object') return;
+    if (!logsMap || Object.keys(logsMap).length === 0) return;
 
     let alerts;
     try {
@@ -17,179 +17,113 @@ export default async function evaluateAlerts(data, options = {}) {
     const now = Date.now();
 
     for (const alert of alerts) {
-        try {
-            if (!alert || !alert.alertRule) continue;
-            if (alert.modelName) {
-                const name = String(alert.modelName);
-                const candidates = new Set();
-                if (data && typeof data === 'object') {
-                    // Common direct fields
-                    if (data.modelName) candidates.add(String(data.modelName));
-                    if (data.model) candidates.add(String(data.model));
-                    if (data.model && typeof data.model === 'object') {
-                        if (data.model.name) candidates.add(String(data.model.name));
-                        if (data.model.modelName) candidates.add(String(data.model.modelName));
-                    }
+        // Identify which models to check
+        let candidates = [];
+        if (alert.modelName) {
+            // Specific Alert: Only check the named model
+            if (logsMap[alert.modelName]) candidates.push(logsMap[alert.modelName]);
+        } else {
+            // Global Alert: Check all models in this batch
+            candidates = Object.values(logsMap);
+        }
 
-                    // Check top-level named payloads (e.g. GoodModel, BadModel)
-                    for (const k of Object.keys(data)) {
-                        try {
-                            // include the key name itself as a candidate
-                            candidates.add(String(k));
-                            const candidate = data[k];
-                            if (candidate && typeof candidate === 'object') {
-                                if (candidate.modelName) candidates.add(String(candidate.modelName));
-                                if (candidate.model) candidates.add(String(candidate.model));
-                                if (candidate.model && typeof candidate.model === 'object') {
-                                    if (candidate.model.name) candidates.add(String(candidate.model.name));
-                                    if (candidate.model.modelName) candidates.add(String(candidate.model.modelName));
-                                }
-                            }
-                        } catch (e) {
-                            // ignore malformed payloads
-                        }
-                    }
-                }
-                if (!Array.from(candidates).includes(name)) {
-                    // incoming data is not from the model this alert targets
-                    continue;
-                }
+        // Collect ALL matches for this specific alert
+        const matchingLogs = [];
+        for (const log of candidates) {
+            if (evaluateRule(alert.alertRule, log)) {
+                matchingLogs.push(log);
             }
-            const matched = evaluateRule(alert.alertRule, data);
-            if (!matched) continue;
+        }
 
-            // stores models that trigger this alert
-            const relatedLogIds = [];
-            if (alert.modelName) {
-                // Alert is for a specific model (e.g., "GoodModel")
-                const targetLog = data[alert.modelName];
-                if (targetLog && targetLog._id) {
-                    relatedLogIds.push(targetLog._id);
-                }
-            } else {
-                // Alert is for all models
-                Object.values(data).forEach(logEntry => {
-                    if (logEntry && logEntry._id) {
-                        relatedLogIds.push(logEntry._id);
-                    }
-                });
-            }
+        // If no models triggered this alert, move to the next alert
+        if (matchingLogs.length === 0) continue;
 
-            // cooldown check: skip if last fired within cooldownMs
-            if (cooldownMs > 0) {
-                try {
-                    const last = await AlertLog.findOne({ alert: alert._id }).sort({ timestamp: -1 }).lean();
-                    if (last && (now - new Date(last.timestamp).getTime()) < cooldownMs) {
-                        continue;
-                    }
-                } catch (qErr) {
-                    console.error('[AlertEvaluator] Failed to query AlertLog for cooldown check:', qErr);
-                }
-            }
-
-            // create alert log (and snapshot if alert is removed)
+        // Groups model logs that are close together in time - so there is only one Alert_Log obj
+        if (cooldownMs > 0) {
             try {
-                const snapshot = {
-                    _id: alert._id,
-                    alertName: alert.alertName,
-                    alertLevel: alert.alertLevel,
-                    modelName: alert.modelName || null,
-                    alertRule: alert.alertRule,
-                    created: alert.created
-                };
-                try {
-                    const created = await AlertLog.create({
-                        alert: alert._id,
-                        alertSnapshot: snapshot,
-                        tags: alert.tags || [],
-                        logs: relatedLogIds
-                    });
-                    // Emit SSE 'alert' event with basic info
-                    try {
-                        const payload = {
-                            _id: created._id,
-                            alert: created.alert,
-                            timestamp: created.timestamp,
-                            alertSnapshot: created.alertSnapshot,
-                            humanRule: Alert.convertToHumanFormat(created.alertSnapshot.alertRule),
-                            tags: created.tags || []
-                        };
-                        broadcastEvent('alert', payload);
-                    } catch (emitErr) {
-                        console.error('[AlertEvaluator] Failed to broadcast alert SSE:', emitErr);
-                    }
-                } catch (createErr) {
-                    console.error('[AlertEvaluator] Failed to create AlertLog for', alert._id, createErr);
+                const last = await AlertLog.findOne({ alert: alert._id })
+                    .sort({ timestamp: -1 })
+                    .lean();
+
+                if (last && (now - new Date(last.timestamp).getTime()) < cooldownMs) {
+                    continue; // Skip if we alerted on this rule recently
                 }
-            } catch (createErr) {
-                console.error('[AlertEvaluator] Failed to create AlertLog for', alert._id, createErr);
+            } catch (err) {
+                console.error('[AlertEvaluator] Cooldown check failed', err);
             }
-        } catch (inner) {
-            console.error('[AlertEvaluator] Error evaluating alert', alert && alert._id, inner);
+        }
+
+        // ToDo: Create the HistoricalTag Obj
+        
+        // ToDo: Stamp the AI_Log with the HistoricalTag
+
+        // Create on AlertLog for all matches
+        try {
+            const triggeredModelNames = matchingLogs.map(l => l.modelName);
+            const modelLabel = triggeredModelNames.join(', ');
+
+            const snapshot = {
+                _id: alert._id,
+                alertName: alert.alertName,
+                alertLevel: alert.alertLevel,
+                modelName: modelLabel,
+                alertRule: alert.alertRule,
+                created: alert.created
+            };
+
+            const created = await AlertLog.create({
+                alert: alert._id,
+                alertSnapshot: snapshot,
+                tags: alert.tags || [],
+                logs: matchingLogs.map(l => l._id)
+            });
+
+            // Broadcast
+            broadcastEvent('alert', {
+                _id: created._id,
+                alert: created.alert,
+                timestamp: created.timestamp,
+                alertSnapshot: created.alertSnapshot,
+                humanRule: Alert.convertToHumanFormat(created.alertSnapshot.alertRule),
+                tags: alert.tags || []
+            });
+        } catch (err) {
+            console.error('[AlertEvaluator] Failed to create AlertLog:', err);
         }
     }
 }
 
-// ---------- Helper: evaluateRule ----------
+// ---------- Helper: evaluateRule (Simplified) ----------
 function evaluateRule(rule, data) {
     if (!rule || typeof rule !== 'object') return false;
     const keys = Object.keys(rule);
+
+    // Handle $and / $or
     if (keys.length === 1 && (keys[0] === '$and' || keys[0] === '$or')) {
         const arr = rule[keys[0]];
         if (!Array.isArray(arr) || arr.length === 0) return false;
         if (keys[0] === '$and') return arr.every(r => evaluateRule(r, data));
         return arr.some(r => evaluateRule(r, data));
     }
+
     const field = keys[0];
     const opObj = rule[field];
-    if (!opObj || typeof opObj !== 'object') return false;
+    if (!opObj) return false;
     const op = Object.keys(opObj)[0];
     const val = opObj[op];
 
-    // support nested/dotted field names like "GoodModel.responseTime"
-    function getValueByPath(obj, path) {
-        if (!obj || !path) return undefined;
-        const parts = String(path).split('.');
-        let cur = obj;
-        for (const p of parts) {
-            if (cur === undefined || cur === null) return undefined;
-            cur = cur[p];
-        }
-        return cur;
-    }
+    // Simpler Value Getter: Strict path only. 
+    // No more fuzzy searching through parents/children.
+    const actualRaw = getValueByPath(data, field);
 
-    let actualRaw = getValueByPath(data, field);
-    // If not found at the top-level path, attempt to locate the field
-    // inside any top-level object (e.g. data = { GoodModel: {...}, BadModel: {...} })
-    if (actualRaw === undefined || actualRaw === null) {
-        if (typeof field === 'string' && !field.includes('.')) {
-            for (const k of Object.keys(data)) {
-                try {
-                    const candidate = data[k];
-                    if (candidate && typeof candidate === 'object' && Object.prototype.hasOwnProperty.call(candidate, field)) {
-                        actualRaw = candidate[field];
-                        break;
-                    }
-                } catch (e) {
-                    // ignore
-                }
-            }
-        }
-    }
     if (actualRaw === undefined || actualRaw === null) return false;
 
-    // Try numeric comparison first; if values are not numeric and op is $eq, fall back to string compare
     const actualNum = Number(actualRaw);
     const expectedNum = Number(val);
     const bothNumeric = !Number.isNaN(actualNum) && !Number.isNaN(expectedNum);
 
-    if (!bothNumeric) {
-        if (op === '$eq') {
-            return String(actualRaw) === String(val);
-        }
-        // other comparison ops require numeric values
-        return false;
-    }
+    if (!bothNumeric && op === '$eq') return String(actualRaw) === String(val);
+    if (!bothNumeric) return false;
 
     switch (op) {
         case '$gt': return actualNum > expectedNum;
@@ -199,4 +133,15 @@ function evaluateRule(rule, data) {
         case '$eq': return actualNum === expectedNum;
         default: return false;
     }
+}
+
+function getValueByPath(obj, path) {
+    if (!obj || !path) return undefined;
+    const parts = String(path).split('.');
+    let cur = obj;
+    for (const p of parts) {
+        if (cur == null) return undefined;
+        cur = cur[p];
+    }
+    return cur;
 }
