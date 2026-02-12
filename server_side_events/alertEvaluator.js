@@ -58,6 +58,23 @@ export default async function evaluateAlerts(data, options = {}) {
             const matched = evaluateRule(alert.alertRule, data);
             if (!matched) continue;
 
+            // stores models that trigger this alert
+            const relatedLogIds = [];
+            if (alert.modelName) {
+                // Alert is for a specific model (e.g., "GoodModel")
+                const targetLog = data[alert.modelName];
+                if (targetLog && targetLog._id) {
+                    relatedLogIds.push(targetLog._id);
+                }
+            } else {
+                // Alert is for all models
+                Object.values(data).forEach(logEntry => {
+                    if (logEntry && logEntry._id) {
+                        relatedLogIds.push(logEntry._id);
+                    }
+                });
+            }
+
             // cooldown check: skip if last fired within cooldownMs
             if (cooldownMs > 0) {
                 try {
@@ -81,7 +98,12 @@ export default async function evaluateAlerts(data, options = {}) {
                     created: alert.created
                 };
                 try {
-                    const created = await AlertLog.create({ alert: alert._id, alertSnapshot: snapshot, tags: alert.tags || [] });
+                    const created = await AlertLog.create({
+                        alert: alert._id,
+                        alertSnapshot: snapshot,
+                        tags: alert.tags || [],
+                        logs: relatedLogIds
+                    });
                     // Emit SSE 'alert' event with basic info
                     try {
                         const payload = {

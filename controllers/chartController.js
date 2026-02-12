@@ -165,6 +165,8 @@ const reorderCharts = async (req, res) => {
 };
 
 // Updated to send back recent data for all models in the database
+// ToDo: This method is doing to much and is being run too frequently
+// Its being run every chart zoom, re-order, delete, etc.
 const getRecentData = async (req, res) => {
     try {
         // get the chart configs

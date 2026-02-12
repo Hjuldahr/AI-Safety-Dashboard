@@ -19,6 +19,7 @@ let summaryInterval = null;
 let previousGeneralization = []
 
 //One method for all models
+//ToDo: Make this dynamic so that it follows constants/charts.js
 async function generateModelData(modelName) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
@@ -140,11 +141,19 @@ async function schedulerTick() {
         }
 
         // Add all the logs to the DB
-        await AI_Log.addLogs(Object.values(data));
+        const logs = await AI_Log.addLogs(Object.values(data));
+
+        // Convert the logs Array back into an Object keyed by modelName - expected by evaluateAlerts().
+        const logsMap = {};
+        logs.forEach(log => {
+            // If log is a mongoose doc, convert to object to ensure we can access fields easily
+            const logObj = log.toObject ? log.toObject() : log; 
+            logsMap[logObj.modelName] = logObj;
+        });
 
         // Evaluate alerts
         try {
-            await evaluateAlerts(data, { cooldownMs: ALERTS_COOLDOWN });
+            await evaluateAlerts(logsMap, { cooldownMs: ALERTS_COOLDOWN });
         } catch (alertErr) {
             console.error('Error evaluating alerts:', alertErr);
         }
