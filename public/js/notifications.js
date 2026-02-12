@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         history: '/notifications/history',      // paginated history
         unreadCount: '/notifications/unread',   // unread count
         markRead: '/notifications/mark-read',   // mark read
-        events: '/events'                           // SSE endpoint
+        events: '/events'                       // SSE endpoint
     };
 
     // SLIDE NOTIFICATION UI

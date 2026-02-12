@@ -1,6 +1,7 @@
 import Alert from "../models/alert_model.js";
 import AlertLog from "../models/alert_log.js";
-import { broadcastEvent } from './scheduler.js';
+//import { broadcastEvent } from './scheduler.js';
+import { sendNotification } from "../controllers/notificationController.js";
 
 export default async function evaluateAlerts(data, options = {}) {
     const { cooldownMs = 60000 } = options;
@@ -84,6 +85,7 @@ export default async function evaluateAlerts(data, options = {}) {
                     const created = await AlertLog.create({ alert: alert._id, alertSnapshot: snapshot, tags: alert.tags || [] });
                     // Emit SSE 'alert' event with basic info
                     try {
+                        /*
                         const payload = {
                             _id: created._id,
                             alert: created.alert,
@@ -93,6 +95,38 @@ export default async function evaluateAlerts(data, options = {}) {
                             tags: created.tags || []
                         };
                         broadcastEvent('alert', payload);
+                        */
+                        const modelPart = created.modelName ? `[${created.modelName}] ` : '';
+                        const alertText = modelPart + (created.humanRule || created.alertName || 'Alert');
+
+                        let trim;
+                        let background;
+                        switch(created.alertLevel) {
+                            case "Medium":
+                                trim = "#f59e0b";
+                                background = "#fef3c7";
+                                break;
+                            case "High":
+                                trim = "#f59e0b";
+                                background = "#fef3c7";
+                                break;
+                            case "Critical":
+                                trim = "#dc2626";
+                                background = "#fee2e2";
+                                break;
+                            case "Info":
+                            default:
+                                trim = "#3b82f6";
+                                background = "#dbeafe";
+                        }
+
+                        await sendNotification({
+                            message: alertText,
+                            category: "alert",
+                            redirect: "/alerts",
+                            trim,
+                            background
+                        });
                     } catch (emitErr) {
                         console.error('[AlertEvaluator] Failed to broadcast alert SSE:', emitErr);
                     }
