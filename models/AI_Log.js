@@ -1,12 +1,19 @@
 import mongoose from 'mongoose';
 import { KNOWN_MODELS, DATA_DICTIONARY } from "../constants/charts.js";
 
+const { Schema } = mongoose;
+
 // === AI_Log Schema ===
-const schemaDefinition = {};
+const schemaDefinition = {
+    tags: [{ type: Schema.Types.ObjectId, ref: 'HistoricalTag' }],
+    // Other fields added dynamically based on DATA_DICTIONARY
+};
 
 Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
+    // Map response timestamp to current date/time.
     if (key === 'responseTimestamp') {
         schemaDefinition[key] = { type: Number, required: true, default: () => Date.now() };
+    // Numeric
     } else if (config.dataType === 'numeric') {
         schemaDefinition[key] = {
             type: Number,
@@ -14,6 +21,7 @@ Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
             default: key === 'queryCount' ? 1 : 0
         };
     }
+    // Categorical
     else if (config.dataType === 'categorical') {
         if (key === 'modelName') {
             schemaDefinition[key] = { type: String, required: true, enum: config.acceptedValues };
@@ -98,8 +106,8 @@ AI_Log_Schema.statics.generateSixtySecondSummary = async function () {
         }
 
         // Map "avg" -> "$avg", "sum" -> "$sum"
-        const mongoOp = `$${config.summarize}`; 
-        
+        const mongoOp = `$${config.summarize}`;
+
         // Add to group stage: e.g., tokensUsed: { $sum: "$tokensUsed" }
         groupStage[key] = { [mongoOp]: `$${key}` };
 

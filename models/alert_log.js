@@ -26,8 +26,7 @@ const AlertLogSchema = new Schema({
         required: true
     },
 
-    // Current tags (refs) — may be empty; snapshot contains preserved tag objects
-    tags: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
+    tags: [{ type: Schema.Types.ObjectId, ref: 'HistoricalTag' }],
 
     // AI Logs associated with the alert. There should always be 1, and max = number of AI models.
     logs: [{ type: mongoose.Schema.Types.ObjectId, ref: "AI_Logs" }],

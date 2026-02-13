@@ -1,6 +1,8 @@
 import Alert from "../models/alert_model.js";
 import AlertLog from "../models/alert_log.js";
 import { broadcastEvent } from './scheduler.js';
+import HistTag from "../models/historicalTag.js";
+import AI_Log from "../models/AI_Log.js";
 
 export default async function evaluateAlerts(logsMap, options = {}) {
     const { cooldownMs = 60000 } = options;
@@ -53,12 +55,28 @@ export default async function evaluateAlerts(logsMap, options = {}) {
             }
         }
 
-        // ToDo: Create the HistoricalTag Obj
-        
-        // ToDo: Stamp the AI_Log with the HistoricalTag
-
         // Create on AlertLog for all matches
         try {
+
+            // Get the Historical Tags
+            const tagPromises = alert.tags.map(async (tag) => {
+                return await HistTag.addOrFindTag(tag);
+            });
+
+            // Wait for all promises in that array to finish
+            const histTags = await Promise.all(tagPromises);
+
+            const histTagsIDs = histTags.map((tag) => {
+                return tag._id;
+            });
+
+            console.log(histTagsIDs);
+
+            // ToDo: Stamp the AI_Log with the HistoricalTag
+            for(const log of matchingLogs){
+                AI_Log.findByIdAndUpdate(log._id, {tags: histTagsIDs || []});
+            }
+
             const triggeredModelNames = matchingLogs.map(l => l.modelName);
             const modelLabel = triggeredModelNames.join(', ');
 
@@ -74,7 +92,7 @@ export default async function evaluateAlerts(logsMap, options = {}) {
             const created = await AlertLog.create({
                 alert: alert._id,
                 alertSnapshot: snapshot,
-                tags: alert.tags || [],
+                tags: histTagsIDs || [],
                 logs: matchingLogs.map(l => l._id)
             });
 
@@ -85,7 +103,7 @@ export default async function evaluateAlerts(logsMap, options = {}) {
                 timestamp: created.timestamp,
                 alertSnapshot: created.alertSnapshot,
                 humanRule: Alert.convertToHumanFormat(created.alertSnapshot.alertRule),
-                tags: alert.tags || []
+                tags: histTags || []
             });
         } catch (err) {
             console.error('[AlertEvaluator] Failed to create AlertLog:', err);
@@ -112,8 +130,6 @@ function evaluateRule(rule, data) {
     const op = Object.keys(opObj)[0];
     const val = opObj[op];
 
-    // Simpler Value Getter: Strict path only. 
-    // No more fuzzy searching through parents/children.
     const actualRaw = getValueByPath(data, field);
 
     if (actualRaw === undefined || actualRaw === null) return false;
