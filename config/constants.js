@@ -157,6 +157,13 @@ export const DATA_DICTIONARY = {
         color: "#9E9E9E", // Grey
         // range: [0, 100]
     },
+    flaggedCount: {
+        label: "Flagged Call Count",
+        dbPath: "flaggedCount",
+        dataType: "numeric",
+        summarize: "sum",
+        color: "#673147", // Plum (Brown + Purple)
+    },
 
     // SPECIAL
     responseTimestamp: {

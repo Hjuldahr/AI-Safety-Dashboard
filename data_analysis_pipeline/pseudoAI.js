@@ -161,8 +161,17 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const energyConsumption = gigaFlopsUsed * 0.5;
 
     let flaggedOutput = null;
-    if (isToxic && isChaos) {
-      flaggedOutput = random.getRandomArrayElement(flaggedOutputPool['mild'][topic][sub_topic]);
+    //TODO improve metric and add grading (mild, moderate, severe)
+    if (isToxic) {
+      let tier;
+      if (toxicityScore < 0.33) {
+        tier = 'mild';
+      } if (toxicityScore < 0.66) {
+        tier = 'moderate';
+      } else {
+        tier = 'severe';
+      }
+      flaggedOutput = random.getRandomArrayElement(flaggedOutputPool[tier][topic][sub_topic]);
     }
 
     calls.push({

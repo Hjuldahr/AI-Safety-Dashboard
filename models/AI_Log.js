@@ -29,7 +29,6 @@ const AI_Log_Schema = new mongoose.Schema(schemaDefinition);
 // ---------- INDEXES ----------
 AI_Log_Schema.index({ modelName: 1, responseTimestamp: -1 });
 
-
 // ---------- QUERIES ----------
 
 // Add a single log
