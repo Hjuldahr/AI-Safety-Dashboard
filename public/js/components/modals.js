@@ -34,7 +34,7 @@ class ModalManager {
 
     }
 
-    open(title, contentHTML, footerHTML, addModalListeners, sizeClass = "medium-modal") {
+    open(title, contentHTML, footerHTML, sizeClass = "medium-modal", addModalListeners) {
         this.title.innerText = title;
         this.body.innerHTML = contentHTML;
         this.footer.innerHTML = footerHTML;
@@ -43,7 +43,7 @@ class ModalManager {
         this.appear();
 
         if (typeof addModalListeners === "function") {
-            addModalListeners();
+            addModalListeners(this);
         }
     }
 

@@ -1,4 +1,4 @@
-import ModalManager from "./modals.js";
+import ModalManager from "../modals.js";
 
 // State
 let deletedTagIds = []; //Holds tags that have been removed from the UI but not the backend yet
@@ -22,9 +22,10 @@ async function renderTagManager() {
     const tagModalFooterHTML = footerHTML();
 
     // Open the modal - passing the addModalListeners method to add interactivity to the modal
-    modal.open("Manage Tags", tagModalHTML, tagModalFooterHTML, addModalListeners, "medium-modal");
+    modal.open("Manage Tags", tagModalHTML, tagModalFooterHTML, "medium-modal", addModalListeners);
 }
 
+// Creates the Modal's HTML content
 async function assembleTagModalHTML() {
     let modalHTML = "";
 
@@ -46,6 +47,7 @@ async function assembleTagModalHTML() {
     return modalHTML;
 }
 
+// Adds the listeners / functionality to the modal
 function addModalListeners() {
     const addTagRowBtn = document.getElementById('add-tag-row-btn');
     const saveTagsBtn = document.getElementById('save-tags-btn');

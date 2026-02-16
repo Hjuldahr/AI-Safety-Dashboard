@@ -1,3 +1,7 @@
+import { initCreateAlertModal } from './components/alerts/createAlertModal.js';
+import { viewAlertLog } from "./components/alerts/alertLogModal.js";
+import ModalManager from './components/modals.js';
+
 document.addEventListener('DOMContentLoaded', async function () {
 
     const hasPermission = (permission) => {
@@ -6,9 +10,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // --- DOM REFERENCES ---
     const addAlertBtn = document.getElementById('add-alert-btn');
-    const alertModal = document.getElementById('alert-modal');
     const manageModal = document.getElementById('manage-modal');
-    const modalTitle = document.getElementById('modal-title');
 
     const openCreateBtn = document.getElementById('open-create-modal-btn');
     const openManageBtn = document.getElementById('open-manage-modal-btn');
@@ -30,7 +32,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     const alertLevelSelect = document.getElementById('alert-level');
     const modelSelect = document.getElementById('model-name');
     const rulesContainer = document.getElementById('rules-container');
-    const logicalOperatorsContainer = document.querySelector('.logical-operators-container');
 
     // Manage/History
     const liveAlertsList = document.getElementById('live-alerts-list');
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     // State
     const liveAlertsCache = {};
     const tagsCache = {};
+    const historyCache = {};
     const selectedTags = []; // For Rule Builder
     let currentEditId = null;
     let currentHistoryPage = 1;
@@ -49,16 +51,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Constants
     const { DATA_DICTIONARY, KNOWN_MODELS } = window.CONSTANTS;
 
-    // OPERATORS (Includes 'eq' / Equal To)
-    // ToDo: Move this to a constants file
-    const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte', 'eq': '$eq' };
-    const OP_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
-
     // Hide add alert button if user doesn't have permission
     if (addAlertBtn && !hasPermission('create:alert')) {
         addAlertBtn.style.display = 'none';
     }
-
 
 
     // --- 1. INITIALIZATION ---
@@ -72,12 +68,23 @@ document.addEventListener('DOMContentLoaded', async function () {
         populateModelDropdowns();
 
         await loadLiveAlerts();
-        await loadLiveAlerts();
-        await loadLiveAlerts();
         await loadAlertHistory(1);
         await initCharts();
         setupLiveUpdates();
     }
+
+    const modalManager = new ModalManager();
+
+    // Initialize the component
+    const openCreateAlertModal = initCreateAlertModal(modalManager, {
+        tagsCache,
+        DATA_DICTIONARY: window.CONSTANTS.DATA_DICTIONARY,
+        KNOWN_MODELS: window.CONSTANTS.KNOWN_MODELS,
+        onSaveSuccess: () => {
+            loadLiveAlerts();
+            loadAlertHistory(1);
+        }
+    });
 
     // --- CHART LOGIC ---
     const chartRangeSelect = document.getElementById('chart-range-select');
@@ -133,26 +140,11 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 
     // --- 2. MODAL CONTROLS ---
-
-    // Rule Builder
-    function openBuilder(isEdit = false) {
-        alertModal.style.display = 'flex';
-        modalTitle.textContent = isEdit ? 'Edit Alert Rule' : 'Create New Alert Rule';
-        saveAlertBtn.textContent = isEdit ? 'Update Alert' : 'Save Alert';
-    }
-    function closeBuilder() {
-        alertModal.style.display = 'none';
-        currentEditId = null;
-        resetBuilderForm();
-    }
-    function resetBuilderForm() {
-        alertNameInput.value = ''; alertLevelSelect.value = '';
-        if (modelSelect) modelSelect.value = '';
-        rulesContainer.innerHTML = ''; addEmptyRuleRow();
-        selectedTags.length = 0; renderTagInput();
-    }
-    openCreateBtn.addEventListener('click', () => { resetBuilderForm(); openBuilder(false); });
-    closeBtns.forEach(b => b.addEventListener('click', closeBuilder));
+    openCreateBtn.addEventListener('click', () => {
+        // todo: figure out if I need to pass the edit obj
+        openCreateAlertModal();
+    });
+    // Don't think I need a close handler here since the modal itself handles closing
 
     // Manage Rules Modal
     openManageBtn.addEventListener('click', () => { manageModal.style.display = 'flex'; });
@@ -209,17 +201,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
     function startEdit(obj) {
-        currentEditId = obj._id;
-        alertNameInput.value = obj.alertName;
-        alertLevelSelect.value = obj.alertLevel;
-        if (modelSelect) modelSelect.value = obj.modelName || '';
-        rulesContainer.innerHTML = '';
-        populateRuleBuilderFromRule(obj.alertRule);
-        selectedTags.length = 0;
-        if (obj.tags) obj.tags.forEach(t => selectedTags.push(t._id));
-        renderTagInput();
+        openCreateAlertModal(obj);
+
+        // Close the manage modal since we are now editing
         manageModal.style.display = 'none';
-        openBuilder(true);
     }
 
     statCards.forEach(c => c.addEventListener('click', () => {
@@ -228,184 +213,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     }));
 
 
-    // --- 5. RULE BUILDER ---
-    function createRuleRowHTML(op) {
-        const del = op ? '<button class="btn btn-secondary btn-icon delete-rule-btn">&times;</button>' : '';
-        const opts = Object.keys(DATA_DICTIONARY).filter(k => DATA_DICTIONARY[k].dataType === 'numeric')
-            .map(k => `<option value="${k}">${DATA_DICTIONARY[k].label}</option>`).join('');
-
-        // English operators
-        return `
-            <span class="logic-separator" style="font-weight:bold; font-size:0.8rem; margin-right:8px;">${op}</span>
-            <select class="data-type"><option value="">-- Data --</option>${opts}</select>
-            <select class="operator-type">
-                <option value="">-- Operator --</option>
-                <option value="gt">Greater Than</option>
-                <option value="gte">Greater Than or Equal To</option>
-                <option value="lt">Less Than</option>
-                <option value="lte">Less Than or Equal To</option>
-                <option value="eq">Equal To</option>
-            </select>
-            <input type="text" placeholder="Value" class="value-input" style="width:80px;">
-            ${del}
-        `;
-    }
-    function addEmptyRuleRow() {
-        const d = document.createElement('div'); d.className = 'rule-row'; d.innerHTML = createRuleRowHTML('');
-        rulesContainer.appendChild(d);
-    }
-    logicalOperatorsContainer.addEventListener('click', e => {
-        if (e.target.classList.contains('add-rule-btn')) {
-            const d = document.createElement('div'); d.className = 'rule-row';
-            d.innerHTML = createRuleRowHTML(e.target.dataset.logic);
-            rulesContainer.appendChild(d);
-        }
-    });
-    rulesContainer.addEventListener('click', e => {
-        if (e.target.classList.contains('delete-rule-btn')) e.target.closest('.rule-row').remove();
-    });
-
-    function buildRuleJSON() {
-        const rows = rulesContainer.querySelectorAll('.rule-row');
-        const conds = []; let logic = null; let valid = true;
-        rows.forEach((r, i) => {
-            const type = r.querySelector('.data-type').value;
-            const op = r.querySelector('.operator-type').value;
-            const val = r.querySelector('.value-input').value;
-            const sep = r.querySelector('.logic-separator');
-            if (i > 0 && sep && !logic) logic = sep.textContent.trim() === 'AND' ? '$and' : '$or';
-            if (type && op && val) {
-                const c = {}; c[DATA_DICTIONARY[type].dbPath] = {}; c[DATA_DICTIONARY[type].dbPath][OPERATOR_MAP[op]] = parseFloat(val);
-                conds.push(c);
-            } else valid = false;
-        });
-        if (!valid || conds.length === 0) return null;
-        if (conds.length === 1) return conds[0];
-        const f = {}; f[logic || '$and'] = conds;
-        return f;
-    }
-
-    function populateRuleBuilderFromRule(rule) {
-        let parts = [];
-        if (rule.$and) parts = rule.$and.map(x => ({ ...x, logic: 'AND' }));
-        else if (rule.$or) parts = rule.$or.map(x => ({ ...x, logic: 'OR' }));
-        else parts = [{ ...rule, logic: '' }];
-
-        parts.forEach((p, i) => {
-            const dbField = Object.keys(p).find(k => k !== 'logic');
-            const inner = p[dbField];
-            const mongoOp = Object.keys(inner)[0];
-            const val = inner[mongoOp];
-            const dictKey = Object.keys(DATA_DICTIONARY).find(k => DATA_DICTIONARY[k].dbPath === dbField);
-
-            const row = document.createElement('div');
-            row.className = 'rule-row';
-            row.innerHTML = createRuleRowHTML(i > 0 ? (i === 1 ? (rule.$and ? 'AND' : 'OR') : 'AND') : '');
-            if (dictKey) row.querySelector('.data-type').value = dictKey;
-            if (OP_REVERSE_MAP[mongoOp]) row.querySelector('.operator-type').value = OP_REVERSE_MAP[mongoOp];
-            row.querySelector('.value-input').value = val;
-            rulesContainer.appendChild(row);
-        });
-        if (parts.length === 0) addEmptyRuleRow();
-    }
-
-
-    // --- 6. MULTISELECT DROPDOWN (RULE BUILDER) ---
-    const tagsInputContainer = document.getElementById('tags-input-container');
-    const tagsSearchInput = document.getElementById('tags-search-input');
-    const tagsDropdown = document.getElementById('tags-dropdown-list');
-
-    function renderTagInput() {
-        if (!tagsInputContainer) return;
-        const pills = tagsInputContainer.querySelectorAll('.tag-input-pill');
-        pills.forEach(c => c.remove());
-
-        selectedTags.forEach(id => {
-            const t = tagsCache[id];
-            if (!t) return;
-            const pill = document.createElement('div');
-            pill.className = 'tag-input-pill';
-            pill.style.backgroundColor = t.color;
-            pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
-            tagsInputContainer.insertBefore(pill, tagsSearchInput);
-        });
-
-        // Hide/Show placeholder based on selection
-        if (tagsSearchInput) tagsSearchInput.placeholder = selectedTags.length > 0 ? '' : 'Select tags...';
-    }
-
-    function renderTagDropdown() {
-        if (!tagsDropdown) return;
-        tagsDropdown.innerHTML = '';
-        const available = Object.values(tagsCache)
-            .filter(t => !selectedTags.includes(t._id))
-            .sort((a, b) => a.name.localeCompare(b.name));
-
-        if (available.length === 0) {
-            tagsDropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
-            return;
-        }
-
-        available.forEach(t => {
-            const item = document.createElement('div');
-            item.className = 'tags-dropdown-item';
-            item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
-            item.addEventListener('click', () => {
-                selectedTags.push(t._id);
-                renderTagInput();
-                renderTagDropdown();
-                if (tagsSearchInput) {
-                    tagsSearchInput.value = '';
-                    tagsSearchInput.focus();
-                }
-            });
-            tagsDropdown.appendChild(item);
-        });
-    }
-
-    // Event Listeners
-    if (tagsInputContainer) {
-        tagsInputContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-tag')) {
-                const id = e.target.dataset.id;
-                const idx = selectedTags.indexOf(id);
-                if (idx > -1) selectedTags.splice(idx, 1);
-                renderTagInput();
-                // If dropdown is open, update it to show the removed tag
-                if (tagsDropdown.style.display === 'block') renderTagDropdown();
-                return;
-            }
-            // Toggle dropdown
-            if (tagsDropdown) {
-                const isVisible = tagsDropdown.style.display === 'block';
-                tagsDropdown.style.display = isVisible ? 'none' : 'block';
-                if (!isVisible) renderTagDropdown();
-            }
-        });
-    }
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if (tagsInputContainer && tagsDropdown && !tagsInputContainer.contains(e.target) && !tagsDropdown.contains(e.target)) {
-            tagsDropdown.style.display = 'none';
-        }
-    });
-
-    saveAlertBtn.addEventListener('click', async () => {
-        const name = alertNameInput.value, level = alertLevelSelect.value, rule = buildRuleJSON();
-        if (!name || !level || !rule) return alert('Fill required fields');
-        const payload = { alertName: name, alertLevel: level, alertRule: rule, modelName: modelSelect.value, tags: selectedTags };
-        try {
-            if (currentEditId) await apiUpdateAlert(currentEditId, payload);
-            else { payload.created = Date.now(); await apiCreateAlert(payload); }
-            closeBuilder(); await loadLiveAlerts(); await loadAlertHistory(1);
-        } catch (e) { alert(e.message); }
-    });
-
     // tagsUpdated is called by tagModal.js when updating tags
     document.addEventListener('tagsUpdated', () => {
         // Refresh the local data
-        loadLiveAlerts(); // This likely re-fetches tags or updates counters
         populateModelDropdowns();
         loadAlertHistory(currentHistoryPage);
     });
@@ -464,10 +274,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         `;
         // Add animation class for new rows
         tr.classList.add('fade-in-row');
+
         return tr;
     }
 
     // --- 8. LOG TAGGING MODAL (Dynamic) ---
+    // ToDo: Refactor this to use ModalManager
     if (alertLogBody) {
         alertLogBody.addEventListener('click', (e) => {
             if (!e.target.classList.contains('add-log-tag-btn')) return;

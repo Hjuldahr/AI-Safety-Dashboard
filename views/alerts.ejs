@@ -15,13 +15,13 @@
   <link rel="stylesheet" href="css/components/modals.css"> 
 
   <script src="js/components/pagination.js" defer></script>
-  <script src="js/alerts.js" defer></script>
+  <script type="module" src="js/alerts.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="js/charts/alertCharts.js"></script>
   <script src="js/notifications.js" defer></script>
-  <script type="module" src="js/components/tagModal.js"></script>
+  <script type="module" src="js/components/tags/tagModal.js"></script>
 </head>
 
 <body>
@@ -182,72 +182,6 @@
     <%- include('components/modal') %>
 
     <!-- ToDo: Refactor the two below modals to use the new modal component -->
-    <div id="alert-modal" class="modal-overlay" style="display: none">
-      <div class="modal-content large-modal">
-        <div class="modal-header">
-          <h2 id="modal-title">Create New Alert</h2>
-          <button class="close-modal-btn">&times;</button>
-        </div>
-
-        <div class="modal-body">
-          <div class="alert-builder-grid">
-            <div class="form-group">
-              <label for="alert-name">Alert Name</label>
-              <input type="text" id="alert-name" placeholder="e.g. High Latency Check" />
-            </div>
-
-            <div class="form-group">
-              <label for="alert-level">Alert Level</label>
-              <select id="alert-level">
-                <option value="">-- Select --</option>
-                <option value="Critical">Critical</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Info">Info</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="model-name">Model (Optional)</label>
-              <select id="model-name" class="model-select-dynamic"></select>
-            </div>
-
-            <div class="form-group full-width">
-              <label>Alert Rule Condition</label>
-              <div class="rule-builder-inputs" id="rules-container"></div>
-              <div class="logical-operators-container">
-                <span class="rule-builder-note">(add another part to the rule)</span>
-                <div class="logical-operators">
-                  <button class="btn btn-sm btn-secondary add-rule-btn" data-logic="AND">
-                    AND
-                  </button>
-                  <button class="btn btn-sm btn-secondary add-rule-btn" data-logic="OR">
-                    OR
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group full-width tags-section">
-              <label>Assign Tags</label>
-              <div class="multiselect-container" id="tags-multiselect">
-                <div class="tags-input-container" id="tags-input-container">
-                  <input type="text" id="tags-search-input" class="tags-search-input" placeholder="Select tags..." readonly />
-                </div>
-                <div class="tags-dropdown" id="tags-dropdown-list" style="display: none"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary close-modal-btn">Cancel</button>
-          <button id="save-alert-btn" class="btn btn-primary">
-            Save Alert
-          </button>
-        </div>
-      </div>
-    </div>
 
     <div id="manage-modal" class="modal-overlay" style="display: none">
       <div class="modal-content medium-modal">
