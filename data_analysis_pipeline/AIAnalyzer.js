@@ -65,7 +65,8 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
     gigaFlopsUsed: createStatsAccumulator(),
     webLookups: createStatsAccumulator(),
     toxicityScore: createStatsAccumulator(),
-    piiDetected: createStatsAccumulator()
+    piiDetected: createStatsAccumulator(),
+    aiOutput: []
   }
 
   // ---- Breakdown buckets ----
@@ -82,6 +83,7 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
     stats.webLookups.push(c.webLookups)
     stats.toxicityScore.push(c.toxicityScore)
     stats.piiDetected.push(c.piiDetected)
+    stats.aiOutput.push(c.aiOutput)
 
     const topicKey = c.topic || 'Unknown'
     if (!buckets[topicKey]) {
@@ -118,7 +120,8 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
       toxicity = 0,
       pii = 0,
       gflops = 0,
-      web = 0
+      web = 0,
+      flagged = 0
 
     for (const c of bucketCalls) {
       rt += c.responseTime || 0
@@ -130,6 +133,7 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
       pii += c.piiDetected || 0
       gflops += c.gigaFlopsUsed || 0
       web += c.webLookups || 0
+      flagged += c.aiOutput.length || 0
     }
 
     const n = bucketCalls.length || 1
@@ -145,7 +149,8 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
       toxicityScore: toxicity / n,
       piiDetected: (pii / n) * 100,
       gigaFlopsUsed: gflops / n,
-      webLookups: web / n
+      webLookups: web / n,
+      flagged
     }
   }
 
@@ -163,6 +168,7 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
     webLookups: stats.webLookups.finalize(),
     toxicityScore: stats.toxicityScore.finalize(),
     piiDetected: stats.piiDetected.finalize(),
+    flaggedOutputs: stats.aiOutput,
     breakdown,
     queryCount: calls.length,
     responseTimestamp: now
