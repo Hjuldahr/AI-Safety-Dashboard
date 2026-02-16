@@ -1,26 +1,22 @@
 document.addEventListener('DOMContentLoaded', async function () {
-  
+
     const hasPermission = (permission) => {
         return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
     };
-    
+
     // --- DOM REFERENCES ---
     const addAlertBtn = document.getElementById('add-alert-btn');
     const alertModal = document.getElementById('alert-modal');
     const manageModal = document.getElementById('manage-modal');
-    const tagsModal = document.getElementById('tags-modal');
     const modalTitle = document.getElementById('modal-title');
-    
+
     const openCreateBtn = document.getElementById('open-create-modal-btn');
     const openManageBtn = document.getElementById('open-manage-modal-btn');
-    const openTagsBtn = document.getElementById('open-tags-modal-btn');
     const saveAlertBtn = document.getElementById('save-alert-btn');
-    const saveTagsBtn = document.getElementById('save-tags-btn');
-    
+
     // Close Buttons
     const closeBtns = document.querySelectorAll('.close-modal-btn');
     const closeManageBtns = document.querySelectorAll('.close-manage-btn');
-    const closeTagsBtns = document.querySelectorAll('.close-tags-btn');
 
     // Stats
     const countCrit = document.getElementById('count-critical');
@@ -35,14 +31,12 @@ document.addEventListener('DOMContentLoaded', async function () {
     const modelSelect = document.getElementById('model-name');
     const rulesContainer = document.getElementById('rules-container');
     const logicalOperatorsContainer = document.querySelector('.logical-operators-container');
-    
+
     // Manage/History
     const liveAlertsList = document.getElementById('live-alerts-list');
     const alertLogBody = document.getElementById('alert-log-body');
     const historyPagination = document.getElementById('history-pagination');
     const historyFilterForm = document.getElementById('history-filter-form');
-    const tagManagerRows = document.getElementById('tag-manager-rows');
-    const addTagRowBtn = document.getElementById('add-tag-row-btn');
 
     // State
     const liveAlertsCache = {};
@@ -50,20 +44,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     const selectedTags = []; // For Rule Builder
     let currentEditId = null;
     let currentHistoryPage = 1;
-    let deletedTagIds = []; // For Tag Manager
+
 
     // Constants
-    const { DATA_DICTIONARY, KNOWN_MODELS } = window.CONSTANTS || { DATA_DICTIONARY: {}, KNOWN_MODELS: [] };
-    
+    const { DATA_DICTIONARY, KNOWN_MODELS } = window.CONSTANTS;
+
     // OPERATORS (Includes 'eq' / Equal To)
+    // ToDo: Move this to a constants file
     const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte', 'eq': '$eq' };
     const OP_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
-  
-   // Hide add alert button if user doesn't have permission
+
+    // Hide add alert button if user doesn't have permission
     if (addAlertBtn && !hasPermission('create:alert')) {
         addAlertBtn.style.display = 'none';
     }
-  
+
 
 
     // --- 1. INITIALIZATION ---
@@ -88,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const chartRangeSelect = document.getElementById('chart-range-select');
 
     async function initCharts() {
-        if(chartRangeSelect) {
+        if (chartRangeSelect) {
             chartRangeSelect.addEventListener('change', () => fetchAndRenderCharts());
         }
         await fetchAndRenderCharts();
@@ -99,23 +94,23 @@ document.addEventListener('DOMContentLoaded', async function () {
             const range = chartRangeSelect ? chartRangeSelect.value : '24h';
             const end = new Date();
             let start = new Date();
-            if(range === '24h') start.setTime(end.getTime() - 24*60*60*1000);
-            else if(range === '7d') start.setTime(end.getTime() - 7*24*60*60*1000);
-            else if(range === '30d') start.setTime(end.getTime() - 30*24*60*60*1000);
+            if (range === '24h') start.setTime(end.getTime() - 24 * 60 * 60 * 1000);
+            else if (range === '7d') start.setTime(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+            else if (range === '30d') start.setTime(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-            const params = new URLSearchParams({ 
-                startDate: start.toISOString(), 
-                endDate: end.toISOString() 
+            const params = new URLSearchParams({
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
             });
 
             const res = await fetch(`alerts/api/stats?${params.toString()}`);
             const data = await res.json();
-            
+
             // Use new AlertCharts builder
             if (window.AlertCharts) {
                 window.AlertCharts.render(data);
             }
-        } catch(e) { console.error('Chart load failed', e); }
+        } catch (e) { console.error('Chart load failed', e); }
     }
 
     function populateModelDropdowns() {
@@ -130,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (tagFilter) {
             let html = '<option value="all">All Tags</option>';
             // Sort tags alphabetically
-            const sorted = Object.values(tagsCache).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+            const sorted = Object.values(tagsCache).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             sorted.forEach(t => html += `<option value="${t._id}">${t.name}</option>`);
             tagFilter.innerHTML = html;
         }
@@ -151,8 +146,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         resetBuilderForm();
     }
     function resetBuilderForm() {
-        alertNameInput.value = ''; alertLevelSelect.value = ''; 
-        if(modelSelect) modelSelect.value = '';
+        alertNameInput.value = ''; alertLevelSelect.value = '';
+        if (modelSelect) modelSelect.value = '';
         rulesContainer.innerHTML = ''; addEmptyRuleRow();
         selectedTags.length = 0; renderTagInput();
     }
@@ -163,104 +158,30 @@ document.addEventListener('DOMContentLoaded', async function () {
     openManageBtn.addEventListener('click', () => { manageModal.style.display = 'flex'; });
     closeManageBtns.forEach(b => b.addEventListener('click', () => { manageModal.style.display = 'none'; }));
 
-    // Tag Manager Modal
-    if (openTagsBtn) {
-        openTagsBtn.addEventListener('click', () => {
-            deletedTagIds = [];
-            renderTagManager();
-            tagsModal.style.display = 'flex';
-        });
-    }
-    closeTagsBtns.forEach(b => b.addEventListener('click', () => { tagsModal.style.display = 'none'; }));
-
-
-    // --- 3. TAG MANAGER LOGIC ---
-    function renderTagManager() {
-        tagManagerRows.innerHTML = '';
-        const tags = Object.values(tagsCache).sort((a,b)=>a.name.localeCompare(b.name));
-        tags.forEach(t => addTagRowUI(t._id, t.name, t.color));
-        if(tags.length === 0) addTagRowUI(null, '', '#888888');
-    }
-
-    function addTagRowUI(id, name, color) {
-        const row = document.createElement('div');
-        row.className = 'tag-edit-row';
-        row.innerHTML = `
-            <input type="text" placeholder="Tag Name" value="${name||''}" class="tag-name-input" data-original-id="${id||''}">
-            <input type="color" value="${color||'#888888'}" class="tag-color-input">
-            <button class="btn btn-secondary delete-tag-btn"><i class="fa-solid fa-trash"></i></button>
-        `;
-        row.querySelector('.delete-tag-btn').addEventListener('click', () => {
-            if(id) deletedTagIds.push(id);
-            row.remove();
-        });
-        tagManagerRows.appendChild(row);
-    }
-
-    if (addTagRowBtn) {
-        addTagRowBtn.addEventListener('click', () => {
-            addTagRowUI(null, '', '#888888');
-            tagManagerRows.scrollTop = tagManagerRows.scrollHeight;
-        });
-    }
-
-    if (saveTagsBtn) {
-        saveTagsBtn.addEventListener('click', async () => {
-            const rows = tagManagerRows.querySelectorAll('.tag-edit-row');
-            const originalIds = [], newNames = [], colors = [];
-            let isValid = true; const seen = new Set();
-            
-            rows.forEach(r => {
-                const name = r.querySelector('.tag-name-input').value.trim();
-                const color = r.querySelector('.tag-color-input').value;
-                const oid = r.querySelector('.tag-name-input').dataset.originalId || null;
-                if(!name) return;
-                if(seen.has(name.toLowerCase())) { alert(`Duplicate: ${name}`); isValid = false; return; }
-                seen.add(name.toLowerCase());
-                newNames.push(name); colors.push(color); originalIds.push(oid);
-            });
-            if(!isValid) return;
-
-            try {
-                await apiSyncTags({ originalIds, newNames, colors, deletions: deletedTagIds });
-                // Reload Tags
-                const updated = await apiListTags();
-                Object.keys(tagsCache).forEach(k=>delete tagsCache[k]);
-                updated.forEach(t=>tagsCache[t._id]=t);
-                // Refresh UIs
-                renderTagInput(); 
-                populateModelDropdowns(); // updates filter
-                loadAlertHistory(currentHistoryPage);
-                tagsModal.style.display = 'none';
-                alert('Tags saved.');
-            } catch(e) { alert('Save failed: '+e.message); }
-        });
-    }
-
 
     // --- 4. LIVE ALERTS (STATS & LIST) ---
     async function loadLiveAlerts() {
         try {
             const data = await apiGetLiveAlerts();
             const alerts = data.alerts || [];
-            Object.keys(liveAlertsCache).forEach(k=>delete liveAlertsCache[k]);
+            Object.keys(liveAlertsCache).forEach(k => delete liveAlertsCache[k]);
             alerts.forEach(a => liveAlertsCache[a._id] = a);
 
             const counts = { Critical: 0, High: 0, Medium: 0, Info: 0 };
-            alerts.forEach(a => { if(counts[a.alertLevel] !== undefined) counts[a.alertLevel]++; });
-            
+            alerts.forEach(a => { if (counts[a.alertLevel] !== undefined) counts[a.alertLevel]++; });
+
             countCrit.innerText = counts.Critical;
             countHigh.innerText = counts.High;
             countMed.innerText = counts.Medium;
             countInfo.innerText = counts.Info;
 
             renderManageList(alerts);
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     }
 
     function renderManageList(alerts) {
         liveAlertsList.innerHTML = '';
-        if(alerts.length === 0) { liveAlertsList.innerHTML = '<li style="color:#888;">No active rules.</li>'; return; }
+        if (alerts.length === 0) { liveAlertsList.innerHTML = '<li style="color:#888;">No active rules.</li>'; return; }
         alerts.forEach(a => {
             const li = document.createElement('li');
             li.innerHTML = `
@@ -276,14 +197,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     liveAlertsList.addEventListener('click', async (e) => {
         const btn = e.target.closest('button');
-        if(!btn) return;
+        if (!btn) return;
         const id = btn.dataset.id;
-        if(btn.classList.contains('delete-alert-btn')) {
-            if(confirm('Delete rule?')) { await apiDeleteAlert(id); await loadLiveAlerts(); }
+        if (btn.classList.contains('delete-alert-btn')) {
+            if (confirm('Delete rule?')) { await apiDeleteAlert(id); await loadLiveAlerts(); }
         }
-        if(btn.classList.contains('edit-alert-btn')) {
+        if (btn.classList.contains('edit-alert-btn')) {
             const obj = liveAlertsCache[id];
-            if(obj) startEdit(obj);
+            if (obj) startEdit(obj);
         }
     });
 
@@ -291,16 +212,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         currentEditId = obj._id;
         alertNameInput.value = obj.alertName;
         alertLevelSelect.value = obj.alertLevel;
-        if(modelSelect) modelSelect.value = obj.modelName || '';
+        if (modelSelect) modelSelect.value = obj.modelName || '';
         rulesContainer.innerHTML = '';
         populateRuleBuilderFromRule(obj.alertRule);
         selectedTags.length = 0;
-        if(obj.tags) obj.tags.forEach(t => selectedTags.push(t._id));
+        if (obj.tags) obj.tags.forEach(t => selectedTags.push(t._id));
         renderTagInput();
         manageModal.style.display = 'none';
         openBuilder(true);
     }
-    
+
     statCards.forEach(c => c.addEventListener('click', () => {
         document.getElementById('filter-level').value = c.dataset.level;
         loadAlertHistory(1);
@@ -310,9 +231,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     // --- 5. RULE BUILDER ---
     function createRuleRowHTML(op) {
         const del = op ? '<button class="btn btn-secondary btn-icon delete-rule-btn">&times;</button>' : '';
-        const opts = Object.keys(DATA_DICTIONARY).filter(k=>DATA_DICTIONARY[k].dataType==='numeric')
-            .map(k=>`<option value="${k}">${DATA_DICTIONARY[k].label}</option>`).join('');
-        
+        const opts = Object.keys(DATA_DICTIONARY).filter(k => DATA_DICTIONARY[k].dataType === 'numeric')
+            .map(k => `<option value="${k}">${DATA_DICTIONARY[k].label}</option>`).join('');
+
         // English operators
         return `
             <span class="logic-separator" style="font-weight:bold; font-size:0.8rem; margin-right:8px;">${op}</span>
@@ -330,18 +251,18 @@ document.addEventListener('DOMContentLoaded', async function () {
         `;
     }
     function addEmptyRuleRow() {
-        const d = document.createElement('div'); d.className='rule-row'; d.innerHTML=createRuleRowHTML('');
+        const d = document.createElement('div'); d.className = 'rule-row'; d.innerHTML = createRuleRowHTML('');
         rulesContainer.appendChild(d);
     }
     logicalOperatorsContainer.addEventListener('click', e => {
-        if(e.target.classList.contains('add-rule-btn')) {
-            const d = document.createElement('div'); d.className='rule-row';
-            d.innerHTML=createRuleRowHTML(e.target.dataset.logic);
+        if (e.target.classList.contains('add-rule-btn')) {
+            const d = document.createElement('div'); d.className = 'rule-row';
+            d.innerHTML = createRuleRowHTML(e.target.dataset.logic);
             rulesContainer.appendChild(d);
         }
     });
     rulesContainer.addEventListener('click', e => {
-        if(e.target.classList.contains('delete-rule-btn')) e.target.closest('.rule-row').remove();
+        if (e.target.classList.contains('delete-rule-btn')) e.target.closest('.rule-row').remove();
     });
 
     function buildRuleJSON() {
@@ -352,23 +273,23 @@ document.addEventListener('DOMContentLoaded', async function () {
             const op = r.querySelector('.operator-type').value;
             const val = r.querySelector('.value-input').value;
             const sep = r.querySelector('.logic-separator');
-            if(i>0 && sep && !logic) logic = sep.textContent.trim()==='AND'?'$and':'$or';
-            if(type && op && val) {
+            if (i > 0 && sep && !logic) logic = sep.textContent.trim() === 'AND' ? '$and' : '$or';
+            if (type && op && val) {
                 const c = {}; c[DATA_DICTIONARY[type].dbPath] = {}; c[DATA_DICTIONARY[type].dbPath][OPERATOR_MAP[op]] = parseFloat(val);
                 conds.push(c);
             } else valid = false;
         });
-        if(!valid || conds.length===0) return null;
-        if(conds.length===1) return conds[0];
-        const f = {}; f[logic||'$and'] = conds;
+        if (!valid || conds.length === 0) return null;
+        if (conds.length === 1) return conds[0];
+        const f = {}; f[logic || '$and'] = conds;
         return f;
     }
 
     function populateRuleBuilderFromRule(rule) {
         let parts = [];
-        if (rule.$and) parts = rule.$and.map(x => ({...x, logic: 'AND'}));
-        else if (rule.$or) parts = rule.$or.map(x => ({...x, logic: 'OR'}));
-        else parts = [{...rule, logic: ''}];
+        if (rule.$and) parts = rule.$and.map(x => ({ ...x, logic: 'AND' }));
+        else if (rule.$or) parts = rule.$or.map(x => ({ ...x, logic: 'OR' }));
+        else parts = [{ ...rule, logic: '' }];
 
         parts.forEach((p, i) => {
             const dbField = Object.keys(p).find(k => k !== 'logic');
@@ -376,16 +297,16 @@ document.addEventListener('DOMContentLoaded', async function () {
             const mongoOp = Object.keys(inner)[0];
             const val = inner[mongoOp];
             const dictKey = Object.keys(DATA_DICTIONARY).find(k => DATA_DICTIONARY[k].dbPath === dbField);
-            
+
             const row = document.createElement('div');
             row.className = 'rule-row';
-            row.innerHTML = createRuleRowHTML(i > 0 ? (i===1 ? (rule.$and?'AND':'OR') : 'AND') : ''); 
-            if(dictKey) row.querySelector('.data-type').value = dictKey;
-            if(OP_REVERSE_MAP[mongoOp]) row.querySelector('.operator-type').value = OP_REVERSE_MAP[mongoOp];
+            row.innerHTML = createRuleRowHTML(i > 0 ? (i === 1 ? (rule.$and ? 'AND' : 'OR') : 'AND') : '');
+            if (dictKey) row.querySelector('.data-type').value = dictKey;
+            if (OP_REVERSE_MAP[mongoOp]) row.querySelector('.operator-type').value = OP_REVERSE_MAP[mongoOp];
             row.querySelector('.value-input').value = val;
             rulesContainer.appendChild(row);
         });
-        if(parts.length === 0) addEmptyRuleRow();
+        if (parts.length === 0) addEmptyRuleRow();
     }
 
 
@@ -395,32 +316,32 @@ document.addEventListener('DOMContentLoaded', async function () {
     const tagsDropdown = document.getElementById('tags-dropdown-list');
 
     function renderTagInput() {
-        if(!tagsInputContainer) return;
+        if (!tagsInputContainer) return;
         const pills = tagsInputContainer.querySelectorAll('.tag-input-pill');
         pills.forEach(c => c.remove());
 
         selectedTags.forEach(id => {
             const t = tagsCache[id];
-            if(!t) return;
+            if (!t) return;
             const pill = document.createElement('div');
             pill.className = 'tag-input-pill';
             pill.style.backgroundColor = t.color;
             pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
             tagsInputContainer.insertBefore(pill, tagsSearchInput);
         });
-        
+
         // Hide/Show placeholder based on selection
-        if(tagsSearchInput) tagsSearchInput.placeholder = selectedTags.length > 0 ? '' : 'Select tags...';
+        if (tagsSearchInput) tagsSearchInput.placeholder = selectedTags.length > 0 ? '' : 'Select tags...';
     }
 
     function renderTagDropdown() {
-        if(!tagsDropdown) return;
+        if (!tagsDropdown) return;
         tagsDropdown.innerHTML = '';
         const available = Object.values(tagsCache)
             .filter(t => !selectedTags.includes(t._id))
-            .sort((a,b) => a.name.localeCompare(b.name));
-            
-        if(available.length === 0) {
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (available.length === 0) {
             tagsDropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
             return;
         }
@@ -433,7 +354,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 selectedTags.push(t._id);
                 renderTagInput();
                 renderTagDropdown();
-                if(tagsSearchInput) {
+                if (tagsSearchInput) {
                     tagsSearchInput.value = '';
                     tagsSearchInput.focus();
                 }
@@ -443,79 +364,87 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // Event Listeners
-    if(tagsInputContainer) {
+    if (tagsInputContainer) {
         tagsInputContainer.addEventListener('click', (e) => {
-            if(e.target.classList.contains('remove-tag')) { 
+            if (e.target.classList.contains('remove-tag')) {
                 const id = e.target.dataset.id;
                 const idx = selectedTags.indexOf(id);
-                if(idx > -1) selectedTags.splice(idx, 1);
+                if (idx > -1) selectedTags.splice(idx, 1);
                 renderTagInput();
                 // If dropdown is open, update it to show the removed tag
-                if(tagsDropdown.style.display === 'block') renderTagDropdown();
+                if (tagsDropdown.style.display === 'block') renderTagDropdown();
                 return;
             }
             // Toggle dropdown
-            if(tagsDropdown) {
+            if (tagsDropdown) {
                 const isVisible = tagsDropdown.style.display === 'block';
                 tagsDropdown.style.display = isVisible ? 'none' : 'block';
-                if(!isVisible) renderTagDropdown();
+                if (!isVisible) renderTagDropdown();
             }
         });
     }
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if(tagsInputContainer && tagsDropdown && !tagsInputContainer.contains(e.target) && !tagsDropdown.contains(e.target)) {
+        if (tagsInputContainer && tagsDropdown && !tagsInputContainer.contains(e.target) && !tagsDropdown.contains(e.target)) {
             tagsDropdown.style.display = 'none';
         }
     });
 
     saveAlertBtn.addEventListener('click', async () => {
         const name = alertNameInput.value, level = alertLevelSelect.value, rule = buildRuleJSON();
-        if(!name || !level || !rule) return alert('Fill required fields');
+        if (!name || !level || !rule) return alert('Fill required fields');
         const payload = { alertName: name, alertLevel: level, alertRule: rule, modelName: modelSelect.value, tags: selectedTags };
         try {
-            if(currentEditId) await apiUpdateAlert(currentEditId, payload);
-            else { payload.created=Date.now(); await apiCreateAlert(payload); }
+            if (currentEditId) await apiUpdateAlert(currentEditId, payload);
+            else { payload.created = Date.now(); await apiCreateAlert(payload); }
             closeBuilder(); await loadLiveAlerts(); await loadAlertHistory(1);
-        } catch(e) { alert(e.message); }
+        } catch (e) { alert(e.message); }
+    });
+
+    // tagsUpdated is called by tagModal.js when updating tags
+    document.addEventListener('tagsUpdated', () => {
+        // Refresh the local data
+        loadLiveAlerts(); // This likely re-fetches tags or updates counters
+        populateModelDropdowns();
+        loadAlertHistory(currentHistoryPage);
     });
 
 
     // --- 7. HISTORY TABLE ---
     async function loadAlertHistory(page = 1) {
         currentHistoryPage = page;
-        if(alertLogBody) alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+        if (alertLogBody) alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
         const params = new URLSearchParams(new FormData(historyFilterForm));
         params.set('page', page); params.set('limit', 10);
         try {
             const res = await fetch(`alerts/api/history?${params.toString()}`);
             const data = await res.json();
-            if(alertLogBody) {
+            if (alertLogBody) {
                 alertLogBody.innerHTML = '';
-                if(!data.logs || data.logs.length===0) { alertLogBody.innerHTML = '<tr><td colspan="6">No history.</td></tr>'; return; }
-                
+                if (!data.logs || data.logs.length === 0) { alertLogBody.innerHTML = '<tr><td colspan="6">No history.</td></tr>'; return; }
+
                 data.logs.forEach(log => {
                     const tr = createAlertRow(log);
                     alertLogBody.appendChild(tr);
                 });
             }
-            if(historyPagination) Pagination.render(historyPagination, data.pages, data.page, (newPage) => loadAlertHistory(newPage));
-        } catch(e) { console.error(e); }
+            if (historyPagination) Pagination.render(historyPagination, data.pages, data.page, (newPage) => loadAlertHistory(newPage));
+        } catch (e) { console.error(e); }
     }
 
     function createAlertRow(log) {
         const tr = document.createElement('tr');
-        const date = new Date(log.created || log.timestamp).toLocaleString('en-CA', {hour12:true}).replace(',','');
-        const tagsHtml = (log.tags||[]).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
-        const tagIds = (log.tags||[]).map(t=>t._id).join(',');
-        const snapshot = log.alertSnapshot || {}; 
-        
+        const date = new Date(log.created || log.timestamp).toLocaleString('en-CA', { hour12: true }).replace(',', '');
+        const tagsHtml = (log.tags || []).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
+        const tagIds = (log.tags || []).map(t => t._id).join(',');
+        const snapshot = log.alertSnapshot || {};
+
         // Handle flattened or nested structure
         const level = log.level || snapshot.alertLevel || 'Info';
         const alertName = log.alertName || snapshot.alertName || 'Alert';
         const modelName = log.modelName || snapshot.modelName || '-';
-        
+
         // Use server-sent humanRule, or fallback to snapshot
         // Logic relying on backend format now.
         const humanRule = log.humanRule || (snapshot.alertRule ? JSON.stringify(snapshot.alertRule) : '');
@@ -553,10 +482,10 @@ document.addEventListener('DOMContentLoaded', async function () {
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
         overlay.style.display = 'flex';
-        
+
         const modal = document.createElement('div');
         modal.className = 'modal-content medium-modal';
-        
+
         modal.innerHTML = `
             <div class="modal-header"><h2>Tag Alert Log</h2><button class="close-dyn-btn">&times;</button></div>
             <div class="modal-body" style="min-height: 250px;">
@@ -587,14 +516,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             selected.forEach(id => {
                 const t = tagsCache[id];
-                if(!t) return;
+                if (!t) return;
                 const pill = document.createElement('div');
                 pill.className = 'tag-input-pill';
                 pill.style.backgroundColor = t.color;
                 pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
                 inputContainer.insertBefore(pill, searchInput);
             });
-            
+
             searchInput.placeholder = selected.length > 0 ? '' : 'Select tags...';
         }
 
@@ -602,9 +531,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             dropdown.innerHTML = '';
             const available = Object.values(tagsCache)
                 .filter(t => !selected.includes(t._id))
-                .sort((a,b) => a.name.localeCompare(b.name));
-                
-            if(available.length === 0) {
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+            if (available.length === 0) {
                 dropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
                 return;
             }
@@ -626,41 +555,41 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         // Event Listeners
         inputContainer.addEventListener('click', (e) => {
-            if(e.target.classList.contains('remove-tag')) { 
+            if (e.target.classList.contains('remove-tag')) {
                 const id = e.target.dataset.id;
                 const idx = selected.indexOf(id);
-                if(idx > -1) selected.splice(idx, 1);
+                if (idx > -1) selected.splice(idx, 1);
                 renderDynInput();
-                if(dropdown.style.display === 'block') renderDynDropdown();
+                if (dropdown.style.display === 'block') renderDynDropdown();
                 return;
             }
             const isVisible = dropdown.style.display === 'block';
             dropdown.style.display = isVisible ? 'none' : 'block';
-            if(!isVisible) renderDynDropdown();
+            if (!isVisible) renderDynDropdown();
         });
 
         // Close dropdown when clicking outside (scoped to this modal overlay)
         overlay.addEventListener('click', (e) => {
-            if(e.target === overlay) return; // overlay click handled by close logic? mainly want to catch clicks outside dropdown
-            if(!inputContainer.contains(e.target) && !dropdown.contains(e.target)) {
+            if (e.target === overlay) return; // overlay click handled by close logic? mainly want to catch clicks outside dropdown
+            if (!inputContainer.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.style.display = 'none';
             }
         });
 
         renderDynInput();
-        
+
         const close = () => { document.body.removeChild(overlay); };
         modal.querySelectorAll('.close-dyn-btn').forEach(b => b.onclick = close);
 
         modal.querySelector('#dyn-save').onclick = async () => {
             try {
                 await fetch(`alerts/api/logs/${logId}/tags`, {
-                    method: 'PUT', headers: {'Content-Type':'application/json'},
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tags: selected })
                 });
                 close();
                 loadAlertHistory(currentHistoryPage);
-            } catch(e) { alert('Failed to update tags'); }
+            } catch (e) { alert('Failed to update tags'); }
         };
     }
 
@@ -673,11 +602,11 @@ document.addEventListener('DOMContentLoaded', async function () {
     function setupLiveUpdates() {
         try {
             const evtSource = new EventSource('events');
-            
+
             evtSource.addEventListener('alert', (event) => {
                 try {
                     const alertData = JSON.parse(event.data);
-                    
+
                     // 1. Live Counters & Charts
                     loadLiveAlerts();
                     fetchAndRenderCharts();
@@ -685,32 +614,31 @@ document.addEventListener('DOMContentLoaded', async function () {
                     // 2. Log Table (Prepend if on page 1)
                     if (currentHistoryPage === 1 && alertLogBody) {
                         // Remove "No history" row if present
-                        if(alertLogBody.children.length === 1 && alertLogBody.firstElementChild.innerText.includes('No history')) {
+                        if (alertLogBody.children.length === 1 && alertLogBody.firstElementChild.innerText.includes('No history')) {
                             alertLogBody.innerHTML = '';
                         }
-                        
+
                         const tr = createAlertRow(alertData);
                         alertLogBody.prepend(tr);
 
                         // Keep list size managed
-                        if(alertLogBody.children.length > 10) {
+                        if (alertLogBody.children.length > 10) {
                             alertLogBody.lastElementChild.remove();
                         }
                     }
-                } catch(e) { console.error('SSE Error', e); }
+                } catch (e) { console.error('SSE Error', e); }
             });
 
             window.addEventListener('beforeunload', () => evtSource.close());
-        } catch(e) { console.error('SSE Setup Failed', e); }
+        } catch (e) { console.error('SSE Setup Failed', e); }
     }
 
     // --- API WRAPPERS ---
-    async function apiGetLiveAlerts() { return fetch('alerts/live').then(r=>r.json()); }
-    async function apiListTags() { return fetch('/tags').then(r=>r.json()).then(d=>d.tags); }
-    async function apiCreateAlert(p) { return fetch('alerts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
-    async function apiUpdateAlert(id, p) { return fetch(`alerts/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
-    async function apiDeleteAlert(id) { return fetch(`alerts/${id}`, {method:'DELETE'}).then(r=>r.json()); }
-    async function apiSyncTags(p) { return fetch('/tags/sync', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
+    async function apiGetLiveAlerts() { return fetch('alerts/live').then(r => r.json()); }
+    async function apiListTags() { return fetch('/tags').then(r => r.json()).then(d => d.tags); }
+    async function apiCreateAlert(p) { return fetch('alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).then(r => r.json()); }
+    async function apiUpdateAlert(id, p) { return fetch(`alerts/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).then(r => r.json()); }
+    async function apiDeleteAlert(id) { return fetch(`alerts/${id}`, { method: 'DELETE' }).then(r => r.json()); }
 
     init();
 });

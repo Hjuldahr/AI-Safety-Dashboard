@@ -58,23 +58,32 @@ export default async function evaluateAlerts(logsMap, options = {}) {
         // Create on AlertLog for all matches
         try {
 
-            // Get the Historical Tags
-            const tagPromises = alert.tags.map(async (tag) => {
-                return await HistTag.addOrFindTag(tag);
-            });
+            if (alert.tags) {
 
-            // Wait for all promises in that array to finish
-            const histTags = await Promise.all(tagPromises);
+            }
 
-            const histTagsIDs = histTags.map((tag) => {
-                return tag._id;
-            });
+            let histTags = null;
+            let histTagsIDs = null;
 
-            console.log(histTagsIDs);
+            if (alert.tags) {
+                // Get the Historical Tags
+                const tagPromises = alert.tags.map(async (tag) => {
+                    return await HistTag.addOrFindTag(tag);
+                });
+
+                // Wait for all promises in that array to finish
+                histTags = await Promise.all(tagPromises);
+
+                if (histTags) {
+                    histTagsIDs = histTags.map((tag) => {
+                        return tag._id;
+                    });
+                }
+            }
 
             // ToDo: Stamp the AI_Log with the HistoricalTag
-            for(const log of matchingLogs){
-                AI_Log.findByIdAndUpdate(log._id, {tags: histTagsIDs || []});
+            for (const log of matchingLogs) {
+                AI_Log.findByIdAndUpdate(log._id, { tags: histTagsIDs || [] });
             }
 
             const triggeredModelNames = matchingLogs.map(l => l.modelName);
