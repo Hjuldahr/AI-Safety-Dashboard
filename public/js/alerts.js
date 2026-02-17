@@ -1,7 +1,7 @@
 import { initCreateAlertModal } from './components/alerts/createAlertModal.js';
 import { initActiveAlertsModal } from './components/alerts/activeAlertsModal.js';
 import { initLogTagModal } from './components/alerts/logTagModal.js';
-import { viewAlertLog } from "./components/alerts/alertLogModal.js";
+import { initAlertLogModal } from "./components/alerts/alertLogModal.js";
 import TagSelect from './components/tags/tagSelect.js';
 import ModalManager from './components/modals.js';
 
@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         dropdownId: 'tags-dropdown-list'
     });
 
+    const openAlertLogModal = initAlertLogModal(modalManager);
+
     // --- CHART LOGIC ---
     const chartRangeSelect = document.getElementById('chart-range-select');
 
@@ -132,6 +134,21 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
+    // Sets up listeners for clicking on alert log
+    if (alertLogBody) {
+        alertLogBody.addEventListener('click', (e) => {
+            // Ignore clicks if they hit the "Add Tag" button or its icon
+            if (e.target.closest('.add-log-tag-btn')) return;
+
+            // Find the closest row to get the log ID
+            const tr = e.target.closest('tr');
+            if (tr) {
+                // We need to store the ID on the row itself when creating it
+                const logId = tr.dataset.logId;
+                if (logId) openAlertLogModal(logId);
+            }
+        });
+    }
 
     async function initCharts() {
         if (chartRangeSelect) {
@@ -238,6 +255,8 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     function createAlertRow(log) {
         const tr = document.createElement('tr');
+        tr.dataset.logId = log._id;
+        tr.style.cursor = 'pointer';
         const date = new Date(log.created || log.timestamp).toLocaleString('en-CA', { hour12: true }).replace(',', '');
         const tagsHtml = (log.tags || []).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
         const tagIds = (log.tags || []).map(t => t._id).join(',');

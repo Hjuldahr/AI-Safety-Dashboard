@@ -6,6 +6,7 @@ import { authorize } from '../middleware/authorization.js';
 const router = express.Router();
 
 router.get("/", isAuthenticated, authorize('view:logs'), controller.getPage);
+router.get("/AI/:id", authorize('view:logs'), controller.getAILog);
 
 router.get("/api/user", isAuthenticated, authorize('view:logs'), controller.getFilteredUserLogs);
 router.get("/api/ai", isAuthenticated, authorize('view:logs'), controller.getFilteredAILogs);

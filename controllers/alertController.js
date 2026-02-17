@@ -124,6 +124,24 @@ const getAlertHistory = async (req, res) => {
   }
 };
 
+const getAlertLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const alertLog = await AlertLog.findById(id);
+
+    if (!alertLog) {
+      return res.status(404).json({ message: "Alert Log not found." });
+    }
+
+    return res.status(201).json(alertLog);
+
+  } catch (error) {
+    console.error("Error fetching alert log:", error);
+    res.status(500).json({ message: "Error fetching alert log." });
+  }
+}
+
+
 const createAlert = async (req, res) => {
   try {
     const { alertName, alertLevel, alertRule, created, modelName, tags } =
@@ -473,6 +491,7 @@ export default {
   createAlert,
   getLiveAlerts,
   getAlertHistory,
+  getAlertLog,
   getAlertStats,
   removeAlertById,
   updateAlertById,

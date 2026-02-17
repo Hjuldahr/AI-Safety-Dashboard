@@ -20,6 +20,7 @@
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script>
     window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+    window.DEEP_LINK = <%- JSON.stringify(deepLink || null) %>;
   </script>
   <script src="js/notifications.js" defer></script>
 </head>

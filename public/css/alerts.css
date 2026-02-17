@@ -570,6 +570,12 @@ body {
   padding: 0.4rem 0.8rem;
 }
 
+.ai-log-links{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 /* MOBILE CARD VIEW */
 @media (max-width: 768px) {
   .alert-log-table thead {

@@ -86,8 +86,8 @@ const buildAILogQuery = ({ modelName, startDate, endDate, search }) => {
         const searchNum = Number(search);
         if (!isNaN(searchNum)) {
             const numericFields = [
-                'policyCompliance', 'responseHelpfulness', 'responseTime', 
-                'energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 
+                'policyCompliance', 'responseHelpfulness', 'responseTime',
+                'energyConsumption', 'tokensUsed', 'gigaFlopsUsed',
                 'webLookups', 'toxicityScore', 'piiDetected', 'queryCount',
                 'responseTimestamp'
             ];
@@ -95,13 +95,7 @@ const buildAILogQuery = ({ modelName, startDate, endDate, search }) => {
                 orConditions.push({ [field]: searchNum });
             });
         }
-        
-        if (query.$or) {
-             // If there was already an $or (unlikely here but good practice), we need to AND it?
-             // Simple override for now as date uses top level field.
-             // If date logic above used $or, this would overwrite.
-             // But date logic above uses query.createdAt.
-        }
+
         query.$or = orConditions;
     }
 
@@ -390,8 +384,45 @@ const getPage = async (req, res) => {
     }
 };
 
+// Gets a specific AI log and returns its page number so we can open the logs page to view the log
+const getAILog = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const limit = 10; // Must match your frontend limit
+
+        // Find the target log
+        const targetLog = await AI_Log.findById(id);
+        if (!targetLog) {
+            return res.redirect('/logs?error=LogNotFound');
+        }
+
+        // Calculate which page it's on
+        // We count how many logs come BEFORE it in the 'responseTimestamp: -1' sort
+        const countBefore = await AI_Log.countDocuments({
+            responseTimestamp: { $gt: targetLog.responseTimestamp }
+        });
+
+        const targetPage = Math.floor(countBefore / limit) + 1;
+
+        // Render the page with "Deep Link" instructions
+        res.render("logs", {
+            user: req.user,
+            // Pass these to the frontend
+            deepLink: {
+                view: 'ai',
+                id: id,
+                page: targetPage
+            }
+        });
+    } catch (error) {
+        console.error("Error redirecting to AI log:", error);
+        res.redirect('/logs');
+    }
+};
+
 export default {
     getPage,
+    getAILog,
     exportUserLogCSV,
     exportUserLogPDF,
     exportAILogCSV,

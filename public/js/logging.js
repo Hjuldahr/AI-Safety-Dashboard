@@ -9,7 +9,7 @@ const hasPermission = (permission) => {
 };
 
 // --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Get all required elements
     const elements = {
         userLogsBtn: document.getElementById('user-logs-btn'),
@@ -76,10 +76,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // --- INITIAL RENDER ---
-    handleUserFilter(elements, 1);
-    handleAiFilter(elements, 1);
-    handleAiSummaryFilter(elements, 1);
+    // Standard Initial Render
+    // (We only run these if there ISN'T a deep link, or we let them run then override)
+    await handleUserFilter(elements, 1);
+
+    if (window.DEEP_LINK && window.DEEP_LINK.view === 'ai') {
+        // Handle the Deep Link
+        const { id, page } = window.DEEP_LINK;
+
+        // Switch to AI tab visually
+        toggleViews('ai', elements);
+
+        // Load the specific page
+        await handleAiFilter(elements, page);
+
+        // Highlight and Scroll to the log
+        const targetElement = elements.aiLogAccordion.querySelector(`[data-id="${id}"]`);
+        if (targetElement) {
+            const header = targetElement.querySelector('.accordion-header');
+            const body = targetElement.querySelector('.accordion-body');
+
+            // Open it
+            header.classList.add('active');
+            body.classList.remove('hidden');
+
+            // Scroll it into view
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Optional: Add a temporary highlight class
+            targetElement.classList.add('highlight-flash');
+            setTimeout(() => targetElement.classList.remove('highlight-flash'), 3000);
+        }
+    } else {
+        // Normal load
+        await handleAiFilter(elements, 1);
+        await handleAiSummaryFilter(elements, 1);
+    }
 });
 
 
@@ -179,6 +211,7 @@ function renderAiAccordion(logs, accordion) {
     logs.forEach((log) => {
         const item = document.createElement('div');
         item.className = 'accordion-item';
+        item.dataset.id = log._id;
         const timestamp = new Date(log.responseTimestamp).toLocaleString();
         const header = document.createElement('button');
         header.className = 'accordion-header';
