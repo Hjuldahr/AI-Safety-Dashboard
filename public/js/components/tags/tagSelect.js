@@ -4,12 +4,16 @@
  */
 export default class TagSelect {
     constructor(options = {}) {
-        this.container = document.getElementById(options.containerId);
-        this.searchInput = document.getElementById(options.searchInputId);
-        this.dropdown = document.getElementById(options.dropdownId);
-        
+        // If customContainer (a DOM node) is provided, search inside it. 
+        // Otherwise, search the whole document.
+        const scope = options.customContainer || document;
+
+        this.container = scope.querySelector(`#${options.containerId}`);
+        this.searchInput = scope.querySelector(`#${options.searchInputId}`);
+        this.dropdown = scope.querySelector(`#${options.dropdownId}`);
+
         this.tagsCache = {};
-        this.selectedTags = []; // Array of IDs
+        this.selectedTags = [];
         this.onSelectionChange = options.onSelectionChange || null;
     }
 
@@ -48,7 +52,7 @@ export default class TagSelect {
                 this.removeTag(e.target.dataset.id);
                 return;
             }
-            
+
             const isVisible = this.dropdown.style.display === 'block';
             this.dropdown.style.display = isVisible ? 'none' : 'block';
             if (!isVisible) this.renderDropdown();
@@ -56,7 +60,7 @@ export default class TagSelect {
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if (!this.container.contains(e.target) && !this.dropdown.contains(e.target)) {
+            if (this.container && !this.container.contains(e.target) && !this.dropdown.contains(e.target)) {
                 this.dropdown.style.display = 'none';
             }
         });

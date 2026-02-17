@@ -1,5 +1,6 @@
 import { initCreateAlertModal } from './components/alerts/createAlertModal.js';
 import { initActiveAlertsModal } from './components/alerts/activeAlertsModal.js';
+import { initLogTagModal } from './components/alerts/logTagModal.js';
 import { viewAlertLog } from "./components/alerts/alertLogModal.js";
 import TagSelect from './components/tags/tagSelect.js';
 import ModalManager from './components/modals.js';
@@ -21,7 +22,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     const statCards = document.querySelectorAll('.stat-card');
 
     // Manage/History
-    const liveAlertsList = document.getElementById('live-alerts-list');
     const alertLogBody = document.getElementById('alert-log-body');
     const historyPagination = document.getElementById('history-pagination');
     const historyFilterForm = document.getElementById('history-filter-form');
@@ -40,9 +40,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         addAlertBtn.style.display = 'none';
     }
 
+    // --- POPUP MODALS ---
     const modalManager = new ModalManager();
 
-    // Initialize the component
+    // Initialize the components
+    // Create Alert
     const openCreateAlertModal = initCreateAlertModal(modalManager, {
         tagsCache,
         DATA_DICTIONARY: window.CONSTANTS.DATA_DICTIONARY,
@@ -53,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
+    // Active Alerts
     const openActiveAlertsModal = initActiveAlertsModal(modalManager, {
         onEdit: (alertObj) => {
             // Re-use your existing edit logic
@@ -62,6 +65,14 @@ document.addEventListener('DOMContentLoaded', async function () {
         },
         onDeleteSuccess: () => {
             loadLiveAlerts(); // Refresh dashboard stats
+        }
+    });
+
+    // Adding / Editing Alert Log Tags
+    const openLogTagModal = initLogTagModal(modalManager, {
+        tagsCache,
+        onSaveSuccess: () => {
+            loadAlertHistory(currentHistoryPage);
         }
     });
 
@@ -106,6 +117,19 @@ document.addEventListener('DOMContentLoaded', async function () {
     const openCreateBtn = document.getElementById('open-create-modal-btn');
     if (openCreateBtn) {
         openCreateBtn.addEventListener('click', () => openCreateAlertModal());
+    }
+
+    // Open Edit Alert Log Tags
+    if (alertLogBody) {
+        alertLogBody.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('add-log-tag-btn')) return;
+
+            const logId = e.target.dataset.id;
+            const currentIds = (e.target.dataset.tags || '').split(',').filter(Boolean);
+
+            // Call our new clean refactored function
+            openLogTagModal(logId, currentIds);
+        });
     }
 
 
@@ -173,8 +197,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             countHigh.innerText = counts.High;
             countMed.innerText = counts.Medium;
             countInfo.innerText = counts.Info;
-
-            renderManageList(alerts);
         } catch (e) { console.error(e); }
     }
 
@@ -258,122 +280,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             const currentIds = (e.target.dataset.tags || '').split(',').filter(Boolean);
             openLogTagModal(logId, currentIds);
         });
-    }
-
-    function openLogTagModal(logId, currentTagIds) {
-        // Create a temporary modal in the DOM
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.style.display = 'flex';
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-content medium-modal';
-
-        modal.innerHTML = `
-            <div class="modal-header"><h2>Tag Alert Log</h2><button class="close-dyn-btn">&times;</button></div>
-            <div class="modal-body" style="min-height: 250px;">
-                <div class="multiselect-container">
-                    <div class="tags-input-container" id="dyn-tags-input">
-                        <input type="text" id="dyn-tags-search" class="tags-search-input" placeholder="Select tags..." readonly />
-                    </div>
-                    <div class="tags-dropdown" id="dyn-tags-dropdown" style="display: none;"></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary close-dyn-btn">Cancel</button>
-                <button id="dyn-save" class="btn btn-primary">Save Tags</button>
-            </div>
-        `;
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-
-        // State for this modal
-        const selected = [...currentTagIds];
-        const inputContainer = modal.querySelector('#dyn-tags-input');
-        const searchInput = modal.querySelector('#dyn-tags-search');
-        const dropdown = modal.querySelector('#dyn-tags-dropdown');
-
-        function renderDynInput() {
-            const pills = inputContainer.querySelectorAll('.tag-input-pill');
-            pills.forEach(c => c.remove());
-
-            selected.forEach(id => {
-                const t = tagsCache[id];
-                if (!t) return;
-                const pill = document.createElement('div');
-                pill.className = 'tag-input-pill';
-                pill.style.backgroundColor = t.color;
-                pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
-                inputContainer.insertBefore(pill, searchInput);
-            });
-
-            searchInput.placeholder = selected.length > 0 ? '' : 'Select tags...';
-        }
-
-        function renderDynDropdown() {
-            dropdown.innerHTML = '';
-            const available = Object.values(tagsCache)
-                .filter(t => !selected.includes(t._id))
-                .sort((a, b) => a.name.localeCompare(b.name));
-
-            if (available.length === 0) {
-                dropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
-                return;
-            }
-
-            available.forEach(t => {
-                const item = document.createElement('div');
-                item.className = 'tags-dropdown-item';
-                item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
-                item.addEventListener('click', () => {
-                    selected.push(t._id);
-                    renderDynInput();
-                    renderDynDropdown();
-                    searchInput.value = '';
-                    searchInput.focus();
-                });
-                dropdown.appendChild(item);
-            });
-        }
-
-        // Event Listeners
-        inputContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-tag')) {
-                const id = e.target.dataset.id;
-                const idx = selected.indexOf(id);
-                if (idx > -1) selected.splice(idx, 1);
-                renderDynInput();
-                if (dropdown.style.display === 'block') renderDynDropdown();
-                return;
-            }
-            const isVisible = dropdown.style.display === 'block';
-            dropdown.style.display = isVisible ? 'none' : 'block';
-            if (!isVisible) renderDynDropdown();
-        });
-
-        // Close dropdown when clicking outside (scoped to this modal overlay)
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) return; // overlay click handled by close logic? mainly want to catch clicks outside dropdown
-            if (!inputContainer.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.style.display = 'none';
-            }
-        });
-
-        renderDynInput();
-
-        const close = () => { document.body.removeChild(overlay); };
-        modal.querySelectorAll('.close-dyn-btn').forEach(b => b.onclick = close);
-
-        modal.querySelector('#dyn-save').onclick = async () => {
-            try {
-                await fetch(`alerts/api/logs/${logId}/tags`, {
-                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tags: selected })
-                });
-                close();
-                loadAlertHistory(currentHistoryPage);
-            } catch (e) { alert('Failed to update tags'); }
-        };
     }
 
     if (historyFilterForm) {

@@ -81,9 +81,13 @@ export default async function evaluateAlerts(logsMap, options = {}) {
                 }
             }
 
-            // ToDo: Stamp the AI_Log with the HistoricalTag
-            for (const log of matchingLogs) {
-                AI_Log.findByIdAndUpdate(log._id, { tags: histTagsIDs || [] });
+            // Stamp the AI_Log with the HistoricalTag
+            if (matchingLogs.length > 0) {
+                await Promise.all(matchingLogs.map(log =>
+                    AI_Log.findByIdAndUpdate(log._id, {
+                        $set: { tags: histTagsIDs || [] }
+                    })
+                ));
             }
 
             const triggeredModelNames = matchingLogs.map(l => l.modelName);

@@ -16,10 +16,12 @@
 .large-modal {
   width: 90%;
   max-width: 900px;
+  min-height: 60vh;
 }
 
 .medium-modal {
   width: 90%;
+  min-height: 40vh;
   max-width: 600px;
 }
 
@@ -28,6 +30,8 @@
   border-radius: 8px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   max-height: 90vh;
 }
@@ -43,6 +47,7 @@
 .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
+  flex-grow: 1;
 }
 
 .modal-footer {
