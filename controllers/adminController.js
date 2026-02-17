@@ -186,6 +186,44 @@ export const deleteRole = async (req, res) => {
   }
 };
 
+// Delete a user account
+export const deleteUser = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+
+    // Prevent deleting self
+    if (req.user && String(req.user._id) === String(targetUserId)) {
+      return res.status(400).json({ message: 'You cannot delete your own account.' });
+    }
+
+    const userToDelete = await User.findById(targetUserId);
+    if (!userToDelete) return res.status(404).json({ message: 'User not found.' });
+
+    // If target is an owner, only allow owners to delete
+    if (userToDelete.roles && userToDelete.roles.includes('owner')) {
+      if (!(req.user && req.user.roles && req.user.roles.includes('owner'))) {
+        return res.status(403).json({ message: 'Only owners can delete owner accounts.' });
+      }
+
+      // Prevent deleting the last owner
+      const ownerCount = await User.countDocuments({ roles: 'owner' });
+      if (ownerCount <= 1) {
+        return res.status(409).json({ message: 'Cannot delete the last owner account.' });
+      }
+    }
+
+    await User.deleteOne({ _id: userToDelete._id });
+
+    // Log the deletion
+    User_Log.addLog(req.user._id, 'User_Deleted', `Deleted user account: ${userToDelete.username}`).catch(err => console.error('Failed to write log:', err));
+
+    res.json({ success: true, message: 'User deleted successfully.' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export default {
   getUsersPage,
   listUsers,
@@ -193,5 +231,6 @@ export default {
   listRoles,
   getAvailablePermissions,
   createRole,
-  deleteRole
+  deleteRole,
+  deleteUser
 };

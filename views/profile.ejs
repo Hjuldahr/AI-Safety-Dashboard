@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="<%= process.env.PUBLIC_URL || '/' %>">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile</title>
+
+  <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/fullSite.css">
+  <link rel="stylesheet" href="css/nav.css">
+  <link rel="stylesheet" href="css/notifications.css">
+  <link rel="stylesheet" href="css/usermanagement.css">
+
+
+  <script>
+    window.CURRENT_USER_ID = "<%= user ? user._id : '' %>";
+  </script>
+  <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script src="js/notifications.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+  <%- include('./components/header') %>
+  <%- include('./components/nav') %>
+
+  <main class="content">
+    <h2>Profile</h2>
+
+    <div class="panel-section" style="max-width: 600px;">
+      <h3>Change Password</h3>
+      <div id="profile-messages"></div>
+      <form id="change-password-form">
+        <div class="form-group">
+          <label for="currentPassword">Current Password</label>
+          <input type="password" id="currentPassword" required>
+        </div>
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input type="password" id="newPassword" required minlength="8">
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm New Password</label>
+          <input type="password" id="confirmPassword" required minlength="8">
+        </div>
+        <div class="button-group">
+          <button class="btn-primary" type="submit">Change Password</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="/js/profile.js" defer></script>
+</body>
+</html>
