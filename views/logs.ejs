@@ -20,7 +20,7 @@
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script>
     window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
-    window.DEEP_LINK = <%- JSON.stringify(deepLink || null) %>;
+    window.DEEP_LINK = <%- JSON.stringify(deepLink) %>;
   </script>
   <script src="js/notifications.js" defer></script>
 </head>
@@ -41,7 +41,7 @@
 
         <form id="user-filter-form" class="filter-group">
           <button type="button" class="btn-secondary clear-filters">Clear</button>
-          
+
           <label for="user-search">Search:</label>
           <input type="text" id="user-search" name="search" placeholder="Search logs...">
 
@@ -69,7 +69,7 @@
 
         <form id="ai-filter-form" class="filter-group hidden">
           <button type="button" class="btn-secondary clear-filters">Clear</button>
-          
+
           <label for="ai-search">Search:</label>
           <input type="text" id="ai-search" name="search" placeholder="Search logs...">
 
@@ -91,7 +91,7 @@
 
         <form id="ai-summary-filter-form" class="filter-group hidden">
           <button type="button" class="btn-secondary clear-filters">Clear</button>
-          
+
           <label for="ai-summary-search">Search:</label>
           <input type="text" id="ai-summary-search" name="search" placeholder="Search summaries...">
 
