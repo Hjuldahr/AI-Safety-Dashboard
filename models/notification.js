@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
+import { NOTIFICATION_TYPES } from "../config/notification";
 
 const NotificationSchema = new mongoose.Schema({
   message: { type: String, required: true },
   category: { 
     type: String, 
-    enum: ['generic', 'alert', 'demo', 'server'],
+    enum: Object.values(NOTIFICATION_TYPES),
     default: 'generic'
   },
   redirectUrl: { type: String, default: null },

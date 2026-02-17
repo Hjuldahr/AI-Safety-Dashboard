@@ -13,6 +13,7 @@ import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase, seedCharts } from './config/database.js';
 import { sendNotification } from './controllers/notificationController.js';
+import { SHUTDOWN_MESSAGE } from "./config/notification.js";
 
 let shuttingDown = false;
 
@@ -109,13 +110,7 @@ const startServer = async () => {
 
         console.log(`\n[Shutdown] Received ${signal}! Shutting down...`);
 
-        await sendNotification({
-            message: "The Server is now shutting down",
-            category: "server",
-            dismissible: false,
-            trim: "#CC0202",
-            background: "#cccaca"
-        });
+        await sendNotification(SHUTDOWN_MESSAGE);
 
         new Promise(resolve => setTimeout(resolve, 5000));
 
