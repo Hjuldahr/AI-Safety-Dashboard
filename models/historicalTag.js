@@ -19,7 +19,7 @@ HistTagSchema.statics.addOrFindTag = async function (tag) {
     if(existingTag){
         return existingTag;
     } else {
-        return await this.create(tag);
+        return await this.create({name: tag.name, color: tag.color});
     }
 }
 

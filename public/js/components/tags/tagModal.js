@@ -11,52 +11,41 @@ const modal = new ModalManager();
 // Tag Manager Modal
 if (openTagsBtn) {
     openTagsBtn.addEventListener('click', () => {
-        deletedTagIds = [];
         renderTagManager();
     });
 }
 
 // Starter Method - renders the modal then adds event listeners
 async function renderTagManager() {
-    const tagModalHTML = await assembleTagModalHTML();
-    const tagModalFooterHTML = footerHTML();
+    deletedTagIds = [];
 
-    // Open the modal - passing the addModalListeners method to add interactivity to the modal
-    modal.open("Manage Tags", tagModalHTML, tagModalFooterHTML, "medium-modal", addModalListeners);
+    const bodyNode = await assembleTagModalNode();
+    const footerNode = createTagFooter(saveTagChanges);
+
+    // Open the modal
+    modal.open("Manage Tags", bodyNode, footerNode, "medium-modal");
 }
 
 // Creates the Modal's HTML content
-async function assembleTagModalHTML() {
-    let modalHTML = "";
+async function assembleTagModalNode() {
+    const container = document.createElement('div');
+    const rowsContainer = document.createElement('div');
+    rowsContainer.id = 'tag-manager-rows';
 
-    // Fetch latest tags from backend
     const tags = await apiListTags();
+    tags.forEach(tag => {
+        rowsContainer.appendChild(createTagRow(tag._id, tag.name, tag.color));
+    });
 
-    modalHTML += "<div id='tag-manager-rows'>";
+    // Add Tag Button
+    const addBtn = document.createElement('button');
+    addBtn.className = "btn btn-sm btn-secondary";
+    addBtn.style.marginTop = "10px";
+    addBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Add New Tag`;
 
-    // Loop over tags and add each of them to the modal
-    for (const tag of tags) {
-        modalHTML += tagRowHTML(tag._id, tag.name, tag.color);
-    }
-
-    modalHTML += "</div>";
-
-    // Add the add new tag button at the end
-    modalHTML += newTagBtn;
-
-    return modalHTML;
-}
-
-// Adds the listeners / functionality to the modal
-function addModalListeners() {
-    const addTagRowBtn = document.getElementById('add-tag-row-btn');
-    const saveTagsBtn = document.getElementById('save-tags-btn');
-    const cancelTagsBtn = document.getElementById("close-tags-modal");
-
-    const tagManagerRows = document.getElementById('tag-manager-rows');
-
-    addTagRowBtn?.addEventListener("click", () => {
-        const rows = tagManagerRows.querySelectorAll('.tag-edit-row');
+    addBtn.addEventListener('click', () => {
+        
+        const rows = rowsContainer.querySelectorAll('.tag-edit-row');
 
         if (rows.length > 0) {
             const lastRow = rows[rows.length - 1];
@@ -71,86 +60,82 @@ function addModalListeners() {
                 return; // Stop the function here
             }
         }
-
-        tagManagerRows.insertAdjacentHTML('beforeend', tagRowHTML());
-        tagManagerRows.scrollTop = tagManagerRows.scrollHeight;
+    
+        rowsContainer.appendChild(createTagRow());
+        rowsContainer.scrollTop = rowsContainer.scrollHeight;
     });
 
-    // Delete Tag Btn
-    tagManagerRows?.addEventListener('click', (e) => {
-        // Check if the click was on the trash icon or the button
-        const deleteBtn = e.target.closest('.delete-tag-btn');
-        if (deleteBtn) {
-            const row = deleteBtn.closest('.tag-edit-row');
-            const tagId = row.querySelector('.tag-name-input').dataset.originalId;
+    container.appendChild(rowsContainer);
+    container.appendChild(addBtn);
 
-            if (tagId) deletedTagIds.push(tagId); // Track for backend sync
-            row.remove();
-        }
-    });
-
-    // Save Changes Button
-    saveTagsBtn?.addEventListener('click', async () => {
-        const rows = tagManagerRows.querySelectorAll('.tag-edit-row');
-        const originalIds = [], newNames = [], colors = [];
-        let isValid = true; const seen = new Set();
-
-        rows.forEach(r => {
-            const name = r.querySelector('.tag-name-input').value.trim();
-            const color = r.querySelector('.tag-color-input').value;
-            const oid = r.querySelector('.tag-name-input').dataset.originalId || null;
-            if (!name) return;
-            if (seen.has(name.toLowerCase())) { alert(`Duplicate: ${name}`); isValid = false; return; }
-            seen.add(name.toLowerCase());
-            newNames.push(name); colors.push(color); originalIds.push(oid);
-        });
-        if (!isValid) return;
-
-        try {
-            await apiSyncTags({ originalIds, newNames, colors, deletions: deletedTagIds });
-
-            // Notifiy alerts.js of the update
-            const event = new CustomEvent('tagsUpdated');
-            document.dispatchEvent(event);
-
-            modal.close();
-        } catch (e) { alert('Save failed: ' + e.message); }
-    });
-
-    // Cancel Button
-    cancelTagsBtn?.addEventListener("click", () => {
-        modal.close();
-    })
+    return container;
 }
 
+async function saveTagChanges() {
+    const tagManagerRows = document.getElementById('tag-manager-rows');
+    const rows = tagManagerRows.querySelectorAll('.tag-edit-row');
+    const originalIds = [], newNames = [], colors = [];
+    let isValid = true; const seen = new Set();
 
-// --- Hard Coded HTML Strings / String Creator Functions ---
-// Keep these seperate for code readability / fututure editing.
-const newTagBtn = `<button id="add-tag-row-btn" class="btn btn-sm btn-secondary" style="margin-top: 10px">
-                        <i class="fa-solid fa-plus"></i> Add New Tag
-                    </button>`;
+    rows.forEach(r => {
+        const name = r.querySelector('.tag-name-input').value.trim();
+        const color = r.querySelector('.tag-color-input').value;
+        const oid = r.querySelector('.tag-name-input').dataset.originalId || null;
+        if (!name) return;
+        if (seen.has(name.toLowerCase())) { alert(`Duplicate: ${name}`); isValid = false; return; }
+        seen.add(name.toLowerCase());
+        newNames.push(name); colors.push(color); originalIds.push(oid);
+    });
+    if (!isValid) return;
 
+    try {
+        await apiSyncTags({ originalIds, newNames, colors, deletions: deletedTagIds });
 
-const tagRowHTML = (id = "", name = "", color = "#888888") => {
-    return `
-        <div class="tag-edit-row">
-            <input type="text" placeholder="Tag Name" value="${name}" class="tag-name-input" data-original-id="${id}">
-            <input type="color" value="${color}" class="tag-color-input">
-            <button class="btn btn-secondary delete-tag-btn"><i class="fa-solid fa-trash"></i></button>
-        </div>
-        `;
-};
+        // Notifiy alerts.js of the update
+        const event = new CustomEvent('tagsUpdated');
+        document.dispatchEvent(event);
 
-const footerHTML = () => {
-    return `
-    <button id="close-tags-modal" class="btn btn-secondary close-modal-btn">
-        Cancel
-    </button>
-    <button id="save-tags-btn" class="btn btn-primary">
-        Save Changes
-    </button>
+        modal.close();
+    } catch (e) { alert('Save failed: ' + e.message); }
+
+}
+
+function createTagRow(id = "", name = "", color = "#888888") {
+    const row = document.createElement('div');
+    row.className = 'tag-edit-row';
+    row.innerHTML = `
+        <input type="text" placeholder="Tag Name" value="${name}" class="tag-name-input" data-original-id="${id}">
+        <input type="color" value="${color}" class="tag-color-input">
+        <button class="btn btn-secondary delete-tag-btn"><i class="fa-solid fa-trash"></i></button>
     `;
-};
+
+    // Attach listener immediately to the specific button in this row
+    row.querySelector('.delete-tag-btn').addEventListener('click', () => {
+        if (id) deletedTagIds.push(id);
+        row.remove();
+    });
+
+    return row;
+}
+
+function createTagFooter(onSave) {
+    const footer = document.createElement('div');
+    footer.className = "modal-footer-inner"; // Add your styling class
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = "btn btn-secondary";
+    cancelBtn.innerText = "Cancel";
+    cancelBtn.onclick = () => modal.close();
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = "btn btn-primary";
+    saveBtn.innerText = "Save Changes";
+    saveBtn.onclick = onSave;
+
+    footer.appendChild(cancelBtn);
+    footer.appendChild(saveBtn);
+    return footer;
+}
 
 
 // --- API Helper Functions ---

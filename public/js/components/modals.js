@@ -34,17 +34,13 @@ class ModalManager {
 
     }
 
-    open(title, contentHTML, footerHTML, sizeClass = "medium-modal", addModalListeners) {
+    open(title, contentNode, footerNode, sizeClass = "medium-modal") {
         this.title.innerText = title;
-        this.body.innerHTML = contentHTML;
-        this.footer.innerHTML = footerHTML;
+        this.body.replaceChildren(contentNode);
+        this.footer.replaceChildren(footerNode);
         this.content.className = `modal-content ${sizeClass}`;
         
         this.appear();
-
-        if (typeof addModalListeners === "function") {
-            addModalListeners(this);
-        }
     }
 
     close() {
