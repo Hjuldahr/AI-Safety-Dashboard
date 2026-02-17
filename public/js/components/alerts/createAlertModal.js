@@ -3,8 +3,8 @@
 import TagSelect from '../tags/tagSelect.js';
 
 // ToDo: Move these to a constants file
-const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte', 'eq': '$eq' };
-const OPERATOR_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
+export const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte', 'eq': '$eq' };
+export const OPERATOR_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
 
 export const initCreateAlertModal = (modalManager, options) => {
   const { tagsCache, onSaveSuccess, DATA_DICTIONARY, KNOWN_MODELS } = options;
@@ -158,9 +158,9 @@ function buildAlertModalBody(DATA_DICTIONARY, KNOWN_MODELS, tagsCache) {
   return { body, elements };
 }
 
-function createRuleRow(opLabel, DATA_DICTIONARY) {
+export function createRuleRow(opLabel, DATA_DICTIONARY, readOnly = false) {
   const row = document.createElement('div');
-  row.className = 'rule-row';
+  row.className = `rule-row ${readOnly ? 'read-only-row' : ''}`;
 
   const opts = Object.keys(DATA_DICTIONARY)
     .filter(k => DATA_DICTIONARY[k].dataType === 'numeric')
@@ -168,8 +168,8 @@ function createRuleRow(opLabel, DATA_DICTIONARY) {
 
   row.innerHTML = `
         <span class="logic-separator">${opLabel}</span>
-        <select class="data-type"><option value="">-- Data --</option>${opts}</select>
-        <select class="operator-type">
+        <select class="data-type" ${readOnly ? 'disabled' : ''}><option value="">-- Data --</option>${opts}</select>
+        <select class="operator-type" ${readOnly ? 'disabled' : ''}>
             <option value="">-- Operator --</option>
             <option value="gt">Greater Than</option>
             <option value="gte">Greater Than or Equal To</option>
@@ -177,22 +177,19 @@ function createRuleRow(opLabel, DATA_DICTIONARY) {
             <option value="lte">Less Than or Equal To</option>
             <option value="eq">Equal To</option>
         </select>
-        <input type="number" class="value-input" style="width:80px;" placeholder="Value">
-        <button class="btn btn-icon delete-rule-btn">&times;</button>
+        <input type="number" class="value-input" ${readOnly ? 'disabled' : ''} style="width:80px;" placeholder="Value">
+        ${readOnly ? '' : '<button class="btn btn-icon delete-rule-btn">&times;</button>'}
     `;
 
-  const deleteBtn = row.querySelector('.delete-rule-btn');
-
   // IF logic label is empty, it's the first row. Remove the X button.
-  if (!opLabel) {
-    deleteBtn.remove();
-  } else {
-    deleteBtn.onclick = () => row.remove();
+  const deleteBtn = row.querySelector('.delete-rule-btn');
+  if (deleteBtn) {
+    if (!opLabel) deleteBtn.remove();
+    else deleteBtn.onclick = () => row.remove();
   }
 
   return row;
 }
-
 function buildAlertFooter(modalManager, onSave, isEdit) {
   const footer = document.createElement('div');
   footer.className = "modal-footer-inner";
@@ -237,7 +234,7 @@ function buildRuleJSON(container, DATA_DICTIONARY) {
   return { [logic]: conds };
 }
 
-export function populateRuleBuilder(container, rule, dictionary) {
+export function populateRuleBuilder(container, rule, dictionary, readOnly = false) {
   container.innerHTML = '';
   let parts = [];
   let logicType = 'AND';
@@ -267,7 +264,7 @@ export function populateRuleBuilder(container, rule, dictionary) {
     // Determine the label (AND/OR) for the row
     const label = i === 0 ? "" : (i === 1 ? logicType : "AND");
 
-    const row = createRuleRow(label, dictionary);
+    const row = createRuleRow(label, dictionary, readOnly);
 
     // Populate the selects/inputs in this row
     if (dictKey) row.querySelector('.data-type').value = dictKey;

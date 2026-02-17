@@ -3,8 +3,10 @@
  * Handles the detailed view of an alert log and links to AI logs.
  */
 
+import { populateRuleBuilder } from './createAlertModal.js';
+
 export function initAlertLogModal(modalManager) {
-    
+
     // This is the function we return to be called by alerts.js
     async function openAlertLogModal(logId) {
         // Show a loading state or just fetch immediately
@@ -24,26 +26,30 @@ export function initAlertLogModal(modalManager) {
     }
 
     function renderModal(log) {
-        const snapshot = log.alertSnapshot || {};
-        const title = `Alert Detail: ${snapshot.alertName || 'Alert'}`;
-        
-        const bodyNode = document.createElement('div');
-        bodyNode.className = 'alert-detail-container';
+        try {
+            const snapshot = log.alertSnapshot || {};
+            const title = `Alert Detail: ${snapshot.alertName || 'Alert'}`;
 
-        // Format the date
-        const date = new Date(log.timestamp).toLocaleString('en-CA', { 
-            dateStyle: 'long', 
-            timeStyle: 'medium' 
-        });
+            const bodyNode = document.createElement('div');
+            bodyNode.className = 'alert-detail-container';
 
-        bodyNode.innerHTML = `
+            const date = new Date(log.timestamp).toLocaleString('en-CA', {
+                dateStyle: 'long',
+                timeStyle: 'medium'
+            });
+
+            // Create a container for the rules instead of a <pre> tag
+            const rulesContainer = document.createElement('div');
+            rulesContainer.className = "rule-builder-inputs read-only-view";
+
+            bodyNode.innerHTML = `
             <div class="detail-section">
                 <p><strong>Triggered At:</strong> ${date}</p>
                 <p><strong>Level:</strong> <span class="level-badge ${snapshot.alertLevel?.toLowerCase()}">${snapshot.alertLevel}</span></p>
                 <p><strong>Model(s):</strong> ${snapshot.modelName || 'N/A'}</p>
                 <hr>
                 <p><strong>Rule Logic:</strong></p>
-                <pre class="rule-pre">${log.humanRule || JSON.stringify(snapshot.alertRule, null, 2)}</pre>
+                <div id="log-rules-viewer"></div> 
             </div>
             
             <div class="detail-section mt-4">
@@ -55,15 +61,22 @@ export function initAlertLogModal(modalManager) {
             </div>
         `;
 
-        const footerNode = document.createElement('div');
-        footerNode.className = "modal-footer-inner";
-        const closeBtn = document.createElement('button');
-        closeBtn.className = "btn btn-secondary";
-        closeBtn.innerText = "Close";
-        closeBtn.onclick = () => modalManager.close();
-        footerNode.appendChild(closeBtn);
+            // Insert the rules into the viewer container
+            const viewer = bodyNode.querySelector('#log-rules-viewer');
+            populateRuleBuilder(viewer, snapshot.alertRule, DATA_DICTIONARY, true);
 
-        modalManager.open(title, bodyNode, footerNode, "medium-modal");
+            const footerNode = document.createElement('div');
+            footerNode.className = "modal-footer-inner";
+            const closeBtn = document.createElement('button');
+            closeBtn.className = "btn btn-secondary";
+            closeBtn.innerText = "Close";
+            closeBtn.onclick = () => modalManager.close();
+            footerNode.appendChild(closeBtn);
+
+            modalManager.open(title, bodyNode, footerNode, "large-modal");
+        } catch (error) {
+            console.error(error);
+        }
     }
 
     function renderAiLogLinks(logs) {

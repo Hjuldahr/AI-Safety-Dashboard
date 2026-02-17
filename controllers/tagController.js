@@ -1,3 +1,4 @@
+import HistTag from "../models/historicalTag.js";
 import Tag from "../models/tag.js";
 
 const listTags = async (req, res) => {
@@ -7,6 +8,22 @@ const listTags = async (req, res) => {
   } catch (error) {
     console.error("Error listing tags:", error);
     return res.status(500).json({ message: "Failed to list tags." });
+  }
+};
+
+const findHistTag = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const tag = await HistTag.findById(id);
+
+    if (!tag) {
+      return res.status(404).json({ message: "Historical Tag not found." });
+    }
+
+    return res.status(201).json({ tag });
+  } catch (error) {
+    console.error("Error finding historical tag:", error);
+    return res.status(500).json({ message: "Failed to find historical tag." });
   }
 };
 
@@ -112,4 +129,4 @@ const syncTags = async (req, res) => {
   }
 };
 
-export default { listTags, createTag, syncTags };
+export default { listTags, findHistTag, createTag, syncTags };
