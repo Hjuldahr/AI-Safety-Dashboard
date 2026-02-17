@@ -4,6 +4,7 @@ import AlertLog from "../models/alert_log.js";
 import User from "../models/user.js";
 import AI_Log from "../models/AI_Log.js";
 import Tag from "../models/tag.js";
+import HistTag from "../models/historicalTag.js";
 import chartConstants from "../constants/charts.js";
 
 const getPage = async (req, res) => {
@@ -53,8 +54,14 @@ const getAlertHistory = async (req, res) => {
     }
 
     if (req.query.tag && req.query.tag !== "all") {
-      const tagId = req.query.tag;
-      query.tags = tagId;
+      const activeTagId = req.query.tag;
+
+      // Find every historical version that ever belonged to this Active Tag
+      const relatedHistTags = await HistTag.find({ originalTagId: activeTagId }).select('_id');
+      const histIds = relatedHistTags.map(ht => ht._id);
+
+      // Search logs that have ANY of those historical versions
+      query.tags = { $in: histIds };
     }
 
     if (start || end) query.timestamp = {};
@@ -285,30 +292,25 @@ const addTagToAlertLog = async (req, res) => {
     const logId = req.params.id;
     const { tagId, name, color } = req.body;
 
-    let tag = null;
+    let sourceTag = null;
+    // Get the source data (either from an existing Tag or raw input)
     if (tagId) {
-      tag = await Tag.findById(tagId).lean();
-      if (!tag) return res.status(404).json({ message: "Tag not found." });
+      sourceTag = await Tag.findById(tagId).lean();
+      if (!sourceTag) return res.status(404).json({ message: "Tag not found." });
     } else if (name) {
-      tag = await Tag.findOne({ name: name.trim() });
-      if (!tag) {
-        tag = await Tag.create({
-          name: name.trim(),
-          color: color || "#888888",
-        });
-      }
-    } else {
-      return res.status(400).json({ message: "Missing tagId or name." });
+      // Logic for ad-hoc tag creation - I don't think we allow this yet, but it was in the old version, so ill keep it.
+      sourceTag = { name: name.trim(), color: color || "#888888" };
     }
+
+    const historicalTag = await HistTag.addOrFindTag(sourceTag)
 
     const existing = await AlertLog.findById(logId);
     if (!existing)
       return res.status(404).json({ message: "Alert log not found." });
 
-    const tagObjectId = tag._id;
-    if (!existing.tags) existing.tags = [];
-    if (!existing.tags.find((t) => String(t) === String(tagObjectId))) {
-      existing.tags.push(tagObjectId);
+    // Store the historical tag
+    if (!existing.tags.includes(historicalTag._id)) {
+      existing.tags.push(historicalTag._id);
     }
 
     await existing.save();
@@ -351,7 +353,14 @@ const setTagsForAlertLog = async (req, res) => {
     if (!existing)
       return res.status(404).json({ message: "Alert log not found." });
 
-    existing.tags = tags.filter((t) => !!t);
+    const historicalTagPromises = tags.map(async (id) => {
+      const source = await Tag.findById(id).lean();
+      return source ? (await HistTag.addOrFindTag(source))._id : null;
+    });
+
+    const histIds = (await Promise.all(historicalTagPromises)).filter(id => id != null);
+    existing.tags = histIds;
+
     await existing.save();
     return res
       .status(200)
@@ -432,7 +441,7 @@ const getAlertStats = async (req, res) => {
     // Helper to generate all hours in range to fill gaps (optional but good for charts)
     // For simplicity, we just return the data points we have, frontend can handle gaps or we fill them.
     // Let's just return raw points for now, or maybe simplified "Label: Count"
-    
+
     timeStats.forEach((t) => {
       const level = t._id.level || "Info";
       // Create a date object for the bucket

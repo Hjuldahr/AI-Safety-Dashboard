@@ -1,9 +1,13 @@
 import mongoose from 'mongoose';
-import Tag from "./tag.js";
 
 const { Schema } = mongoose;
 
 const HistTagSchema = new Schema({
+    originalTagId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Tag',
+        required: false // Set to false in case the original tag is deleted
+    },
     name: {
         type: String,
         required: true,
@@ -16,20 +20,18 @@ const HistTagSchema = new Schema({
     }
 }, { timestamps: true });
 
+// ---------- INDEXES ----------
+HistTagSchema.index({ name: 1, color: 1 });
+
 
 // ---------- QUERIES ----------
 HistTagSchema.statics.addOrFindTag = async function (tag) {
-    if (!tag.name || !tag.color) {
-        throw new Error("Tag name or color not found!");
-    }
-
-    const existingTag = await this.findOne({ name: tag.name, color: tag.color });
-    if (existingTag) {
-        return existingTag;
-    } else {
-        return await this.create({ name: tag.name, color: tag.color });
-    }
-}
+    return await this.findOneAndUpdate(
+        { name: tag.name, color: tag.color },
+        { $setOnInsert: { name: tag.name, color: tag.color, originalTagId: tag._id } },
+        { upsert: true, new: true, runValidators: true }
+    );
+};
 
 const HistTag = mongoose.model('HistoricalTag', HistTagSchema);
 export default HistTag;

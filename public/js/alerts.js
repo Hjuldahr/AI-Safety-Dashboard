@@ -302,6 +302,44 @@ document.addEventListener('DOMContentLoaded', async function () {
 
                     // 2. Log Table (Prepend if on page 1)
                     if (currentHistoryPage === 1 && alertLogBody) {
+                        // --- Giant Filter Section ---
+                        // This section just checks the incoming logs and doesn't
+                        // display them if they should be filtered out.
+                        const formData = new FormData(historyFilterForm);
+                        const filterLevel = formData.get('level'); // Ensure these 'name' attributes match your HTML
+                        const filterModel = formData.get('modelName');
+                        const filterTag = formData.get('tag');
+                        const alert = alertData.alertSnapshot;
+                        const startDateVal = formData.get('startDate');
+                        const endDateVal = formData.get('endDate');
+                        const alertTime = new Date(alertData.timestamp).getTime();
+
+                        if (startDateVal) {
+                            const startTs = new Date(startDateVal).getTime();
+                            if (alertTime < startTs) return; // Alert is too old for this filter
+                        }
+
+                        if (endDateVal) {
+                            const endTs = new Date(endDateVal).getTime();
+                            if (alertTime > endTs) return; // Alert is newer than the selected range
+                        }
+
+                        // Check Level (if not 'all')
+                        if (filterLevel && filterLevel !== 'all' && alert.alertLevel !== filterLevel) {
+                            return;
+                        }
+
+                        // Check Model (if not 'all')
+                        if (filterModel && filterModel !== 'all' && alert.modelName !== filterModel) {
+                            return;
+                        }
+
+                        // Check Tag (if not 'all')
+                        if (filterTag && filterTag !== 'all') {
+                            const hasTag = (alertData.originalTagIDs || []).some(t => t._id === filterTag);
+                            if (!hasTag) return;
+                        }
+
                         // Remove "No history" row if present
                         if (alertLogBody.children.length === 1 && alertLogBody.firstElementChild.innerText.includes('No history')) {
                             alertLogBody.innerHTML = '';

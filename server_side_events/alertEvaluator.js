@@ -57,11 +57,6 @@ export default async function evaluateAlerts(logsMap, options = {}) {
 
         // Create on AlertLog for all matches
         try {
-
-            if (alert.tags) {
-
-            }
-
             let histTags = null;
             let histTagsIDs = null;
 
@@ -116,7 +111,8 @@ export default async function evaluateAlerts(logsMap, options = {}) {
                 timestamp: created.timestamp,
                 alertSnapshot: created.alertSnapshot,
                 humanRule: Alert.convertToHumanFormat(created.alertSnapshot.alertRule),
-                tags: histTags || []
+                tags: histTags || [],
+                originalTagIDs: alert.tags || []
             });
         } catch (err) {
             console.error('[AlertEvaluator] Failed to create AlertLog:', err);
