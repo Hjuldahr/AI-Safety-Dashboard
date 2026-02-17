@@ -2,6 +2,7 @@ import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
 import { Role } from '../models/role.js';
 import { roles as rolesConfig } from '../config/roles.js';
+import { permissions as permissionsConfig } from '../config/permissions.js';
 
 // Render the user management page
 export const getUsersPage = async (req, res) => {
@@ -91,8 +92,17 @@ export const listRoles = async (req, res) => {
 // Get available permissions
 export const getAvailablePermissions = async (req, res) => {
   try {
-    const validPermissions = Role.getValidPermissions();
-    res.json({ permissions: validPermissions });
+    // Convert permissions object to grouped format with category names
+    const groupedPermissions = {};
+    Object.entries(permissionsConfig).forEach(([category, perms]) => {
+      // Capitalize first letter of category
+      const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+      groupedPermissions[categoryName] = Object.entries(perms).map(([key, label]) => ({
+        key,
+        label
+      }));
+    });
+    res.json({ permissions: groupedPermissions });
   } catch (err) {
     console.error('Error getting permissions:', err);
     res.status(500).json({ message: 'Server error' });

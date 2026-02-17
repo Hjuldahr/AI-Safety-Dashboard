@@ -27,6 +27,16 @@
   <main class="content">
     <h2>Profile</h2>
 
+    <!-- User Info Section -->
+    <div class="panel-section" style="max-width: 600px; margin-bottom: 2rem;">
+      <h3>Welcome, <%= user ? user.username : 'User' %>!</h3>
+      <div class="user-info-display">
+        <p><strong>Username:</strong> <%= user.username %></p>
+        <p><strong>Email:</strong> <%= user.email %></p>
+      </div>
+    </div>
+
+    <!-- Change Password Section -->
     <div class="panel-section" style="max-width: 600px;">
       <h3>Change Password</h3>
       <div id="profile-messages"></div>

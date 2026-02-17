@@ -21,14 +21,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Render permissions list
-  function renderPermissions(permissions) {
-    permissionsListDiv.innerHTML = permissions
-      .map(perm => `
+  function renderPermissions(permissionsObj) {
+    let html = '';
+    
+    // permissionsObj is now: { "Category": [{ key, label }, ...], ... }
+    Object.entries(permissionsObj).forEach(([category, perms]) => {
+      html += `<div class="permission-category">
+        <h5 style="margin: 1rem 0 0.5rem; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem;">${category}</h5>`;
+      
+      perms.forEach(perm => {
+        html += `
         <div class="permission-item">
-          <input type="checkbox" id="perm-${perm}" value="${perm}" name="permissions">
-          <label for="perm-${perm}">${perm}</label>
-        </div>
-      `).join('');
+          <input type="checkbox" id="perm-${perm.key}" value="${perm.key}" name="permissions">
+          <label for="perm-${perm.key}">${perm.label}</label>
+        </div>`;
+      });
+      
+      html += '</div>';
+    });
+    
+    permissionsListDiv.innerHTML = html;
   }
 
   // Show message in role section
