@@ -1,81 +1,144 @@
-// --- 6. MULTISELECT DROPDOWN (RULE BUILDER) ---
-const tagsInputContainer = document.getElementById('tags-input-container');
-const tagsSearchInput = document.getElementById('tags-search-input');
-const tagsDropdown = document.getElementById('tags-dropdown-list');
-
-function renderTagInput() {
-    if (!tagsInputContainer) return;
-    const pills = tagsInputContainer.querySelectorAll('.tag-input-pill');
-    pills.forEach(c => c.remove());
-
-    selectedTags.forEach(id => {
-        const t = tagsCache[id];
-        if (!t) return;
-        const pill = document.createElement('div');
-        pill.className = 'tag-input-pill';
-        pill.style.backgroundColor = t.color;
-        pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
-        tagsInputContainer.insertBefore(pill, tagsSearchInput);
-    });
-
-    // Hide/Show placeholder based on selection
-    if (tagsSearchInput) tagsSearchInput.placeholder = selectedTags.length > 0 ? '' : 'Select tags...';
-}
-
-function renderTagDropdown() {
-    if (!tagsDropdown) return;
-    tagsDropdown.innerHTML = '';
-    const available = Object.values(tagsCache)
-        .filter(t => !selectedTags.includes(t._id))
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-    if (available.length === 0) {
-        tagsDropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
-        return;
+/**
+ * TagSelect Component
+ * Handles fetching, displaying, and selecting multiple tags.
+ */
+export default class TagSelect {
+    constructor(options = {}) {
+        this.container = document.getElementById(options.containerId);
+        this.searchInput = document.getElementById(options.searchInputId);
+        this.dropdown = document.getElementById(options.dropdownId);
+        
+        this.tagsCache = {};
+        this.selectedTags = []; // Array of IDs
+        this.onSelectionChange = options.onSelectionChange || null;
     }
 
-    available.forEach(t => {
-        const item = document.createElement('div');
-        item.className = 'tags-dropdown-item';
-        item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
-        item.addEventListener('click', () => {
-            selectedTags.push(t._id);
-            renderTagInput();
-            renderTagDropdown();
-            if (tagsSearchInput) {
-                tagsSearchInput.value = '';
-                tagsSearchInput.focus();
+    async init(initialSelectedIds = []) {
+        if (!this.container) return;
+
+        // Fetch tags if not already loaded
+        await this.loadTags();
+
+        // Set initial state
+        this.selectedTags = [...initialSelectedIds];
+
+        // Setup Listeners
+        this.setupEventListeners();
+
+        // Initial Render
+        this.render();
+    }
+
+    async loadTags() {
+        try {
+            const response = await fetch('/tags');
+            const data = await response.json();
+            const tags = data.tags || [];
+            this.tagsCache = {};
+            tags.forEach(t => this.tagsCache[t._id] = t);
+        } catch (e) {
+            console.error('TagSelect: Failed to load tags', e);
+        }
+    }
+
+    setupEventListeners() {
+        // Toggle dropdown on container click
+        this.container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-tag')) {
+                this.removeTag(e.target.dataset.id);
+                return;
+            }
+            
+            const isVisible = this.dropdown.style.display === 'block';
+            this.dropdown.style.display = isVisible ? 'none' : 'block';
+            if (!isVisible) this.renderDropdown();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.container.contains(e.target) && !this.dropdown.contains(e.target)) {
+                this.dropdown.style.display = 'none';
             }
         });
-        tagsDropdown.appendChild(item);
-    });
-}
+    }
 
+    render() {
+        this.renderInputPills();
+        this.renderDropdown();
+    }
 
-// Event Listeners
-if (tagsInputContainer) {
-    tagsInputContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('remove-tag')) {
-            const id = e.target.dataset.id;
-            const idx = selectedTags.indexOf(id);
-            if (idx > -1) selectedTags.splice(idx, 1);
-            renderTagInput();
-            // If dropdown is open, update it to show the removed tag
-            if (tagsDropdown.style.display === 'block') renderTagDropdown();
+    renderInputPills() {
+        if (!this.container || !this.searchInput) return;
+
+        // Clear existing pills
+        const pills = this.container.querySelectorAll('.tag-input-pill');
+        pills.forEach(p => p.remove());
+
+        // Add current pills
+        this.selectedTags.forEach(id => {
+            const t = this.tagsCache[id];
+            if (!t) return;
+
+            const pill = document.createElement('div');
+            pill.className = 'tag-input-pill';
+            pill.style.backgroundColor = t.color;
+            pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
+            this.container.insertBefore(pill, this.searchInput);
+        });
+
+        this.searchInput.placeholder = this.selectedTags.length > 0 ? '' : 'Select tags...';
+    }
+
+    renderDropdown() {
+        if (!this.dropdown) return;
+        this.dropdown.innerHTML = '';
+
+        const available = Object.values(this.tagsCache)
+            .filter(t => !this.selectedTags.includes(t._id))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (available.length === 0) {
+            this.dropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
             return;
         }
-        // Toggle dropdown
-        if (tagsDropdown) {
-            const isVisible = tagsDropdown.style.display === 'block';
-            tagsDropdown.style.display = isVisible ? 'none' : 'block';
-            if (!isVisible) renderTagDropdown();
-        }
-    });
-}
 
-// Close dropdown when clicking outside
-document.addEventListener('click', (e) => {
-    if (tagsInputContainer && tagsDropdown && !tagsInputContainer.contains(e.target) && !tagsDropdown.contains(e.target)) {
-        tagsDropdown.style.display = 'none';
+        available.forEach(t => {
+            const item = document.createElement('div');
+            item.className = 'tags-dropdown-item';
+            item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
+            item.addEventListener('click', (e) => {
+                e.stopPropagation(); // Keep dropdown logic clean
+                this.addTag(t._id);
+            });
+            this.dropdown.appendChild(item);
+        });
     }
-});
+
+    addTag(id) {
+        if (!this.selectedTags.includes(id)) {
+            this.selectedTags.push(id);
+            this.render();
+            if (this.onSelectionChange) this.onSelectionChange(this.selectedTags);
+        }
+    }
+
+    removeTag(id) {
+        this.selectedTags = this.selectedTags.filter(tId => tId !== id);
+        this.render();
+        if (this.onSelectionChange) this.onSelectionChange(this.selectedTags);
+    }
+
+    getSelectedIds() {
+        return this.selectedTags;
+    }
+
+    setSelectedIds(ids) {
+        this.selectedTags = [...ids];
+        this.render();
+    }
+
+    reset() {
+        this.selectedTags = [];
+        this.render();
+    }
+}

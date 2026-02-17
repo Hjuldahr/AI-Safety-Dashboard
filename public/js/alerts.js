@@ -1,5 +1,7 @@
 import { initCreateAlertModal } from './components/alerts/createAlertModal.js';
+import { initActiveAlertsModal } from './components/alerts/activeAlertsModal.js';
 import { viewAlertLog } from "./components/alerts/alertLogModal.js";
+import TagSelect from './components/tags/tagSelect.js';
 import ModalManager from './components/modals.js';
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -10,15 +12,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // --- DOM REFERENCES ---
     const addAlertBtn = document.getElementById('add-alert-btn');
-    const manageModal = document.getElementById('manage-modal');
-
-    const openCreateBtn = document.getElementById('open-create-modal-btn');
-    const openManageBtn = document.getElementById('open-manage-modal-btn');
-    const saveAlertBtn = document.getElementById('save-alert-btn');
-
-    // Close Buttons
-    const closeBtns = document.querySelectorAll('.close-modal-btn');
-    const closeManageBtns = document.querySelectorAll('.close-manage-btn');
 
     // Stats
     const countCrit = document.getElementById('count-critical');
@@ -26,12 +19,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     const countMed = document.getElementById('count-medium');
     const countInfo = document.getElementById('count-info');
     const statCards = document.querySelectorAll('.stat-card');
-
-    // Builder
-    const alertNameInput = document.getElementById('alert-name');
-    const alertLevelSelect = document.getElementById('alert-level');
-    const modelSelect = document.getElementById('model-name');
-    const rulesContainer = document.getElementById('rules-container');
 
     // Manage/History
     const liveAlertsList = document.getElementById('live-alerts-list');
@@ -42,9 +29,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     // State
     const liveAlertsCache = {};
     const tagsCache = {};
-    const historyCache = {};
-    const selectedTags = []; // For Rule Builder
-    let currentEditId = null;
     let currentHistoryPage = 1;
 
 
@@ -54,23 +38,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Hide add alert button if user doesn't have permission
     if (addAlertBtn && !hasPermission('create:alert')) {
         addAlertBtn.style.display = 'none';
-    }
-
-
-    // --- 1. INITIALIZATION ---
-    async function init() {
-        try {
-            const tData = await apiListTags();
-            (tData || []).forEach(t => tagsCache[t._id] = t);
-        } catch (e) { console.warn('Tags load failed', e); }
-
-        // Populate dropdowns AFTER tags are loaded
-        populateModelDropdowns();
-
-        await loadLiveAlerts();
-        await loadAlertHistory(1);
-        await initCharts();
-        setupLiveUpdates();
     }
 
     const modalManager = new ModalManager();
@@ -86,8 +53,61 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     });
 
+    const openActiveAlertsModal = initActiveAlertsModal(modalManager, {
+        onEdit: (alertObj) => {
+            // Re-use your existing edit logic
+            const tagIds = (alertObj.tags || []).map(t => t._id || t);
+            alertTagSelect.setSelectedIds(tagIds);
+            openCreateAlertModal(alertObj);
+        },
+        onDeleteSuccess: () => {
+            loadLiveAlerts(); // Refresh dashboard stats
+        }
+    });
+
+    const alertTagSelect = new TagSelect({
+        containerId: 'tags-input-container',
+        searchInputId: 'tags-search-input',
+        dropdownId: 'tags-dropdown-list'
+    });
+
     // --- CHART LOGIC ---
     const chartRangeSelect = document.getElementById('chart-range-select');
+
+
+    // --- INITIALIZATION ---
+    async function init() {
+        try {
+            const tData = await apiListTags();
+            (tData || []).forEach(t => tagsCache[t._id] = t);
+        } catch (e) { console.warn('Tags load failed', e); }
+
+        // Populate dropdowns AFTER tags are loaded
+        populateModelDropdowns();
+
+        await alertTagSelect.init();
+
+        await loadLiveAlerts();
+        await loadAlertHistory(1);
+        await initCharts();
+        setupLiveUpdates();
+    }
+
+
+    // --- EVENT LISTENERS ---
+
+    // Open Manage Rules
+    const openManageBtn = document.getElementById('open-manage-modal-btn');
+    if (openManageBtn) {
+        openManageBtn.addEventListener('click', openActiveAlertsModal);
+    }
+
+    // Open Create Rule
+    const openCreateBtn = document.getElementById('open-create-modal-btn');
+    if (openCreateBtn) {
+        openCreateBtn.addEventListener('click', () => openCreateAlertModal());
+    }
+
 
     async function initCharts() {
         if (chartRangeSelect) {
@@ -138,20 +158,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-
-    // --- 2. MODAL CONTROLS ---
-    openCreateBtn.addEventListener('click', () => {
-        // todo: figure out if I need to pass the edit obj
-        openCreateAlertModal();
-    });
-    // Don't think I need a close handler here since the modal itself handles closing
-
-    // Manage Rules Modal
-    openManageBtn.addEventListener('click', () => { manageModal.style.display = 'flex'; });
-    closeManageBtns.forEach(b => b.addEventListener('click', () => { manageModal.style.display = 'none'; }));
-
-
-    // --- 4. LIVE ALERTS (STATS & LIST) ---
+    // --- LIVE ALERTS (STATS & LIST) ---
     async function loadLiveAlerts() {
         try {
             const data = await apiGetLiveAlerts();
@@ -171,42 +178,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         } catch (e) { console.error(e); }
     }
 
-    function renderManageList(alerts) {
-        liveAlertsList.innerHTML = '';
-        if (alerts.length === 0) { liveAlertsList.innerHTML = '<li style="color:#888;">No active rules.</li>'; return; }
-        alerts.forEach(a => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <div><span class="level-badge ${a.alertLevel.toLowerCase()}">${a.alertLevel}</span> <strong>${a.alertName}</strong></div>
-                <div class="alert-actions">
-                    <button class="btn btn-secondary btn-icon edit-alert-btn" data-id="${a._id}"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn btn-secondary btn-icon delete-alert-btn" data-id="${a._id}" style="color:#dc2626;"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            `;
-            liveAlertsList.appendChild(li);
-        });
-    }
-
-    liveAlertsList.addEventListener('click', async (e) => {
-        const btn = e.target.closest('button');
-        if (!btn) return;
-        const id = btn.dataset.id;
-        if (btn.classList.contains('delete-alert-btn')) {
-            if (confirm('Delete rule?')) { await apiDeleteAlert(id); await loadLiveAlerts(); }
-        }
-        if (btn.classList.contains('edit-alert-btn')) {
-            const obj = liveAlertsCache[id];
-            if (obj) startEdit(obj);
-        }
-    });
-
-    function startEdit(obj) {
-        openCreateAlertModal(obj);
-
-        // Close the manage modal since we are now editing
-        manageModal.style.display = 'none';
-    }
-
     statCards.forEach(c => c.addEventListener('click', () => {
         document.getElementById('filter-level').value = c.dataset.level;
         loadAlertHistory(1);
@@ -221,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 
 
-    // --- 7. HISTORY TABLE ---
+    // --- HISTORY TABLE ---
     async function loadAlertHistory(page = 1) {
         currentHistoryPage = page;
         if (alertLogBody) alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
@@ -278,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         return tr;
     }
 
-    // --- 8. LOG TAGGING MODAL (Dynamic) ---
+    // --- LOG TAGGING MODAL (Dynamic) ---
     // ToDo: Refactor this to use ModalManager
     if (alertLogBody) {
         alertLogBody.addEventListener('click', (e) => {
@@ -410,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         document.querySelector('.clear-filters').addEventListener('click', () => { historyFilterForm.reset(); loadAlertHistory(1); });
     }
 
-    // --- 9. LIVE UPDATES (SSE) ---
+    // --- LIVE UPDATES (SSE) ---
     function setupLiveUpdates() {
         try {
             const evtSource = new EventSource('events');
@@ -448,8 +419,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     // --- API WRAPPERS ---
     async function apiGetLiveAlerts() { return fetch('alerts/live').then(r => r.json()); }
     async function apiListTags() { return fetch('/tags').then(r => r.json()).then(d => d.tags); }
-    async function apiCreateAlert(p) { return fetch('alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).then(r => r.json()); }
-    async function apiUpdateAlert(id, p) { return fetch(`alerts/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).then(r => r.json()); }
     async function apiDeleteAlert(id) { return fetch(`alerts/${id}`, { method: 'DELETE' }).then(r => r.json()); }
 
     init();

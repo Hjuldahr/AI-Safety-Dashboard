@@ -55,6 +55,12 @@
   border-radius: 0 0 8px 8px;
 }
 
+.modal-footer-inner{
+  display: flex;
+  direction: row;
+  gap: 0.5rem;
+}
+
 /* --- Tags Modal CSS --- */
 
 /* Tag Manager Rows */

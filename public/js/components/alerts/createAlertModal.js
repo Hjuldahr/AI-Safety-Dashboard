@@ -1,248 +1,304 @@
 // createAlertModal.js
 
-const alertModal = document.getElementById('alert-modal');
-const modalTitle = document.getElementById('modal-title');
-const logicalOperatorsContainer = document.querySelector('.logical-operators-container');
+import TagSelect from '../tags/tagSelect.js';
 
-// OPERATORS (Includes 'eq' / Equal To)
-// ToDo: Move this to a constants file
+// ToDo: Move these to a constants file
 const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte', 'eq': '$eq' };
-const OP_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
+const OPERATOR_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
 
 export const initCreateAlertModal = (modalManager, options) => {
-    const { tagsCache, onSaveSuccess, DATA_DICTIONARY, KNOWN_MODELS } = options;
-    let currentEditId = null;
-    let selectedTags = [];
+  const { tagsCache, onSaveSuccess, DATA_DICTIONARY, KNOWN_MODELS } = options;
 
-    const content = getModalHTML();
-    const footer = getFooterHTML();
+  return async (editData = null) => {
+    const currentEditId = editData ? editData._id : null;
+    const title = currentEditId ? 'Edit Alert Rule' : 'Create New Alert Rule';
 
-    // Return an "Open" function
-    return (editData = null) => {
-        currentEditId = editData ? editData._id : null;
-        const title = currentEditId ? 'Edit Alert Rule' : 'Create New Alert Rule';
+    // Build the body and footer nodes
+    const { body, elements } = buildAlertModalBody(DATA_DICTIONARY, KNOWN_MODELS, tagsCache);
 
-        modalManager.open(title, content, footer, "large-modal", () => {
-            attachListeners();
-            if (editData) {
-                fillEditAlertForm();
-            } else {
-                fillCreateAlertForm();
-            }
-        });
+    const tagSelector = new TagSelect({
+      containerId: 'modal-tags-container',
+      searchInputId: 'modal-tags-search',
+      dropdownId: 'modal-tags-dropdown'
+    });
+
+
+    // Assign the actual DOM nodes since they aren't in the document yet
+    tagSelector.container = elements.tagsContainer;
+    tagSelector.searchInput = elements.tagsSearch;
+    tagSelector.dropdown = elements.tagsDropdown;
+
+    await tagSelector.init();
+
+    // Setup the save logic using our 'elements' references
+    const handleSave = async () => {
+      const payload = {
+        alertName: elements.nameInput.value,
+        alertLevel: elements.levelSelect.value,
+        modelName: elements.modelSelect.value,
+        alertRule: buildRuleJSON(elements.rulesContainer, DATA_DICTIONARY),
+        tags: tagSelector.getSelectedIds(),
+        ...(currentEditId ? {} : { created: Date.now() })
+      };
+
+      if (!payload.alertName || !payload.alertLevel || !payload.alertRule) {
+        return alert('Please fill in all required fields');
+      }
+
+      try {
+        if (currentEditId) await apiUpdateAlert(currentEditId, payload);
+        else await apiCreateAlert(payload);
+
+        modalManager.close();
+        onSaveSuccess();
+      } catch (e) {
+        alert(e.message);
+      }
     };
+
+    const footer = buildAlertFooter(modalManager, handleSave, currentEditId);
+
+    // If editing, fill the form
+    if (editData) {
+      elements.nameInput.value = editData.alertName;
+      elements.levelSelect.value = editData.alertLevel;
+      elements.modelSelect.value = editData.modelName || "";
+      populateRuleBuilder(elements.rulesContainer, editData.alertRule, DATA_DICTIONARY);
+
+      const tagIds = (editData.tags || []).map(t => t._id || t);
+      tagSelector.setSelectedIds(tagIds);
+    } else {
+      // Default state: one empty row
+      elements.rulesContainer.appendChild(createRuleRow("", DATA_DICTIONARY));
+    }
+
+    modalManager.open(title, body, footer, "large-modal");
+  };
 };
 
-function getModalHTML() {
-    // ToDo: Write this method
+/**
+ * Builds the main UI and returns an object 'elements' 
+ * containing references to inputs for easy data retrieval.
+ */
+function buildAlertModalBody(DATA_DICTIONARY, KNOWN_MODELS, tagsCache) {
+  const body = document.createElement('div');
+  body.className = 'alert-builder-grid';
 
-    return "";
-}
+  // We store references here so we don't have to 'find' them later
+  const elements = {
+    rulesContainer: document.createElement('div'),
+    nameInput: null,
+    levelSelect: null,
+    modelSelect: null,
+    selectedTags: []
+  };
+  elements.rulesContainer.id = "rules-container";
+  elements.rulesContainer.className = "rule-builder-inputs";
 
-function getFooterHTML() {
-    return `
-        <button class="btn btn-secondary close-modal-btn">Cancel</button>
-        <button id="save-alert-btn" class="btn btn-primary">Save Alert</button>
-    `;
-}
-
-function attachListeners() {
-    const saveBtn = document.getElementById('save-alert-btn');
-
-    saveBtn.addEventListener('click', async () => {
-        // Validate, build JSON, call API
-        // On success: 
-        // modalManager.close();
-        // onSaveSuccess();
-    });
-
-    // ToDo: Add listeners for "Add Rule", "Delete Rule", "Tag Selection"
-};
-
-// Old Alerts.js Methods
-// Rule Builder
-function openBuilder(isEdit = false) {
-    alertModal.style.display = 'flex';
-    modalTitle.textContent = isEdit ? 'Edit Alert Rule' : 'Create New Alert Rule';
-    saveAlertBtn.textContent = isEdit ? 'Update Alert' : 'Save Alert';
-}
-function closeBuilder() {
-    alertModal.style.display = 'none';
-    currentEditId = null;
-    resetBuilderForm();
-}
-function resetBuilderForm() {
-    alertNameInput.value = ''; alertLevelSelect.value = '';
-    if (modelSelect) modelSelect.value = '';
-    rulesContainer.innerHTML = ''; addEmptyRuleRow();
-    selectedTags.length = 0; renderTagInput();
-}
-
-// --- 5. RULE BUILDER ---
-
-function createRuleRowHTML(op) {
-    const del = op ? '<button class="btn btn-secondary btn-icon delete-rule-btn">&times;</button>' : '';
-    const opts = Object.keys(DATA_DICTIONARY).filter(k => DATA_DICTIONARY[k].dataType === 'numeric')
-        .map(k => `<option value="${k}">${DATA_DICTIONARY[k].label}</option>`).join('');
-
-    // English operators
-    return `
-            <span class="logic-separator" style="font-weight:bold; font-size:0.8rem; margin-right:8px;">${op}</span>
-            <select class="data-type"><option value="">-- Data --</option>${opts}</select>
-            <select class="operator-type">
-                <option value="">-- Operator --</option>
-                <option value="gt">Greater Than</option>
-                <option value="gte">Greater Than or Equal To</option>
-                <option value="lt">Less Than</option>
-                <option value="lte">Less Than or Equal To</option>
-                <option value="eq">Equal To</option>
-            </select>
-            <input type="text" placeholder="Value" class="value-input" style="width:80px;">
-            ${del}
-        `;
-}
-
-function addEmptyRuleRow() {
-    const d = document.createElement('div'); d.className = 'rule-row'; d.innerHTML = createRuleRowHTML('');
-    rulesContainer.appendChild(d);
-}
-
-// these need to be run once the modal exists in the DOM
-
-// logicalOperatorsContainer.addEventListener('click', e => {
-//     if (e.target.classList.contains('add-rule-btn')) {
-//         const d = document.createElement('div'); d.className = 'rule-row';
-//         d.innerHTML = createRuleRowHTML(e.target.dataset.logic);
-//         rulesContainer.appendChild(d);
-//     }
-// });
-
-// rulesContainer.addEventListener('click', e => {
-//     if (e.target.classList.contains('delete-rule-btn')) e.target.closest('.rule-row').remove();
-// });
-
-// saveAlertBtn.addEventListener('click', async () => {
-//     const name = alertNameInput.value, level = alertLevelSelect.value, rule = buildRuleJSON();
-//     if (!name || !level || !rule) return alert('Fill required fields');
-//     const payload = { alertName: name, alertLevel: level, alertRule: rule, modelName: modelSelect.value, tags: selectedTags };
-//     try {
-//         if (currentEditId) await apiUpdateAlert(currentEditId, payload);
-//         else { payload.created = Date.now(); await apiCreateAlert(payload); }
-//         closeBuilder(); await loadLiveAlerts(); await loadAlertHistory(1);
-//     } catch (e) { alert(e.message); }
-// });
-
-function buildRuleJSON() {
-    const rows = rulesContainer.querySelectorAll('.rule-row');
-    const conds = []; let logic = null; let valid = true;
-    rows.forEach((r, i) => {
-        const type = r.querySelector('.data-type').value;
-        const op = r.querySelector('.operator-type').value;
-        const val = r.querySelector('.value-input').value;
-        const sep = r.querySelector('.logic-separator');
-        if (i > 0 && sep && !logic) logic = sep.textContent.trim() === 'AND' ? '$and' : '$or';
-        if (type && op && val) {
-            const c = {}; c[DATA_DICTIONARY[type].dbPath] = {}; c[DATA_DICTIONARY[type].dbPath][OPERATOR_MAP[op]] = parseFloat(val);
-            conds.push(c);
-        } else valid = false;
-    });
-    if (!valid || conds.length === 0) return null;
-    if (conds.length === 1) return conds[0];
-    const f = {}; f[logic || '$and'] = conds;
-    return f;
-}
-
-function populateRuleBuilderFromRule(rule) {
-    let parts = [];
-    if (rule.$and) parts = rule.$and.map(x => ({ ...x, logic: 'AND' }));
-    else if (rule.$or) parts = rule.$or.map(x => ({ ...x, logic: 'OR' }));
-    else parts = [{ ...rule, logic: '' }];
-
-    parts.forEach((p, i) => {
-        const dbField = Object.keys(p).find(k => k !== 'logic');
-        const inner = p[dbField];
-        const mongoOp = Object.keys(inner)[0];
-        const val = inner[mongoOp];
-        const dictKey = Object.keys(DATA_DICTIONARY).find(k => DATA_DICTIONARY[k].dbPath === dbField);
-
-        const row = document.createElement('div');
-        row.className = 'rule-row';
-        row.innerHTML = createRuleRowHTML(i > 0 ? (i === 1 ? (rule.$and ? 'AND' : 'OR') : 'AND') : '');
-        if (dictKey) row.querySelector('.data-type').value = dictKey;
-        if (OP_REVERSE_MAP[mongoOp]) row.querySelector('.operator-type').value = OP_REVERSE_MAP[mongoOp];
-        row.querySelector('.value-input').value = val;
-        rulesContainer.appendChild(row);
-    });
-    if (parts.length === 0) addEmptyRuleRow();
-}
-
-// --- Hard Coded HTML Strings / String Creator Functions ---
-// Keep these seperate for code readability / fututure editing.
-const modalHTML = () => {
-    return `
-    <div class="modal-content large-modal">
-        <div class="modal-header">
-          <h2 id="modal-title">Create New Alert</h2>
-          <button class="close-modal-btn">&times;</button>
-        </div>
-
-        <div class="modal-body">
-          <div class="alert-builder-grid">
-            <div class="form-group">
-              <label for="alert-name">Alert Name</label>
-              <input type="text" id="alert-name" placeholder="e.g. High Latency Check" />
-            </div>
-
-            <div class="form-group">
-              <label for="alert-level">Alert Level</label>
-              <select id="alert-level">
-                <option value="">-- Select --</option>
-                <option value="Critical">Critical</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Info">Info</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="model-name">Model (Optional)</label>
-              <select id="model-name" class="model-select-dynamic"></select>
-            </div>
-
-            <div class="form-group full-width">
-              <label>Alert Rule Condition</label>
-              <div class="rule-builder-inputs" id="rules-container"></div>
-              <div class="logical-operators-container">
-                <span class="rule-builder-note">(add another part to the rule)</span>
-                <div class="logical-operators">
-                  <button class="btn btn-sm btn-secondary add-rule-btn" data-logic="AND">
-                    AND
-                  </button>
-                  <button class="btn btn-sm btn-secondary add-rule-btn" data-logic="OR">
-                    OR
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group full-width tags-section">
-              <label>Assign Tags</label>
-              <div class="multiselect-container" id="tags-multiselect">
-                <div class="tags-input-container" id="tags-input-container">
-                  <input type="text" id="tags-search-input" class="tags-search-input" placeholder="Select tags..." readonly />
-                </div>
-                <div class="tags-dropdown" id="tags-dropdown-list" style="display: none"></div>
-              </div>
-            </div>
+  // Generate HTML structure
+  body.innerHTML = `
+        <div class="form-group"><label>Alert Name</label><input type="text" class="name-input" placeholder="e.g. High Latency"></div>
+        <div class="form-group"><label>Alert Level</label><select class="level-select"><option value="">-- Select --</option><option>Critical</option><option>High</option><option>Medium</option><option>Info</option></select></div>
+        <div class="form-group"><label>Model (Optional)</label><select class="model-select"><option value="">-- All Models --</option>${KNOWN_MODELS.map(m => `<option value="${m}">${m}</option>`).join('')}</select></div>
+        <div class="form-group full-width">
+        <div class="form-group full-width"><label>Conditions</label></div>
+        <label>Tags</label>
+        <div class="multiselect-container">
+          <div class="tags-input-container" id="modal-tags-container">
+            <input type="text" id="modal-tags-search" class="tags-search-input" placeholder="Select tags..." readonly />
           </div>
+          <div class="tags-dropdown" id="modal-tags-dropdown" style="display: none;"></div>
         </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary close-modal-btn">Cancel</button>
-          <button id="save-alert-btn" class="btn btn-primary">
-            Save Alert
-          </button>
-        </div>
-      </div>
     `;
+
+  // Map the references
+  elements.nameInput = body.querySelector('.name-input');
+  elements.levelSelect = body.querySelector('.level-select');
+  elements.modelSelect = body.querySelector('.model-select');
+  elements.tagsContainer = body.querySelector('#modal-tags-container');
+  elements.tagsSearch = body.querySelector('#modal-tags-search');
+  elements.tagsDropdown = body.querySelector('#modal-tags-dropdown');
+
+  // Add Rules Section
+  const rulesSection = body.querySelectorAll('.full-width')[1];
+  rulesSection.appendChild(elements.rulesContainer);
+
+  // Logical Operators (AND/OR buttons)
+  const opsContainer = document.createElement('div');
+  opsContainer.className = 'logical-operators';
+
+  ['AND', 'OR'].forEach(logic => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm btn-secondary';
+    btn.innerText = logic;
+
+    btn.onclick = () => {
+      // Validation: Check if the last row is filled out
+      const rows = elements.rulesContainer.querySelectorAll('.rule-row');
+      const lastRow = rows[rows.length - 1];
+
+      if (lastRow) {
+        const dataType = lastRow.querySelector('.data-type').value;
+        const operator = lastRow.querySelector('.operator-type').value;
+        const val = lastRow.querySelector('.value-input').value;
+
+        if (!dataType || !operator || val === "") {
+          alert("Please fill out the current rule before adding another.");
+          return;
+        }
+      }
+
+      elements.rulesContainer.appendChild(createRuleRow(logic, DATA_DICTIONARY));
+    };
+
+    opsContainer.appendChild(btn);
+  });
+  rulesSection.appendChild(opsContainer);
+
+  return { body, elements };
+}
+
+function createRuleRow(opLabel, DATA_DICTIONARY) {
+  const row = document.createElement('div');
+  row.className = 'rule-row';
+
+  const opts = Object.keys(DATA_DICTIONARY)
+    .filter(k => DATA_DICTIONARY[k].dataType === 'numeric')
+    .map(k => `<option value="${k}">${DATA_DICTIONARY[k].label}</option>`).join('');
+
+  row.innerHTML = `
+        <span class="logic-separator">${opLabel}</span>
+        <select class="data-type"><option value="">-- Data --</option>${opts}</select>
+        <select class="operator-type">
+            <option value="">-- Operator --</option>
+            <option value="gt">Greater Than</option>
+            <option value="gte">Greater Than or Equal To</option>
+            <option value="lt">Less Than</option>
+            <option value="lte">Less Than or Equal To</option>
+            <option value="eq">Equal To</option>
+        </select>
+        <input type="number" class="value-input" style="width:80px;" placeholder="Value">
+        <button class="btn btn-icon delete-rule-btn">&times;</button>
+    `;
+
+  const deleteBtn = row.querySelector('.delete-rule-btn');
+
+  // IF logic label is empty, it's the first row. Remove the X button.
+  if (!opLabel) {
+    deleteBtn.remove();
+  } else {
+    deleteBtn.onclick = () => row.remove();
+  }
+
+  return row;
+}
+
+function buildAlertFooter(modalManager, onSave, isEdit) {
+  const footer = document.createElement('div');
+  footer.className = "modal-footer-inner";
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = "btn btn-secondary";
+  cancelBtn.innerText = "Cancel";
+  cancelBtn.onclick = () => modalManager.close();
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = "btn btn-primary";
+  saveBtn.innerText = isEdit ? "Update Alert" : "Save Alert";
+  saveBtn.onclick = onSave;
+
+  footer.appendChild(cancelBtn);
+  footer.appendChild(saveBtn);
+  return footer;
+}
+
+// Helper to scrape data from the rows
+function buildRuleJSON(container, DATA_DICTIONARY) {
+  const rows = container.querySelectorAll('.rule-row');
+  const conds = [];
+  let logic = '$and';
+
+  rows.forEach((r, i) => {
+    const type = r.querySelector('.data-type').value;
+    const op = r.querySelector('.operator-type').value;
+    const val = r.querySelector('.value-input').value;
+    const sep = r.querySelector('.logic-separator').textContent.trim();
+
+    if (i === 1 && sep === 'OR') logic = '$or';
+
+    if (type && op && val) {
+      const dbPath = DATA_DICTIONARY[type].dbPath;
+      conds.push({ [dbPath]: { [OPERATOR_MAP[op]]: parseFloat(val) } });
+    }
+  });
+
+  if (conds.length === 0) return null;
+  if (conds.length === 1) return conds[0];
+  return { [logic]: conds };
+}
+
+export function populateRuleBuilder(container, rule, dictionary) {
+  container.innerHTML = '';
+  let parts = [];
+  let logicType = 'AND';
+
+  // 1. Flatten the rule structure
+  if (rule.$and) {
+    parts = rule.$and;
+    logicType = 'AND';
+  } else if (rule.$or) {
+    parts = rule.$or;
+    logicType = 'OR';
+  } else {
+    parts = [rule]; // Single rule
+  }
+
+  // 2. Create rows for each part
+  parts.forEach((p, i) => {
+    // Find the DB field (e.g., "metrics.cpu_usage")
+    const dbField = Object.keys(p).find(k => k !== 'logic');
+    const inner = p[dbField];
+    const mongoOp = Object.keys(inner)[0]; // e.g., "$gt"
+    const val = inner[mongoOp];
+
+    // Find the dictionary key (e.g., "cpu")
+    const dictKey = Object.keys(dictionary).find(k => dictionary[k].dbPath === dbField);
+
+    // Determine the label (AND/OR) for the row
+    const label = i === 0 ? "" : (i === 1 ? logicType : "AND");
+
+    const row = createRuleRow(label, dictionary);
+
+    // Populate the selects/inputs in this row
+    if (dictKey) row.querySelector('.data-type').value = dictKey;
+    if (OPERATOR_REVERSE_MAP[mongoOp]) {
+      row.querySelector('.operator-type').value = OPERATOR_REVERSE_MAP[mongoOp];
+    }
+    row.querySelector('.value-input').value = val;
+
+    container.appendChild(row);
+  });
+
+  if (parts.length === 0) {
+    container.appendChild(createRuleRow("", dictionary));
+  }
+}
+
+// API Helper functions - expaned to make more readable
+async function apiCreateAlert(content) {
+  const response = await fetch('alerts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(content)
+  });
+  return await response.json();
+}
+
+async function apiUpdateAlert(id, content) {
+  const response = await fetch(`alerts/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(content)
+  });
+  return await response.json();
 }
