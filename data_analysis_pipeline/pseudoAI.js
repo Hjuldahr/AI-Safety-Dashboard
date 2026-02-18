@@ -110,6 +110,46 @@ function applyLongTermEnvironment(topicWeights, previousGeneralization) {
   };
 }
 
+function getSeasonalModifiers() {
+  const now = new Date();
+  const month = now.getMonth(); // 0–11
+  const day = now.getDate();
+
+  // ---- Smooth yearly sinusoid ----
+  const yearProgress =
+    (month + day / 30) / 12;
+
+  const yearWave = Math.sin(yearProgress * Math.PI * 2);
+
+  // ---- Academic / work intensity cycle ----
+  // peaks: Jan, May, Sep
+  const productivityWave =
+    Math.sin((yearProgress * 3) * Math.PI * 2) * 0.15;
+
+  // ---- Holiday / relaxed cycle ----
+  // peaks: Dec + summer
+  const leisureWave =
+    Math.cos((yearProgress * 2) * Math.PI * 2) * 0.15;
+
+  // ---- Tech/news release season ----
+  // peaks: Mar + Sep
+  const techWave =
+    Math.sin((yearProgress * 2 + 0.25) * Math.PI * 2) * 0.12;
+
+  // ---- Traffic seasonal drift ----
+  const trafficMultiplier =
+    1 +
+    (yearWave * 0.08) +
+    (productivityWave * 0.05);
+
+  return {
+    productivityBias: 1 + productivityWave,
+    leisureBias: 1 + leisureWave,
+    techBias: 1 + techWave,
+    trafficMultiplier
+  };
+}
+
 /**
  * pseudoAI v7.1
  * - Topic + subtopic aware web lookups
@@ -126,8 +166,44 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
   const { topicWeights, characteristicBias, volumeBias } =
     applyGeneralizationBias(modelConfig.TOPIC_WEIGHTS, previousGeneralization);
 
+  const seasonal = getSeasonalModifiers();
+
   const longTerm = applyLongTermEnvironment(topicWeights, previousGeneralization);
   const adjustedTopicWeights = longTerm.topicWeights; 
+  for (const key in adjustedTopicWeights) {
+    const lower = key.toLowerCase();
+
+    // productivity topics
+    if (
+      lower.includes('code') ||
+      lower.includes('research') ||
+      lower.includes('technical') ||
+      lower.includes('math')
+    ) {
+      adjustedTopicWeights[key] *= seasonal.productivityBias;
+    }
+
+    // leisure / creative
+    if (
+      lower.includes('creative') ||
+      lower.includes('entertainment') ||
+      lower.includes('chat') ||
+      lower.includes('story')
+    ) {
+      adjustedTopicWeights[key] *= seasonal.leisureBias;
+    }
+
+    // tech/news spikes
+    if (
+      lower.includes('news') ||
+      lower.includes('ai') ||
+      lower.includes('technology')
+    ) {
+      adjustedTopicWeights[key] *= seasonal.techBias;
+    }
+
+    adjustedTopicWeights[key] = Math.max(0.05, adjustedTopicWeights[key]);
+  }
 
   const now = new Date();
 
@@ -138,8 +214,13 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
 
   const baseQueries = random.getRandomInt(30, 80);
   const queries = Math.max(
-    1,
-    Math.floor(baseQueries * timeWeight * intervalDuration * volumeBias / 2)
+    1, Math.floor(
+      baseQueries *
+      timeWeight *
+      intervalDuration *
+      volumeBias *
+      seasonal.trafficMultiplier / 2
+    )
   );
 
   const startTime = now.getTime();
@@ -197,7 +278,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       }
 
       piiScore = hasPII ? random.getRandomFloat(0.8, 1.0) : 0;
-      
+
       helpfulness = random.getRandomFloat(0.8, 1.0) * longTerm.curiosityDrift;
       helpfulness = Math.min(1, helpfulness);
 
@@ -211,6 +292,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
           (subMod.complexity || 1)
         )
       );
+      tokens = Math.floor(tokens * (0.95 + seasonal.productivityBias * 0.05));
     }
 
     // ---- Physics & cost simulation ----
