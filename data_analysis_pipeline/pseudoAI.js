@@ -49,6 +49,67 @@ function applyGeneralizationBias(topicWeights, previousGeneralization) {
   };
 }
 
+function applyLongTermEnvironment(topicWeights, previousGeneralization) {
+  const adjusted = { ...topicWeights };
+
+  // ---- Weekly behavioral cycle ----
+  const now = new Date();
+  const day = now.getDay(); // 0-6
+  const weekAngle = (day / 7) * Math.PI * 2;
+
+  // weekend vs weekday bias
+  const weekendBoost = (Math.sin(weekAngle - Math.PI/2) + 1) / 2;
+
+  // ---- Topic fatigue from previous period ----
+  if (previousGeneralization?.breakdown) {
+    for (const key in previousGeneralization.breakdown) {
+      if (!adjusted[key]) continue;
+
+      const bucket = previousGeneralization.breakdown[key];
+
+      // heavy usage -> fatigue
+      const usage = bucket.queryCount || 0;
+      const fatigue = Math.min(0.15, usage / 2000);
+
+      // high helpfulness -> popularity boost
+      const popularity = (bucket.responseHelpfulness ?? 0) * 0.05;
+
+      adjusted[key] *= (1 - fatigue + popularity);
+    }
+  }
+
+  // ---- Weekend topic bias (soft) ----
+  for (const key in adjusted) {
+    const lower = key.toLowerCase();
+
+    if (lower.includes('creative') || lower.includes('entertainment') || lower.includes('chat')) {
+      adjusted[key] *= 1 + (0.15 * weekendBoost);
+    }
+
+    if (lower.includes('code') || lower.includes('technical') || lower.includes('research')) {
+      adjusted[key] *= 1 + (0.15 * (1 - weekendBoost));
+    }
+  }
+
+  // normalize floor
+  for (const k in adjusted) {
+    adjusted[k] = Math.max(0.05, adjusted[k]);
+  }
+
+  // ---- System load drift (multi-day smooth noise) ----
+  const dayOfYear = Math.floor(now.getTime() / 86400000);
+  const slowWave = Math.sin(dayOfYear / 6) * 0.08;   // ~12 day cycle
+  const microWave = Math.sin(dayOfYear / 2.3) * 0.04; // shorter wobble
+
+  const loadDrift = 1 + slowWave + microWave;
+
+  return {
+    topicWeights: adjusted,
+    infraLoad: loadDrift,
+    curiosityDrift: 1 + (Math.sin(dayOfYear / 5) * 0.05)
+  };
+}
+
 /**
  * pseudoAI v7.1
  * - Topic + subtopic aware web lookups
@@ -64,6 +125,9 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
 
   const { topicWeights, characteristicBias, volumeBias } =
     applyGeneralizationBias(modelConfig.TOPIC_WEIGHTS, previousGeneralization);
+
+  const longTerm = applyLongTermEnvironment(topicWeights, previousGeneralization);
+  const adjustedTopicWeights = longTerm.topicWeights; 
 
   const now = new Date();
 
@@ -83,7 +147,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
 
   for (let i = 0; i < queries; i++) {
     // ---- Topic selection ----
-    const topic = random.getWeightedRandomKey(topicWeights);
+    const topic = random.getWeightedRandomKey(adjustedTopicWeights);
     const sub_topic = random.getRandomArrayElement(TOPIC_HIERARCHY[topic]);
 
     const baseChar = modelConfig.TOPIC_CHARACTERISTICS[topic];
@@ -133,7 +197,9 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       }
 
       piiScore = hasPII ? random.getRandomFloat(0.8, 1.0) : 0;
-      helpfulness = random.getRandomFloat(0.8, 1.0);
+      
+      helpfulness = random.getRandomFloat(0.8, 1.0) * longTerm.curiosityDrift;
+      helpfulness = Math.min(1, helpfulness);
 
       const baseTokens = subMod.baseTokens ?? baseChar.baseTokens;
       const tokenVariance = subMod.tokenVariance ?? baseChar.tokenVariance;
@@ -149,7 +215,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
 
     // ---- Physics & cost simulation ----
     const msPerToken = 20 * MODEL_PROFILE.speedMultiplier;
-    let responseTime = tokens * msPerToken + random.getRandomFloat(0, 50);
+    let responseTime = tokens * msPerToken * longTerm.infraLoad + random.getRandomFloat(0, 50 * longTerm.infraLoad);
 
     if (needsWeb) responseTime += random.getRandomFloat(500, 1500);
     if (caughtToxic || caughtPII) responseTime += 50;
