@@ -160,18 +160,23 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const gigaFlopsUsed = (tokens * 6 * complexity) / 1000;
     const energyConsumption = gigaFlopsUsed * 0.5;
 
-    let flaggedOutput = null;
+    let flagged = null;
     //TODO improve metric and add grading (mild, moderate, severe)
     if (isToxic) {
       let tier;
       if (toxicityScore < 0.33) {
         tier = 'mild';
-      } if (toxicityScore < 0.66) {
+      } else if (toxicityScore < 0.66) {
         tier = 'moderate';
       } else {
         tier = 'severe';
       }
-      flaggedOutput = random.getRandomArrayElement(flaggedOutputPool[tier][topic][sub_topic]);
+      flagged = {
+        text: random.getRandomArrayElement(flaggedOutputPool[tier][topic][sub_topic]),
+        severity: tier,
+        topic,
+        sub_topic
+      }
     }
 
     calls.push({
@@ -188,7 +193,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       sub_topic,
       toxicityScore,
       piiDetected: piiScore,
-      aiOutput: flaggedOutput
+      flagged
     });
   }
 
