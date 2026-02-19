@@ -415,8 +415,8 @@ const getAILog = async (req, res) => {
                 view: 'ai',
                 id: id,
                 page: targetPage,
-                constants: chartConstants
-            }
+            },
+            constants: chartConstants
         });
     } catch (error) {
         console.error("Error redirecting to AI log:", error);
