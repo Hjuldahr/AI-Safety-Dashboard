@@ -47,6 +47,7 @@ export function initLogTagModal(modalManager, { tagsCache, onSaveSuccess }) {
         saveBtn.onclick = async () => {
             const selected = tagSelect.getSelectedIds();
             try {
+                // ToDo: Update this to check if its an alert log or an ai log / summary
                 const res = await fetch(`alerts/api/logs/${logId}/tags`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },

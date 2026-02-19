@@ -1,3 +1,6 @@
+import { initLogTagModal } from './components/alerts/logTagModal.js';
+import ModalManager from './components/modals.js';
+
 // --- GLOBAL STATE ---
 let currentLogsPage = 1;
 let currentAiLogsPage = 1;
@@ -8,8 +11,15 @@ const hasPermission = (permission) => {
     return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
 };
 
+// Tags State
+const tagsCache = {};
+let openLogTagModal;
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
+
+    const modalManager = new ModalManager();
+
     // Get all required elements
     const elements = {
         userLogsBtn: document.getElementById('user-logs-btn'),
@@ -32,7 +42,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         aiSummaryPaginationControls: document.getElementById('ai-summary-pagination-controls'),
     };
 
+    // Initialize the Tag Modal Logic
+    openLogTagModal = initLogTagModal(modalManager, {
+        tagsCache,
+        onSaveSuccess: () => {
+            // Refresh the active view
+            const activeView = document.querySelector('.log-tab-btn.active').dataset.view;
+            if (activeView === 'ai') handleAiFilter(elements, currentAiLogsPage);
+            if (activeView === 'summary') handleAiSummaryFilter(elements, currentAiSummariesPage);
+        }
+    });
+
+    // Load Tags
+    await refreshTagCache();
+
     // --- EVENT LISTENERS ---
+
+    document.addEventListener('tagsUpdated', async () => {
+        await refreshTagCache();
+
+        // Re-render current view to reflect color/name changes
+        const activeView = document.querySelector('.log-tab-btn.active').dataset.view;
+        if (activeView === 'ai') handleAiFilter(elements, currentAiLogsPage);
+        else if (activeView === 'summary') handleAiSummaryFilter(elements, currentAiSummariesPage);
+    });
+
+    // --- EVENT LISTENERS ---
+
 
     // Tab switching
     elements.userLogsBtn.addEventListener('click', () => toggleViews('user', elements));
@@ -114,6 +150,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+async function refreshTagCache() {
+    try {
+        // Use apiListTags (All tags) instead of HistTags
+        const tData = await apiListTags();
+        // Clear and refill to ensure we don't have stale data
+        Object.keys(tagsCache).forEach(key => delete tagsCache[key]);
+        (tData || []).forEach(t => tagsCache[t._id] = t);
+    } catch (e) {
+        console.warn('Tags load failed', e);
+    }
+}
+
 
 // --- VIEW TOGGLING ---
 
@@ -121,45 +169,25 @@ document.addEventListener('DOMContentLoaded', async () => {
  * Toggles between 'user' and 'ai' log views
  */
 function toggleViews(viewToShow, elements) {
-    // ToDo: This is the stupidest fucking code ive ever written
+    // Reset classes
+    [elements.userLogsBtn, elements.aiLogsBtn, elements.aiSummariesBtn].forEach(b => b.classList.remove('active'));
+    [elements.userLogView, elements.aiLogView, elements.aiSummaryView].forEach(v => v.classList.add('hidden'));
+    [elements.userFilterForm, elements.aiFilterForm, elements.aiSummaryFilterForm].forEach(f => f.classList.add('hidden'));
+
     if (viewToShow === "user") {
-        elements.userLogsBtn.classList.toggle('active', true);
-        elements.aiLogsBtn.classList.toggle('active', false);
-        elements.aiSummariesBtn.classList.toggle('active', false);
-
-        elements.userLogView.classList.toggle('hidden', false);
-        elements.aiLogView.classList.toggle('hidden', true);
-        elements.aiSummaryView.classList.toggle('hidden', true);
-
-        elements.userFilterForm.classList.toggle('hidden', false);
-        elements.aiFilterForm.classList.toggle('hidden', true);
-        elements.aiSummaryFilterForm.classList.toggle('hidden', true);
+        elements.userLogsBtn.classList.add('active');
+        elements.userLogView.classList.remove('hidden');
+        elements.userFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "ai") {
-        elements.userLogsBtn.classList.toggle('active', false);
-        elements.aiLogsBtn.classList.toggle('active', true);
-        elements.aiSummariesBtn.classList.toggle('active', false);
-
-        elements.userLogView.classList.toggle('hidden', true);
-        elements.aiLogView.classList.toggle('hidden', false);
-        elements.aiSummaryView.classList.toggle('hidden', true);
-
-        elements.userFilterForm.classList.toggle('hidden', true);
-        elements.aiFilterForm.classList.toggle('hidden', false);
-        elements.aiSummaryFilterForm.classList.toggle('hidden', true);
+        elements.aiLogsBtn.classList.add('active');
+        elements.aiLogView.classList.remove('hidden');
+        elements.aiFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "summary") {
-        elements.userLogsBtn.classList.toggle('active', false);
-        elements.aiLogsBtn.classList.toggle('active', false);
-        elements.aiSummariesBtn.classList.toggle('active', true);
-
-        elements.userLogView.classList.toggle('hidden', true);
-        elements.aiLogView.classList.toggle('hidden', true);
-        elements.aiSummaryView.classList.toggle('hidden', false);
-
-        elements.userFilterForm.classList.toggle('hidden', true);
-        elements.aiFilterForm.classList.toggle('hidden', true);
-        elements.aiSummaryFilterForm.classList.toggle('hidden', false);
+        elements.aiSummariesBtn.classList.add('active');
+        elements.aiSummaryView.classList.remove('hidden');
+        elements.aiSummaryFilterForm.classList.remove('hidden');
     }
 }
 
@@ -212,13 +240,41 @@ function renderAiAccordion(logs, accordion) {
         const item = document.createElement('div');
         item.className = 'accordion-item';
         item.dataset.id = log._id;
+
+        console.log("tags: ", log.tags);
+
         const timestamp = new Date(log.responseTimestamp).toLocaleString();
+
+        const tagsHtml = (log.tags || []).map(tagId => {
+            // Handle if tagId is populated object or just ID
+            const id = tagId._id || tagId;
+            const t = tagsCache[id];
+            if (!t) return ''; // Skip if not found in cache (or render generic)
+            return `<span class="tag-pill" style="background:${t.color}; font-size: 0.75rem; padding: 2px 6px; border-radius: 10px; margin-right: 4px; color: #fff;">${t.name}</span>`;
+        }).join('');
+
+        // Prepare IDs for the button data attribute
+        const tagIds = (log.tags || []).map(t => t._id || t).join(',');
+
         const header = document.createElement('button');
         header.className = 'accordion-header';
         header.innerHTML = `
-      <span><strong>Model:</strong> ${log.modelName}</span>
-      <span>${timestamp}</span>
-    `;
+            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <strong>${log.modelName}</strong> 
+                    <span>${timestamp}</span>
+                </div>
+                
+                <div class="tags-cell" style="display: flex; align-items: center;">
+                    ${tagsHtml}
+                    <div class="add-log-tag-btn btn-secondary" 
+                         style="padding: 0px 6px; border-radius: 50%; cursor: pointer; margin-left: 5px; font-weight: bold;" 
+                         data-id="${log._id}" 
+                         data-tags="${tagIds}">+</div>
+                </div>
+            </div>
+        `;
+
         const body = document.createElement('div');
         body.className = 'accordion-body hidden';
         const pre = document.createElement('pre');
@@ -232,6 +288,14 @@ function renderAiAccordion(logs, accordion) {
         //use the replacer
         pre.textContent = JSON.stringify(log, replacer, 2);
         body.appendChild(pre);
+
+        // Add tag button
+        const plusBtn = header.querySelector('.add-log-tag-btn');
+        plusBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Stop accordion from opening
+            openLogTagModal(log._id, tagIds); // Pass array directly, no dataset splitting needed
+        });
+
         header.addEventListener('click', () => {
             header.classList.toggle('active');
             body.classList.toggle('hidden');
@@ -393,4 +457,10 @@ async function handleAiSummaryFilter(elements, page = 1) {
         console.error('Failed to fetch AI summaries:', error);
         elements.aiSummaryAccordion.innerHTML = `<p>Error loading summaries. ${error.message}</p>`;
     }
+}
+
+
+// API Helper Functions
+async function apiListTags() {
+    return fetch('tags').then(r => r.json()).then(d => d.tags);
 }

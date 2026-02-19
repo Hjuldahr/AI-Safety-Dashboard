@@ -4,6 +4,7 @@ import AI_Summary from "../models/AI_Summary.js"
 import User from '../models/user.js';
 import { Parser } from 'json2csv';
 import PDFDocument from 'pdfkit';
+import chartConstants from "../constants/charts.js";
 
 
 // === Helper Query Builders ===
@@ -378,7 +379,8 @@ const getPage = async (req, res) => {
     try {
         res.render("logs", {
             user: req.user,
-            deepLink: null
+            deepLink: null,
+            constants: chartConstants
         });
     } catch (error) {
         console.error("Error fetching logs page:", error);

@@ -31,6 +31,21 @@ document.addEventListener('DOMContentLoaded', async function () {
     const tagsCache = {};
     let currentHistoryPage = 1;
 
+    const liveToggle = document.getElementById('live-update-toggle');
+    let isLive = true;
+
+    if (liveToggle) {
+        liveToggle.addEventListener('change', async (e) => {
+            isLive = e.target.checked;
+            // Visual indicator that updates are paused
+            alertLogBody.style.opacity = isLive ? "1" : "0.9";
+
+            if (isLive) {
+                await loadAlertHistory(currentHistoryPage);
+            }
+        });
+    }
+
 
     // Constants
     const { DATA_DICTIONARY, KNOWN_MODELS } = window.CONSTANTS;
@@ -312,14 +327,15 @@ document.addEventListener('DOMContentLoaded', async function () {
             const evtSource = new EventSource('events');
 
             evtSource.addEventListener('alert', (event) => {
+                if (!isLive) return;
                 try {
                     const alertData = JSON.parse(event.data);
 
-                    // 1. Live Counters & Charts
+                    // Live Counters & Charts
                     loadLiveAlerts();
                     fetchAndRenderCharts();
 
-                    // 2. Log Table (Prepend if on page 1)
+                    // Log Table (Prepend if on page 1)
                     if (currentHistoryPage === 1 && alertLogBody) {
                         // --- Giant Filter Section ---
                         // This section just checks the incoming logs and doesn't
@@ -381,7 +397,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // --- API WRAPPERS ---
     async function apiGetLiveAlerts() { return fetch('alerts/live').then(r => r.json()); }
-    async function apiListTags() { return fetch('/tags').then(r => r.json()).then(d => d.tags); }
+    async function apiListTags() { return fetch('tags').then(r => r.json()).then(d => d.tags); }
     async function apiDeleteAlert(id) { return fetch(`alerts/${id}`, { method: 'DELETE' }).then(r => r.json()); }
 
     init();

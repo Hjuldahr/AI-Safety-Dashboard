@@ -12,7 +12,8 @@
   <link rel="stylesheet" href="css/alerts.css" />
   <link rel="stylesheet" href="css/nav.css" />
   <link rel="stylesheet" href="css/notifications.css" />
-  <link rel="stylesheet" href="css/components/modals.css"> 
+  <link rel="stylesheet" href="css/components/modals.css">
+  <link rel="stylesheet" href="css/components/tagSelect.css">
 
   <script src="js/components/pagination.js" defer></script>
   <script type="module" src="js/alerts.js" defer></script>
@@ -152,6 +153,15 @@
           <button id="open-create-modal-btn" class="btn btn-primary create-btn">
             <i class="fa-solid fa-plus"></i> Create Alert
           </button>
+        </div>
+        <div class="filter-actions">
+          <div class="live-toggle-container">
+            <label class="switch">
+              <input type="checkbox" id="live-update-toggle" checked>
+              <span class="slider round"></span>
+            </label>
+            <span class="live-label">Live Updates</span>
+          </div>
         </div>
       </section>
 

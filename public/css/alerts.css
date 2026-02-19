@@ -407,110 +407,6 @@ body {
   padding: 0.4rem 0.8rem;
 }
 
-/* Multiselect Dropdown */
-.multiselect-container {
-  position: relative;
-  width: 100%;
-}
-
-.tags-input-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: #fff;
-  min-height: 42px;
-  cursor: text;
-}
-
-.tags-input-container:focus-within {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
-}
-
-.tag-input-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background-color: var(--bg-color);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 500;
-  gap: 0.5rem;
-  user-select: none;
-}
-
-.tag-input-pill .remove-tag {
-  cursor: pointer;
-  font-weight: bold;
-  opacity: 0.8;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.2);
-  font-size: 10px;
-}
-
-.tag-input-pill .remove-tag:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.tags-search-input {
-  border: none;
-  outline: none;
-  flex: 1;
-  min-width: 100px;
-  padding: 4px 0;
-  font-size: 0.9rem;
-  background: transparent;
-}
-
-.tags-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: #fff;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  margin-top: 4px;
-  z-index: 100;
-  max-height: 200px;
-  overflow-y: auto;
-  display: none;
-}
-
-.tags-dropdown-item {
-  padding: 0.75rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.tags-dropdown-item:last-child {
-  border-bottom: none;
-}
-
-.tags-dropdown-item:hover {
-  background-color: #f9fafb;
-}
-
-.color-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-}
 
 /* Active Rules List */
 .live-alerts-list {
@@ -570,10 +466,71 @@ body {
   padding: 0.4rem 0.8rem;
 }
 
-.ai-log-links{
+.ai-log-links {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.live-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+}
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked+.slider {
+  background-color: #2196F3;
+}
+
+input:checked+.slider:before {
+  transform: translateX(20px);
+}
+
+.live-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #666;
 }
 
 /* MOBILE CARD VIEW */

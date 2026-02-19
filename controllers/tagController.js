@@ -11,6 +11,16 @@ const listTags = async (req, res) => {
   }
 };
 
+const listHistTags = async (req, res) => {
+  try {
+    const tags = await HistTag.find().sort({ name: 1 }).lean();
+    return res.status(200).json({ tags });
+  } catch (error) {
+    console.error("Error listing tags:", error);
+    return res.status(500).json({ message: "Failed to list tags." });
+  }
+};
+
 const findHistTag = async (req, res) => {
   try {
     const { id } = req.body;
@@ -129,4 +139,4 @@ const syncTags = async (req, res) => {
   }
 };
 
-export default { listTags, findHistTag, createTag, syncTags };
+export default { listTags, listHistTags, findHistTag, createTag, syncTags };

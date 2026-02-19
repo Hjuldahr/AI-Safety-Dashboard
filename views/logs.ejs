@@ -13,13 +13,16 @@
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/logs.css">
   <link rel="stylesheet" href="css/notifications.css">
+  <link rel="stylesheet" href="css/components/modals.css">
+  <link rel="stylesheet" href="css/components/tagSelect.css">
 
   <!-- Scripts -->
   <script src="js/components/pagination.js" defer></script>
-  <script src="js/logging.js" defer></script>
+  <script src="js/logging.js" type="module" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script>
     window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+    window.CONSTANTS = <%- JSON.stringify(constants) %>;
     window.DEEP_LINK = <%- JSON.stringify(deepLink) %>;
   </script>
   <script src="js/notifications.js" defer></script>
@@ -149,6 +152,8 @@
       </div>
 
     </div>
+
+    <%- include('components/modal') %>
 
   </main>
 </body>
