@@ -62,3 +62,9 @@ export const resetScenario = (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const renderComponentLibrary = (req, res) => {
+    res.render('component_demo', {
+        user: req.user
+    });
+};

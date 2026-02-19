@@ -1,0 +1,188 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <base href="<%= process.env.PUBLIC_URL || '/' %>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Component Library</title>
+    
+    <!-- Core CSS (as used in the site) -->
+    <link rel="stylesheet" href="css/fullSite.css">
+    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/nav.css">
+    <link rel="stylesheet" href="css/logs.css">     <!-- For buttons, tables, filters -->
+    <link rel="stylesheet" href="css/login.css">    <!-- For auth forms/cards -->
+    <link rel="stylesheet" href="css/alerts.css">   <!-- For stat cards -->
+    <link rel="stylesheet" href="css/notifications.css">
+    
+    <!-- Theme CSS (Consolidated) -->
+    <link rel="stylesheet" href="themes/components.css">
+    
+    <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+    <style>
+        .component-section {
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .component-section h2 {
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        .example-block {
+            padding: 1rem;
+            border: 1px dashed #ccc;
+            margin-top: 1rem;
+            background: #fafafa;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <%- include('components/header') %>
+    <%- include('components/nav') %>
+
+    <main class="content">
+        <div class="main-container">
+            <h1>Component Library </h1>
+
+            <!-- Buttons Section -->
+            <div class="component-section">
+                <h2>Buttons (from Logs & Login)</h2>
+                
+                <h3>Primary & Secondary Controls</h3>
+                <div class="example-block">
+                    <!-- From logs.ejs -->
+                    <button type="submit" class="btn-primary">Apply</button>
+                    <button type="button" class="btn-secondary clear-filters">Clear</button>
+                    <button type="button" class="btn-danger">Delete</button>
+                </div>
+
+                <h3>Tab Buttons</h3>
+                <div class="example-block">
+                    <!-- From logs.ejs -->
+                    <div class="log-tabs">
+                        <button class="log-tab-btn active">User Logs</button>
+                        <button class="log-tab-btn">AI Logs</button>
+                        <button class="log-tab-btn">AI Summaries</button>
+                    </div>
+                </div>
+
+                <h3>Auth Tabs</h3>
+                <div class="example-block">
+                    <!-- From login.ejs -->
+                    <div class="tab-nav" style="background:white; padding:10px;">
+                        <button class="tab-button tab-active">Sign In</button>
+                        <button class="tab-button">Sign Up</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forms Section -->
+            <div class="component-section">
+                <h2>Filters & Forms (from Logs)</h2>
+                <div class="example-block">
+                     <!-- From logs.ejs -->
+                     <form class="filter-group" onclick="return false;">
+                        <label>Search:</label>
+                        <input type="text" placeholder="Search logs...">
+              
+                        <label>From:</label>
+                        <input type="date">
+              
+                        <label>Event:</label>
+                        <select>
+                          <option value="all" selected>All Events</option>
+                          <option value="Login">Login</option>
+                          <option value="Alert_Created">Alert Created</option>
+                        </select>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Login Form Section -->
+            <div class="component-section">
+                <h2>Auth Form (from Login)</h2>
+                <div class="example-block">
+                    <!-- From login.ejs -->
+                    <div class="auth-card" style="margin: 0 auto; max-width: 400px; box-shadow: none; border: 1px solid #ddd;">
+                        <form class="auth-form" onclick="return false;">
+                            <div class="form-group">
+                              <label>Username or Email Address</label>
+                              <input type="text" required>
+                            </div>
+                            <div class="form-group">
+                              <label>Password</label>
+                              <input type="password" required>
+                            </div>
+                            <button type="submit" class="submit-button">Sign In</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stat Cards Section -->
+            <div class="component-section">
+                <h2>Stat Cards (from Alerts)</h2>
+                <div class="example-block" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <!-- From alerts.ejs -->
+                    <div class="stat-card critical">
+                        <div class="stat-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+                        <div class="stat-info">
+                          <span class="stat-count">5</span>
+                          <span class="stat-label">Critical Alerts</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card high">
+                        <div class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="stat-info">
+                          <span class="stat-count">12</span>
+                          <span class="stat-label">High Alerts</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tables Section -->
+            <div class="component-section">
+                <h2>User Log Table</h2>
+                <div class="example-block">
+                     <!-- From logs.ejs -->
+                     <table class="log-table">
+                        <thead>
+                          <tr>
+                            <th class="col-type">Type</th>
+                            <th class="col-time">Timestamp</th>
+                            <th class="col-user">User</th>
+                            <th class="col-action">Action</th>
+                            <th class="col-details">Details</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>User_Action</td>
+                                <td>2023-10-27 10:00:00</td>
+                                <td>admin</td>
+                                <td>Login</td>
+                                <td>Successful login</td>
+                            </tr>
+                            <tr>
+                                <td>System</td>
+                                <td>2023-10-27 10:05:23</td>
+                                <td>system</td>
+                                <td>Alert_Created</td>
+                                <td>High CPU usage detected</td>
+                            </tr>
+                        </tbody>
+                      </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</body>
+</html>
