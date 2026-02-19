@@ -396,7 +396,7 @@ const getAILog = async (req, res) => {
         // Find the target log
         const targetLog = await AI_Log.findById(id);
         if (!targetLog) {
-            return res.redirect('/logs?error=LogNotFound');
+            return res.redirect('logs?error=LogNotFound');
         }
 
         // Calculate which page it's on
@@ -414,7 +414,8 @@ const getAILog = async (req, res) => {
             deepLink: {
                 view: 'ai',
                 id: id,
-                page: targetPage
+                page: targetPage,
+                constants: chartConstants
             }
         });
     } catch (error) {
