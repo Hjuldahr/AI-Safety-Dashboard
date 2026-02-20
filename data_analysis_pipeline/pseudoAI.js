@@ -321,10 +321,9 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       }
       flagged = {
         text: random.getRandomArrayElement(flaggedOutputPool[tier][topic][sub_topic]),
-        severity: tier,
-        topic,
-        sub_topic
+        severity: tier
       }
+      //console.log(flagged); //there is data here, why you no show up in db
     }
 
     calls.push({

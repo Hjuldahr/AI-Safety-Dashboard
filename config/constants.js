@@ -173,6 +173,8 @@ export const DATA_DICTIONARY = {
         summarize: "special",
         color: "#000000" // Black
     }
+
+    //NOTE, add flaggedouts in here to allow it to be persisted to the DB, but hide from the charts
 };
 
 

@@ -83,7 +83,7 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
     stats.webLookups.push(c.webLookups)
     stats.toxicityScore.push(c.toxicityScore)
     stats.piiDetected.push(c.piiDetected)
-    if (c.flagged) stats.flaggedOutputs.push(c.flagged)
+    if (c.flagged !== null) stats.flaggedOutputs.push(c.flagged)
 
     const topicKey = c.topic || 'Unknown'
     if (!buckets[topicKey]) {
@@ -133,7 +133,7 @@ export function AIAnalyzer(modelName, intervalDuration, previousGeneralization =
       pii += c.piiDetected || 0
       gflops += c.gigaFlopsUsed || 0
       web += c.webLookups || 0
-      if (c.flagged) flaggedCount++
+      if (c.flagged !== null) flaggedCount++
     }
 
     const n = bucketCalls.length || 1
