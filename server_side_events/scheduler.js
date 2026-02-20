@@ -40,6 +40,7 @@ async function generateModelData(modelName) {
         queryCount: summary.queryCount,
         responseTimestamp: summary.responseTimestamp,
         breakdown: summary.breakdown,
+        flaggedCount: summary.flaggedCount,
         flaggedOutputs: summary.flaggedOutputs
     };
 }

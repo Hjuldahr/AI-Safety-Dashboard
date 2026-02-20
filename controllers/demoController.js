@@ -47,7 +47,7 @@ export const applyScenario = (req, res) => {
 
         sendNotification({
             message: `${modelName} is now ${scenarioName}.`,
-            category: "demo",
+            category: "Demo",
             dismissible: true,
             timeout: 5,
             trim: "#3b82f6",
@@ -70,7 +70,7 @@ export const resetScenario = (req, res) => {
 
         sendNotification({
             message: `${modelName} is back to normal.`,
-            category: "demo",
+            category: "Demo",
             dismissible: true,
             timeout: 5,
             trim: "#3b82f6",

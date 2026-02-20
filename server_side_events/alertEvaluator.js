@@ -1,7 +1,7 @@
 import Alert from "../models/alert_model.js";
 import AlertLog from "../models/alert_log.js";
 import { broadcastEvent } from './scheduler.js';
-import HistTag from "../models/historicalTag.js";
+//import HistTag from "../models/historicalTag.js";
 import AI_Log from "../models/AI_Log.js";
 import { TRIM_COLOURS, BACKGROUND_COLOURS } from "../config/notification.js";
 
@@ -64,7 +64,7 @@ export default async function evaluateAlerts(logsMap, options = {}) {
             if (alert.tags) {
                 // Get the Historical Tags
                 const tagPromises = alert.tags.map(async (tag) => {
-                    return await HistTag.addOrFindTag(tag);
+                    //return await HistTag.addOrFindTag(tag);
                 });
 
                 // Wait for all promises in that array to finish
