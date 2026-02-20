@@ -2,6 +2,7 @@ import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
 import { Role } from '../models/role.js';
 import { roles as rolesConfig } from "../constants/roles.js";
+import { permissions as permissionsConfig } from "../constants/permissions.js";
 
 // Render the user management page
 export const getUsersPage = async (req, res) => {
