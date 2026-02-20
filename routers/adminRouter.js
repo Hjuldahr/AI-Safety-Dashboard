@@ -26,4 +26,7 @@ router.post('/api/roles', isAuthenticated, authorize('manage:roles'), controller
 // API: delete a role
 router.delete('/api/roles/:name', isAuthenticated, authorize('manage:roles'), controller.deleteRole);
 
+// API: delete a user
+router.delete('/api/users/:id', isAuthenticated, authorize('manage:users'), controller.deleteUser);
+
 export default router;

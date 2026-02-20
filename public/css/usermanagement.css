@@ -229,3 +229,31 @@
       background-color: #ccc;
       cursor: not-allowed;
     }
+
+    .table button.btn-danger {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    .table button.btn-danger:hover {
+      background-color: #c82333;
+    }
+
+    /* User info display styling */
+    .user-info-display {
+      background: white;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      padding: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .user-info-display p {
+      margin: 0.5rem 0;
+      font-size: 0.95rem;
+      color: #333;
+    }
+
+    .user-info-display strong {
+      color: #007bff;
+    }
