@@ -23,7 +23,7 @@ Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
         }
     }
     else if (config.dataType === 'flagged_outputs') {
-        schemaDefinition[key] = [{ type: Object, default: {} }];
+        schemaDefinition[key] = { type: Object, default: {} };
     }
 });
 
@@ -99,8 +99,7 @@ AI_Log_Schema.statics.generateSixtySecondSummary = async function () {
             return;
         }
         if (config.summarize === "flagged_outputs") {
-            //TODO aggregate count by severity
-            /*{mild: number, moderate: number, severe: number}*/
+            //TODO adjust so its not producing a list of 1 object
             groupStage[key] = { $push: "$flaggedOutputs" };
             projectStage[key] = { $let: {
                 vars: { flat: {

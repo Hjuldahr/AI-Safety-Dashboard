@@ -261,6 +261,8 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
 
     let compliance, helpfulness, tokens, piiScore, toxicityScore;
 
+    //TODO fix to use config file properly again
+
     if (caughtToxic || caughtPII) {
       compliance = 1.0;
       helpfulness = MODEL_PROFILE.helpfulnessWhenBlocked;
@@ -309,9 +311,10 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const energyConsumption = gigaFlopsUsed * 0.5;
 
     let flagged = null;
+    // only seems to be picking mild and severe for some reason
     if (isToxic) {
       let tier;
-      if (toxicityScore < 0.5) {
+      if (toxicityScore <= 0.5) {
         tier = 'mild';
       } else if (toxicityScore <= 0.75) {
         tier = 'moderate';

@@ -20,7 +20,7 @@ Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
             // Do nothing - only modelName is saved, no topic or sub topic
         }
     }  else if (config.dataType === 'flagged_outputs') {
-        schemaDefinition[key] = [{ type: Object, default: {} }];
+        schemaDefinition[key] = { type: Object, default: {} };
     }
 });
 
