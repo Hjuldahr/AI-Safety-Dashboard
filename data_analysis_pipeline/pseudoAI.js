@@ -309,7 +309,6 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const energyConsumption = gigaFlopsUsed * 0.5;
 
     let flagged = null;
-    //TODO improve metric and add grading (mild, moderate, severe)
     if (isToxic) {
       let tier;
       if (toxicityScore < 0.33) {

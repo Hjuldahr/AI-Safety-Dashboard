@@ -164,7 +164,6 @@ export const DATA_DICTIONARY = {
         summarize: "sum",
         color: "#673147", // Plum (Brown + Purple)
     },
-
     // SPECIAL
     responseTimestamp: {
         label: "Timestamp",
@@ -172,11 +171,15 @@ export const DATA_DICTIONARY = {
         dataType: "timestamp",
         summarize: "special",
         color: "#000000" // Black
+    },
+    flaggedOutputs: {
+        label: null,
+        dbPath: "flaggedOutputs",
+        dataType: "flagged_outputs",
+        summarize: null,
+        color: "#000000" // Black
     }
-
-    //NOTE, add flaggedouts in here to allow it to be persisted to the DB, but hide from the charts
 };
-
 
 export default {
     KNOWN_MODELS,

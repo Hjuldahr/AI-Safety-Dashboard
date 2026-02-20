@@ -22,6 +22,9 @@ Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
             schemaDefinition.breakdown = { type: Object, default: {} };
         }
     }
+    else if (config.dataType === 'flagged_outputs') {
+        schemaDefinition[key] = [{ type: Object, default: {} }];
+    }
 });
 
 const AI_Log_Schema = new mongoose.Schema(schemaDefinition);
