@@ -98,6 +98,35 @@ AI_Log_Schema.statics.generateSixtySecondSummary = async function () {
         if (config.summarize === "remove" || config.summarize === "special") {
             return;
         }
+        if (config.summarize === "flagged_outputs") {
+            //TODO aggregate count by severity
+            /*{mild: number, moderate: number, severe: number}*/
+            groupStage[key] = { $push: "$flaggedOutputs" };
+            projectStage[key] = { $let: {
+                vars: { flat: {
+                    $reduce: {
+                    input: `$${key}`,
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] }
+                    }
+                }},
+                in: { $arrayToObject: { $map: {
+                    input: { $setUnion: { $map: {
+                            input: "$$flat",
+                            as: "f",
+                            in: "$$f.severity"
+                    }}},
+                    as: "sev", in: {
+                        k: "$$sev",
+                        v: { $size: { $filter: {
+                                input: "$$flat",
+                                cond: { $eq: ["$$this.severity", "$$sev"] }
+                        }}}
+                    }}
+                }}
+            }};
+            return;
+        }
 
         // Map "avg" -> "$avg", "sum" -> "$sum"
         const mongoOp = `$${config.summarize}`; 

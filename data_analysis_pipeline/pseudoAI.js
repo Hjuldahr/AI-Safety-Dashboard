@@ -311,9 +311,9 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     let flagged = null;
     if (isToxic) {
       let tier;
-      if (toxicityScore < 0.33) {
+      if (toxicityScore < 0.5) {
         tier = 'mild';
-      } else if (toxicityScore < 0.66) {
+      } else if (toxicityScore <= 0.75) {
         tier = 'moderate';
       } else {
         tier = 'severe';
@@ -322,7 +322,6 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
         text: random.getRandomArrayElement(flaggedOutputPool[tier][topic][sub_topic]),
         severity: tier
       }
-      //console.log(flagged); //there is data here, why you no show up in db
     }
 
     calls.push({

@@ -173,10 +173,10 @@ export const DATA_DICTIONARY = {
         color: "#000000" // Black
     },
     flaggedOutputs: {
-        label: null,
+        label: "Flagged Outputs",
         dbPath: "flaggedOutputs",
         dataType: "flagged_outputs",
-        summarize: null,
+        summarize: "flagged_outputs",
         color: "#000000" // Black
     }
 };
