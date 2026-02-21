@@ -13,6 +13,7 @@ const hasPermission = (permission) => {
 
 // Tags State
 const tagsCache = {};
+const histTagsCache = {};
 let openLogTagModal;
 
 // --- INITIALIZATION ---
@@ -55,11 +56,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load Tags
     await refreshTagCache();
+    await refreshHistTagCache();
 
     // --- EVENT LISTENERS ---
 
     document.addEventListener('tagsUpdated', async () => {
         await refreshTagCache();
+        await refreshHistTagCache();
 
         // Re-render current view to reflect color/name changes
         const activeView = document.querySelector('.log-tab-btn.active').dataset.view;
@@ -162,6 +165,18 @@ async function refreshTagCache() {
     }
 }
 
+async function refreshHistTagCache() {
+    try {
+        // Use apiListTags to get HistTags
+        const tData = await apiListHistTags();
+        // Clear and refill to ensure we don't have stale data
+        Object.keys(histTagsCache).forEach(key => delete histTagsCache[key]);
+        (tData || []).forEach(t => histTagsCache[t._id] = t);
+    } catch (e) {
+        console.warn('Hist Tags load failed', e);
+    }
+}
+
 
 // --- VIEW TOGGLING ---
 
@@ -230,7 +245,7 @@ function renderUserLogs(logs, tbody) {
 /**
  * Populates the AI Logs + Summaries accordion
  */
-function renderAiAccordion(logs, accordion) {
+function renderAiAccordion(logs, accordion, isSummary = false) {
     accordion.innerHTML = '';
     if (logs.length === 0) {
         accordion.innerHTML = '<p>No AI logs found.</p>';
@@ -241,20 +256,29 @@ function renderAiAccordion(logs, accordion) {
         item.className = 'accordion-item';
         item.dataset.id = log._id;
 
-        console.log("tags: ", log.tags);
-
         const timestamp = new Date(log.responseTimestamp).toLocaleString();
 
         const tagsHtml = (log.tags || []).map(tagId => {
             // Handle if tagId is populated object or just ID
             const id = tagId._id || tagId;
-            const t = tagsCache[id];
+            const t = histTagsCache[id];
             if (!t) return ''; // Skip if not found in cache (or render generic)
             return `<span class="tag-pill" style="background:${t.color}; font-size: 0.75rem; padding: 2px 6px; border-radius: 10px; margin-right: 4px; color: #fff;">${t.name}</span>`;
         }).join('');
 
         // Prepare IDs for the button data attribute
         const tagIds = (log.tags || []).map(t => t._id || t).join(',');
+
+        const tagHeaderHTML = `<div class="tags-cell" style="display: flex; align-items: center;">
+                    ${tagsHtml}
+                    <div class="add-log-tag-btn btn-secondary" 
+                         style="padding: 0px 6px; border-radius: 50%; cursor: pointer; margin-left: 5px; font-weight: bold;" 
+                         data-id="${log._id}" 
+                         data-tags="${tagIds}">+</div>
+                </div>`;
+
+        // Summaries don't have tags / the add tag button
+        const accordionHeader = isSummary ? "" : tagHeaderHTML;
 
         const header = document.createElement('button');
         header.className = 'accordion-header';
@@ -264,14 +288,8 @@ function renderAiAccordion(logs, accordion) {
                     <strong>${log.modelName}</strong> 
                     <span>${timestamp}</span>
                 </div>
-                
-                <div class="tags-cell" style="display: flex; align-items: center;">
-                    ${tagsHtml}
-                    <div class="add-log-tag-btn btn-secondary" 
-                         style="padding: 0px 6px; border-radius: 50%; cursor: pointer; margin-left: 5px; font-weight: bold;" 
-                         data-id="${log._id}" 
-                         data-tags="${tagIds}">+</div>
-                </div>
+
+                ${accordionHeader}
             </div>
         `;
 
@@ -289,12 +307,15 @@ function renderAiAccordion(logs, accordion) {
         pre.textContent = JSON.stringify(log, replacer, 2);
         body.appendChild(pre);
 
-        // Add tag button
-        const plusBtn = header.querySelector('.add-log-tag-btn');
-        plusBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Stop accordion from opening
-            openLogTagModal(log._id, tagIds); // Pass array directly, no dataset splitting needed
-        });
+        if (!isSummary) {
+            // Add tag button
+            const plusBtn = header.querySelector('.add-log-tag-btn');
+            plusBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Stop accordion from opening
+                openLogTagModal(log._id, tagIds); // Pass array directly, no dataset splitting needed
+            });
+        }
+
 
         header.addEventListener('click', () => {
             header.classList.toggle('active');
@@ -450,7 +471,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
         const data = await response.json(); // { logs, total, page, pages }
 
         // Render data and pagination
-        renderAiAccordion(data.logs, elements.aiSummaryAccordion);
+        renderAiAccordion(data.logs, elements.aiSummaryAccordion, true);
         Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, (newPage) => handleAiSummaryFilter(elements, newPage));
 
     } catch (error) {
@@ -463,4 +484,8 @@ async function handleAiSummaryFilter(elements, page = 1) {
 // API Helper Functions
 async function apiListTags() {
     return fetch('tags').then(r => r.json()).then(d => d.tags);
+}
+
+async function apiListHistTags() {
+    return fetch('tags/hist').then(r => r.json()).then(d => d.tags);
 }
