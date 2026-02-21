@@ -175,8 +175,8 @@ export const DATA_DICTIONARY = {
     flaggedOutputs: {
         label: "Flagged Outputs",
         dbPath: "flaggedOutputs",
-        dataType: "flagged_outputs",
-        summarize: "flagged_outputs",
+        dataType: "flaggedOutputs",
+        summarize: "flaggedOutputs",
         color: "#000000" // Black
     }
 };

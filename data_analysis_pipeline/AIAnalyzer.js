@@ -51,8 +51,8 @@ function createStatsAccumulator() {
   }
 }
 
-export function AIAnalyzer(modelName, intervalDuration, previousGeneralization = null) {
-  const calls = generateCalls(modelName, intervalDuration, previousGeneralization)
+export function AIAnalyzer(modelName, intervalDuration, previousGeneralizations) {
+  const calls = generateCalls(modelName, intervalDuration, previousGeneralizations)
 
   // ---- Global accumulators ----
   const stats = {

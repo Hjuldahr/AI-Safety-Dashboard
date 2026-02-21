@@ -5,6 +5,7 @@ import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
 import evaluateAlerts from "./alertEvaluator.js";
+import Denque from "denque";
 
 // ---------- Shutdown Guard ----------
 let shuttingDown = false;
@@ -16,14 +17,16 @@ let schedulerInterval = null;
 let summaryInterval = null;
 
 // ---------- Model Simulation ----------
-let previousGeneralization = []
+const MAX_PREV_GENS = 60;
+let previousGeneralizations = new Denque();
 
 //One method for all models
 async function generateModelData(modelName) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
-    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization);
-    previousGeneralization = summary;
+    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralizations);
+    previousGeneralizations.push(summary);
+    if (previousGeneralizations.length > MAX_PREV_GENS) previousGeneralizations.removeOne(0);
 
     // Format for DB/SSE
     return {

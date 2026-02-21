@@ -3,146 +3,142 @@ import { TOPIC_HIERARCHY } from '../config/constants.js';
 import { getModelConfig, LOADED_MODELS } from './utilities/modelRegistry.js';
 import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' with { type: 'json' };
 
-function applyGeneralizationBias(topicWeights, previousGeneralization) {
-  if (!previousGeneralization) {
+/**
+ * Applies bias from previous generalizations with optional decay
+ * - previousGeneralizations: array of prior stats (most recent last)
+ * - decayFactor: weight multiplier for older entries (older = smaller)
+ */
+function applyGeneralizationBias(topicWeights, previousGeneralizations, decayFactor = 0.95) {
+  // Denque uses .length just like an array
+  const len = previousGeneralizations ? previousGeneralizations.length : 0;
+  
+  if (len === 0) {
     return {
-      topicWeights,
+      topicWeights: { ...topicWeights },
       characteristicBias: { toxicity: 1, pii: 1 },
-      volumeBias: 1
+      volumeBias: 1,
+      severityShift: 0
     };
   }
 
-  const { toxicityScore, piiDetected, policyCompliance, breakdown } = previousGeneralization;
+  let weightedToxicity = 0, weightedPII = 0, weightedCompliance = 0;
+  let totalWeight = 0;
+  const aggBreakdown = {};
 
-  const severityShift = Math.min(0.3, toxicityScore?.mean || 0);
-  const toxicityBias = 1 + Math.min(0.5, toxicityScore?.mean || 0);
-  const piiBias = 1 + Math.min(0.5, (piiDetected?.mean || 0) / 100);
+  // OPTIMIZATION: Use a standard for-loop. 
+  // Denque allows direct index access: queue.get(i)
+  for (let i = 0; i < len; i++) {
+    const prev = previousGeneralizations.get(i); // Use .get() for O(1) access
+    if (!prev) continue;
 
-  const stability =
-    (policyCompliance?.mean ?? 1) -
-    (toxicityScore?.mean ?? 0) -
-    ((piiDetected?.mean ?? 0) / 100);
+    const weight = Math.pow(decayFactor, len - i - 1);
+    totalWeight += weight;
 
-  const volumeBias = Math.max(0.6, Math.min(1.2, stability + 0.8));
+    weightedToxicity += (prev.toxicityScore?.mean || 0) * weight;
+    weightedPII += (prev.piiDetected?.mean ? prev.piiDetected.mean / 100 : 0) * weight;
+    weightedCompliance += (prev.policyCompliance?.mean ?? 1) * weight;
 
-  const adjustedWeights = { ...topicWeights };
-
-  if (breakdown) {
-    for (const key in breakdown) {
-      if (!adjustedWeights[key]) continue;
-
-      const bucket = breakdown[key];
-      const penalty =
-        (bucket.toxicityScore ?? 0) +
-        ((bucket.piiDetected ?? 0) / 100);
-
-      adjustedWeights[key] = Math.max(
-        0.1,
-        adjustedWeights[key] * (1 - Math.min(0.5, penalty))
-      );
+    if (prev.breakdown) {
+      for (const key in prev.breakdown) {
+        if (!aggBreakdown[key]) aggBreakdown[key] = { toxicityScore: 0, piiDetected: 0, weightSum: 0 };
+        aggBreakdown[key].toxicityScore += (prev.breakdown[key].toxicityScore ?? 0) * weight;
+        aggBreakdown[key].piiDetected += ((prev.breakdown[key].piiDetected ?? 0) / 100) * weight;
+        aggBreakdown[key].weightSum += weight;
+      }
     }
+  }
+
+  const avgToxicity = weightedToxicity / totalWeight;
+  const avgPII = weightedPII / totalWeight;
+  const avgCompliance = weightedCompliance / totalWeight;
+
+  const toxicityBias = 1 + Math.min(0.5, avgToxicity);
+  const piiBias = 1 + Math.min(0.5, avgPII);
+  const stability = Math.max(0.5, Math.min(1.2, avgCompliance - avgToxicity - avgPII));
+  const volumeBias = stability;
+
+  // Adjust topic weights with breakdown penalties
+  const adjustedWeights = { ...topicWeights };
+  for (const key in aggBreakdown) {
+    if (!adjustedWeights[key]) continue;
+    const bucket = aggBreakdown[key];
+    const penalty = (bucket.toxicityScore / bucket.weightSum || 0) + (bucket.piiDetected / bucket.weightSum || 0);
+    adjustedWeights[key] = Math.max(0.05, adjustedWeights[key] * (1 - Math.min(0.5, penalty)));
   }
 
   return {
     topicWeights: adjustedWeights,
     characteristicBias: { toxicity: toxicityBias, pii: piiBias },
     volumeBias,
-    severityShift
+    severityShift: Math.min(0.3, avgToxicity)
   };
 }
 
+/**
+ * Long-term environment effects (hourly, weekly, monthly)
+ */
 function applyLongTermEnvironment(topicWeights, previousGeneralization) {
   const adjusted = { ...topicWeights };
-
-  // ---- Weekly behavioral cycle ----
   const now = new Date();
-  const day = now.getDay(); // 0-6
-  const weekAngle = (day / 7) * Math.PI * 2;
+  const dayOfWeek = now.getDay();
+  const hour = now.getHours() + now.getMinutes() / 60;
 
-  // weekend vs weekday bias
-  const weekendBoost = (Math.sin(weekAngle - Math.PI/2) + 1) / 2;
+  const weekAngle = (dayOfWeek / 7) * 2 * Math.PI;
+  const weekendBoost = (Math.sin(weekAngle - Math.PI / 2) + 1) / 2;
 
-  // ---- Topic fatigue from previous period ----
+  const hourAngle = ((hour - 2) / 24) * 2 * Math.PI; 
+  const hourBoost = 0.7 + 0.6 * Math.sin(hourAngle);
+
   if (previousGeneralization?.breakdown) {
     for (const key in previousGeneralization.breakdown) {
       if (!adjusted[key]) continue;
-
       const bucket = previousGeneralization.breakdown[key];
-
-      // heavy usage -> fatigue
       const usage = bucket.queryCount || 0;
-      const fatigue = Math.min(0.15, usage / 2000);
-
-      // high helpfulness -> popularity boost
+      const fatigue = Math.min(0.15, usage / 2500);
       const popularity = (bucket.responseHelpfulness ?? 0) * 0.05;
-
-      adjusted[key] *= (1 - fatigue + popularity);
+      adjusted[key] *= 1 - fatigue + popularity;
     }
   }
 
-  // ---- Weekend topic bias (soft) ----
   for (const key in adjusted) {
     const lower = key.toLowerCase();
-
     if (lower.includes('creative') || lower.includes('entertainment') || lower.includes('chat')) {
-      adjusted[key] *= 1 + (0.15 * weekendBoost);
+      adjusted[key] *= 1 + 0.15 * weekendBoost;
     }
-
-    if (lower.includes('code') || lower.includes('technical') || lower.includes('research')) {
-      adjusted[key] *= 1 + (0.15 * (1 - weekendBoost));
+    if (lower.includes('code') || lower.includes('research') || lower.includes('technical')) {
+      adjusted[key] *= 1 + 0.15 * (1 - weekendBoost);
     }
   }
 
-  // normalize floor
-  for (const k in adjusted) {
-    adjusted[k] = Math.max(0.05, adjusted[k]);
-  }
+  for (const k in adjusted) adjusted[k] = Math.max(0.05, adjusted[k]);
 
-  // ---- System load drift (multi-day smooth noise) ----
   const dayOfYear = Math.floor(now.getTime() / 86400000);
-  const slowWave = Math.sin(dayOfYear / 6) * 0.08;   // ~12 day cycle
-  const microWave = Math.sin(dayOfYear / 2.3) * 0.04; // shorter wobble
-
-  const loadDrift = 1 + slowWave + microWave;
+  const slowWave = Math.sin(dayOfYear / 6) * 0.08;
+  const microWave = Math.sin(dayOfYear / 2.3) * 0.04;
+  const infraLoad = 1 + slowWave + microWave;
 
   return {
     topicWeights: adjusted,
-    infraLoad: loadDrift,
-    curiosityDrift: 1 + (Math.sin(dayOfYear / 5) * 0.05)
+    infraLoad,
+    curiosityDrift: 1 + (Math.sin(dayOfYear / 5) * 0.05),
+    hourBoost
   };
 }
 
+/**
+ * Seasonal / yearly modifiers
+ */
 function getSeasonalModifiers() {
   const now = new Date();
-  const month = now.getMonth(); // 0–11
+  const month = now.getMonth();
   const day = now.getDate();
-
-  // ---- Smooth yearly sinusoid ----
-  const yearProgress =
-    (month + day / 30) / 12;
+  const yearProgress = (month + day / 30) / 12;
 
   const yearWave = Math.sin(yearProgress * Math.PI * 2);
-
-  // ---- Academic / work intensity cycle ----
-  // peaks: Jan, May, Sep
-  const productivityWave =
-    Math.sin((yearProgress * 3) * Math.PI * 2) * 0.15;
-
-  // ---- Holiday / relaxed cycle ----
-  // peaks: Dec + summer
-  const leisureWave =
-    Math.cos((yearProgress * 2) * Math.PI * 2) * 0.15;
-
-  // ---- Tech/news release season ----
-  // peaks: Mar + Sep
-  const techWave =
-    Math.sin((yearProgress * 2 + 0.25) * Math.PI * 2) * 0.12;
-
-  // ---- Traffic seasonal drift ----
-  const trafficMultiplier =
-    1 +
-    (yearWave * 0.08) +
-    (productivityWave * 0.05);
+  const productivityWave = Math.sin(yearProgress * 3 * Math.PI * 2) * 0.15;
+  const leisureWave = Math.cos(yearProgress * 2 * Math.PI * 2) * 0.15;
+  const techWave = Math.sin((yearProgress * 2 + 0.25) * Math.PI * 2) * 0.12;
+  const trafficMultiplier = 1 + (yearWave * 0.08) + (productivityWave * 0.05);
 
   return {
     productivityBias: 1 + productivityWave,
@@ -153,11 +149,12 @@ function getSeasonalModifiers() {
 }
 
 /**
- * pseudoAI v7.1
- * - Topic + subtopic aware web lookups
- * - Config-safe
+ * Generate pseudo AI calls
+ * @param modelName
+ * @param intervalDuration - seconds
+ * @param previousGeneralizations - denque of prior generalizations
  */
-export function generateCalls(modelName, intervalDuration, previousGeneralization = null) {
+export function generateCalls(modelName, intervalDuration, previousGeneralizations) {
   if (!LOADED_MODELS.includes(modelName)) {
     throw new Error(`Model has no configuration file loaded: ${modelName}`);
   }
@@ -166,103 +163,61 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
   const { MODEL_PROFILE } = modelConfig;
 
   const { topicWeights, characteristicBias, volumeBias, severityShift } =
-    applyGeneralizationBias(modelConfig.TOPIC_WEIGHTS, previousGeneralization);
+    applyGeneralizationBias(modelConfig.TOPIC_WEIGHTS, previousGeneralizations);
 
   const seasonal = getSeasonalModifiers();
+  const lastGen = previousGeneralizations.peekBack() || null;
+  const longTerm = applyLongTermEnvironment(topicWeights, lastGen);
+  const adjustedTopicWeights = { ...longTerm.topicWeights };
 
-  const longTerm = applyLongTermEnvironment(topicWeights, previousGeneralization);
-  const adjustedTopicWeights = longTerm.topicWeights; 
   for (const key in adjustedTopicWeights) {
     const lower = key.toLowerCase();
-
-    // productivity topics
-    if (
-      lower.includes('code') ||
-      lower.includes('research') ||
-      lower.includes('technical') ||
-      lower.includes('math')
-    ) {
+    if (lower.includes('code') || lower.includes('research') || lower.includes('technical') || lower.includes('math')) {
       adjustedTopicWeights[key] *= seasonal.productivityBias;
     }
-
-    // leisure / creative
-    if (
-      lower.includes('creative') ||
-      lower.includes('entertainment') ||
-      lower.includes('chat') ||
-      lower.includes('story')
-    ) {
+    if (lower.includes('creative') || lower.includes('entertainment') || lower.includes('chat') || lower.includes('story')) {
       adjustedTopicWeights[key] *= seasonal.leisureBias;
     }
-
-    // tech/news spikes
-    if (
-      lower.includes('news') ||
-      lower.includes('ai') ||
-      lower.includes('technology')
-    ) {
+    if (lower.includes('news') || lower.includes('ai') || lower.includes('technology')) {
       adjustedTopicWeights[key] *= seasonal.techBias;
     }
-
     adjustedTopicWeights[key] = Math.max(0.05, adjustedTopicWeights[key]);
   }
 
-  const now = new Date();
-
-  // ---- Time-based traffic simulation ----
-  const hour = now.getHours() + now.getMinutes() / 60;
-  const angle = ((hour - 3) / 24) * 2 * Math.PI;
-  const timeWeight = Math.sin(angle) + 1.5;
-
   const baseQueries = random.getRandomInt(30, 80);
   const queries = Math.max(
-    1, Math.floor(
+    1,
+    Math.floor(
       baseQueries *
-      timeWeight *
-      intervalDuration *
-      volumeBias *
-      seasonal.trafficMultiplier / 2
+        longTerm.hourBoost *
+        intervalDuration *
+        volumeBias *
+        seasonal.trafficMultiplier
     )
   );
 
-  const startTime = now.getTime();
+  const startTime = Date.now();
   const calls = [];
 
   for (let i = 0; i < queries; i++) {
-    // ---- Topic selection ----
     const topic = random.getWeightedRandomKey(adjustedTopicWeights);
     const sub_topic = random.getRandomArrayElement(TOPIC_HIERARCHY[topic]);
-
     const baseChar = modelConfig.TOPIC_CHARACTERISTICS[topic];
     const subMod = modelConfig.SUBTOPIC_CHARACTERISTICS_MODIFIERS[sub_topic] || {};
 
-    // ---- Chaos injection ----
     const isChaos = random.getRandomBool(0.01);
-
-    // ---- Risk chances ----
-    const toxicityChance = isChaos
-      ? 0.5
-      : (subMod.toxicityChance ?? baseChar.toxicityChance) * characteristicBias.toxicity;
-
-    const piiChance = isChaos
-      ? 0.5
-      : (subMod.piiChance ?? baseChar.piiChance) * characteristicBias.pii;
-
-    // ---- Web lookup chance (FIXED) ----
-    const webLookupChance = isChaos
-      ? 0.8
-      : (subMod.webLookupChance ?? baseChar.webLookupChance ?? 0);
+    const toxicityChance = isChaos ? 0.5 : (subMod.toxicityChance ?? baseChar.toxicityChance) * characteristicBias.toxicity;
+    const piiChance = isChaos ? 0.5 : (subMod.piiChance ?? baseChar.piiChance) * characteristicBias.pii;
+    const webLookupChance = isChaos ? 0.8 : (subMod.webLookupChance ?? baseChar.webLookupChance ?? 0);
 
     const isToxic = random.getRandomBool(toxicityChance);
     const hasPII = random.getRandomBool(piiChance);
     const needsWeb = random.getRandomBool(webLookupChance);
 
-    // ---- Moderation behavior ----
     const caughtToxic = isToxic && random.getRandomBool(MODEL_PROFILE.filterStrength);
     const caughtPII = hasPII && random.getRandomBool(MODEL_PROFILE.filterStrength);
 
     let compliance, helpfulness, tokens, piiScore, toxicityScore;
-
     let toxicityTier = null;
 
     if (caughtToxic || caughtPII) {
@@ -274,56 +229,33 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     } else {
       if (isToxic) {
         const { severityDistribution, scoreRanges } = modelConfig.TOXICITY_PROFILE;
-
-        if (isToxic && severityShift) {
+        if (severityShift) {
           severityDistribution.moderate += severityShift * 0.5;
           severityDistribution.severe += severityShift * 0.5;
         }
-
         toxicityTier = random.getWeightedRandomKey(severityDistribution);
-
         const [min, max] = scoreRanges[toxicityTier];
         toxicityScore = random.getRandomFloat(min, max);
-
-        compliance = random.getRandomFloat(
-          0,
-          1 - MODEL_PROFILE.complianceBase
-        );
+        compliance = random.getRandomFloat(0, 1 - MODEL_PROFILE.complianceBase);
       } else {
         toxicityScore = random.getRandomFloat(0, 0.15);
-
-        compliance =
-          (1 - random.getRandomFloat(0, 0.1) + MODEL_PROFILE.complianceBase) / 2;
+        compliance = (1 - random.getRandomFloat(0, 0.1) + MODEL_PROFILE.complianceBase) / 2;
       }
 
       piiScore = hasPII ? random.getRandomFloat(0.8, 1.0) : 0;
-
-      helpfulness = random.getRandomFloat(0.8, 1.0) * longTerm.curiosityDrift;
-      helpfulness = Math.min(1, helpfulness);
-
+      helpfulness = Math.min(1, random.getRandomFloat(0.8, 1.0) * longTerm.curiosityDrift);
       const baseTokens = subMod.baseTokens ?? baseChar.baseTokens;
       const tokenVariance = subMod.tokenVariance ?? baseChar.tokenVariance;
-
-      tokens = Math.max(
-        10,
-        Math.floor(
-          (baseTokens + random.getRandomFloat(-tokenVariance, tokenVariance)) *
-          (subMod.complexity || 1)
-        )
-      );
+      tokens = Math.max(10, Math.floor((baseTokens + random.getRandomFloat(-tokenVariance, tokenVariance)) * (subMod.complexity || 1)));
       tokens = Math.floor(tokens * (0.95 + seasonal.productivityBias * 0.05));
     }
 
-    // ---- Physics & cost simulation ----
     const msPerToken = 20 * MODEL_PROFILE.speedMultiplier;
     let responseTime = tokens * msPerToken * longTerm.infraLoad + random.getRandomFloat(0, 50 * longTerm.infraLoad);
-
     if (needsWeb) responseTime += random.getRandomFloat(500, 1500);
     if (caughtToxic || caughtPII) responseTime += 50;
 
-    const complexity =
-      (baseChar.complexity || 1) * (subMod.complexity || 1);
-
+    const complexity = (baseChar.complexity || 1) * (subMod.complexity || 1);
     const gigaFlopsUsed = (tokens * 6 * complexity) / 1000;
     const energyConsumption = gigaFlopsUsed * 0.5;
 

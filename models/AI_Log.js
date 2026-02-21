@@ -2,7 +2,9 @@ import mongoose from 'mongoose';
 import { KNOWN_MODELS, DATA_DICTIONARY } from '../config/constants.js';
 
 // === AI_Log Schema ===
-const schemaDefinition = {};
+const schemaDefinition = {
+    flaggedOutputs: { type: Object, default: {} }
+};
 
 Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
     if (key === 'responseTimestamp') {
@@ -21,9 +23,6 @@ Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
             // "breakdown" logic for other categoricals
             schemaDefinition.breakdown = { type: Object, default: {} };
         }
-    }
-    else if (config.dataType === 'flagged_outputs') {
-        schemaDefinition[key] = { type: Object, default: {} };
     }
 });
 
@@ -98,8 +97,7 @@ AI_Log_Schema.statics.generateSixtySecondSummary = async function () {
         if (config.summarize === "remove" || config.summarize === "special") {
             return;
         }
-        if (config.summarize === "flagged_outputs") {
-            //TODO adjust so its not producing a list of 1 object
+        if (config.summarize === "flaggedOutputs") {
             groupStage[key] = { $push: "$flaggedOutputs" };
             projectStage[key] = { $let: {
                 vars: { flat: {
