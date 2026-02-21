@@ -263,16 +263,15 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
             const id = tagId._id || tagId;
             const t = histTagsCache[id];
             if (!t) return ''; // Skip if not found in cache (or render generic)
-            return `<span class="tag-pill" style="background:${t.color}; font-size: 0.75rem; padding: 2px 6px; border-radius: 10px; margin-right: 4px; color: #fff;">${t.name}</span>`;
+            return `<span class="tag-pill" style="background:${t.color};">${t.name}</span>`;
         }).join('');
 
         // Prepare IDs for the button data attribute
         const tagIds = (log.tags || []).map(t => t._id || t).join(',');
 
-        const tagHeaderHTML = `<div class="tags-cell" style="display: flex; align-items: center;">
+        const tagHeaderHTML = `<div class="tags-cell">
                     ${tagsHtml}
-                    <div class="add-log-tag-btn btn-secondary" 
-                         style="padding: 0px 6px; border-radius: 50%; cursor: pointer; margin-left: 5px; font-weight: bold;" 
+                    <div class="add-log-tag-btn" 
                          data-id="${log._id}" 
                          data-tags="${tagIds}">+</div>
                 </div>`;
@@ -283,8 +282,8 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
         const header = document.createElement('button');
         header.className = 'accordion-header';
         header.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="accordion-header-content">
+                <div class="accordion-header-right-content">
                     <strong>${log.modelName}</strong> 
                     <span>${timestamp}</span>
                 </div>

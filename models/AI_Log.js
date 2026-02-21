@@ -13,13 +13,7 @@ Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
     // Map response timestamp to current date/time.
     if (key === 'responseTimestamp') {
         schemaDefinition[key] = { type: Number, required: true, default: () => Date.now() };
-    // Numeric
-    } else if (config.dataType === 'numeric') {
-        schemaDefinition[key] = {
-            type: Number,
-            required: true,
-            default: key === 'queryCount' ? 1 : 0
-        };
+
     }
     // Categorical
     else if (config.dataType === 'categorical') {
@@ -30,6 +24,16 @@ Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
             schemaDefinition.breakdown = { type: Object, default: {} };
         }
     }
+    
+    // Numeric
+    else if (config.dataType === 'numeric') {
+        schemaDefinition[key] = {
+            type: Number,
+            required: true,
+            default: key === 'queryCount' ? 1 : 0
+        };
+    }
+
 });
 
 const AI_Log_Schema = new mongoose.Schema(schemaDefinition);

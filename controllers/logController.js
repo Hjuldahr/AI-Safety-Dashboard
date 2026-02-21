@@ -307,7 +307,8 @@ const getFilteredAILogs = async (req, res) => {
         const logsQuery = AI_Log.find(query)
             .sort({ responseTimestamp: -1 })
             .skip(skip)
-            .limit(limitNum);
+            .limit(limitNum)
+            .populate("tags");
 
         const totalQuery = AI_Log.countDocuments(query);
 
