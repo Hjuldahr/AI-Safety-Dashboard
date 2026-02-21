@@ -14,6 +14,7 @@ function applyGeneralizationBias(topicWeights, previousGeneralization) {
 
   const { toxicityScore, piiDetected, policyCompliance, breakdown } = previousGeneralization;
 
+  const severityShift = Math.min(0.3, toxicityScore?.mean || 0);
   const toxicityBias = 1 + Math.min(0.5, toxicityScore?.mean || 0);
   const piiBias = 1 + Math.min(0.5, (piiDetected?.mean || 0) / 100);
 
@@ -45,7 +46,8 @@ function applyGeneralizationBias(topicWeights, previousGeneralization) {
   return {
     topicWeights: adjustedWeights,
     characteristicBias: { toxicity: toxicityBias, pii: piiBias },
-    volumeBias
+    volumeBias,
+    severityShift
   };
 }
 
@@ -163,7 +165,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
   const modelConfig = getModelConfig(modelName);
   const { MODEL_PROFILE } = modelConfig;
 
-  const { topicWeights, characteristicBias, volumeBias } =
+  const { topicWeights, characteristicBias, volumeBias, severityShift } =
     applyGeneralizationBias(modelConfig.TOPIC_WEIGHTS, previousGeneralization);
 
   const seasonal = getSeasonalModifiers();
@@ -261,7 +263,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
 
     let compliance, helpfulness, tokens, piiScore, toxicityScore;
 
-    //TODO fix to use config file properly again
+    let toxicityTier = null;
 
     if (caughtToxic || caughtPII) {
       compliance = 1.0;
@@ -271,12 +273,27 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
       toxicityScore = 0;
     } else {
       if (isToxic) {
-        compliance = random.getRandomFloat(0, 0.2);
-        toxicityScore = random.getRandomFloat(0.8, 1.0);
+        const { severityDistribution, scoreRanges } = modelConfig.TOXICITY_PROFILE;
+
+        if (isToxic && severityShift) {
+          severityDistribution.moderate += severityShift * 0.5;
+          severityDistribution.severe += severityShift * 0.5;
+        }
+
+        toxicityTier = random.getWeightedRandomKey(severityDistribution);
+
+        const [min, max] = scoreRanges[toxicityTier];
+        toxicityScore = random.getRandomFloat(min, max);
+
+        compliance = random.getRandomFloat(
+          0,
+          1 - MODEL_PROFILE.complianceBase
+        );
       } else {
+        toxicityScore = random.getRandomFloat(0, 0.15);
+
         compliance =
           (1 - random.getRandomFloat(0, 0.1) + MODEL_PROFILE.complianceBase) / 2;
-        toxicityScore = random.getRandomFloat(0, 0.1);
       }
 
       piiScore = hasPII ? random.getRandomFloat(0.8, 1.0) : 0;
@@ -311,16 +328,8 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const energyConsumption = gigaFlopsUsed * 0.5;
 
     let flagged = null;
-    // only seems to be picking mild and severe for some reason
     if (isToxic) {
-      let tier;
-      if (toxicityScore <= 0.5) {
-        tier = 'mild';
-      } else if (toxicityScore <= 0.75) {
-        tier = 'moderate';
-      } else {
-        tier = 'severe';
-      }
+      const tier = toxicityTier ?? (toxicityScore <= 0.5 ? 'mild' : toxicityScore <= 0.75 ? 'moderate' : 'severe');
       flagged = {
         text: random.getRandomArrayElement(flaggedOutputPool[tier][topic][sub_topic]),
         severity: tier
