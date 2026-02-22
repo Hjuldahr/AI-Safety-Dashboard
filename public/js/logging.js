@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         aiPaginationControls: document.getElementById('ai-pagination-controls'),
         aiSummaryPaginationControls: document.getElementById('ai-summary-pagination-controls'),
         liveToggle: document.getElementById('live-update-toggle'),
+        liveUpdatesContainer: document.getElementById('live-updates-container'),
         manageTagsBtn: document.getElementById('open-tags-modal-btn'),
     };
 
@@ -216,18 +217,21 @@ function toggleViews(viewToShow, elements) {
 
     if (viewToShow === "user") {
         elements.manageTagsBtn.classList.add("hidden");
+        elements.liveUpdatesContainer.classList.add("hidden");
         elements.userLogsBtn.classList.add('active');
         elements.userLogView.classList.remove('hidden');
         elements.userFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "ai") {
         elements.manageTagsBtn.classList.remove("hidden");
+        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiLogsBtn.classList.add('active');
         elements.aiLogView.classList.remove('hidden');
         elements.aiFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "summary") {
         elements.manageTagsBtn.classList.remove("hidden");
+        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiSummariesBtn.classList.add('active');
         elements.aiSummaryView.classList.remove('hidden');
         elements.aiSummaryFilterForm.classList.remove('hidden');
