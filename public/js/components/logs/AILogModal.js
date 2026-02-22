@@ -64,7 +64,7 @@ export function initAILogModal(modalManager, { onSaveSuccess }) {
 
             <div class="detail-section mt-4">
                 <h5><i class="fa-solid fa-bell"></i> Triggered Alerts</h5>
-                <p class="text-muted small">Alerts that flagged this specific data frame.</p>
+                <p class="text-muted small">Alerts flagged by this data:</p>
                 <div class="ai-log-links mt-2">
                     ${alertsHtml}
                 </div>

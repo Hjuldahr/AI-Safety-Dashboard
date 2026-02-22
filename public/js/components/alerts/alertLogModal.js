@@ -54,7 +54,7 @@ export function initAlertLogModal(modalManager) {
             
             <div class="detail-section mt-4">
                 <h5><i class="fa-solid fa-microchip"></i> Associated AI Logs</h5>
-                <p class="text-muted small">These logs contain the specific data frames that triggered this alert.</p>
+                <p class="text-muted small">These logs contain the specific AI data that triggered this alert.</p>
                 <div class="ai-log-links">
                     ${renderAiLogLinks(log.logs)}
                 </div>
