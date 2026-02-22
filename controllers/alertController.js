@@ -141,6 +141,26 @@ const getAlertLog = async (req, res) => {
   }
 }
 
+const getAIAlerts = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const targetLog = await AI_Log.findById(id);
+    if (!targetLog) {
+      return res.status(404).json({ message: "AI Log not found." });
+    }
+
+    // find alerts associated with that Log
+    const results = await AlertLog.find({ logs: id });
+
+    return res.status(200).json(results);
+
+  } catch (error) {
+    console.error("Error fetching alerts for AI Log:", error);
+    res.status(500).json({ message: "Error fetching alerts for AI Log." });
+  }
+};
+
 
 const createAlert = async (req, res) => {
   try {
@@ -492,6 +512,7 @@ export default {
   getLiveAlerts,
   getAlertHistory,
   getAlertLog,
+  getAIAlerts,
   getAlertStats,
   removeAlertById,
   updateAlertById,

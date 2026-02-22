@@ -1,4 +1,5 @@
 import { initLogTagModal } from './components/alerts/logTagModal.js';
+import { initAILogModal } from './components/logs/AILogModal.js';
 import ModalManager from './components/modals.js';
 
 // --- GLOBAL STATE ---
@@ -14,7 +15,7 @@ const hasPermission = (permission) => {
 // Tags State
 const tagsCache = {};
 const histTagsCache = {};
-let openLogTagModal;
+let openAILogModal;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -44,8 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Initialize the Tag Modal Logic
-    openLogTagModal = initLogTagModal(modalManager, {
-        tagsCache,
+    openAILogModal = initAILogModal(modalManager, {
         onSaveSuccess: () => {
             // Refresh the active view
             const activeView = document.querySelector('.log-tab-btn.active').dataset.view;
@@ -266,29 +266,39 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
             return `<span class="tag-pill" style="background:${t.color};">${t.name}</span>`;
         }).join('');
 
-        // Prepare IDs for the button data attribute
-        const tagIds = (log.tags || []).map(t => t._id || t).join(',');
+        const tagHeaderHTML = `<div class="tags-cell">${tagsHtml}</div>`;
 
-        const tagHeaderHTML = `<div class="tags-cell">
-                    ${tagsHtml}
-                    <div class="add-log-tag-btn" 
-                         data-id="${log._id}" 
-                         data-tags="${tagIds}">+</div>
-                </div>`;
+        // Create an array of tag IDs to pass to the modal
+        const tagIdsArray = (log.tags || []).map(t => t._id || t);
 
-        // Summaries don't have tags / the add tag button
-        const accordionHeader = isSummary ? "" : tagHeaderHTML;
+        // Summaries don't get the info/tagging button
+        const infoBtnHTML = isSummary
+            ? ""
+            : `<button class="btn btn-sm ai-log-info-btn" style="margin-right: 8px;">AI Log Info</button>`;
 
-        const header = document.createElement('button');
+        const contentBtnText = isSummary ? "AI Summary Content" : "AI Log Content";
+
+        const contentBtnHTML = `<button class="btn btn-secondary ai-log-content-btn">${contentBtnText}</button>`;
+
+        // Create the header
+        const header = document.createElement('div');
         header.className = 'accordion-header';
+
         header.innerHTML = `
             <div class="accordion-header-content">
-                <div class="accordion-header-right-content">
+                <div class="accordion-header-left-content">
                     <strong>${log.modelName}</strong> 
                     <span>${timestamp}</span>
                 </div>
 
-                ${accordionHeader}
+                <div class="accordion-header-right-content">
+                        ${isSummary ? "" : tagHeaderHTML}
+                    
+                    <div class="accordion-actions">
+                        ${infoBtnHTML}
+                        ${contentBtnHTML}
+                    </div>
+                </div>
             </div>
         `;
 
@@ -308,18 +318,25 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
 
         if (!isSummary) {
             // Add tag button
-            const plusBtn = header.querySelector('.add-log-tag-btn');
-            plusBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Stop accordion from opening
-                openLogTagModal(log._id, tagIds); // Pass array directly, no dataset splitting needed
+            const infoBtn = header.querySelector('.ai-log-info-btn');
+            infoBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openAILogModal(log._id, tagIdsArray);
             });
         }
 
 
-        header.addEventListener('click', () => {
+        const contentBtn = header.querySelector('.ai-log-content-btn');
+        contentBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Toggle active states
             header.classList.toggle('active');
             body.classList.toggle('hidden');
+
+            const isHidden = body.classList.contains('hidden');
+            contentBtn.innerText = isHidden ? contentBtnText : "Hide Content";
         });
+
         item.appendChild(header);
         item.appendChild(body);
         accordion.appendChild(item);

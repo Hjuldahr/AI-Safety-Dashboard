@@ -14,6 +14,9 @@ router.get("/api/history", isAuthenticated, authorize('view:alerts'), controller
 // get just one alert log
 router.get("/api/log/:id", isAuthenticated, authorize('view:alerts'), controller.getAlertLog);
 
+// Fetch alerts for an AI Log
+router.get("/api/aiLog/:id", isAuthenticated, authorize('view:alerts'), controller.getAIAlerts)
+
 
 // Return dashboard stats
 router.get("/api/stats", isAuthenticated, controller.getAlertStats);

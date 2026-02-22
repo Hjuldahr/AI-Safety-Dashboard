@@ -83,10 +83,8 @@ export function initAlertLogModal(modalManager) {
         if (!logs || logs.length === 0) return `<p>No AI logs associated.</p>`;
 
         return logs.map((logId, index) => {
-            // As you scale, you might want to include model names in the link text
-            // For now, we'll label them as Log 1, Log 2 etc., or by ID
             return `
-                <a href="/logs/AI/${logId}" class="ai-log-link-item">
+                <a href="/logs/view/ai/${logId}" class="ai-log-link-item">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                     View AI Log Data (${logId.substring(logId.length - 6)})
                 </a>

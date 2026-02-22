@@ -33,5 +33,17 @@ HistTagSchema.statics.addOrFindTag = async function (tag) {
     );
 };
 
+HistTagSchema.statics.addOrFindTags = async function (activeTagsArray) {
+    if (!activeTagsArray || activeTagsArray.length === 0) return [];
+
+    // Map over the active tags and run existing "find or create" logic concurrently
+    const historicalTags = await Promise.all(
+        activeTagsArray.map(tag => this.addOrFindTag(tag))
+    );
+
+    // Return just the newly found/created Historical Tag IDs
+    return historicalTags.map(ht => ht._id);
+};
+
 const HistTag = mongoose.model('HistoricalTag', HistTagSchema);
 export default HistTag;
