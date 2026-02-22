@@ -116,7 +116,34 @@ document.addEventListener('DOMContentLoaded', async function () {
         await alertTagSelect.init();
 
         await loadLiveAlerts();
-        await loadAlertHistory(1);
+
+        if (window.DEEP_LINK && window.DEEP_LINK.view === 'alert') {
+            console.log("Deep link found: ", window.DEEP_LINK);
+            const { id, page } = window.DEEP_LINK;
+
+            // Render the specific page the alert lives on
+            await loadAlertHistory(page);
+
+            // Locate the row, scroll to it, and open the modal
+            setTimeout(() => {
+                const targetRow = document.querySelector(`tr[data-log-id="${id}"]`);
+                if (targetRow) {
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Optional: Add the same highlight-flash effect you use in logging.js
+                    targetRow.classList.add('highlight-flash');
+                    setTimeout(() => targetRow.classList.remove('highlight-flash'), 3000);
+                }
+
+                // Open the info modal
+                openAlertLogModal(id);
+            }, 100); // Slight delay ensures the DOM is fully painted after the await
+
+        } else {
+            // Standard load behavior
+            await loadAlertHistory(1);
+        }
+
         await initCharts();
         setupLiveUpdates();
     }

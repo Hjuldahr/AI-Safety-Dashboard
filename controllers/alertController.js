@@ -25,6 +25,7 @@ const getPage = async (req, res) => {
       alertLogs: [],
       models: modelNames,
       constants: chartConstants,
+      deepLink: null,
     });
   } catch (error) {
     console.error("Error fetching alert page:", error);
@@ -506,6 +507,54 @@ const getAlertStats = async (req, res) => {
   }
 };
 
+// Gets a specific Alert log and returns its page number so we can open the alerts page to view it
+const getAlertLogView = async (req, res) => {
+  try {
+    console.log("this is running")
+    const { id } = req.params;
+    const limit = 10; // Keep consistent with your history limit
+
+    // Find the target alert log
+    const targetLog = await AlertLog.findById(id);
+    if (!targetLog) {
+      return res.redirect('/alerts?error=LogNotFound');
+    }
+
+    // Calculate which page it is on based on your history sort (timestamp: -1)
+    const countBefore = await AlertLog.countDocuments({
+      timestamp: { $gt: targetLog.timestamp }
+    });
+
+    const targetPage = Math.floor(countBefore / limit) + 1;
+
+    // Fetch standard required data for the alerts page
+    const alerts = await Alert.find();
+    let modelNames = [];
+    try {
+      modelNames = await AI_Log.distinct("modelName");
+    } catch (mnErr) {
+      console.error("Failed to fetch model names for alerts page:", mnErr);
+    }
+
+    // Render the page with the Deep Link instructions
+    res.render("alerts", {
+      user: req.user,
+      alerts: alerts,
+      alertLogs: [], // Initial empty array, frontend will fetch the specific page
+      models: modelNames,
+      constants: chartConstants,
+      deepLink: {
+        view: 'alert',
+        id: id,
+        page: targetPage
+      }
+    });
+  } catch (error) {
+    console.error("Error redirecting to Alert log:", error);
+    res.redirect('/alerts');
+  }
+}
+
 export default {
   getPage,
   createAlert,
@@ -521,4 +570,5 @@ export default {
   addTagToAlertLog,
   removeTagFromAlertLog,
   setTagsForAlertLog,
+  getAlertLogView
 };

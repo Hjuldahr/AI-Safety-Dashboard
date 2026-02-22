@@ -267,7 +267,9 @@ const getPage = async (req, res) => {
 const getAILogView = async (req, res) => {
     try {
         const { id } = req.params;
-        const limit = 10; // Must match your frontend limit
+
+        // ToDo: Avoid hardcoding this page limit
+        const limit = 10;
 
         // Find the target log
         const targetLog = await AI_Log.findById(id);

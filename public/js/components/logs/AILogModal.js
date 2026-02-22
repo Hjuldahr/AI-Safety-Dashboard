@@ -34,7 +34,7 @@ export function initAILogModal(modalManager, { onSaveSuccess }) {
         // Map out the HTML for triggered alerts
         const alertsHtml = associatedAlerts.length > 0 
             ? associatedAlerts.map(alert => `
-                <a href="/alerts?id=${alert._id}" class="ai-log-link-item">
+                <a href="alerts/${alert._id}" class="ai-log-link-item">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     ${alert.alertSnapshot.alertName || 'Unnamed Alert'}
                 </a>
