@@ -1,5 +1,6 @@
 import express from "express";
 import authRouter from "./authRouter.js";
+import adminRouter from "./adminRouter.js";
 import indexRouter from "./indexRouter.js";
 import alertRouter from "./alertRouter.js";
 import logRouter from "./logRouter.js";
@@ -7,10 +8,10 @@ import reportRouter from "./reportRouter.js";
 import controlPanelRouter from './controlPanelRouter.js';
 import tagRouter from './tagRouter.js';
 import schedulerRouter from "./schedulerRouter.js";
-import adminRouter from "./adminRouter.js";
 import demoRouter from "./demoRouter.js";
 import docsRouter from "./docsRouter.js";
 import profileRouter from "./profileRouter.js";
+import notificationRouter from "./notificationRouter.js";
 
 const router = express.Router();
 
@@ -24,11 +25,8 @@ router.use('/tags', tagRouter);
 router.use("/", schedulerRouter);
 router.use("/demo", demoRouter);
 router.use("/", docsRouter);
-
-// Profile routes
 router.use('/', profileRouter);
-
-// Admin user management
 router.use('/admin', adminRouter);
+router.use("/notifications", notificationRouter);
 
 export default router;

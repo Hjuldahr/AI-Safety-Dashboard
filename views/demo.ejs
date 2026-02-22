@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <base href="<%= process.env.PUBLIC_URL || '/' %>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Model Demo</title>
 
@@ -11,10 +10,12 @@
     <link rel="stylesheet" href="css/header.css">
     <link rel="stylesheet" href="css/nav.css">
     <link rel="stylesheet" href="css/demo.css">
+    <link rel="stylesheet" href="css/notifications.css">
     
     <!-- Scripts -->
     <script src="js/demo.js"></script>
     <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+    <script src="js/notifications.js" defer></script>
 </head>
 <body>
     <%- include('components/header') %>

@@ -1,4 +1,5 @@
 import { LOADED_MODELS, setScenario, clearScenario, getScenarios, getCurrentScenario } from '../data_analysis_pipeline/utilities/modelRegistry.js';
+import { sendNotification } from './notificationController.js';
 
 export const renderDemoPage = (req, res) => {
     // TODO set curret scenario as default
@@ -43,6 +44,15 @@ export const applyScenario = (req, res) => {
         setScenario(modelName, scenarioName);
         console.log(`[Demo] Model ${modelName} set to ${scenarioName}.`);
         res.json({ success: true, message: `${modelName} is now ${scenarioName}.` });
+
+        sendNotification({
+            message: `${modelName} is now ${scenarioName}.`,
+            category: "Demo",
+            dismissible: true,
+            timeout: 5,
+            trim: "#3b82f6",
+            background: "#bad1f5"
+        });
         
     } catch (error) {
         console.error(`[Demo] Error setting to ${scenarioName}:`, error);
@@ -57,6 +67,16 @@ export const resetScenario = (req, res) => {
         clearScenario(modelName);
         console.log(`[Demo] Model ${modelName} reset to normal.`);
         res.json({ success: true, message: `${modelName} is back to normal.` });
+
+        sendNotification({
+            message: `${modelName} is back to normal.`,
+            category: "Demo",
+            dismissible: true,
+            timeout: 5,
+            trim: "#3b82f6",
+            background: "#bad1f5"
+        });
+
     } catch (error) {
         console.error('[Demo] Error going back to normal:', error);
         res.status(500).json({ error: error.message });

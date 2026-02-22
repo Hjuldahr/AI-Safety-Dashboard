@@ -106,3 +106,4 @@ function hideError() {
     errorMessageDiv.classList.add("hidden");
     errorMessageDiv.querySelector("span").innerText = "";
 }
+

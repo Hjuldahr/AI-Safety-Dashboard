@@ -1,6 +1,7 @@
 import Alert from "../models/alert_model.js";
 import AlertLog from "../models/alert_log.js";
 import { broadcastEvent } from './scheduler.js';
+import { sendNotification } from './notificationController.js';
 import HistTag from "../models/historicalTag.js";
 import AI_Log from "../models/AI_Log.js";
 
@@ -103,6 +104,15 @@ export async function finalizeAlertLogs(pendingAlertLogs, insertedLogsMap) {
                 tags: histTags || [],
                 originalTagIDs: alert.tags || []
             });
+            
+            await sendNotification({
+                message: alertText,
+                category: "alert",
+                redirect: "/alerts",
+                trim: TRIM_COLOURS[alert.alertLevel],
+                background: BACKGROUND_COLOURS[alert.alertLevel]
+            });
+
         } catch (err) {
             console.error('[AlertEvaluator] Failed to create AlertLog:', err);
         }

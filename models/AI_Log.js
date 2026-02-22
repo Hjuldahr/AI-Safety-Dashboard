@@ -6,6 +6,9 @@ const { Schema } = mongoose;
 // === AI_Log Schema ===
 const schemaDefinition = {
     tags: [{ type: Schema.Types.ObjectId, ref: 'HistoricalTag' }],
+    
+    flaggedOutputs: { type: Object, default: {} }
+
     // Other fields added dynamically based on DATA_DICTIONARY
 };
 
@@ -40,7 +43,6 @@ const AI_Log_Schema = new mongoose.Schema(schemaDefinition);
 
 // ---------- INDEXES ----------
 AI_Log_Schema.index({ modelName: 1, responseTimestamp: -1 });
-
 
 // ---------- QUERIES ----------
 
@@ -106,6 +108,33 @@ AI_Log_Schema.statics.generateSixtySecondSummary = async function () {
     Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
         // Skip fields that shouldn't be in the summary or are special
         if (config.summarize === "remove" || config.summarize === "special") {
+            return;
+        }
+        if (config.summarize === "flaggedOutputs") {
+            groupStage[key] = { $push: "$flaggedOutputs" };
+            projectStage[key] = { $let: {
+                vars: { flat: {
+                    $reduce: {
+                    input: `$${key}`,
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] }
+                    }
+                }},
+                in: { $arrayToObject: { $map: {
+                    input: { $setUnion: { $map: {
+                            input: "$$flat",
+                            as: "f",
+                            in: "$$f.severity"
+                    }}},
+                    as: "sev", in: {
+                        k: "$$sev",
+                        v: { $size: { $filter: {
+                                input: "$$flat",
+                                cond: { $eq: ["$$this.severity", "$$sev"] }
+                        }}}
+                    }}
+                }}
+            }};
             return;
         }
 

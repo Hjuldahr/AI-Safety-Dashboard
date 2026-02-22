@@ -2,7 +2,9 @@ import mongoose from 'mongoose';
 import { KNOWN_MODELS, DATA_DICTIONARY } from "../constants/charts.js";
 
 // === AI_Summary Schema ===
-const schemaDefinition = {};
+const schemaDefinition = {
+    flaggedOutputs: { type: Object, default: {} }
+};
 
 Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
     if (key === 'responseTimestamp') {

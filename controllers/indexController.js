@@ -4,7 +4,6 @@ import chartConstants from "../constants/charts.js";
 
 const getPage = async (req, res) => {
     try {
-        // Ensure permissions are passed explicitly to the template to avoid undefined errors
         res.render("index", {
             user: req.user,
             permissions: res.locals.permissions || [],
