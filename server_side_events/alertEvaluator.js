@@ -1,7 +1,7 @@
 import Alert from "../models/alert_model.js";
 import AlertLog from "../models/alert_log.js";
 import { broadcastEvent } from './scheduler.js';
-import { sendNotification } from './notificationController.js';
+import { sendNotification } from '../controllers/notificationController.js';
 import HistTag from "../models/historicalTag.js";
 import AI_Log from "../models/AI_Log.js";
 
