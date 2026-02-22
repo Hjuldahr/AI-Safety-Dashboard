@@ -112,7 +112,7 @@ export async function finalizeAlertLogs(pendingAlertLogs, insertedLogsMap) {
             await sendNotification({
                 message: alertText,
                 category: "Alert",
-                redirect: "/alerts",
+                redirectUrl: "/alerts",
                 trim: TRIM_COLOURS[alert.alertLevel],
                 background: BACKGROUND_COLOURS[alert.alertLevel]
             });
