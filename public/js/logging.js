@@ -20,6 +20,7 @@ let openAILogModal;
 document.addEventListener('DOMContentLoaded', async () => {
 
     const modalManager = new ModalManager();
+    let isLive = true;
 
     // Get all required elements
     const elements = {
@@ -41,6 +42,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationControls: document.getElementById('pagination-controls'),
         aiPaginationControls: document.getElementById('ai-pagination-controls'),
         aiSummaryPaginationControls: document.getElementById('ai-summary-pagination-controls'),
+        liveToggle: document.getElementById('live-update-toggle'),
+        manageTagsBtn: document.getElementById('open-tags-modal-btn'),
     };
 
     // Initialize the Tag Modal Logic
@@ -52,6 +55,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (activeView === 'summary') handleAiSummaryFilter(elements, currentAiSummariesPage);
         }
     });
+
+    if (elements.liveToggle) {
+        elements.liveToggle.addEventListener('change', async (e) => {
+            isLive = e.target.checked;
+            // Visual indicator that updates are paused
+            alertLogBody.style.opacity = isLive ? "1" : "0.9";
+
+            if (isLive) {
+                await loadAlertHistory(currentHistoryPage);
+            }
+        });
+    }
 
     // Load Tags
     await refreshTagCache();
@@ -92,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     elements.aiSummaryFilterForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        handleAiSummaryFilter(elements); //ToDo:make this method
+        handleAiSummaryFilter(elements);
     });
 
 
@@ -189,16 +204,19 @@ function toggleViews(viewToShow, elements) {
     [elements.userFilterForm, elements.aiFilterForm, elements.aiSummaryFilterForm].forEach(f => f.classList.add('hidden'));
 
     if (viewToShow === "user") {
+        elements.manageTagsBtn.classList.add("hidden");
         elements.userLogsBtn.classList.add('active');
         elements.userLogView.classList.remove('hidden');
         elements.userFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "ai") {
+        elements.manageTagsBtn.classList.remove("hidden");
         elements.aiLogsBtn.classList.add('active');
         elements.aiLogView.classList.remove('hidden');
         elements.aiFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "summary") {
+        elements.manageTagsBtn.classList.remove("hidden");
         elements.aiSummariesBtn.classList.add('active');
         elements.aiSummaryView.classList.remove('hidden');
         elements.aiSummaryFilterForm.classList.remove('hidden');
@@ -266,7 +284,7 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
         }).join('');
 
         const tagHeaderHTML = `<div class="tags-cell">${tagsHtml}</div>`;
-        
+
         // Summaries don't get the info/tagging button
         const infoBtnHTML = isSummary
             ? ""
