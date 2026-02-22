@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (json.id && isNotificationShown(json.id)) return;
 
         content.textContent = json.message;
+        //TODO include timestamp
         container.style.backgroundColor = json.trim;
 
         container.classList.remove('hidden');
