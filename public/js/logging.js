@@ -213,7 +213,7 @@ async function refreshHistTagCache() {
 function toggleViews(viewToShow, elements) {
     // Clean up the URL so deep links don't persist on refresh
     if (window.location.pathname.includes('/view/ai/')) {
-        window.history.pushState({}, document.title, '/logs'); // Adjust '/logs' to your base URL route
+        window.history.pushState({}, document.title, 'logs'); // Adjust '/logs' to your base URL route
     }
 
     // Reset classes

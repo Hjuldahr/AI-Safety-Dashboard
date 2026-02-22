@@ -124,6 +124,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             // Render the specific page the alert lives on
             await loadAlertHistory(page);
 
+            // Pause live alerts
+            isLive = false;
+            liveToggle.checked = false;
+
             // Locate the row, scroll to it, and open the modal
             setTimeout(() => {
                 const targetRow = document.querySelector(`tr[data-log-id="${id}"]`);

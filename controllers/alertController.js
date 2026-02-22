@@ -510,7 +510,6 @@ const getAlertStats = async (req, res) => {
 // Gets a specific Alert log and returns its page number so we can open the alerts page to view it
 const getAlertLogView = async (req, res) => {
   try {
-    console.log("this is running")
     const { id } = req.params;
     const limit = 10; // Keep consistent with your history limit
 
