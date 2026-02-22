@@ -4,6 +4,7 @@ import AI_Summary from "../models/AI_Summary.js"
 import User from '../models/user.js';
 import chartConstants from "../constants/charts.js";
 import HistTag from '../models/historicalTag.js';
+import Tag from '../models/tag.js';
 
 // === Helper Query Builders ===
 const buildUserLogQuery = async ({ userID, eventType, startDate, endDate, search }) => {

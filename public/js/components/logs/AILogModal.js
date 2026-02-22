@@ -8,7 +8,7 @@ import TagSelect from '../tags/tagSelect.js';
 
 export function initAILogModal(modalManager, { onSaveSuccess }) {
 
-    async function openAILogModal(logId, currentTagIds) {
+    async function openAILogModal(logId, tags) {
         let logDetails = {};
         let associatedAlerts = [];
 
@@ -79,7 +79,9 @@ export function initAILogModal(modalManager, { onSaveSuccess }) {
             customContainer: bodyNode // Crucial: scopes the querySelectors to this unmounted DOM node
         });
 
-        await tagSelect.init(currentTagIds);
+        const activeTagIds = tags.map(tag => tag.originalTagId);
+
+        await tagSelect.init(activeTagIds);
 
         // Build the Footer (Save & Cancel buttons)
         const footerNode = document.createElement('div');

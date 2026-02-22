@@ -29,6 +29,7 @@ export function initLogTagModal(modalManager, { tagsCache, onSaveSuccess }) {
         });
 
         await tagSelect.init();
+
         tagSelect.setSelectedIds(currentTagIds);
 
         // Build the Footer Node

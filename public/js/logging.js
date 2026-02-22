@@ -1,4 +1,3 @@
-import { initLogTagModal } from './components/alerts/logTagModal.js';
 import { initAILogModal } from './components/logs/AILogModal.js';
 import ModalManager from './components/modals.js';
 
@@ -267,10 +266,7 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
         }).join('');
 
         const tagHeaderHTML = `<div class="tags-cell">${tagsHtml}</div>`;
-
-        // Create an array of tag IDs to pass to the modal
-        const tagIdsArray = (log.tags || []).map(t => t._id || t);
-
+        
         // Summaries don't get the info/tagging button
         const infoBtnHTML = isSummary
             ? ""
@@ -321,7 +317,7 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
             const infoBtn = header.querySelector('.ai-log-info-btn');
             infoBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                openAILogModal(log._id, tagIdsArray);
+                openAILogModal(log._id, log.tags);
             });
         }
 
