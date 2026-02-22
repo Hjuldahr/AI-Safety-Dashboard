@@ -13,7 +13,7 @@ import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
 import { connectDB, seedDataBase, seedCharts } from './config/database.js';
 import { sendNotification } from './controllers/notificationController.js';
-import { SHUTDOWN_MESSAGE } from "./config/notification.js";
+import { SHUTDOWN_MESSAGE } from "./constants/notification.js";
 
 let shuttingDown = false;
 
