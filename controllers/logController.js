@@ -56,7 +56,7 @@ const buildUserLogQuery = async ({ userID, eventType, startDate, endDate, search
     return query;
 };
 
-const buildAILogQuery = ({ modelName, startDate, endDate, search }) => {
+const buildAILogQuery = async ({ modelName, startDate, endDate, search }) => {
     const query = {};
 
     // Add modelName filter if provided and not "all"
@@ -79,8 +79,19 @@ const buildAILogQuery = ({ modelName, startDate, endDate, search }) => {
     if (search) {
         const searchRegex = new RegExp(search, 'i');
         const orConditions = [
-            { modelName: searchRegex }
+            { modelName: searchRegex },
         ];
+
+        const matchingTags = await HistTag.find({ 
+            name: searchRegex 
+        }).select('_id');
+
+        const tagIds = matchingTags.map(t => t._id);
+
+        if (tagIds.length > 0) {
+            // Now we search the logs for any of these specific ObjectIds
+            orConditions.push({ tags: { $in: tagIds } });
+        }
 
         // Numeric check
         const searchNum = Number(search);
@@ -159,7 +170,7 @@ const getFilteredAILogs = async (req, res) => {
         const pageNum = Number(page);
         const limitNum = Number(limit);
 
-        const query = buildAILogQuery({
+        const query = await buildAILogQuery({
             modelName,
             startDate,
             endDate,
@@ -206,7 +217,7 @@ const getFilteredAISummaries = async (req, res) => {
         const pageNum = Number(page);
         const limitNum = Number(limit);
 
-        const query = buildAILogQuery({
+        const query = await buildAILogQuery({
             modelName,
             startDate,
             endDate,
