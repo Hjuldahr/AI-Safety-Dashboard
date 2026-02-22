@@ -579,22 +579,24 @@ function setupLiveUpdates(elements, getIsLive) {
             if (!getIsLive() || currentAiSummariesPage !== 1) return;
 
             try {
-                const logData = JSON.parse(event.data);
+                const summaryArray = JSON.parse(event.data);
 
-                if (passesFilters(logData, elements.aiSummaryFilterForm)) {
-                    // Clear "No logs found" message if present
-                    if (elements.aiSummaryAccordion.children.length === 1 && elements.aiSummaryAccordion.firstElementChild.tagName === 'P') {
-                        elements.aiSummaryAccordion.innerHTML = '';
+                summaryArray.forEach(logData => {
+                    if (passesFilters(logData, elements.aiSummaryFilterForm)) {
+                        // Clear "No logs found" message if present
+                        if (elements.aiSummaryAccordion.children.length === 1 && elements.aiSummaryAccordion.firstElementChild.tagName === 'P') {
+                            elements.aiSummaryAccordion.innerHTML = '';
+                        }
+
+                        const newItem = createAiAccordionItem(logData, true);
+                        elements.aiSummaryAccordion.prepend(newItem);
+
+                        // Maintain max 10 items
+                        if (elements.aiSummaryAccordion.children.length > 10) {
+                            elements.aiSummaryAccordion.lastElementChild.remove();
+                        }
                     }
-
-                    const newItem = createAiAccordionItem(logData, true);
-                    elements.aiSummaryAccordion.prepend(newItem);
-
-                    // Maintain max 10 items
-                    if (elements.aiSummaryAccordion.children.length > 10) {
-                        elements.aiSummaryAccordion.lastElementChild.remove();
-                    }
-                }
+                });
             } catch (e) { console.error('SSE AI Summary Error', e); }
         });
 

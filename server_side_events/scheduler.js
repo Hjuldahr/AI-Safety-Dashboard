@@ -151,6 +151,8 @@ async function schedulerTick() {
         // Add all the logs to the DB
         const insertedLogs = await AI_Log.addLogs(Object.values(data));
 
+        await AI_Log.populate(insertedLogs, { path: 'tags' });
+
         // Convert the returned DB docs into the map format
         const logsMap = {};
         insertedLogs.forEach(log => {
