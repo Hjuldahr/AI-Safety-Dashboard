@@ -172,6 +172,7 @@ export const DATA_DICTIONARY = {
         summarize: "special",
         color: "#000000" // Black
     },
+    // ToDo: Add these to AI Summaries
     flaggedOutputs: {
         label: "Flagged Outputs",
         dbPath: "flaggedOutputs",
