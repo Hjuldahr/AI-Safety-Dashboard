@@ -4,7 +4,7 @@ import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
-import evaluateAlerts from "./alertEvaluator.js";
+import { evaluateAndTagLogs, finalizeAlertLogs } from "./alertEvaluator.js";
 
 // ---------- Shutdown Guard ----------
 let shuttingDown = false;
@@ -19,6 +19,7 @@ let summaryInterval = null;
 let previousGeneralization = []
 
 //One method for all models
+//ToDo: Make this dynamic so that it follows constants/charts.js
 async function generateModelData(modelName) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
@@ -117,7 +118,7 @@ function safeWriteAll(sseData, targetUserId = null) {
 function broadcastEvent(eventType, data) {
     try {
         if (shuttingDown) return;
-        
+
         const sseData = `event: ${eventType}\n` + `data: ${JSON.stringify(data)}\n\n`;
         pruneDeadClients();
         const target = data?._targetUser || null;
@@ -139,18 +140,33 @@ async function schedulerTick() {
             data[model] = await generateModelData(model);
         }
 
-        // Add all the logs to the DB
-        await AI_Log.addLogs(Object.values(data));
-
-        // Evaluate alerts
+        // Evaluate alerts and attach tag IDs to the raw data objects
+        let pendingAlerts = [];
         try {
-            await evaluateAlerts(data, { cooldownMs: ALERTS_COOLDOWN });
+            pendingAlerts = await evaluateAndTagLogs(data, { cooldownMs: ALERTS_COOLDOWN });
         } catch (alertErr) {
             console.error('Error evaluating alerts:', alertErr);
         }
 
+        // Add all the logs to the DB
+        const insertedLogs = await AI_Log.addLogs(Object.values(data));
+
+        await AI_Log.populate(insertedLogs, { path: 'tags' });
+
+        // Convert the returned DB docs into the map format
+        const logsMap = {};
+        insertedLogs.forEach(log => {
+            const logObj = log.toObject ? log.toObject() : log;
+            logsMap[logObj.modelName] = logObj;
+        });
+
+        // Create the AlertLog documents
+        if (pendingAlerts.length > 0) {
+            await finalizeAlertLogs(pendingAlerts, logsMap);
+        }
+
         // Broadcast real-time update to clients
-        broadcastEvent('update', data);
+        broadcastEvent('update', logsMap);
 
     } catch (err) {
         console.error('Scheduler tick error:', err);
@@ -166,7 +182,9 @@ async function createSummary() {
 
         if (summaries.length > 0) {
             // Save to the summary collection
-            await AI_Summary.insertMany(summaries);
+            const summary = await AI_Summary.insertMany(summaries);
+
+            broadcastEvent('summary', summary);
 
             // Delete extra
             const cutoff = Date.now() - AI_LOG_CUTOFF;

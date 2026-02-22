@@ -13,15 +13,21 @@
   <link rel="stylesheet" href="css/nav.css">
   <link rel="stylesheet" href="css/logs.css">
   <link rel="stylesheet" href="css/notifications.css">
+  <link rel="stylesheet" href="css/components/modals.css">
+  <link rel="stylesheet" href="css/components/tagSelect.css">
 
   <!-- Scripts -->
   <script src="js/components/pagination.js" defer></script>
-  <script src="js/logging.js" defer></script>
+  <script src="js/logging.js" type="module" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script src="js/notifications.js" defer></script>
+  <script type="module" src="js/components/tags/tagModal.js"></script>
   <script>
     window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+    window.CONSTANTS = <%- JSON.stringify(constants) %>;
+    window.DEEP_LINK = <%- JSON.stringify(deepLink) %>;
   </script>
-  <script src="js/notifications.js" defer></script>
+
 </head>
 
 <body>
@@ -40,7 +46,7 @@
 
         <form id="user-filter-form" class="filter-group">
           <button type="button" class="btn-secondary clear-filters">Clear</button>
-          
+
           <label for="user-search">Search:</label>
           <input type="text" id="user-search" name="search" placeholder="Search logs...">
 
@@ -68,7 +74,7 @@
 
         <form id="ai-filter-form" class="filter-group hidden">
           <button type="button" class="btn-secondary clear-filters">Clear</button>
-          
+
           <label for="ai-search">Search:</label>
           <input type="text" id="ai-search" name="search" placeholder="Search logs...">
 
@@ -90,7 +96,7 @@
 
         <form id="ai-summary-filter-form" class="filter-group hidden">
           <button type="button" class="btn-secondary clear-filters">Clear</button>
-          
+
           <label for="ai-summary-search">Search:</label>
           <input type="text" id="ai-summary-search" name="search" placeholder="Search summaries...">
 
@@ -110,6 +116,25 @@
           <button type="submit" class="btn-primary">Apply</button>
         </form>
 
+      </div>
+    </div>
+
+    <div class="second-logs-toolbar">
+      <div class="manage-tags-container">
+        <button id="open-tags-modal-btn" class="btn btn-secondary hidden">
+          <i class="fa-solid fa-tags"></i> Manage Tags
+        </button>
+      </div>
+
+
+      <div class="filter-actions">
+        <div class="live-toggle-container hidden" id="live-updates-container">
+          <label class="switch">
+            <input type="checkbox" id="live-update-toggle" checked>
+            <span class="slider round"></span>
+          </label>
+          <span class="live-label">Live Updates</span>
+        </div>
       </div>
     </div>
 
@@ -148,6 +173,8 @@
       </div>
 
     </div>
+
+    <%- include('components/modal') %>
 
   </main>
 </body>

@@ -1,15 +1,33 @@
+import { initAILogModal } from './components/logs/AILogModal.js';
+import ModalManager from './components/modals.js';
+
 // --- GLOBAL STATE ---
+let isLive = true;
+
 let currentLogsPage = 1;
 let currentAiLogsPage = 1;
 let currentAiSummariesPage = 1;
+
+let totalAiLogs = 0;
+let totalAiSummaries = 0;
+// ToDo: let users define this
+const PAGE_LIMIT = 10;
 
 // --- PERMISSION CHECKS ---
 const hasPermission = (permission) => {
     return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
 };
 
+// Tags State
+const tagsCache = {};
+const histTagsCache = {};
+let openAILogModal;
+
 // --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+
+    const modalManager = new ModalManager();
+
     // Get all required elements
     const elements = {
         userLogsBtn: document.getElementById('user-logs-btn'),
@@ -30,9 +48,47 @@ document.addEventListener('DOMContentLoaded', () => {
         paginationControls: document.getElementById('pagination-controls'),
         aiPaginationControls: document.getElementById('ai-pagination-controls'),
         aiSummaryPaginationControls: document.getElementById('ai-summary-pagination-controls'),
+        liveToggle: document.getElementById('live-update-toggle'),
+        liveUpdatesContainer: document.getElementById('live-updates-container'),
+        manageTagsBtn: document.getElementById('open-tags-modal-btn'),
     };
 
+    // Initialize the Tag Modal Logic
+    openAILogModal = initAILogModal(modalManager, {
+        onSaveSuccess: () => {
+            // Refresh the active view
+            const activeView = document.querySelector('.log-tab-btn.active').dataset.view;
+            if (activeView === 'ai') handleAiFilter(elements, currentAiLogsPage);
+            if (activeView === 'summary') handleAiSummaryFilter(elements, currentAiSummariesPage);
+        }
+    });
+
+    if (elements.liveToggle) {
+        elements.liveToggle.addEventListener('change', async (e) => {
+            isLive = e.target.checked;
+
+            toggleLiveUpdates(elements, isLive);
+        });
+    }
+
+    // Load Tags
+    await refreshTagCache();
+    await refreshHistTagCache();
+
     // --- EVENT LISTENERS ---
+
+    document.addEventListener('tagsUpdated', async () => {
+        await refreshTagCache();
+        await refreshHistTagCache();
+
+        // Re-render current view to reflect color/name changes
+        const activeView = document.querySelector('.log-tab-btn.active').dataset.view;
+        if (activeView === 'ai') handleAiFilter(elements, currentAiLogsPage);
+        else if (activeView === 'summary') handleAiSummaryFilter(elements, currentAiSummariesPage);
+    });
+
+    // --- EVENT LISTENERS ---
+
 
     // Tab switching
     elements.userLogsBtn.addEventListener('click', () => toggleViews('user', elements));
@@ -54,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     elements.aiSummaryFilterForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        handleAiSummaryFilter(elements); //ToDo:make this method
+        handleAiSummaryFilter(elements);
     });
 
 
@@ -76,11 +132,77 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // --- INITIAL RENDER ---
-    handleUserFilter(elements, 1);
-    handleAiFilter(elements, 1);
-    handleAiSummaryFilter(elements, 1);
+    // Standard Initial Render
+    // (We only run these if there ISN'T a deep link, or we let them run then override)
+    await handleUserFilter(elements, 1);
+
+    if (window.DEEP_LINK && window.DEEP_LINK.view === 'ai') {
+        // Handle the Deep Link
+        const { id, page } = window.DEEP_LINK;
+
+        // Switch to AI tab visually
+        toggleViews('ai', elements);
+
+        // Stop the UI from updating live
+        toggleLiveUpdates(elements, false);
+        elements.liveToggle.checked = false;
+
+        // Load the specific page
+        await handleAiFilter(elements, page);
+        await handleAiSummaryFilter(elements, 1);
+
+
+
+        // Highlight and Scroll to the log
+        const targetElement = elements.aiLogAccordion.querySelector(`[data-id="${id}"]`);
+        if (targetElement) {
+            const header = targetElement.querySelector('.accordion-header');
+            const body = targetElement.querySelector('.accordion-body');
+
+            // Open it
+            header.classList.add('active');
+            body.classList.remove('hidden');
+
+            // Scroll it into view
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Optional: Add a temporary highlight class
+            targetElement.classList.add('highlight-flash');
+            setTimeout(() => targetElement.classList.remove('highlight-flash'), 3000);
+        }
+    } else {
+        // Normal load
+        await handleAiFilter(elements, 1);
+        await handleAiSummaryFilter(elements, 1);
+    }
+
+    // Setup Live updates
+    setupLiveUpdates(elements, () => isLive);
 });
+
+async function refreshTagCache() {
+    try {
+        // Use apiListTags (All tags) instead of HistTags
+        const tData = await apiListTags();
+        // Clear and refill to ensure we don't have stale data
+        Object.keys(tagsCache).forEach(key => delete tagsCache[key]);
+        (tData || []).forEach(t => tagsCache[t._id] = t);
+    } catch (e) {
+        console.warn('Tags load failed', e);
+    }
+}
+
+async function refreshHistTagCache() {
+    try {
+        // Use apiListTags to get HistTags
+        const tData = await apiListHistTags();
+        // Clear and refill to ensure we don't have stale data
+        Object.keys(histTagsCache).forEach(key => delete histTagsCache[key]);
+        (tData || []).forEach(t => histTagsCache[t._id] = t);
+    } catch (e) {
+        console.warn('Hist Tags load failed', e);
+    }
+}
 
 
 // --- VIEW TOGGLING ---
@@ -89,45 +211,36 @@ document.addEventListener('DOMContentLoaded', () => {
  * Toggles between 'user' and 'ai' log views
  */
 function toggleViews(viewToShow, elements) {
-    // ToDo: This is the stupidest fucking code ive ever written
+    // Clean up the URL so deep links don't persist on refresh
+    if (window.location.pathname.includes('/view/ai/')) {
+        window.history.pushState({}, document.title, 'logs'); // Adjust '/logs' to your base URL route
+    }
+
+    // Reset classes
+    [elements.userLogsBtn, elements.aiLogsBtn, elements.aiSummariesBtn].forEach(b => b.classList.remove('active'));
+    [elements.userLogView, elements.aiLogView, elements.aiSummaryView].forEach(v => v.classList.add('hidden'));
+    [elements.userFilterForm, elements.aiFilterForm, elements.aiSummaryFilterForm].forEach(f => f.classList.add('hidden'));
+
     if (viewToShow === "user") {
-        elements.userLogsBtn.classList.toggle('active', true);
-        elements.aiLogsBtn.classList.toggle('active', false);
-        elements.aiSummariesBtn.classList.toggle('active', false);
-
-        elements.userLogView.classList.toggle('hidden', false);
-        elements.aiLogView.classList.toggle('hidden', true);
-        elements.aiSummaryView.classList.toggle('hidden', true);
-
-        elements.userFilterForm.classList.toggle('hidden', false);
-        elements.aiFilterForm.classList.toggle('hidden', true);
-        elements.aiSummaryFilterForm.classList.toggle('hidden', true);
+        elements.manageTagsBtn.classList.add("hidden");
+        elements.liveUpdatesContainer.classList.add("hidden");
+        elements.userLogsBtn.classList.add('active');
+        elements.userLogView.classList.remove('hidden');
+        elements.userFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "ai") {
-        elements.userLogsBtn.classList.toggle('active', false);
-        elements.aiLogsBtn.classList.toggle('active', true);
-        elements.aiSummariesBtn.classList.toggle('active', false);
-
-        elements.userLogView.classList.toggle('hidden', true);
-        elements.aiLogView.classList.toggle('hidden', false);
-        elements.aiSummaryView.classList.toggle('hidden', true);
-
-        elements.userFilterForm.classList.toggle('hidden', true);
-        elements.aiFilterForm.classList.toggle('hidden', false);
-        elements.aiSummaryFilterForm.classList.toggle('hidden', true);
+        elements.manageTagsBtn.classList.remove("hidden");
+        elements.liveUpdatesContainer.classList.remove("hidden");
+        elements.aiLogsBtn.classList.add('active');
+        elements.aiLogView.classList.remove('hidden');
+        elements.aiFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "summary") {
-        elements.userLogsBtn.classList.toggle('active', false);
-        elements.aiLogsBtn.classList.toggle('active', false);
-        elements.aiSummariesBtn.classList.toggle('active', true);
-
-        elements.userLogView.classList.toggle('hidden', true);
-        elements.aiLogView.classList.toggle('hidden', true);
-        elements.aiSummaryView.classList.toggle('hidden', false);
-
-        elements.userFilterForm.classList.toggle('hidden', true);
-        elements.aiFilterForm.classList.toggle('hidden', true);
-        elements.aiSummaryFilterForm.classList.toggle('hidden', false);
+        elements.manageTagsBtn.classList.remove("hidden");
+        elements.liveUpdatesContainer.classList.remove("hidden");
+        elements.aiSummariesBtn.classList.add('active');
+        elements.aiSummaryView.classList.remove('hidden');
+        elements.aiSummaryFilterForm.classList.remove('hidden');
     }
 }
 
@@ -170,43 +283,101 @@ function renderUserLogs(logs, tbody) {
 /**
  * Populates the AI Logs + Summaries accordion
  */
-function renderAiAccordion(logs, accordion) {
+function renderAiAccordion(logs, accordion, elements, isSummary = false) {
     accordion.innerHTML = '';
     if (logs.length === 0) {
-        accordion.innerHTML = '<p>No AI logs found.</p>';
+        accordion.innerHTML = `<p>No AI ${isSummary ? 'summaries' : 'logs'} found.</p>`;
         return;
     }
     logs.forEach((log) => {
-        const item = document.createElement('div');
-        item.className = 'accordion-item';
-        const timestamp = new Date(log.responseTimestamp).toLocaleString();
-        const header = document.createElement('button');
-        header.className = 'accordion-header';
-        header.innerHTML = `
-      <span><strong>Model:</strong> ${log.modelName}</span>
-      <span>${timestamp}</span>
-    `;
-        const body = document.createElement('div');
-        body.className = 'accordion-body hidden';
-        const pre = document.createElement('pre');
-        // replace fields starting with '_'
-        const replacer = (key, value) => {
-            if (typeof key === 'string' && key.startsWith('_')) {
-                return undefined;
-            }
-            return value;
-        };
-        //use the replacer
-        pre.textContent = JSON.stringify(log, replacer, 2);
-        body.appendChild(pre);
-        header.addEventListener('click', () => {
-            header.classList.toggle('active');
-            body.classList.toggle('hidden');
-        });
-        item.appendChild(header);
-        item.appendChild(body);
+        const item = createAiAccordionItem(log, elements, isSummary);
         accordion.appendChild(item);
     });
+}
+
+/**
+ * Creates a single accordion item DOM element for AI Logs or Summaries
+ */
+function createAiAccordionItem(log, elements, isSummary = false,) {
+    const item = document.createElement('div');
+    item.className = 'accordion-item fade-in-row'; // Added fade-in animation
+    item.dataset.id = log._id;
+
+    const timestamp = new Date(log.responseTimestamp || log.createdAt).toLocaleString();
+
+    const tagsHtml = (log.tags || []).map(tagId => {
+        // Handle if tagId is populated object or just ID
+        const id = tagId._id || tagId;
+        const t = histTagsCache[id];
+        if (!t) return '';
+        return `<span class="tag-pill" style="background:${t.color};">${t.name}</span>`;
+    }).join('');
+
+    // Summaries don't get the info/tagging button
+    const tagHeaderHTML = `<div class="tags-cell">${tagsHtml}</div>`;
+    const infoBtnHTML = isSummary
+        ? ""
+        : `<button class="btn btn-sm ai-log-info-btn" style="margin-right: 8px;">AI Log Info</button>`;
+    const contentBtnText = isSummary ? "AI Summary Content" : "AI Log Content";
+    const contentBtnHTML = `<button class="btn btn-secondary ai-log-content-btn">${contentBtnText}</button>`;
+
+    // Create the header
+    const header = document.createElement('div');
+    header.className = 'accordion-header';
+    header.innerHTML = `
+        <div class="accordion-header-content">
+            <div class="accordion-header-left-content">
+                <strong>${log.modelName || 'Unknown Model'}</strong> 
+                <span>${timestamp}</span>
+            </div>
+            <div class="accordion-header-right-content">
+                ${isSummary ? "" : tagHeaderHTML}
+                <div class="accordion-actions">
+                    ${infoBtnHTML}
+                    ${contentBtnHTML}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Create the body
+    const body = document.createElement('div');
+    body.className = 'accordion-body hidden';
+    const pre = document.createElement('pre');
+
+    const replacer = (key, value) => {
+        if (typeof key === 'string' && key.startsWith('_')) return undefined;
+        return value;
+    };
+    pre.textContent = JSON.stringify(log, replacer, 2);
+    body.appendChild(pre);
+
+    // Event Listeners
+    if (!isSummary) {
+        const infoBtn = header.querySelector('.ai-log-info-btn');
+        infoBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleLiveUpdates(elements, false);
+            elements.liveToggle.checked = false;
+            openAILogModal(log._id, log.tags);
+        });
+    }
+
+    const contentBtn = header.querySelector('.ai-log-content-btn');
+    contentBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleLiveUpdates(elements, false);
+        elements.liveToggle.checked = false;
+        header.classList.toggle('active');
+        body.classList.toggle('hidden');
+        const isHidden = body.classList.contains('hidden');
+        contentBtn.innerText = isHidden ? contentBtnText : "Hide Content";
+    });
+
+    item.appendChild(header);
+    item.appendChild(body);
+
+    return item;
 }
 
 // --- HELPER FUNCTIONS ---
@@ -224,6 +395,24 @@ function getDotClass(eventType) {
         default: return 'log-dot-default';
     }
 }
+
+async function toggleLiveUpdates(elements, newValue) {
+    // Visual indicator that updates are paused
+    isLive = newValue;
+    const opacity = isLive ? "1" : "0.9";
+    elements.aiLogAccordion.style.opacity = opacity;
+    elements.aiSummaryAccordion.style.opacity = opacity;
+    elements.userLogTbody.style.opacity = opacity; // Even if not live yet, good for visual consistency
+
+    if (isLive) {
+        // When toggled back on, refresh the AI views
+        await Promise.all([
+            handleAiFilter(elements, currentAiLogsPage),
+            handleAiSummaryFilter(elements, currentAiSummariesPage)
+        ]);
+    }
+}
+
 
 /**
  * (UPDATED) Fetches and filters user logs from the API
@@ -306,8 +495,10 @@ async function handleAiFilter(elements, page = 1) {
         }
         const data = await response.json(); // { logs, total, page, pages }
 
+        totalAiLogs = data.total;
+
         // Render data and pagination
-        renderAiAccordion(data.logs, elements.aiLogAccordion);
+        renderAiAccordion(data.logs, elements.aiLogAccordion, elements, false);
         Pagination.render(elements.aiPaginationControls, data.pages, data.page, (newPage) => handleAiFilter(elements, newPage));
 
     } catch (error) {
@@ -352,12 +543,119 @@ async function handleAiSummaryFilter(elements, page = 1) {
         }
         const data = await response.json(); // { logs, total, page, pages }
 
+        totalAiSummaries = data.total;
+
         // Render data and pagination
-        renderAiAccordion(data.logs, elements.aiSummaryAccordion);
+        renderAiAccordion(data.logs, elements.aiSummaryAccordion, elements, true);
         Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, (newPage) => handleAiSummaryFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch AI summaries:', error);
         elements.aiSummaryAccordion.innerHTML = `<p>Error loading summaries. ${error.message}</p>`;
     }
+}
+
+
+// --- LIVE UPDATES (SSE) ---
+function setupLiveUpdates(elements, getIsLive) {
+    try {
+        const evtSource = new EventSource('events');
+
+        // Helper to check if an incoming log matches the current form filters
+        const passesFilters = (logData, formElement) => {
+            const formData = new FormData(formElement);
+            const filterModel = formData.get('modelName');
+            const searchVal = formData.get('search');
+            const startVal = formData.get('startDate');
+            const endVal = formData.get('endDate');
+
+            const logTime = new Date(logData.responseTimestamp || logData.createdAt).getTime();
+
+            if (startVal && logTime < new Date(startVal).getTime()) return false;
+            if (endVal && logTime > new Date(endVal).getTime()) return false;
+            if (filterModel && filterModel !== 'all' && logData.modelName !== filterModel) return false;
+
+            if (searchVal) {
+                const searchLower = searchVal.toLowerCase();
+                const logString = JSON.stringify(logData).toLowerCase();
+                if (!logString.includes(searchLower)) return false;
+            }
+
+            return true;
+        };
+
+        // AI Logs Listener
+        evtSource.addEventListener('update', (event) => {
+            if (!getIsLive() || currentAiLogsPage !== 1) return;
+
+            try {
+                const logData = JSON.parse(event.data);
+
+                for (const model in logData) {
+                    if (passesFilters(logData[model], elements.aiFilterForm)) {
+                        // Clear "No logs found" message if present
+                        if (elements.aiLogAccordion.children.length === 1 && elements.aiLogAccordion.firstElementChild.tagName === 'P') {
+                            elements.aiLogAccordion.innerHTML = '';
+                        }
+
+                        const newItem = createAiAccordionItem(logData[model], elements, false);
+                        elements.aiLogAccordion.prepend(newItem);
+
+                        totalAiLogs++;
+                        const newTotalPages = Math.ceil(totalAiLogs / PAGE_LIMIT);
+
+                        // Re-render the pagination
+                        Pagination.render(
+                            elements.aiPaginationControls,
+                            newTotalPages,
+                            currentAiLogsPage,
+                            (newPage) => handleAiFilter(elements, newPage)
+                        );
+
+                        if (elements.aiLogAccordion.children.length > PAGE_LIMIT) {
+                            elements.aiLogAccordion.lastElementChild.remove();
+                        }
+                    }
+                }
+            } catch (e) { console.error('SSE AI Log Error', e); }
+        });
+
+        // AI Summaries Listener
+        evtSource.addEventListener('summary', (event) => {
+            if (!getIsLive() || currentAiSummariesPage !== 1) return;
+
+            try {
+                const summaryArray = JSON.parse(event.data);
+
+                summaryArray.forEach(logData => {
+                    if (passesFilters(logData, elements.aiSummaryFilterForm)) {
+                        // Clear "No logs found" message if present
+                        if (elements.aiSummaryAccordion.children.length === 1 && elements.aiSummaryAccordion.firstElementChild.tagName === 'P') {
+                            elements.aiSummaryAccordion.innerHTML = '';
+                        }
+
+                        const newItem = createAiAccordionItem(logData, elements, true);
+                        elements.aiSummaryAccordion.prepend(newItem);
+
+                        // Maintain max 10 items
+                        if (elements.aiSummaryAccordion.children.length > 10) {
+                            elements.aiSummaryAccordion.lastElementChild.remove();
+                        }
+                    }
+                });
+            } catch (e) { console.error('SSE AI Summary Error', e); }
+        });
+
+        window.addEventListener('beforeunload', () => evtSource.close());
+    } catch (e) { console.error('SSE Setup Failed', e); }
+}
+
+
+// API Helper Functions
+async function apiListTags() {
+    return fetch('tags').then(r => r.json()).then(d => d.tags);
+}
+
+async function apiListHistTags() {
+    return fetch('tags/hist').then(r => r.json()).then(d => d.tags);
 }

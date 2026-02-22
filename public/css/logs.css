@@ -9,11 +9,18 @@
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
   padding-bottom: 1rem;
+  margin-bottom: 1rem;
   border-bottom: 1px solid #eee;
   gap: 1rem;
   padding-right: 100px;
+}
+
+.second-logs-toolbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
 }
 
 .log-tabs {
@@ -57,6 +64,69 @@
   font-size: 0.9rem;
 }
 
+
+/* Live Updates Toggle */
+.live-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+}
+
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked+.slider {
+  background-color: #2196F3;
+}
+
+input:checked+.slider:before {
+  transform: translateX(20px);
+}
+
+.live-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #666;
+}
+
 /* A generic primary button style */
 .btn-primary {
   padding: 0.5rem 1rem;
@@ -74,16 +144,20 @@
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
   font-weight: 600;
-  border: 1px solid #6c757d; /* Gray border */
-  background-color: #ffffff;  /* White background */
-  color: #6c757d;            /* Gray text */
+  border: 1px solid #6c757d;
+  /* Gray border */
+  background-color: #ffffff;
+  /* White background */
+  color: #6c757d;
+  /* Gray text */
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background-color: #f8f9fa; /* Light gray on hover */
+  background-color: #f8f9fa;
+  /* Light gray on hover */
 }
 
 /* --- User Log Table --- */
@@ -107,11 +181,25 @@
 }
 
 /* Column widths */
-.col-type { width: 5%; }
-.col-time { width: 20%; }
-.col-user { width: 15%; }
-.col-action { width: 15%; }
-.col-details { width: 45%; }
+.col-type {
+  width: 5%;
+}
+
+.col-time {
+  width: 20%;
+}
+
+.col-user {
+  width: 15%;
+}
+
+.col-action {
+  width: 15%;
+}
+
+.col-details {
+  width: 45%;
+}
 
 /* Colored Dots */
 .log-dot {
@@ -124,13 +212,41 @@
   transform: translateY(1px);
 }
 
-.log-dot-login { background-color: #28a745; } /* Green */
-.log-dot-signup { background-color: #17a2b8; } /* Teal */
-.log-dot-logout { background-color: #6c757d; } /* Gray */
-.log-dot-alert { background-color: #ffc107; } /* Yellow */
-.log-dot-report { background-color: #007bff; } /* Blue */
-.log-dot-delete { background-color: #dc3545; } /* Red */
-.log-dot-default { background-color: #ccc; }   /* Light Gray */
+.log-dot-login {
+  background-color: #28a745;
+}
+
+/* Green */
+.log-dot-signup {
+  background-color: #17a2b8;
+}
+
+/* Teal */
+.log-dot-logout {
+  background-color: #6c757d;
+}
+
+/* Gray */
+.log-dot-alert {
+  background-color: #ffc107;
+}
+
+/* Yellow */
+.log-dot-report {
+  background-color: #007bff;
+}
+
+/* Blue */
+.log-dot-delete {
+  background-color: #dc3545;
+}
+
+/* Red */
+.log-dot-default {
+  background-color: #ccc;
+}
+
+/* Light Gray */
 
 
 /* --- AI Log Accordion --- */
@@ -142,33 +258,45 @@
 }
 
 .accordion-header {
-  width: 100%;
   background-color: #f7f7f7;
   padding: 0.75rem 1rem;
-  text-align: left;
+
   border: none;
   border-bottom: 1px solid #ddd;
-  font-size: 1rem;
-  font-weight: 600;
+
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
+.accordion-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.accordion-header-right-content {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+.accordion-header-left-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  text-align: left;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+
+
 .accordion-header:hover {
   background-color: #eee;
-}
-
-.accordion-header::after {
-  content: '+';
-  font-size: 1.5rem;
-  font-weight: 300;
-  color: #555;
-}
-
-.accordion-header.active::after {
-  content: '−';
 }
 
 .accordion-body {
@@ -185,6 +313,19 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   font-family: 'Courier New', Courier, monospace;
+}
+
+.ai-log-info-btn {
+  background-color: #007bff;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid #6c757d;
+  color: #ffffff;
+  /* Gray text */
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 /* --- Pagination Controls --- */
@@ -221,4 +362,53 @@
   background-color: #007bff;
   color: white;
   border-color: #007bff;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.add-log-tag-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px dashed #9ca3af;
+  background: none;
+  color: #6b7280;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition: all 0.2s;
+
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.add-log-tag-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: #eff6ff;
+}
+
+
+.tags-cell {
+  display: flex;
+  align-items: center;
+
+  gap: 1rem;
+}
+
+.ai-log-links{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }

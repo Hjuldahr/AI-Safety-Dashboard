@@ -11,6 +11,16 @@ router.post("/", isAuthenticated, authorize('create:alert'), controller.createAl
 router.get("/live", isAuthenticated, authorize('view:alerts'), controller.getLiveAlerts);
 // Return full alert history (Paginated/Filtered)
 router.get("/api/history", isAuthenticated, authorize('view:alerts'), controller.getAlertHistory);
+// get just one alert log
+router.get("/api/log/:id", isAuthenticated, authorize('view:alerts'), controller.getAlertLog);
+
+// Fetch alerts for an AI Log
+router.get("/api/aiLog/:id", isAuthenticated, authorize('view:alerts'), controller.getAIAlerts)
+
+// View one specific alert log
+router.get("/view/:id", isAuthenticated, authorize('view:alerts'), controller.getAlertLogView);
+
+
 // Return dashboard stats
 router.get("/api/stats", isAuthenticated, controller.getAlertStats);
 // Return unread count for current user
