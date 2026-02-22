@@ -2,9 +2,16 @@ import { initAILogModal } from './components/logs/AILogModal.js';
 import ModalManager from './components/modals.js';
 
 // --- GLOBAL STATE ---
+let isLive = true;
+
 let currentLogsPage = 1;
 let currentAiLogsPage = 1;
 let currentAiSummariesPage = 1;
+
+let totalAiLogs = 0;
+let totalAiSummaries = 0;
+// ToDo: let users define this
+const PAGE_LIMIT = 10;
 
 // --- PERMISSION CHECKS ---
 const hasPermission = (permission) => {
@@ -20,7 +27,6 @@ let openAILogModal;
 document.addEventListener('DOMContentLoaded', async () => {
 
     const modalManager = new ModalManager();
-    let isLive = true;
 
     // Get all required elements
     const elements = {
@@ -61,19 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.liveToggle.addEventListener('change', async (e) => {
             isLive = e.target.checked;
 
-            // Visual indicator that updates are paused
-            const opacity = isLive ? "1" : "0.9";
-            elements.aiLogAccordion.style.opacity = opacity;
-            elements.aiSummaryAccordion.style.opacity = opacity;
-            elements.userLogTbody.style.opacity = opacity; // Even if not live yet, good for visual consistency
-
-            if (isLive) {
-                // When toggled back on, refresh the AI views
-                await Promise.all([
-                    handleAiFilter(elements, currentAiLogsPage),
-                    handleAiSummaryFilter(elements, currentAiSummariesPage)
-                ]);
-            }
+            toggleLiveUpdates(elements, isLive);
         });
     }
 
@@ -149,8 +143,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Switch to AI tab visually
         toggleViews('ai', elements);
 
+        // Stop the UI from updating live
+        toggleLiveUpdates(elements, false);
+        elements.liveToggle.checked = false;
+
         // Load the specific page
         await handleAiFilter(elements, page);
+        await handleAiSummaryFilter(elements, 1);
+
+
 
         // Highlight and Scroll to the log
         const targetElement = elements.aiLogAccordion.querySelector(`[data-id="${id}"]`);
@@ -210,6 +211,11 @@ async function refreshHistTagCache() {
  * Toggles between 'user' and 'ai' log views
  */
 function toggleViews(viewToShow, elements) {
+    // Clean up the URL so deep links don't persist on refresh
+    if (window.location.pathname.includes('/view/ai/')) {
+        window.history.pushState({}, document.title, '/logs'); // Adjust '/logs' to your base URL route
+    }
+
     // Reset classes
     [elements.userLogsBtn, elements.aiLogsBtn, elements.aiSummariesBtn].forEach(b => b.classList.remove('active'));
     [elements.userLogView, elements.aiLogView, elements.aiSummaryView].forEach(v => v.classList.add('hidden'));
@@ -277,14 +283,14 @@ function renderUserLogs(logs, tbody) {
 /**
  * Populates the AI Logs + Summaries accordion
  */
-function renderAiAccordion(logs, accordion, isSummary = false) {
+function renderAiAccordion(logs, accordion, elements, isSummary = false) {
     accordion.innerHTML = '';
     if (logs.length === 0) {
         accordion.innerHTML = `<p>No AI ${isSummary ? 'summaries' : 'logs'} found.</p>`;
         return;
     }
     logs.forEach((log) => {
-        const item = createAiAccordionItem(log, isSummary);
+        const item = createAiAccordionItem(log, elements, isSummary);
         accordion.appendChild(item);
     });
 }
@@ -292,7 +298,7 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
 /**
  * Creates a single accordion item DOM element for AI Logs or Summaries
  */
-function createAiAccordionItem(log, isSummary = false) {
+function createAiAccordionItem(log, elements, isSummary = false,) {
     const item = document.createElement('div');
     item.className = 'accordion-item fade-in-row'; // Added fade-in animation
     item.dataset.id = log._id;
@@ -351,6 +357,8 @@ function createAiAccordionItem(log, isSummary = false) {
         const infoBtn = header.querySelector('.ai-log-info-btn');
         infoBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            toggleLiveUpdates(elements, false);
+            elements.liveToggle.checked = false;
             openAILogModal(log._id, log.tags);
         });
     }
@@ -358,6 +366,8 @@ function createAiAccordionItem(log, isSummary = false) {
     const contentBtn = header.querySelector('.ai-log-content-btn');
     contentBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        toggleLiveUpdates(elements, false);
+        elements.liveToggle.checked = false;
         header.classList.toggle('active');
         body.classList.toggle('hidden');
         const isHidden = body.classList.contains('hidden');
@@ -385,6 +395,24 @@ function getDotClass(eventType) {
         default: return 'log-dot-default';
     }
 }
+
+async function toggleLiveUpdates(elements, newValue) {
+    // Visual indicator that updates are paused
+    isLive = newValue;
+    const opacity = isLive ? "1" : "0.9";
+    elements.aiLogAccordion.style.opacity = opacity;
+    elements.aiSummaryAccordion.style.opacity = opacity;
+    elements.userLogTbody.style.opacity = opacity; // Even if not live yet, good for visual consistency
+
+    if (isLive) {
+        // When toggled back on, refresh the AI views
+        await Promise.all([
+            handleAiFilter(elements, currentAiLogsPage),
+            handleAiSummaryFilter(elements, currentAiSummariesPage)
+        ]);
+    }
+}
+
 
 /**
  * (UPDATED) Fetches and filters user logs from the API
@@ -467,8 +495,10 @@ async function handleAiFilter(elements, page = 1) {
         }
         const data = await response.json(); // { logs, total, page, pages }
 
+        totalAiLogs = data.total;
+
         // Render data and pagination
-        renderAiAccordion(data.logs, elements.aiLogAccordion);
+        renderAiAccordion(data.logs, elements.aiLogAccordion, elements, false);
         Pagination.render(elements.aiPaginationControls, data.pages, data.page, (newPage) => handleAiFilter(elements, newPage));
 
     } catch (error) {
@@ -513,8 +543,10 @@ async function handleAiSummaryFilter(elements, page = 1) {
         }
         const data = await response.json(); // { logs, total, page, pages }
 
+        totalAiSummaries = data.total;
+
         // Render data and pagination
-        renderAiAccordion(data.logs, elements.aiSummaryAccordion, true);
+        renderAiAccordion(data.logs, elements.aiSummaryAccordion, elements, true);
         Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, (newPage) => handleAiSummaryFilter(elements, newPage));
 
     } catch (error) {
@@ -566,11 +598,21 @@ function setupLiveUpdates(elements, getIsLive) {
                             elements.aiLogAccordion.innerHTML = '';
                         }
 
-                        const newItem = createAiAccordionItem(logData[model], false);
+                        const newItem = createAiAccordionItem(logData[model], elements, false);
                         elements.aiLogAccordion.prepend(newItem);
 
-                        // Maintain max 10 items
-                        if (elements.aiLogAccordion.children.length > 10) {
+                        totalAiLogs++;
+                        const newTotalPages = Math.ceil(totalAiLogs / PAGE_LIMIT);
+
+                        // Re-render the pagination
+                        Pagination.render(
+                            elements.aiPaginationControls,
+                            newTotalPages,
+                            currentAiLogsPage,
+                            (newPage) => handleAiFilter(elements, newPage)
+                        );
+
+                        if (elements.aiLogAccordion.children.length > PAGE_LIMIT) {
                             elements.aiLogAccordion.lastElementChild.remove();
                         }
                     }
@@ -592,7 +634,7 @@ function setupLiveUpdates(elements, getIsLive) {
                             elements.aiSummaryAccordion.innerHTML = '';
                         }
 
-                        const newItem = createAiAccordionItem(logData, true);
+                        const newItem = createAiAccordionItem(logData, elements, true);
                         elements.aiSummaryAccordion.prepend(newItem);
 
                         // Maintain max 10 items
