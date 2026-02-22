@@ -1,6 +1,7 @@
 import express from 'express';
 import tagController from '../controllers/tagController.js';
 import { isAuthenticated } from '../middleware/authMiddleware.js';
+import { authorize } from '../middleware/authorization.js';
 
 const router = express.Router();
 
