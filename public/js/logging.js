@@ -59,11 +59,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (elements.liveToggle) {
         elements.liveToggle.addEventListener('change', async (e) => {
             isLive = e.target.checked;
+
             // Visual indicator that updates are paused
-            alertLogBody.style.opacity = isLive ? "1" : "0.9";
+            const opacity = isLive ? "1" : "0.9";
+            elements.aiLogAccordion.style.opacity = opacity;
+            elements.aiSummaryAccordion.style.opacity = opacity;
+            elements.userLogTbody.style.opacity = opacity; // Even if not live yet, good for visual consistency
 
             if (isLive) {
-                await loadAlertHistory(currentHistoryPage);
+                // When toggled back on, refresh the AI views
+                await Promise.all([
+                    handleAiFilter(elements, currentAiLogsPage),
+                    handleAiSummaryFilter(elements, currentAiSummariesPage)
+                ]);
             }
         });
     }
@@ -165,6 +173,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         await handleAiFilter(elements, 1);
         await handleAiSummaryFilter(elements, 1);
     }
+
+    // Setup Live updates
+    setupLiveUpdates(elements, () => isLive);
 });
 
 async function refreshTagCache() {
@@ -265,96 +276,94 @@ function renderUserLogs(logs, tbody) {
 function renderAiAccordion(logs, accordion, isSummary = false) {
     accordion.innerHTML = '';
     if (logs.length === 0) {
-        accordion.innerHTML = '<p>No AI logs found.</p>';
+        accordion.innerHTML = `<p>No AI ${isSummary ? 'summaries' : 'logs'} found.</p>`;
         return;
     }
     logs.forEach((log) => {
-        const item = document.createElement('div');
-        item.className = 'accordion-item';
-        item.dataset.id = log._id;
-
-        const timestamp = new Date(log.responseTimestamp).toLocaleString();
-
-        const tagsHtml = (log.tags || []).map(tagId => {
-            // Handle if tagId is populated object or just ID
-            const id = tagId._id || tagId;
-            const t = histTagsCache[id];
-            if (!t) return ''; // Skip if not found in cache (or render generic)
-            return `<span class="tag-pill" style="background:${t.color};">${t.name}</span>`;
-        }).join('');
-
-        const tagHeaderHTML = `<div class="tags-cell">${tagsHtml}</div>`;
-
-        // Summaries don't get the info/tagging button
-        const infoBtnHTML = isSummary
-            ? ""
-            : `<button class="btn btn-sm ai-log-info-btn" style="margin-right: 8px;">AI Log Info</button>`;
-
-        const contentBtnText = isSummary ? "AI Summary Content" : "AI Log Content";
-
-        const contentBtnHTML = `<button class="btn btn-secondary ai-log-content-btn">${contentBtnText}</button>`;
-
-        // Create the header
-        const header = document.createElement('div');
-        header.className = 'accordion-header';
-
-        header.innerHTML = `
-            <div class="accordion-header-content">
-                <div class="accordion-header-left-content">
-                    <strong>${log.modelName}</strong> 
-                    <span>${timestamp}</span>
-                </div>
-
-                <div class="accordion-header-right-content">
-                        ${isSummary ? "" : tagHeaderHTML}
-                    
-                    <div class="accordion-actions">
-                        ${infoBtnHTML}
-                        ${contentBtnHTML}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        const body = document.createElement('div');
-        body.className = 'accordion-body hidden';
-        const pre = document.createElement('pre');
-        // replace fields starting with '_'
-        const replacer = (key, value) => {
-            if (typeof key === 'string' && key.startsWith('_')) {
-                return undefined;
-            }
-            return value;
-        };
-        //use the replacer
-        pre.textContent = JSON.stringify(log, replacer, 2);
-        body.appendChild(pre);
-
-        if (!isSummary) {
-            // Add tag button
-            const infoBtn = header.querySelector('.ai-log-info-btn');
-            infoBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                openAILogModal(log._id, log.tags);
-            });
-        }
-
-
-        const contentBtn = header.querySelector('.ai-log-content-btn');
-        contentBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Toggle active states
-            header.classList.toggle('active');
-            body.classList.toggle('hidden');
-
-            const isHidden = body.classList.contains('hidden');
-            contentBtn.innerText = isHidden ? contentBtnText : "Hide Content";
-        });
-
-        item.appendChild(header);
-        item.appendChild(body);
+        const item = createAiAccordionItem(log, isSummary);
         accordion.appendChild(item);
     });
+}
+
+/**
+ * Creates a single accordion item DOM element for AI Logs or Summaries
+ */
+function createAiAccordionItem(log, isSummary = false) {
+    const item = document.createElement('div');
+    item.className = 'accordion-item fade-in-row'; // Added fade-in animation
+    item.dataset.id = log._id;
+
+    const timestamp = new Date(log.responseTimestamp || log.createdAt).toLocaleString();
+
+    const tagsHtml = (log.tags || []).map(tagId => {
+        // Handle if tagId is populated object or just ID
+        const id = tagId._id || tagId;
+        const t = histTagsCache[id];
+        if (!t) return '';
+        return `<span class="tag-pill" style="background:${t.color};">${t.name}</span>`;
+    }).join('');
+
+    // Summaries don't get the info/tagging button
+    const tagHeaderHTML = `<div class="tags-cell">${tagsHtml}</div>`;
+    const infoBtnHTML = isSummary
+        ? ""
+        : `<button class="btn btn-sm ai-log-info-btn" style="margin-right: 8px;">AI Log Info</button>`;
+    const contentBtnText = isSummary ? "AI Summary Content" : "AI Log Content";
+    const contentBtnHTML = `<button class="btn btn-secondary ai-log-content-btn">${contentBtnText}</button>`;
+
+    // Create the header
+    const header = document.createElement('div');
+    header.className = 'accordion-header';
+    header.innerHTML = `
+        <div class="accordion-header-content">
+            <div class="accordion-header-left-content">
+                <strong>${log.modelName || 'Unknown Model'}</strong> 
+                <span>${timestamp}</span>
+            </div>
+            <div class="accordion-header-right-content">
+                ${isSummary ? "" : tagHeaderHTML}
+                <div class="accordion-actions">
+                    ${infoBtnHTML}
+                    ${contentBtnHTML}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Create the body
+    const body = document.createElement('div');
+    body.className = 'accordion-body hidden';
+    const pre = document.createElement('pre');
+
+    const replacer = (key, value) => {
+        if (typeof key === 'string' && key.startsWith('_')) return undefined;
+        return value;
+    };
+    pre.textContent = JSON.stringify(log, replacer, 2);
+    body.appendChild(pre);
+
+    // Event Listeners
+    if (!isSummary) {
+        const infoBtn = header.querySelector('.ai-log-info-btn');
+        infoBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openAILogModal(log._id, log.tags);
+        });
+    }
+
+    const contentBtn = header.querySelector('.ai-log-content-btn');
+    contentBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        header.classList.toggle('active');
+        body.classList.toggle('hidden');
+        const isHidden = body.classList.contains('hidden');
+        contentBtn.innerText = isHidden ? contentBtnText : "Hide Content";
+    });
+
+    item.appendChild(header);
+    item.appendChild(body);
+
+    return item;
 }
 
 // --- HELPER FUNCTIONS ---
@@ -508,6 +517,89 @@ async function handleAiSummaryFilter(elements, page = 1) {
         console.error('Failed to fetch AI summaries:', error);
         elements.aiSummaryAccordion.innerHTML = `<p>Error loading summaries. ${error.message}</p>`;
     }
+}
+
+
+// --- LIVE UPDATES (SSE) ---
+function setupLiveUpdates(elements, getIsLive) {
+    try {
+        const evtSource = new EventSource('events');
+
+        // Helper to check if an incoming log matches the current form filters
+        const passesFilters = (logData, formElement) => {
+            const formData = new FormData(formElement);
+            const filterModel = formData.get('modelName');
+            const searchVal = formData.get('search');
+            const startVal = formData.get('startDate');
+            const endVal = formData.get('endDate');
+
+            const logTime = new Date(logData.responseTimestamp || logData.createdAt).getTime();
+
+            if (startVal && logTime < new Date(startVal).getTime()) return false;
+            if (endVal && logTime > new Date(endVal).getTime()) return false;
+            if (filterModel && filterModel !== 'all' && logData.modelName !== filterModel) return false;
+
+            if (searchVal) {
+                const searchLower = searchVal.toLowerCase();
+                const logString = JSON.stringify(logData).toLowerCase();
+                if (!logString.includes(searchLower)) return false;
+            }
+
+            return true;
+        };
+
+        // AI Logs Listener
+        evtSource.addEventListener('update', (event) => {
+            if (!getIsLive() || currentAiLogsPage !== 1) return;
+
+            try {
+                const logData = JSON.parse(event.data);
+
+                for (const model in logData) {
+                    if (passesFilters(logData[model], elements.aiFilterForm)) {
+                        // Clear "No logs found" message if present
+                        if (elements.aiLogAccordion.children.length === 1 && elements.aiLogAccordion.firstElementChild.tagName === 'P') {
+                            elements.aiLogAccordion.innerHTML = '';
+                        }
+
+                        const newItem = createAiAccordionItem(logData[model], false);
+                        elements.aiLogAccordion.prepend(newItem);
+
+                        // Maintain max 10 items
+                        if (elements.aiLogAccordion.children.length > 10) {
+                            elements.aiLogAccordion.lastElementChild.remove();
+                        }
+                    }
+                }
+            } catch (e) { console.error('SSE AI Log Error', e); }
+        });
+
+        // AI Summaries Listener
+        evtSource.addEventListener('summary', (event) => {
+            if (!getIsLive() || currentAiSummariesPage !== 1) return;
+
+            try {
+                const logData = JSON.parse(event.data);
+
+                if (passesFilters(logData, elements.aiSummaryFilterForm)) {
+                    // Clear "No logs found" message if present
+                    if (elements.aiSummaryAccordion.children.length === 1 && elements.aiSummaryAccordion.firstElementChild.tagName === 'P') {
+                        elements.aiSummaryAccordion.innerHTML = '';
+                    }
+
+                    const newItem = createAiAccordionItem(logData, true);
+                    elements.aiSummaryAccordion.prepend(newItem);
+
+                    // Maintain max 10 items
+                    if (elements.aiSummaryAccordion.children.length > 10) {
+                        elements.aiSummaryAccordion.lastElementChild.remove();
+                    }
+                }
+            } catch (e) { console.error('SSE AI Summary Error', e); }
+        });
+
+        window.addEventListener('beforeunload', () => evtSource.close());
+    } catch (e) { console.error('SSE Setup Failed', e); }
 }
 
 

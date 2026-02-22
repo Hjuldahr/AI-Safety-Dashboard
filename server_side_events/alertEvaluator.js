@@ -4,95 +4,85 @@ import { broadcastEvent } from './scheduler.js';
 import HistTag from "../models/historicalTag.js";
 import AI_Log from "../models/AI_Log.js";
 
-export default async function evaluateAlerts(logsMap, options = {}) {
+export async function evaluateAndTagLogs(rawLogsMap, options = {}) {
     const { cooldownMs = 60000 } = options;
-    if (!logsMap || Object.keys(logsMap).length === 0) return;
+    if (!rawLogsMap || Object.keys(rawLogsMap).length === 0) return [];
 
     let alerts;
     try {
         alerts = await Alert.find().populate('tags').lean();
     } catch (err) {
         console.error('[AlertEvaluator] Failed to fetch alerts:', err);
-        return;
+        return [];
     }
 
     const now = Date.now();
+    const pendingAlertLogs = []; // Stores data needed to create AlertLogs after DB insert
 
     for (const alert of alerts) {
         // Identify which models to check
-        let candidates = [];
-        if (alert.modelName) {
-            // Specific Alert: Only check the named model
-            if (logsMap[alert.modelName]) candidates.push(logsMap[alert.modelName]);
-        } else {
-            // Global Alert: Check all models in this batch
-            candidates = Object.values(logsMap);
-        }
+        let candidates = alert.modelName
+            ? (rawLogsMap[alert.modelName] ? [rawLogsMap[alert.modelName]] : [])
+            : Object.values(rawLogsMap);
 
-        // Collect ALL matches for this specific alert
-        const matchingLogs = [];
-        for (const log of candidates) {
-            if (evaluateRule(alert.alertRule, log)) {
-                matchingLogs.push(log);
-            }
-        }
-
-        // If no models triggered this alert, move to the next alert
+        const matchingLogs = candidates.filter(log => evaluateRule(alert.alertRule, log));
         if (matchingLogs.length === 0) continue;
 
-        // Groups model logs that are close together in time - so there is only one Alert_Log obj
         if (cooldownMs > 0) {
             try {
-                const last = await AlertLog.findOne({ alert: alert._id })
-                    .sort({ timestamp: -1 })
-                    .lean();
-
-                if (last && (now - new Date(last.timestamp).getTime()) < cooldownMs) {
-                    continue; // Skip if we alerted on this rule recently
-                }
+                const last = await AlertLog.findOne({ alert: alert._id }).sort({ timestamp: -1 }).lean();
+                if (last && (now - new Date(last.timestamp).getTime()) < cooldownMs) continue;
             } catch (err) {
                 console.error('[AlertEvaluator] Cooldown check failed', err);
             }
         }
 
-        // Create on AlertLog for all matches
-        try {
-            let histTags = null;
-            let histTagsIDs = null;
+        let histTags = [];
+        let histTagsIDs = [];
 
-            if (alert.tags) {
-                // Get the Historical Tags
-                const tagPromises = alert.tags.map(async (tag) => {
-                    return await HistTag.addOrFindTag(tag);
-                });
+        if (alert.tags && alert.tags.length > 0) {
+            histTags = await Promise.all(alert.tags.map(tag => HistTag.addOrFindTag(tag)));
+            histTagsIDs = histTags.map(tag => tag._id);
+        }
 
-                // Wait for all promises in that array to finish
-                histTags = await Promise.all(tagPromises);
-
-                if (histTags) {
-                    histTagsIDs = histTags.map((tag) => {
-                        return tag._id;
-                    });
+        // Stamp Logs with Tags
+        for (const log of matchingLogs) {
+            if (!log.tags) log.tags = [];
+            histTagsIDs.forEach(id => {
+                // Prevent duplicate tags if multiple alerts trigger the same tag
+                if (!log.tags.some(existingId => String(existingId) === String(id))) {
+                    log.tags.push(id);
                 }
-            }
+            });
+        }
 
-            // Stamp the AI_Log with the HistoricalTag
-            if (matchingLogs.length > 0) {
-                await Promise.all(matchingLogs.map(log =>
-                    AI_Log.findByIdAndUpdate(log._id, {
-                        $set: { tags: histTagsIDs || [] }
-                    })
-                ));
-            }
+        pendingAlertLogs.push({
+            alert,
+            matchedModelNames: matchingLogs.map(l => l.modelName),
+            histTags,
+            histTagsIDs
+        });
+    }
 
-            const triggeredModelNames = matchingLogs.map(l => l.modelName);
-            const modelLabel = triggeredModelNames.join(', ');
+    return pendingAlertLogs;
+}
+
+// Step 2: Create the AlertLogs once AI_Logs have real _ids
+export async function finalizeAlertLogs(pendingAlertLogs, insertedLogsMap) {
+    for (const pending of pendingAlertLogs) {
+        try {
+            const { alert, matchedModelNames, histTags, histTagsIDs } = pending;
+
+            // Retrieve the inserted DB documents to get their _ids
+            const matchingDbLogs = matchedModelNames
+                .map(model => insertedLogsMap[model])
+                .filter(Boolean);
 
             const snapshot = {
                 _id: alert._id,
                 alertName: alert.alertName,
                 alertLevel: alert.alertLevel,
-                modelName: modelLabel,
+                modelName: matchedModelNames.join(', '),
                 alertRule: alert.alertRule,
                 created: alert.created
             };
@@ -101,10 +91,9 @@ export default async function evaluateAlerts(logsMap, options = {}) {
                 alert: alert._id,
                 alertSnapshot: snapshot,
                 tags: histTagsIDs || [],
-                logs: matchingLogs.map(l => l._id)
+                logs: matchingDbLogs.map(l => l._id)
             });
 
-            // Broadcast
             broadcastEvent('alert', {
                 _id: created._id,
                 alert: created.alert,
