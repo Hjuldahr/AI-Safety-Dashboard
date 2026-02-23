@@ -113,6 +113,7 @@ export async function finalizeAlertLogs(pendingAlertLogs, insertedLogsMap) {
                 message: alertText,
                 category: "Alert",
                 redirectUrl: "/alerts",
+                autoCalculateTimeout: true,
                 trim: TRIM_COLOURS[alert.alertLevel],
                 background: BACKGROUND_COLOURS[alert.alertLevel]
             });

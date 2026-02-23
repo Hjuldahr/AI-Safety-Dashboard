@@ -148,7 +148,18 @@
     opacity: 0.9;
 }
 
-/* Background colors for different alert levels */
+.notification-slide-text {
+    display: block; /* Ensures it takes its own line */
+}
+/* Style for the timestamp */
+.notification-slide-time {
+    display: block;
+    font-size: 0.8em;
+    margin-top: 0.35rem;
+    opacity: 0.9;
+}
+
+/* Background colors for different alert levels 
 .notification-history-item.critical {
     background-color: #fee2e2;
     border-left: 4px solid #dc2626;
@@ -165,7 +176,7 @@
     background-color: #dbeafe;
     border-left: 4px solid #3b82f6;
 }
-
+*/
 .notification-slide {
     border-radius: 25px 0px 0px 25px;
     color: white;

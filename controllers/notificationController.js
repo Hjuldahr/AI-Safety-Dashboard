@@ -27,7 +27,6 @@ const latest = async (req, res) => {
 
         if (!notif) return res.status(200).json({});
 
-        // Map DB fields to frontend-friendly format
         const response = {
             id: notif._id.toString('base64'),
             message: notif.message,
@@ -171,10 +170,9 @@ const markRead = async (req, res) => {
 export async function sendNotification(json) {
     if ('message' in json) {
         const notification = new Notification(json);
+        if (json.autoCalculateTimeout === true) notification.autoCalculateTimeout();
         await notification.save();
-
-        json.id = notification._id.toString('base64');
-        broadcastEvent("notification", json);
+        broadcastEvent("notification", notification.toJSON());
     }
 };
 

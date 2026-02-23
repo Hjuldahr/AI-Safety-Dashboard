@@ -84,8 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Already shown?
         if (json.id && isNotificationShown(json.id)) return;
 
-        content.textContent = json.message;
-        //TODO include timestamp
+        content.innerHTML = `<span class='notification-slide-text'>${json.message}<span><br><span class='notification-slide-time'>${formatTime(json.timestamp || Date.now())}</span>`;
+        
         container.style.backgroundColor = json.trim;
 
         container.classList.remove('hidden');
@@ -103,13 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch(e) { console.error(e); }
         }
 
-        if (dismissTimer) clearTimeout(dismissTimer);
+        if (dismissTimer !== null) clearTimeout(dismissTimer);
 
         if (json.timeout) {
             dismissTimer = setTimeout(() => {
                 if (json.dismissible !== false) hideNotification();
             }, json.timeout * 1000);
-        }
+        } 
     };
 
     // CLICK BEHAVIOUR

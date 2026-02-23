@@ -11,10 +11,16 @@ const NotificationSchema = new mongoose.Schema({
   redirectUrl: { type: String, default: null },
   background: { type: String, default: '#ffffff' },
   trim: { type: String, default: '#ffffff' },
-  timeout: { type: Number, default: 10 }, // seconds
+  timeout: { type: Number, default: 3 }, // seconds
   dismissible: { type: Boolean, default: true },
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag" }]
 }, { timestamps: true });
+
+NotificationSchema.methods.autoCalculateTimeout = function () {
+  const wordCount = this.message.trim().split(/\s+/).length;
+  let calculatedTimeout = (wordCount * 0.25) + 2;
+  this.timeout = Math.min(Math.max(calculatedTimeout, 3), 8);
+};
 
 NotificationSchema.index({ createdAt: -1 });
 NotificationSchema.index({ category: 1, createdAt: -1 });

@@ -21,6 +21,7 @@ export const SHUTDOWN_MESSAGE = {
     message: "The Server is now shutting down",
     category: NOTIFICATION_TYPES.Server,
     dismissible: false,
+    timeout: null,
     trim: "#CC0202",
     background: "#cccaca"
 }

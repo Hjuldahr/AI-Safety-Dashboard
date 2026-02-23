@@ -71,8 +71,7 @@ export const resetScenario = (req, res) => {
         sendNotification({
             message: `${modelName} is back to normal.`,
             category: "Demo",
-            dismissible: true,
-            timeout: 5,
+            redirectUrl: "/demo",
             trim: "#3b82f6",
             background: "#bad1f5"
         });
