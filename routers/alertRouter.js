@@ -21,7 +21,6 @@ router.get("/api/aiLog/:id", isAuthenticated, authorize('view:alerts'), controll
 // View one specific alert log
 router.get("/view/:id", isAuthenticated, authorize('view:alerts'), controller.getAlertLogView);
 
-
 // Return dashboard stats
 router.get("/api/stats", isAuthenticated, controller.getAlertStats);
 // Delete an alert by id
