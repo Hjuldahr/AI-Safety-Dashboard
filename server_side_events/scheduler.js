@@ -6,6 +6,9 @@ import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
 import { evaluateAndTagLogs, finalizeAlertLogs } from "./alertEvaluator.js";
 import Denque from "denque";
+import { sendNotification } from '../controllers/notificationController.js';
+import { NOTIFICATION_TYPES, BACKGROUND_COLOURS, TRIM_COLOURS } from '../constants/notification.js';
+import User_Log from '../models/User_Log.js';
 
 // ---------- Shutdown Guard ----------
 let shuttingDown = false;
@@ -220,21 +223,48 @@ function stopScheduler() {
     }
 }
 
-function updateSchedulerSettings({ isPaused, activeModel, interval }) {
-    let restart = false;
+function updateSchedulerSettings(newState, user) {
+    console.log(newState, user);
 
-    if (typeof isPaused === 'boolean' && isPaused !== schedulerState.isPaused) {
-        schedulerState.isPaused = isPaused;
-        console.log(`[Scheduler] ${isPaused ? 'Paused' : 'Resumed'}`);
-        restart = true;
+    const prevIsPaused = schedulerState.isPaused;
+    let shouldRestart = false;
+
+    // ===== Pause / Resume Handling =====
+    if (typeof newState.isPaused === 'boolean' && newState.isPaused !== prevIsPaused) {
+        schedulerState.isPaused = newState.isPaused;
+        shouldRestart = true;
+
+        const action = newState.isPaused ? 'Paused' : 'Resumed';
+
+        console.log(`[Scheduler] ${action}`);
+
+        if (user?._id && user?.username) {
+            User_Log
+                .addLog(user._id, 'User_Updated', `User ${action} Scheduler`)
+                .catch(err => console.error('Failed to write log:', err));
+
+            sendNotification({
+                message: `[Scheduler] was ${action} by ${user.username}`,
+                category: NOTIFICATION_TYPES.Server,
+                redirectUrl: '/',
+                autoCalculateTimeout: true,
+                trim: TRIM_COLOURS[action],
+                background: BACKGROUND_COLOURS[action]
+            });
+        }
     }
 
-    if (activeModel) {
-        schedulerState.activeModel = activeModel;
-        console.log('[Scheduler] Active model changed to', activeModel);
+    // ===== Active Model Handling =====
+    if (newState.activeModel && newState.activeModel !== schedulerState.activeModel) {
+        schedulerState.activeModel = newState.activeModel;
+        console.log('[Scheduler] Active model changed to', newState.activeModel);
+        shouldRestart = true;
     }
 
-    if (restart) startScheduler();
+    // ===== Restart if needed =====
+    if (shouldRestart) {
+        startScheduler();
+    }
 }
 
 function setupScheduler() {

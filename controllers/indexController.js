@@ -32,7 +32,7 @@ const getParams = (req, res) => {
 const updateParams = (req, res) => {
     try {
         if (scheduler) {
-            scheduler.updateSchedulerSettings(req.body);
+            scheduler.updateSchedulerSettings(req.body, req.user);
             res.json({ success: true, state: req.body });
         }
         else {
