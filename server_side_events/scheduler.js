@@ -224,8 +224,6 @@ function stopScheduler() {
 }
 
 function updateSchedulerSettings(newState, user) {
-    console.log(newState, user);
-
     const prevIsPaused = schedulerState.isPaused;
     let shouldRestart = false;
 
