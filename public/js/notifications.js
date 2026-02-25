@@ -81,6 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const showNotification = async (json) => {
         if (!json || !json.message) return;
 
+        if (historyContainer && historyContainer.classList.contains('show')) {
+            //console.log('History is open — skipping slide notification');
+            return;
+        }
+
         // Already shown?
         if (json.id && isNotificationShown(json.id)) return;
 
@@ -227,6 +232,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (willShow) {
                 await populateHistory();
                 historyContainer.classList.add('show');
+
+                container.classList.remove('show');
+                container.classList.add('hidden');
 
                 try {
                     await fetch(API.markRead, { method: 'POST' });

@@ -1,20 +1,38 @@
+// demoController.js
+
+import { schedulerState } from '../server_side_events/schedulerState.js';
 import { LOADED_MODELS, setScenario, clearScenario, getScenarios, getCurrentScenario } from '../data_analysis_pipeline/utilities/modelRegistry.js';
 import { sendNotification } from './notificationController.js';
+import { TRIM_COLOURS, BACKGROUND_COLOURS } from "../constants/notification.js";
 
-export const renderDemoPage = (req, res) => {
-    // TODO set curret scenario as default
-    const firstModel = LOADED_MODELS[0];
-    const scenarioNames = Object.keys(getScenarios(firstModel));
-    const currentScenario = getCurrentScenario(firstModel);
+const viewDefaultDemoPage = (req, res) => {
+    const { activeModel } = schedulerState;
+    const scenarioNames = Object.keys(getScenarios(activeModel));
+    const currentScenario = getCurrentScenario(activeModel);
+
     res.render('demo', { 
         models: LOADED_MODELS, 
         scenarios: scenarioNames, 
-        currentScenario,
+        currentScenario: currentScenario,
+        activeModel,
         user: req.user 
     });
 };
 
-export const listScenarios = (req, res) => {
+const viewDemoPage = (req, res) => {
+    const { model } = req.params;
+    const scenarioNames = Object.keys(getScenarios(model));
+    const currentScenario = getCurrentScenario(model);
+    res.render('demo', { 
+        models: LOADED_MODELS, 
+        scenarios: scenarioNames, 
+        currentScenario: currentScenario,
+        activeModel: model,
+        user: req.user 
+    });
+};
+
+const listScenarios = (req, res) => {
     const { modelName } = req.body;
 
     if (!modelName) {
@@ -33,7 +51,7 @@ export const listScenarios = (req, res) => {
     });
 };
 
-export const applyScenario = (req, res) => {
+const applyScenario = (req, res) => {
     const { modelName, scenarioName } = req.body;
     
     if (!modelName) {
@@ -49,9 +67,10 @@ export const applyScenario = (req, res) => {
             message: `${modelName} is now ${scenarioName}.`,
             category: "Demo",
             dismissible: true,
-            timeout: 5,
-            trim: "#3b82f6",
-            background: "#bad1f5"
+            redirectUrl: `/demo/view/${modelName}`,
+            autoCalculateTimeout: true,
+            trim: TRIM_COLOURS.Info,
+            background: BACKGROUND_COLOURS.Info
         });
         
     } catch (error) {
@@ -60,7 +79,7 @@ export const applyScenario = (req, res) => {
     }
 };
 
-export const resetScenario = (req, res) => {
+const resetScenario = (req, res) => {
     const { modelName } = req.body;
 
     try {
@@ -71,13 +90,22 @@ export const resetScenario = (req, res) => {
         sendNotification({
             message: `${modelName} is back to normal.`,
             category: "Demo",
-            redirectUrl: "/demo",
-            trim: "#3b82f6",
-            background: "#bad1f5"
+            redirectUrl: `/demo/view/${modelName}`,
+            autoCalculateTimeout: true,
+            trim: TRIM_COLOURS.Info,
+            background: BACKGROUND_COLOURS.Info
         });
 
     } catch (error) {
         console.error('[Demo] Error going back to normal:', error);
         res.status(500).json({ error: error.message });
     }
+};
+
+export default {
+    resetScenario,
+    viewDemoPage,
+    viewDefaultDemoPage,
+    applyScenario,
+    listScenarios
 };

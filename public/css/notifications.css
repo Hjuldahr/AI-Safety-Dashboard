@@ -92,6 +92,7 @@
     box-shadow: var(--shadow);
     max-height: 250px;
     overflow-y: auto;
+    z-index: 1000;
 }
 
 /* Class added by JS to show the dropdown */
