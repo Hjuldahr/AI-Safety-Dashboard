@@ -1,4 +1,3 @@
-// notification.js
 document.addEventListener('DOMContentLoaded', () => {
     // CONFIG
     const API = {
@@ -22,21 +21,38 @@ document.addEventListener('DOMContentLoaded', () => {
     content.className = 'notificationBannerContent';
     container.appendChild(content);
 
-    // LOCAL HISTORY
-    let localHistory = [];
-
     // HELPERS
-    const isNotificationShown = (id) => localStorage.getItem(`previousNotificationId`) === id;
-    const markNotificationShown = (id) => localStorage.setItem(`previousNotificationId`, id);
-    const safeJSON = async (resp) => { try { return await resp.json(); } catch { return null; } };
+    const safeJSON = async (resp) => {
+        try { return await resp.json(); } catch { return null; }
+    };
+
     const formatTime = (date) => new Date(date).toLocaleString();
 
-    const fetchLatestNotification = async () => {
-        try {
-            const resp = await fetch(API.latest);
-            if (!resp.ok) return null;
-            return await safeJSON(resp);
-        } catch (e) { console.error('Failed to fetch latest notification:', e); return null; }
+    // HISTORY & UNREAD STATE
+    const bellButton = document.querySelector('.notification-bell');
+    const historyContainer = document.getElementById('notification-history');
+    const badgeEl = document.getElementById('notification-badge');
+
+    let allNotifications = [];   // master array of notifications
+    let page = 1;                // for pagination
+    let pageSize = 10;
+    let historyOpen = false;
+    let fetching = false;        // prevent multiple fetches
+
+    const updateBadge = (unread) => {
+        if (!badgeEl) return;
+        if (historyOpen) {
+            badgeEl.textContent = '';
+            badgeEl.classList.remove('show');
+        } else {
+            if (unread > 0) {
+                badgeEl.textContent = unread > 99 ? '99+' : String(unread);
+                badgeEl.classList.add('show');
+            } else {
+                badgeEl.textContent = '';
+                badgeEl.classList.remove('show');
+            }
+        }
     };
 
     const fetchUnreadCount = async () => {
@@ -48,92 +64,24 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch { return 0; }
     };
 
-    const fetchHistory = async (limit = 20) => {
+    const fetchHistoryPage = async (pageNum = 1) => {
+        if (fetching) return [];
+        fetching = true;
         try {
-            const params = new URLSearchParams({ page: '1', limit: String(limit) });
+            const params = new URLSearchParams({ page: pageNum, limit: pageSize });
             const resp = await fetch(`${API.history}?${params}`);
             if (!resp.ok) return [];
             const data = await safeJSON(resp);
             return Array.isArray(data?.notifications) ? data.notifications : [];
-        } catch (e) { console.error('Failed to fetch history:', e); return []; }
-    };
-
-    // SHOW / HIDE SLIDE
-    const hideNotification = () => {
-        container.classList.remove('show');
-        container.classList.add('hidden');
-        if (dismissTimer) { clearTimeout(dismissTimer); dismissTimer = null; }
-        setTimeout(() => currentNotification = null, 350);
-    };
-
-    const showNotification = async (json) => {
-        if (!json || !json.message) return;
-
-        // Suppress slide if history is open
-        if (historyContainer && historyContainer.classList.contains('show')) return;
-
-        if (json.id && isNotificationShown(json.id)) return;
-
-        content.innerHTML = `<span class='notification-slide-text'>${json.message}<span><br><span class='notification-slide-time'>${formatTime(json.timestamp || Date.now())}</span>`;
-        container.style.backgroundColor = json.trim;
-
-        container.classList.remove('hidden');
-        container.offsetHeight;
-        container.classList.add('show');
-
-        currentNotification = json;
-        if (json.id) markNotificationShown(json.id);
-
-        if (json.dismissible === false) {
-            try { await fetch(API.markRead, { method: 'POST' }); } catch(e) { console.error(e); }
-        }
-
-        if (dismissTimer !== null) clearTimeout(dismissTimer);
-        if (json.timeout) {
-            dismissTimer = setTimeout(() => { if (json.dismissible !== false) hideNotification(); }, json.timeout * 1000);
+        } catch (e) {
+            console.error('Failed to fetch history:', e);
+            return [];
+        } finally {
+            fetching = false;
         }
     };
 
-    // CLICK BEHAVIOR
-    container.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!currentNotification) return;
-        if (currentNotification.redirectUrl) { window.location.href = currentNotification.redirectUrl; return; }
-        if (currentNotification.dismissible !== false) hideNotification();
-    });
-
-    document.body.addEventListener('click', (e) => {
-        if (!currentNotification) return;
-        if (container.contains(e.target)) return;
-        if (currentNotification.dismissible === false) return;
-        hideNotification();
-    });
-
-    // NOTIFICATION BELL + HISTORY
-    const bellButton = document.querySelector('.notification-bell');
-    const historyContainer = document.getElementById('notification-history');
-    const badgeEl = document.getElementById('notification-badge');
-
-    const updateBadge = (unread) => {
-        if (!badgeEl) return;
-
-        // Force hidden if history is open
-        if (historyContainer && historyContainer.classList.contains('show')) {
-            badgeEl.textContent = '';
-            badgeEl.classList.remove('show');
-            return;
-        }
-
-        if (unread > 0) {
-            badgeEl.textContent = unread > 99 ? '99+' : String(unread);
-            badgeEl.classList.add('show');
-        } else {
-            badgeEl.textContent = '';
-            badgeEl.classList.remove('show');
-        }
-    };
-
-    const renderHistory = (notifications) => {
+    const renderHistoryWindow = () => {
         if (!historyContainer) return;
         historyContainer.innerHTML = '';
 
@@ -143,11 +91,16 @@ document.addEventListener('DOMContentLoaded', () => {
         historyContainer.appendChild(header);
 
         const list = document.createElement('ul');
-        notifications.forEach(n => {
+        list.style.maxHeight = '250px';
+        list.style.overflowY = 'auto';
+        historyContainer.appendChild(list);
+
+        // Render visible notifications
+        allNotifications.forEach(n => {
             const li = document.createElement('li');
             li.className = 'notification-history-item';
             li.style.borderLeft = `5px solid ${n.trim}`;
-            li.style.backgroundColor = n.background;
+            li.style.backgroundColor = n.background || '#fff';
 
             const link = document.createElement('a');
             if (n.redirectUrl) link.href = n.redirectUrl;
@@ -166,91 +119,136 @@ document.addEventListener('DOMContentLoaded', () => {
             list.appendChild(li);
         });
 
-        historyContainer.appendChild(list);
+        // virtual scroll: fetch more when near bottom
+        list.addEventListener('scroll', async () => {
+            if (list.scrollTop + list.clientHeight >= list.scrollHeight - 50) {
+                page++;
+                const newPage = await fetchHistoryPage(page);
+                if (newPage.length) {
+                    allNotifications = allNotifications.concat(newPage);
+                    renderHistoryWindow(); // re-render
+                }
+            }
+        });
     };
 
     const populateHistory = async () => {
-        if (!historyContainer) return;
-        const logs = await fetchHistory();
-        localHistory = logs;
-        renderHistory(localHistory);
-        updateBadge(0); // enforce badge hidden while open
+        page = 1;
+        allNotifications = await fetchHistoryPage(page);
+        renderHistoryWindow();
     };
 
-    bellButton?.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const willShow = !historyContainer.classList.contains('show');
+    // SLIDE NOTIFICATIONS
+    const showNotification = async (n) => {
+        if (!n || !n.message) return;
+        if (historyOpen) return; // suppress slide when history is open
 
-        if (willShow) {
+        const id = n.id;
+        if (id && localStorage.getItem(`previousNotificationId`) === id) return;
+        content.innerHTML = `<span class='notification-slide-text'>${n.message}<span><br><span class='notification-slide-time'>${formatTime(n.timestamp || Date.now())}</span>`;
+        container.style.backgroundColor = n.trim;
+        container.classList.remove('hidden');
+        container.offsetHeight;
+        container.classList.add('show');
+
+        if (id) localStorage.setItem(`previousNotificationId`, id);
+
+        currentNotification = n;
+        if (n.dismissible !== false) {
+            if (dismissTimer !== null) clearTimeout(dismissTimer);
+            if (n.timeout) {
+                dismissTimer = setTimeout(() => container.classList.remove('show'), n.timeout * 1000);
+            }
+        }
+
+        // auto mark read if non-dismissible
+        if (n.dismissible === false) {
+            try { await fetch(API.markRead, { method: 'POST' }); } catch(e) { console.error(e); }
+        }
+    };
+
+    const hideNotification = () => {
+        container.classList.remove('show');
+        container.classList.add('hidden');
+        if (dismissTimer) { clearTimeout(dismissTimer); dismissTimer = null; }
+        currentNotification = null;
+    };
+
+    container.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!currentNotification) return;
+        if (currentNotification.redirectUrl) window.location.href = currentNotification.redirectUrl;
+        if (currentNotification.dismissible !== false) hideNotification();
+    });
+
+    document.body.addEventListener('click', (e) => {
+        if (!currentNotification) return;
+        if (container.contains(e.target)) return;
+        if (currentNotification.dismissible === false) return;
+        hideNotification();
+    });
+
+    // BELL CLICK
+    bellButton.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        historyOpen = !historyContainer.classList.contains('show');
+
+        if (historyOpen) {
             await populateHistory();
             historyContainer.classList.add('show');
-
-            container.classList.remove('show');
-            container.classList.add('hidden');
-
-            try { await fetch(API.markRead, { method: 'POST' }); } catch(e) { console.log(e); }
-
+            hideNotification(); // hide slide
+            updateBadge(0);
+            try { await fetch(API.markRead, { method: 'POST' }); } catch {}
         } else {
             historyContainer.classList.remove('show');
-            // When closing, fetch unread count again
-            const unread = await fetchUnreadCount();
-            updateBadge(unread);
         }
     });
 
     document.addEventListener('click', () => {
-        if (historyContainer.classList.contains('show')) {
+        if (historyOpen) {
             historyContainer.classList.remove('show');
-            fetchUnreadCount().then(unread => updateBadge(unread));
+            historyOpen = false;
         }
     });
 
-    // SSE LIVE EVENTS
+    // SSE / LIVE EVENTS
     let evtSource = null;
     try {
         evtSource = new EventSource(API.events);
-
         evtSource.addEventListener('notification', async (ev) => {
             try {
                 const json = JSON.parse(ev.data);
 
-                // show slide if history not open
-                showNotification(json);
+                // prepend new notification to master array
+                allNotifications.unshift(json);
 
-                // update local history
-                localHistory.unshift(json);
-                if (localHistory.length > 10) localHistory.pop();
-
-                // update DOM if history is open
-                if (historyContainer.classList.contains('show')) {
-                    renderHistory(localHistory);
-                    updateBadge(0); // hide badge while open
-                    try { await fetch(API.markRead, { method: 'POST' }); } catch(e) {}
-                } else {
+                if (!historyOpen) {
+                    showNotification(json);
                     const unread = await fetchUnreadCount();
                     updateBadge(unread);
+                } else {
+                    renderHistoryWindow(); // update history in real time
+                    updateBadge(0);        // keep badge 0 while open
+                    // mark read server-side immediately
+                    try { await fetch(API.markRead, { method: 'POST' }); } catch {}
                 }
-
             } catch (err) {
                 console.error('Notification SSE parse error:', err);
             }
         });
-
         evtSource.onerror = () => { console.warn('Notification SSE disconnected.'); evtSource.close(); };
-
     } catch (e) { console.error('Failed to init SSE:', e); }
 
     // INITIAL LOAD
     (async () => {
-        const notif = await fetchLatestNotification();
-        if (notif) showNotification(notif);
+        const latest = await fetchLatestNotification();
+        if (latest) showNotification(latest);
 
         const unread = await fetchUnreadCount();
         updateBadge(unread);
-
-        const logs = await fetchHistory(10);
-        localHistory = logs; // local cache
     })();
 
-    window.addEventListener('beforeunload', () => { try { evtSource?.close(); } catch {} });
+    window.addEventListener('beforeunload', () => {
+        try { evtSource?.close(); } catch {}
+    });
 });
