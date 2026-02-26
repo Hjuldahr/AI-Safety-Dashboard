@@ -433,6 +433,26 @@ main.content {
   color: var(--nav-link-active-color);
 }
 
+/* Dark-mode toggle (in header) */
+.dark-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--header-text-color);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  padding: 0;
+}
+.dark-mode-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
 
 /* ==========================================================================
    5. NOTIFICATIONS  (notifications.css)

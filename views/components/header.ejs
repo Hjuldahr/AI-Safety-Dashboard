@@ -1,6 +1,15 @@
+<script>
+  // Anti-FOUC: apply dark mode instantly before paint
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
+  }
+</script>
 <header class="site-header">
     <h1>AI Safety Dashboard</h1>
     <div class="header-controls">
+        <button id="dark-mode-toggle" class="dark-mode-toggle" title="Toggle dark mode">
+            <i class="fa-solid fa-moon"></i>
+        </button>
         <% if(user){ %>
             <div class="userInfo">
                 <p id="user-name">User: <%= user.username%>
@@ -18,3 +27,4 @@
         <%- include('notifications') %>
     </div>
 </header>
+<script src="js/darkMode.js"></script>
