@@ -12,8 +12,8 @@
     }
 
     .panel-section {
-      background: #f9f9f9;
-      border: 1px solid #ddd;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 1.5rem;
     }
@@ -21,9 +21,9 @@
     .panel-section h3 {
       margin-top: 0;
       margin-bottom: 1rem;
-      color: #333;
+      color: var(--text-dark);
       font-size: 1.2rem;
-      border-bottom: 2px solid #007bff;
+      border-bottom: 2px solid var(--primary-color);
       padding-bottom: 0.5rem;
     }
 
@@ -35,17 +35,19 @@
       display: block;
       margin-bottom: 0.5rem;
       font-weight: 500;
-      color: #333;
+      color: var(--text-dark);
     }
 
     .form-group input,
     .form-group textarea {
       width: 100%;
       padding: 0.75rem;
-      border: 1px solid #ccc;
+      border: 1px solid var(--border-color);
       border-radius: 4px;
       font-size: 1rem;
       font-family: inherit;
+      background-color: var(--input-bg);
+      color: var(--text-dark);
     }
 
     .form-group textarea {
@@ -56,10 +58,10 @@
     .permissions-list {
       max-height: 300px;
       overflow-y: auto;
-      border: 1px solid #ccc;
+      border: 1px solid var(--border-color);
       border-radius: 4px;
       padding: 1rem;
-      background: white;
+      background: var(--input-bg);
     }
 
     .permission-item {
@@ -99,21 +101,21 @@
     }
 
     .btn-primary {
-      background-color: #007bff;
+      background-color: var(--primary-color);
       color: white;
     }
 
     .btn-primary:hover {
-      background-color: #0056b3;
+      background-color: var(--primary-hover);
     }
 
     .btn-secondary {
-      background-color: #6c757d;
-      color: white;
+      background-color: var(--button-bg-color);
+      color: var(--button-text-color);
     }
 
     .btn-secondary:hover {
-      background-color: #5a6268;
+      background-color: var(--button-hover-bg-color);
     }
 
     .btn-danger {
@@ -130,8 +132,8 @@
     }
 
     .role-item {
-      background: white;
-      border: 1px solid #ddd;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
       border-radius: 4px;
       padding: 1rem;
       margin-bottom: 0.75rem;
@@ -142,19 +144,19 @@
 
     .role-info h4 {
       margin: 0 0 0.5rem;
-      color: #333;
+      color: var(--text-dark);
     }
 
     .role-info p {
       margin: 0;
-      color: #666;
+      color: var(--text-light);
       font-size: 0.9rem;
     }
 
     .role-badge {
       display: inline-block;
-      background-color: #e9ecef;
-      color: #333;
+      background-color: var(--button-bg-color);
+      color: var(--text-dark);
       padding: 0.25rem 0.75rem;
       border-radius: 20px;
       font-size: 0.85rem;
@@ -187,29 +189,31 @@
     .table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
+      background: var(--card-bg);
     }
 
     .table thead {
-      background-color: #f9f9f9;
+      background-color: var(--body-bg);
     }
 
     .table th,
     .table td {
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-color);
       padding: 0.75rem;
       text-align: left;
     }
 
     .table th {
       font-weight: 600;
-      color: #333;
+      color: var(--text-dark);
     }
 
     .table select {
       padding: 0.5rem;
-      border: 1px solid #ccc;
+      border: 1px solid var(--border-color);
       border-radius: 4px;
+      background-color: var(--input-bg);
+      color: var(--text-dark);
     }
 
     .table button {
