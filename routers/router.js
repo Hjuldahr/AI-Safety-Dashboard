@@ -10,6 +10,7 @@ import schedulerRouter from "./schedulerRouter.js";
 import adminRouter from "./adminRouter.js";
 import demoRouter from "./demoRouter.js";
 import docsRouter from "./docsRouter.js";
+import profileRouter from "./profileRouter.js";
 
 const router = express.Router();
 
@@ -23,6 +24,9 @@ router.use('/tags', tagRouter);
 router.use("/", schedulerRouter);
 router.use("/demo", demoRouter);
 router.use("/", docsRouter);
+
+// Profile routes
+router.use('/', profileRouter);
 
 // Admin user management
 router.use('/admin', adminRouter);

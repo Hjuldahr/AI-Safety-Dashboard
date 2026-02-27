@@ -45,6 +45,35 @@ components:
           type: string
           format: date-time
 
+    Role:
+      type: object
+      required:
+        - name
+        - description
+        - permissions
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        name:
+          type: string
+          description: Lowercase unique role name
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        isSystemRole:
+          type: boolean
+          description: Indicates if the role is a built-in system role
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
     Alert:
       type: object
       required:
@@ -951,3 +980,307 @@ paths:
               schema:
                 type: string
               example: "<html>...</html>"
+  # ============================
+  # ADMIN ROUTER
+  # ============================
+  /users:
+    get:
+      tags: [Admin, "HTML Page"]
+      summary: User management page
+      description: Returns the HTML of the User Management page.
+      responses:
+        200:
+          description: HTML content for the Users Page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
+
+  /api/users:
+    get:
+      tags: [Admin]
+      summary: Get list of users (no passwords)
+      responses:
+        200:
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        500:
+          description: Server error
+
+  /api/users/{id}/roles:
+    patch:
+      tags: [Admin]
+      summary: Update a user's role
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+      responses:
+        200:
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      username:
+                        type: string
+                      roles:
+                        type: array
+                        items:
+                          type: string
+        400:
+          description: Invalid role or invalid request (e.g. changing own role)
+        403:
+          description: Forbidden (e.g. assigning owner role without permission)
+        404:
+          description: User not found
+        500:
+          description: Server error
+
+  /api/users/{id}:
+    delete:
+      tags: [Admin]
+      summary: Delete a user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        400:
+          description: Bad request (e.g. attempting to delete own account)
+        403:
+          description: Forbidden (e.g. deleting owner without permission)
+        404:
+          description: User not found
+        409:
+          description: Conflict (e.g. cannot delete last owner)
+        500:
+          description: Server error
+
+  /api/roles:
+    get:
+      tags: [Admin]
+      summary: List roles
+      responses:
+        200:
+          description: Roles list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        isSystemRole:
+                          type: boolean
+                        isCustom:
+                          type: boolean
+        500:
+          description: Server error
+    post:
+      tags: [Admin]
+      summary: Create a new role
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        201:
+          description: Role created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  role:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      description:
+                        type: string
+                      permissions:
+                        type: array
+                        items:
+                          type: string
+                      isCustom:
+                        type: boolean
+        400:
+          description: Validation error (missing fields or invalid values)
+        409:
+          description: Role already exists
+        500:
+          description: Server error
+
+  /api/roles/{name}:
+    delete:
+      tags: [Admin]
+      summary: Delete a role by name
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Role deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        403:
+          description: Forbidden (system roles cannot be deleted)
+        404:
+          description: Role not found
+        409:
+          description: Conflict (users still have this role)
+        500:
+          description: Server error
+
+  /api/permissions:
+    get:
+      tags: [Admin]
+      summary: Get grouped available permissions
+      responses:
+        200:
+          description: Permissions grouped by category
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permissions:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          label:
+                            type: string
+        500:
+          description: Server error
+
+  # ============================
+  # PROFILE ROUTER
+  # ============================
+  /profile:
+    get:
+      tags: [Profile, "HTML Page"]
+      summary: Profile page
+      description: Returns the HTML of the Profile Page.
+      responses:
+        200:
+          description: HTML content for the Profile Page.
+          content:
+            text/html:
+              schema:
+                type: string
+              example: "<html>...</html>"
+        500:
+          description: Server error
+
+  /api/profile/password:
+    post:
+      tags: [Profile]
+      summary: Change current user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        200:
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        400:
+          description: Missing fields or validation error (e.g. new password too short)
+        401:
+          description: Not authenticated
+        403:
+          description: Current password incorrect
+        404:
+          description: User not found
+        500:
+          description: Server error

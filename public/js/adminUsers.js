@@ -21,14 +21,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Render permissions list
-  function renderPermissions(permissions) {
-    permissionsListDiv.innerHTML = permissions
-      .map(perm => `
+  function renderPermissions(permissionsObj) {
+    let html = '';
+    
+    // permissionsObj is now: { "Category": [{ key, label }, ...], ... }
+    Object.entries(permissionsObj).forEach(([category, perms]) => {
+      html += `<div class="permission-category">
+        <h5 style="margin: 1rem 0 0.5rem; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem;">${category}</h5>`;
+      
+      perms.forEach(perm => {
+        html += `
         <div class="permission-item">
-          <input type="checkbox" id="perm-${perm}" value="${perm}" name="permissions">
-          <label for="perm-${perm}">${perm}</label>
-        </div>
-      `).join('');
+          <input type="checkbox" id="perm-${perm.key}" value="${perm.key}" name="permissions">
+          <label for="perm-${perm.key}">${perm.label}</label>
+        </div>`;
+      });
+      
+      html += '</div>';
+    });
+    
+    permissionsListDiv.innerHTML = html;
   }
 
   // Show message in role section
@@ -109,6 +121,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const disabledAttr = (String(window.CURRENT_USER_ID) === String(u._id)) ? 'disabled' : '';
       const saveBtnDisabled = disabledAttr ? 'disabled' : '';
 
+      const canDelete = (window.USER_PERMISSIONS || []).includes('manage:users');
+      const deleteDisabled = (String(window.CURRENT_USER_ID) === String(u._id)) ? 'disabled' : '';
+
       return `
         <tr data-user-id="${u._id}">
           <td>${u.username}</td>
@@ -121,13 +136,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td>
             <button class="save-role" ${saveBtnDisabled}>Save</button>
           </td>
+          <td>
+            ${canDelete ? `<button class="btn-danger delete-user" ${deleteDisabled}>Delete</button>` : ''}
+          </td>
         </tr>
       `;
     }).join('');
 
     usersContainer.innerHTML = `
       <table class="table">
-        <thead><tr><th>Username</th><th>Email</th><th>Role</th><th></th></tr></thead>
+        <thead><tr><th>Username</th><th>Email</th><th>Role</th><th></th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     `;
@@ -158,6 +176,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (err) {
           console.error(err);
           alert('Error updating role');
+        }
+      });
+    });
+
+    // Attach delete listeners
+    usersContainer.querySelectorAll('.delete-user').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const tr = e.target.closest('tr');
+        const userId = tr.dataset.userId;
+
+        if (!confirm('Are you sure you want to delete this user account?')) return;
+
+        try {
+          const res = await fetch(`admin/api/users/${userId}`, {
+            method: 'DELETE'
+          });
+
+          const data = await res.json();
+          if (res.ok) {
+            alert('User deleted');
+            load();
+          } else {
+            alert('Error: ' + (data.message || 'Unable to delete user'));
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error deleting user');
         }
       });
     });
