@@ -10,7 +10,7 @@
   'use strict';
 
   const STORAGE_PREFIX = 'theme';
-  const THEME_CLASSES = ['theme-ocean', 'theme-sunset']; // 'default' = no class
+  const THEME_CLASSES = ['theme-ocean', 'theme-sunset', 'theme-compact']; // 'default' = no class
 
   function getStorageKey() {
     const el = document.getElementById('user-name');
