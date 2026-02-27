@@ -15,9 +15,17 @@
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script src="js/notifications.js" defer></script>
   <script src="js/darkMode.js"></script>
+  <script src="js/themeManager.js"></script>
 </head>
 
 <body>
+  <script>
+    // Anti-FOUC: apply theme before paint
+    (function() {
+      var t = localStorage.getItem('theme');
+      if (t && t !== 'default') document.body.classList.add('theme-' + t);
+    })();
+  </script>
 
   <div class="auth-container">
     <div class="title-container">

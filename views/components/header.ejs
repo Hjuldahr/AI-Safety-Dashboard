@@ -1,8 +1,14 @@
 <script>
-  // Anti-FOUC: apply dark mode instantly before paint
+  // Anti-FOUC: apply dark mode and theme instantly before paint
   if (localStorage.getItem('darkMode') === 'true') {
     document.body.classList.add('dark-mode');
   }
+  (function() {
+    var theme = localStorage.getItem('theme');
+    if (theme && theme !== 'default') {
+      document.body.classList.add('theme-' + theme);
+    }
+  })();
 </script>
 <header class="site-header">
     <h1>AI Safety Dashboard</h1>
@@ -28,3 +34,4 @@
     </div>
 </header>
 <script src="js/darkMode.js"></script>
+<script src="js/themeManager.js"></script>
