@@ -1,7 +1,7 @@
 <div>
   <div id="dashboard-controls">
     <div class="controls-group">
-      <% if (typeof permissions !== 'undefined' && (permissions.includes('create:graph') || permissions.includes('edit:graph') || permissions.includes('delete:graph'))) { %>
+      <% if (user && user.roles.includes('admin')) { %>
       <input type="hidden" value="true" id="isAdmin">
       <% } %>
       <button id="toggle-button">Loading graph state...</button>
@@ -10,9 +10,7 @@
         <option value="GoodModel">Good Model</option>
         <option value="BadModel">Bad Model</option>
       </select>
-      <% if (typeof permissions !== 'undefined' && permissions.includes('create:graph')) { %>
       <button id="add_new_chart">Add New Chart</button>
-      <% } %>
     </div>
     <div id="new-chart-modal"></div>
   </div>

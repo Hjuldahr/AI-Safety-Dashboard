@@ -1,5 +1,6 @@
 /**
- * client side javascript for demo page
+ * demo.js
+ * Client-side logic for the demo page.
  * Handles user interactions and API calls for model scenarios.
  */
 
@@ -15,75 +16,102 @@ class DemoManager {
     }
 
     initEventListeners() {
-        if (this.applyBtn) {
-            this.applyBtn.addEventListener('click', () => this.applyScenario());
-        }
-        if (this.resetBtn) {
-            this.resetBtn.addEventListener('click', () => this.resetModel());
-        }
-        if (this.modelSelect) {
-            this.modelSelect.addEventListener('change', () => this.updateScenarioList());
-        }
+        this.applyBtn?.addEventListener('click', () => this.applyScenario());
+        this.resetBtn?.addEventListener('click', () => this.resetModel());
+        this.modelSelect?.addEventListener('change', () => this.updateScenarioList());
     }
 
-    async updateScenarioList() {
-        const modelName = this.getModelName();
-        if (!modelName) return;
-
-        const response = await fetch('demo/list', {
+    async postJSON(url, body) {
+        const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ modelName })
+            body: JSON.stringify(body)
         });
 
-        const { scenarios, currentScenario } = await response.json();
+        const data = await response.json().catch(() => ({}));
+        return { response, data };
+    }
 
-        const scenarioList = Array.isArray(scenarios) ? scenarios : [];
-        this.scenarioSelect.innerHTML = scenarioList
-            .map(e => `<option value="${e}" ${e === currentScenario ? "selected" : ""}>${e}</option>`)
-            .join('\n');
+    setTitle(model, scenario = '') {
+        document.title = `Demo [${model}] ${scenario}`.trim();
     }
 
     getModelName() {
-        return this.modelSelect ? this.modelSelect.value : null;
+        return this.modelSelect?.value || null;
     }
 
     getScenarioName() {
-        return this.scenarioSelect ? this.scenarioSelect.value : null;
+        return this.scenarioSelect?.value || null;
     }
 
     updateStatus(message, type = 'normal') {
         if (!this.statusDiv) return;
 
         this.statusDiv.textContent = message;
-        this.statusDiv.className = ''; // clear previous classes
-        this.statusDiv.classList.add(type === 'error' ? 'status-error' : 'status-normal');
+
+        this.statusDiv.classList.remove('status-error', 'status-normal');
+        this.statusDiv.classList.add(
+            type === 'error' ? 'status-error' : 'status-normal'
+        );
+    }
+
+    async updateScenarioList() {
+        const modelName = this.getModelName();
+        if (!modelName) return;
+
+        try {
+            const { response, data } = await this.postJSON('/demo/list', { modelName });
+
+            if (!response.ok) {
+                this.updateStatus(data.error || 'Failed to load scenarios', 'error');
+                return;
+            }
+
+            const { scenarios = [], currentScenario } = data;
+
+            if (this.scenarioSelect) {
+                this.scenarioSelect.innerHTML = scenarios
+                    .map(s => `
+                        <option value="${s}" ${s === currentScenario ? 'selected' : ''}>
+                            ${s}
+                        </option>
+                    `)
+                    .join('');
+            }
+
+            this.setTitle(modelName, currentScenario);
+
+        } catch (err) {
+            console.error(err);
+            this.updateStatus('Request failed', 'error');
+        }
     }
 
     async applyScenario() {
         const modelName = this.getModelName();
-        if (!modelName) return;
-
         const scenarioName = this.getScenarioName();
-        if (!scenarioName) return;
+
+        if (!modelName || !scenarioName) return;
 
         try {
-            const response = await fetch('demo/apply', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ modelName, scenarioName })
+            const { response, data } = await this.postJSON('/demo/apply', {
+                modelName,
+                scenarioName
             });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                this.updateStatus(data.message, scenarioName);
-            } else {
-                this.updateStatus('Error: ' + data.error, 'error');
+
+            if (!response.ok) {
+                this.updateStatus('Error: ' + (data.error || 'Unknown error'), 'error');
+                this.setTitle(modelName, 'Error');
+                return;
             }
-        } catch (e) {
-            console.error(e);
+
+            this.updateStatus(data.message, 'normal');
+            this.setTitle(modelName, scenarioName);
+
+        } catch (err) {
+            console.error(err);
             this.updateStatus('Request failed', 'error');
+            this.setTitle(modelName, 'Error');
         }
     }
 
@@ -92,28 +120,28 @@ class DemoManager {
         if (!modelName) return;
 
         try {
-            const response = await fetch('demo/reset', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ modelName })
+            const { response, data } = await this.postJSON('/demo/reset', {
+                modelName
             });
-            
-            const data = await response.json();
-            
-            if (response.ok) {
-                this.updateStatus(data.message, 'normal');
-                await this.updateScenarioList();
-            } else {
-                this.updateStatus('Error: ' + data.error, 'error');
+
+            if (!response.ok) {
+                this.updateStatus('Error: ' + (data.error || 'Unknown error'), 'error');
+                this.setTitle(modelName, 'Error');
+                return;
             }
-        } catch (e) {
-            console.error(e);
+
+            this.updateStatus(data.message, 'normal');
+            await this.updateScenarioList();
+            this.setTitle(modelName, 'Normal');
+
+        } catch (err) {
+            console.error(err);
             this.updateStatus('Request failed', 'error');
+            this.setTitle(modelName, 'Error');
         }
     }
 }
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.demoManager = new DemoManager();
 });

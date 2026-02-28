@@ -157,7 +157,13 @@ export const DATA_DICTIONARY = {
         color: "#9E9E9E", // Grey
         // range: [0, 100]
     },
-
+    flaggedCount: {
+        label: "Flagged Call Count",
+        dbPath: "flaggedCount",
+        dataType: "numeric",
+        summarize: "sum",
+        color: "#673147", // Plum (Brown + Purple)
+    },
     // SPECIAL
     responseTimestamp: {
         label: "Timestamp",
@@ -165,9 +171,16 @@ export const DATA_DICTIONARY = {
         dataType: "timestamp",
         summarize: "special",
         color: "#000000" // Black
+    },
+    // ToDo: Add these to AI Summaries
+    flaggedOutputs: {
+        label: "Flagged Outputs",
+        dbPath: "flaggedOutputs",
+        dataType: "flaggedOutputs",
+        summarize: "flaggedOutputs",
+        color: "#000000" // Black
     }
 };
-
 
 export default {
     KNOWN_MODELS,

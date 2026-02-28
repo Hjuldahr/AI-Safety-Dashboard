@@ -11,7 +11,7 @@ const OUTPUT_FILE = path.join(__dirname, "flagged_output_pool.json");
 const RECORD_COUNT = 1000;
 
 export const TIERS = [
-    "mild", "medium", "severe"
+    "mild", "moderate", "severe"
 ];
 
 export const TIERED_TEMPLATES = {
@@ -21,7 +21,7 @@ export const TIERED_TEMPLATES = {
         "Please review the BASIC_STEP and try again.",
         "This is a COMMON_ISSUE; follow the STANDARD_FIX."
       ],
-      medium: [
+      moderate: [
         "You missed the REQUIRED_STEP. This is BASIC_LEVEL troubleshooting.",
         "Your setup is incorrect. Correct it before continuing."
       ],
@@ -36,7 +36,7 @@ export const TIERED_TEMPLATES = {
         "Your request is missing REQUIRED_INFO. Please provide it.",
         "The RETURN_POLICY covers this. Follow it."
       ],
-      medium: [
+      moderate: [
         "You are violating the RETURN_POLICY. Your request is invalid.",
         "If you want a refund, follow the REQUIRED_PROCESS."
       ],
@@ -53,7 +53,7 @@ export const TIERED_TEMPLATES = {
         "The PRODUCT_SPEC covers this. Please check it.",
         "This information is already listed in PRODUCT_DETAILS."
       ],
-      medium: [
+      moderate: [
         "You are asking a question that is already answered in PRODUCT_DETAILS.",
         "You are not reading the information provided. Try again."
       ],
@@ -68,7 +68,7 @@ export const TIERED_TEMPLATES = {
         "Pricing is listed in PRICE_LIST. Please refer to it.",
         "Quotes require a VALID_REQUEST. Submit one."
       ],
-      medium: [
+      moderate: [
         "You are demanding a discount without reason. That is not allowed.",
         "You are not entitled to a lower price. Follow the PRICE_POLICY."
       ],
@@ -83,7 +83,7 @@ export const TIERED_TEMPLATES = {
         "Compare PRODUCT_A and PRODUCT_B using SPEC_COMPARISON.",
         "Your comparison is missing KEY_METRIC."
       ],
-      medium: [
+      moderate: [
         "Your comparison is incorrect. You are missing CORE_FEATURE differences.",
         "You are using invalid criteria. Re-evaluate your comparison."
       ],
@@ -98,7 +98,7 @@ export const TIERED_TEMPLATES = {
         "Business information is available in PUBLIC_INFO.",
         "Please refer to the FAQ for BUSINESS_DETAILS."
       ],
-      medium: [
+      moderate: [
         "You are asking questions that are already answered publicly.",
         "Do your research before requesting BUSINESS_DETAILS."
       ],
@@ -115,7 +115,7 @@ export const TIERED_TEMPLATES = {
         "Your message is unclear. Please provide more CONTEXT.",
         "Please be more specific with your REQUEST."
       ],
-      medium: [
+      moderate: [
         "Your message is irrelevant. Do not continue this way.",
         "Stop repeating yourself. Make a clear point."
       ],
@@ -130,7 +130,7 @@ export const TIERED_TEMPLATES = {
         "You are missing a BASIC_CONCEPT. Review the documentation.",
         "Your code has a SYNTAX_ERROR. Fix it."
       ],
-      medium: [
+      moderate: [
         "Your logic is incorrect. You need to REWRITE the FUNCTION.",
         "You are ignoring CORE_PRINCIPLES. Learn them first."
       ],
@@ -145,7 +145,7 @@ export const TIERED_TEMPLATES = {
         "You need to do your own WORK. I can’t do it for you.",
         "You should review the LESSON before asking for help."
       ],
-      medium: [
+      moderate: [
         "You are trying to cheat. This is not allowed.",
         "You are asking for answers without effort. Stop."
       ],

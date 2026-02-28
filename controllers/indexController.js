@@ -4,7 +4,6 @@ import chartConstants from "../constants/charts.js";
 
 const getPage = async (req, res) => {
     try {
-        // Ensure permissions are passed explicitly to the template to avoid undefined errors
         res.render("index", {
             user: req.user,
             permissions: res.locals.permissions || [],
@@ -33,7 +32,7 @@ const getParams = (req, res) => {
 const updateParams = (req, res) => {
     try {
         if (scheduler) {
-            scheduler.updateSchedulerSettings(req.body);
+            scheduler.updateSchedulerSettings(req.body, req.user);
             res.json({ success: true, state: req.body });
         }
         else {

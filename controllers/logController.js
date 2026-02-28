@@ -2,9 +2,9 @@ import User_Log from '../models/User_Log.js';
 import AI_Log from '../models/AI_Log.js';
 import AI_Summary from "../models/AI_Summary.js"
 import User from '../models/user.js';
-import { Parser } from 'json2csv';
-import PDFDocument from 'pdfkit';
-
+import chartConstants from "../constants/charts.js";
+import HistTag from '../models/historicalTag.js';
+import Tag from '../models/tag.js';
 
 // === Helper Query Builders ===
 const buildUserLogQuery = async ({ userID, eventType, startDate, endDate, search }) => {
@@ -56,7 +56,7 @@ const buildUserLogQuery = async ({ userID, eventType, startDate, endDate, search
     return query;
 };
 
-const buildAILogQuery = ({ modelName, startDate, endDate, search }) => {
+const buildAILogQuery = async ({ modelName, startDate, endDate, search }) => {
     const query = {};
 
     // Add modelName filter if provided and not "all"
@@ -79,15 +79,26 @@ const buildAILogQuery = ({ modelName, startDate, endDate, search }) => {
     if (search) {
         const searchRegex = new RegExp(search, 'i');
         const orConditions = [
-            { modelName: searchRegex }
+            { modelName: searchRegex },
         ];
+
+        const matchingTags = await HistTag.find({ 
+            name: searchRegex 
+        }).select('_id');
+
+        const tagIds = matchingTags.map(t => t._id);
+
+        if (tagIds.length > 0) {
+            // Now we search the logs for any of these specific ObjectIds
+            orConditions.push({ tags: { $in: tagIds } });
+        }
 
         // Numeric check
         const searchNum = Number(search);
         if (!isNaN(searchNum)) {
             const numericFields = [
-                'policyCompliance', 'responseHelpfulness', 'responseTime', 
-                'energyConsumption', 'tokensUsed', 'gigaFlopsUsed', 
+                'policyCompliance', 'responseHelpfulness', 'responseTime',
+                'energyConsumption', 'tokensUsed', 'gigaFlopsUsed',
                 'webLookups', 'toxicityScore', 'piiDetected', 'queryCount',
                 'responseTimestamp'
             ];
@@ -95,152 +106,11 @@ const buildAILogQuery = ({ modelName, startDate, endDate, search }) => {
                 orConditions.push({ [field]: searchNum });
             });
         }
-        
-        if (query.$or) {
-             // If there was already an $or (unlikely here but good practice), we need to AND it?
-             // Simple override for now as date uses top level field.
-             // If date logic above used $or, this would overwrite.
-             // But date logic above uses query.createdAt.
-        }
+
         query.$or = orConditions;
     }
 
     return query;
-};
-
-// === PDF Streaming Helper ===
-const streamLogsAsPDF = (res, filename, title, logs) => {
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', 'application/pdf');
-    doc.pipe(res);
-
-    doc.fontSize(20).text(title, { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text('Event Logs', { underline: true });
-    doc.moveDown(0.5);
-
-    logs.forEach((log, i) => {
-        const created = new Date(log.createdAt).toLocaleString();
-        doc.fontSize(10)
-            .text(`• [${i + 1}] ${log.eventType}`, { continued: true })
-            .text(` — ${created}`, { align: 'right' });
-
-        if (log.details && Object.keys(log.details).length > 0) {
-            doc.moveDown(0.2)
-                .fontSize(9)
-                .fillColor('gray')
-                .text(JSON.stringify(log.details, null, 2), { indent: 20 })
-                .fillColor('black');
-        }
-
-        doc.moveDown(0.5);
-        doc.moveTo(40, doc.y).lineTo(550, doc.y).strokeColor('#cccccc').stroke();
-        doc.moveDown(0.5);
-    });
-
-    doc.moveDown(2);
-    doc.fontSize(9).fillColor('gray');
-    doc.text(`Generated at: ${new Date().toLocaleString()}`, { align: 'right' });
-    doc.fillColor('black');
-
-    doc.end();
-};
-
-// === Generic CSV Export Helper ===
-const exportCSV = (res, logs, filename) => {
-    const csv = new Parser().parse(logs.map(log => log.toObject()));
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', 'text/csv');
-    res.status(200).send(csv);
-};
-
-// === User Log Exports ===
-const exportUserLogCSV = async (req, res) => {
-    try {
-        const { _id: userID } = req.user;
-        const { eventType, startDate, endDate, search, page = 1, limit = 100 } = req.body || {};
-
-        const query = await buildUserLogQuery({ userID, eventType, startDate, endDate, search });
-        const logs = await User_Log.find(query)
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit);
-
-        if (!logs.length) return res.status(404).json({ message: 'No logs found.' });
-
-        const filename = `UserLog_${userID}_${Date.now()}.csv`;
-        exportCSV(res, logs, filename);
-
-    } catch (err) {
-        console.error('Export User Log CSV Error:', err);
-        res.status(500).json({ message: 'Failed to export logs', error: err.message });
-    }
-};
-
-const exportUserLogPDF = async (req, res) => {
-    try {
-        const { _id: userID } = req.user;
-        const { eventType, startDate, endDate, search, page = 1, limit = 100 } = req.body || {};
-
-        const query = await buildUserLogQuery({ userID, eventType, startDate, endDate, search });
-        const logs = await User_Log.find(query)
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit);
-
-        if (!logs.length) return res.status(404).json({ message: 'No logs found.' });
-
-        const filename = `UserLog_${userID}_${Date.now()}.pdf`;
-        streamLogsAsPDF(res, filename, `User Log Report - ${userID}`, logs);
-
-    } catch (err) {
-        console.error('Export User Log PDF Error:', err);
-        res.status(500).json({ message: 'Failed to export logs', error: err.message });
-    }
-};
-
-// === AI Log Exports ===
-const exportAILogCSV = async (req, res) => {
-    try {
-        const { _id: modelID } = req.model;
-        const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, search, page = 1, limit = 100 } = req.body || {};
-
-        const logs = await AI_Log.find(buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, search }))
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit);
-
-        if (!logs.length) return res.status(404).json({ message: 'No logs found.' });
-
-        const filename = `AILog_${modelID}_${Date.now()}.csv`;
-        exportCSV(res, logs, filename);
-
-    } catch (err) {
-        console.error('Export AI Log CSV Error:', err);
-        res.status(500).json({ message: 'Failed to export logs', error: err.message });
-    }
-};
-
-const exportAILogPDF = async (req, res) => {
-    try {
-        const { _id: modelID } = req.model;
-        const { policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, search, page = 1, limit = 100 } = req.body || {};
-
-        const logs = await AI_Log.find(buildAILogQuery({ modelID, policyCompliance, responseHelpfulness, responseTime, energyConsumption, responseTimestamp, startDate, endDate, search }))
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit);
-
-        if (!logs.length) return res.status(404).json({ message: 'No logs found.' });
-
-        const filename = `AILog_${modelID}_${Date.now()}.pdf`;
-        streamLogsAsPDF(res, filename, `AI Model Log Report - ${modelID}`, logs);
-
-    } catch (err) {
-        console.error('Export AI Log PDF Error:', err);
-        res.status(500).json({ message: 'Failed to export logs', error: err.message });
-    }
 };
 
 // === Pagination ===
@@ -300,7 +170,7 @@ const getFilteredAILogs = async (req, res) => {
         const pageNum = Number(page);
         const limitNum = Number(limit);
 
-        const query = buildAILogQuery({
+        const query = await buildAILogQuery({
             modelName,
             startDate,
             endDate,
@@ -312,7 +182,8 @@ const getFilteredAILogs = async (req, res) => {
         const logsQuery = AI_Log.find(query)
             .sort({ responseTimestamp: -1 })
             .skip(skip)
-            .limit(limitNum);
+            .limit(limitNum)
+            .populate("tags");
 
         const totalQuery = AI_Log.countDocuments(query);
 
@@ -346,7 +217,7 @@ const getFilteredAISummaries = async (req, res) => {
         const pageNum = Number(page);
         const limitNum = Number(limit);
 
-        const query = buildAILogQuery({
+        const query = await buildAILogQuery({
             modelName,
             startDate,
             endDate,
@@ -384,19 +255,112 @@ const getPage = async (req, res) => {
     try {
         res.render("logs", {
             user: req.user,
+            deepLink: null,
+            constants: chartConstants
         });
     } catch (error) {
         console.error("Error fetching logs page:", error);
     }
 };
 
+// Gets a specific AI log and returns its page number so we can open the logs page to view the log
+const getAILogView = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // ToDo: Avoid hardcoding this page limit
+        const limit = 10;
+
+        // Find the target log
+        const targetLog = await AI_Log.findById(id);
+        if (!targetLog) {
+            return res.redirect('logs?error=LogNotFound');
+        }
+
+        // Calculate which page it's on
+        // We count how many logs come BEFORE it in the 'responseTimestamp: -1' sort
+        const countBefore = await AI_Log.countDocuments({
+            responseTimestamp: { $gt: targetLog.responseTimestamp }
+        });
+
+        const targetPage = Math.floor(countBefore / limit) + 1;
+
+        // Render the page with "Deep Link" instructions
+        res.render("logs", {
+            user: req.user,
+            // Pass these to the frontend
+            deepLink: {
+                view: 'ai',
+                id: id,
+                page: targetPage,
+            },
+            constants: chartConstants
+        });
+    } catch (error) {
+        console.error("Error redirecting to AI log:", error);
+        res.redirect('/logs');
+    }
+};
+
+const getAILog = async (req, res) => {
+    try {
+        const id = req.params.id
+        
+        const log = await AI_Log.findById(id);
+
+        if(!log){
+            return res.status(404).json({message: "Ai Log not found"});
+        }
+
+        return res.status(200).json(log);
+    } catch (error) {
+        console.error("Error fetching AI log:", error);
+        return res.status(500).json({ message: "Error fetching AI log." });
+    }
+};
+
+
+// Log Tagging
+const tagAILog = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { tags } = req.body;
+
+        const targetLog = await AI_Log.findById(id);
+        if (!targetLog) {
+            return res.status(404).json({ message: "AI Log not found." });
+        }
+
+        let historicalTagIds = [];
+
+        if (tags && tags.length > 0) {
+            // Fetch the full Active Tag documents so we know their current names/colors
+            const activeTags = await Tag.find({ _id: { $in: tags } });
+
+            // Generate or find the corresponding Historical Tags
+            historicalTagIds = await HistTag.addOrFindTags(activeTags);
+        }
+
+        targetLog.tags = historicalTagIds;
+
+        await targetLog.save();
+
+        return res.status(200).json(targetLog);
+
+    } catch (error) {
+        console.error("Error tagging AI log:", error);
+        return res.status(500).json({ message: "Error tagging AI log." });
+    }
+}
+
+
+
 export default {
     getPage,
-    exportUserLogCSV,
-    exportUserLogPDF,
-    exportAILogCSV,
-    exportAILogPDF,
+    getAILogView,
+    getAILog,
     getFilteredUserLogs,
     getFilteredAILogs,
-    getFilteredAISummaries
+    getFilteredAISummaries,
+    tagAILog
 }

@@ -15,6 +15,7 @@ const alert_model_Schema = new mongoose.Schema({
     default: null,
   },
   // Alert level (e.g., Critical, High, Medium, Info)
+  // ToDo: Move this to a constants file.
   alertLevel: {
     type: String,
     required: true,

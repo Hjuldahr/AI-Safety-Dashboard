@@ -85,5 +85,17 @@
         "helpfulnessWhenBlocked": 0.9,
         "tokensWhenBlocked": 100,
         "speedMultiplier": 1.5
+    },
+    "TOXICITY_PROFILE": {
+        "severityDistribution": {
+            "mild": 0.8,
+            "moderate": 0.15,
+            "severe": 0.05
+        },
+        "scoreRanges": {
+            "mild": [0.2, 0.5],
+            "moderate": [0.5, 0.75],
+            "severe": [0.75, 1.0]
+        }
     }
 }
