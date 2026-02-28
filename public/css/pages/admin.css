@@ -1,0 +1,149 @@
+/* ==========================================================================
+   PAGE — ADMIN / USER MANAGEMENT
+   Admin panel grid, permissions, roles, badges, table overrides,
+   and user info display.
+   ========================================================================== */
+.admin-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+@media (max-width: 1024px) {
+  .admin-panel { grid-template-columns: 1fr; }
+}
+
+.panel-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+.panel-section h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-dark);
+  font-size: 1.2rem;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 0.5rem;
+}
+
+.permissions-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  background: var(--input-bg);
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.permission-item input[type="checkbox"] {
+  width: 18px; height: 18px;
+  margin-right: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.permission-item label {
+  margin: 0;
+  cursor: pointer;
+  flex: 1;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+.button-group button {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.roles-list { margin-top: 1rem; }
+
+.role-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.role-info h4 { margin: 0 0 0.5rem; color: var(--text-dark); }
+.role-info p { margin: 0; color: var(--text-light); font-size: 0.9rem; }
+
+.role-badge {
+  display: inline-block;
+  background-color: var(--button-bg-color);
+  color: var(--text-dark);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+}
+.role-badge.system { background-color: var(--role-system-bg); color: var(--role-system-text); }
+
+.alert {
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+.alert-success { background-color: var(--alert-success-bg); color: var(--alert-success-text); border: 1px solid var(--alert-success-border); }
+.alert-error   { background-color: var(--alert-error-bg); color: var(--alert-error-text); border: 1px solid var(--alert-error-border); }
+
+/* .table base is defined in components/tables.css. Overrides only: */
+.table th,
+.table td {
+  border: 1px solid var(--border-color);
+}
+.table select { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--input-bg); color: var(--text-dark); }
+.table button {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-success);
+  color: var(--color-white);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.table button:hover { background-color: var(--color-success-hover); }
+.table button:disabled { background-color: var(--border-light); cursor: not-allowed; }
+
+.table button.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.table button.btn-danger:hover {
+  background-color: #c82333;
+}
+
+/* User info display styling */
+.user-info-display {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.user-info-display p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.user-info-display strong {
+  color: #007bff;
+}

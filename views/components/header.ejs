@@ -1,5 +1,5 @@
 <script>
-  // Anti-FOUC: apply dark mode and theme instantly before paint
+  // Anti-FOUC: apply dark mode, theme class, and link hrefs before paint
   if (localStorage.getItem('darkMode') === 'true') {
     document.body.classList.add('dark-mode');
   }
@@ -8,6 +8,13 @@
     if (theme && theme !== 'default') {
       document.body.classList.add('theme-' + theme);
     }
+    // Swap color stylesheet link
+    var colorMap = { ocean: 'css/themes/colors-ocean.css', sunset: 'css/themes/colors-sunset.css' };
+    var colorLink = document.getElementById('theme-colors');
+    if (colorLink) colorLink.href = colorMap[theme] || '';
+    // Swap layout stylesheet link
+    var layoutLink = document.getElementById('theme-layout');
+    if (layoutLink) layoutLink.href = (theme === 'compact') ? 'css/layouts/compact.css' : 'css/layouts/default.css';
   })();
 </script>
 <header class="site-header">

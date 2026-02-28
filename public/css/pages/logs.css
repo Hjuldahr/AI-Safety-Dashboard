@@ -1,0 +1,134 @@
+/* ==========================================================================
+   PAGE — LOGS
+   Toolbar, tabs, filters, user log table columns, colored dots,
+   and AI accordion.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   TOOLBAR, TABS & FILTERS
+   ========================================================================== */
+.hidden { display: none !important; }
+
+.logs-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-lighter);
+  gap: 1rem;
+  padding-right: 100px;
+}
+
+.log-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+.log-tab-btn {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  color: var(--text-dark);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.log-tab-btn.active {
+  background-color: var(--btn-default-bg);
+  color: var(--color-white);
+  border-color: var(--btn-default-bg);
+}
+
+.filter-group label { font-weight: 500; }
+.filter-group input[type="date"],
+.filter-group select {
+  padding: 0.4rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: var(--input-bg);
+  color: var(--text-dark);
+}
+
+
+/* ==========================================================================
+   USER LOG TABLE
+   ========================================================================== */
+/* .log-table base is defined in components/tables.css. Overrides only: */
+.log-table td { vertical-align: top; }
+
+.col-type    { width: 5%; }
+.col-time    { width: 20%; }
+.col-user    { width: 15%; }
+.col-action  { width: 15%; }
+.col-details { width: 45%; }
+
+/* Colored dots */
+.log-dot {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  transform: translateY(1px);
+}
+.log-dot-login   { background-color: var(--log-dot-login); }
+.log-dot-signup  { background-color: var(--log-dot-signup); }
+.log-dot-logout  { background-color: var(--log-dot-logout); }
+.log-dot-alert   { background-color: var(--log-dot-alert); }
+.log-dot-report  { background-color: var(--log-dot-report); }
+.log-dot-delete  { background-color: var(--log-dot-delete); }
+.log-dot-default { background-color: var(--log-dot-default); }
+
+
+/* ==========================================================================
+   AI ACCORDION
+   ========================================================================== */
+.accordion-item {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+.accordion-header {
+  width: 100%;
+  background-color: var(--body-bg);
+  color: var(--text-dark);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: none;
+}
+.accordion-header:hover { background-color: var(--button-hover-bg-color); transform: none; }
+.accordion-header::after {
+  content: '+';
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--text-light);
+}
+.accordion-header.active::after { content: '−'; }
+
+.accordion-body {
+  padding: 1rem;
+  background-color: var(--card-bg);
+  border-top: 1px solid var(--border-color);
+}
+.accordion-body pre {
+  background-color: var(--code-bg);
+  color: var(--code-text);
+  padding: 1rem;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Courier New', Courier, monospace;
+}

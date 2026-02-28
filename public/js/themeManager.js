@@ -1,16 +1,26 @@
 /**
  * Theme Manager
- * Toggles theme by swapping CSS classes on <body>.
- * Persists user preference in localStorage on a per-user basis
- * (same pattern as darkMode.js).
+ * Toggles theme by swapping CSS classes on <body> AND updating
+ * the <link id="theme-colors"> and <link id="theme-layout"> hrefs
+ * so modular color/layout files are loaded correctly.
  *
- * Available themes: 'default', 'ocean', 'sunset'
+ * Available themes: 'default', 'ocean', 'sunset', 'compact'
  */
 (function () {
   'use strict';
 
   const STORAGE_PREFIX = 'theme';
   const THEME_CLASSES = ['theme-ocean', 'theme-sunset', 'theme-compact']; // 'default' = no class
+
+  // Map theme name → color CSS file path (relative to public/)
+  const COLOR_FILES = {
+    ocean: 'css/themes/colors-ocean.css',
+    sunset: 'css/themes/colors-sunset.css'
+  };
+
+  // Layout CSS files
+  const LAYOUT_DEFAULT = 'css/layouts/default.css';
+  const LAYOUT_COMPACT = 'css/layouts/compact.css';
 
   function getStorageKey() {
     const el = document.getElementById('user-name');
@@ -26,12 +36,28 @@
     THEME_CLASSES.forEach(cls => document.body.classList.remove(cls));
   }
 
-  /** Apply a theme name ('default', 'ocean', 'sunset') */
+  /** Update the <link id="theme-colors"> href */
+  function updateColorLink(name) {
+    const link = document.getElementById('theme-colors');
+    if (!link) return;
+    link.href = COLOR_FILES[name] || '';
+  }
+
+  /** Update the <link id="theme-layout"> href */
+  function updateLayoutLink(name) {
+    const link = document.getElementById('theme-layout');
+    if (!link) return;
+    link.href = (name === 'compact') ? LAYOUT_COMPACT : LAYOUT_DEFAULT;
+  }
+
+  /** Apply a theme name ('default', 'ocean', 'sunset', 'compact') */
   function applyTheme(name) {
     clearTheme();
     if (name && name !== 'default') {
       document.body.classList.add('theme-' + name);
     }
+    updateColorLink(name);
+    updateLayoutLink(name);
   }
 
   // Apply saved theme immediately (runs before DOMContentLoaded)
