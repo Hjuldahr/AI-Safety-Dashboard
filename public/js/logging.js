@@ -13,6 +13,18 @@ let totalAiSummaries = 0;
 // ToDo: let users define this
 const PAGE_LIMIT = 10;
 
+let paginationState = {
+    paginationTotalUserLogs: 0,
+    paginationTotalAILogs: 0,
+    paginationTotalAISummaries: 0,
+
+    paginationSize: 10,
+
+    paginationPageUserLogs: 1,
+    paginationPageAILogs: 1,
+    paginationPageAISummaries: 1
+}
+
 // --- PERMISSION CHECKS ---
 const hasPermission = (permission) => {
     return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
@@ -25,6 +37,17 @@ let openAILogModal;
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
+
+    const paginationElements = {
+        paginationSizeSelect: document.getElementById('paginationSize'),
+        paginationSlice: document.getElementById('paginationSlice'), // 1 - 10 of 76 items
+        paginationFirstPageBtn: document.getElementById('paginationFirstPage'),
+        paginationPrevPageBtn: document.getElementById('paginationPrevPage'),
+        paginationPageInput: document.getElementById('paginationPage'),
+        paginationPageTotal: document.getElementById('paginationTotal'), // of 8
+        paginationNextPageBtn: document.getElementById('paginationNextPage'),
+        paginationLastPageBtn: document.getElementById('paginationLastPage')
+    };
 
     const modalManager = new ModalManager();
 
@@ -45,9 +68,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         userClearBtn: document.querySelector('#user-filter-form .clear-filters'),
         aiClearBtn: document.querySelector('#ai-filter-form .clear-filters'),
         aiSummaryClearBtn: document.querySelector('#ai-summary-filter-form .clear-filters'),
-        paginationControls: document.getElementById('pagination-controls'),
-        aiPaginationControls: document.getElementById('ai-pagination-controls'),
-        aiSummaryPaginationControls: document.getElementById('ai-summary-pagination-controls'),
         liveToggle: document.getElementById('live-update-toggle'),
         liveUpdatesContainer: document.getElementById('live-updates-container'),
         manageTagsBtn: document.getElementById('open-tags-modal-btn'),
