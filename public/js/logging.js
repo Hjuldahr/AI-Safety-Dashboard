@@ -6,9 +6,9 @@ let activeView = "user";
 let isLive = true;
 
 const paginationState = {
-    page: 1,
     pageSize: 10,
-    total: 0
+    totals: { user: 0, ai: 0, summary: 0 },
+    pages: { user: 1, ai: 1, summary: 1 }
 };
 
 let pagination;
@@ -16,65 +16,63 @@ let paginationElements;
 let elements;
 
 class PaginationController {
-
-    constructor(state, elements, onPageChange) {
+    constructor(state, elements, getPage, setPage, onPageChange) {
         this.state = state;
         this.el = elements;
+        this.getPage = getPage;   // function returning current page
+        this.setPage = setPage;   // function to update current page
         this.onPageChange = onPageChange;
 
         this.attachEvents();
     }
 
     attachEvents() {
-
         this.el.paginationFirstPageBtn.onclick = () => this.goto(1);
-
-        this.el.paginationPrevPageBtn.onclick = () =>
-            this.goto(this.state.page - 1);
-
-        this.el.paginationNextPageBtn.onclick = () =>
-            this.goto(this.state.page + 1);
-
+        this.el.paginationPrevPageBtn.onclick = () => this.goto(this.getPage() - 1);
+        this.el.paginationNextPageBtn.onclick = () => this.goto(this.getPage() + 1);
         this.el.paginationLastPageBtn.onclick = () => {
             const last = Math.ceil(this.state.total / this.state.pageSize);
             this.goto(last);
         };
+        this.el.paginationPageInput.onchange = e => this.goto(parseInt(e.target.value));
+        this.el.paginationSizeSelect.onchange = e => {
+            const newSize = parseInt(e.target.value);
+            this.state.pageSize = newSize;
 
-        this.el.paginationPageInput.onchange = (e) =>
-            this.goto(parseInt(e.target.value));
+            // Clamp all views' pages to new max pages
+            for (const view in this.state.pages) {
+                const total = this.state.totals[view] || 0;
+                const totalPages = Math.max(1, Math.ceil(total / newSize));
+                if (this.state.pages[view] > totalPages) {
+                    this.state.pages[view] = totalPages;
+                }
+            }
 
-        this.el.paginationSizeSelect.onchange = (e) => {
-            this.state.pageSize = parseInt(e.target.value);
-            this.goto(1);
+            // Reload current view at proper page
+            const currentPage = this.state.pages[activeView] || 1;
+            this.goto(currentPage);
         };
     }
 
     goto(page) {
-
-        const totalPages = Math.max(
-            1,
-            Math.ceil(this.state.total / this.state.pageSize)
-        );
-
-        this.state.page = Math.max(1, Math.min(page, totalPages));
-
-        this.onPageChange(this.state.page);
+        const totalPages = Math.max(1, Math.ceil(this.state.total / this.state.pageSize));
+        const newPage = Math.max(1, Math.min(page, totalPages));
+        this.setPage(newPage);           // store per-view
+        this.onPageChange(newPage);      // reload
     }
 
-    update(total) {
+    update() {
+        const view = activeView;
+        const total = this.state.totals[view] || 0;
+        this.state.total = total; // optional, for legacy calculations
 
-        this.state.total = total;
-
-        const page = this.state.page;
+        const page = this.getPage();
         const size = this.state.pageSize;
         const totalPages = Math.max(1, Math.ceil(total / size));
-
-        const start = total === 0 ? 0 : ((page - 1) * size) + 1;
+        const start = total === 0 ? 0 : (page - 1) * size + 1;
         const end = Math.min(page * size, total);
 
-        this.el.paginationSlice.textContent =
-            `${start} - ${end} of ${total} items`;
-
+        this.el.paginationSlice.textContent = `${start} - ${end} of ${total} items`;
         this.el.paginationPageInput.value = page;
         this.el.paginationPageTotal.textContent = `of ${totalPages}`;
 
@@ -123,6 +121,7 @@ async function loadUserLogs() {
 
     renderUserLogs(data.logs, elements.userLogTbody);
 
+    paginationState.totals.user = data.total;
     pagination.update(data.total);
 }
 
@@ -147,6 +146,7 @@ async function loadAiLogs() {
 
     renderAiAccordion(data.logs, elements.aiLogAccordion, elements);
 
+    paginationState.totals.ai = data.total;
     pagination.update(data.total);
 }
 
@@ -170,15 +170,18 @@ async function loadAiSummaries() {
         true
     );
 
+    paginationState.totals.summary = data.total;
     pagination.update(data.total);
 }
 
 function setView(view) {
-
     activeView = view;
-    paginationState.page = 1;
 
     toggleViews(view, elements);
+
+    // Recreate or reconfigure pagination controller to use the right page for this view
+    pagination.getPage = () => paginationState.pages[view];
+    pagination.setPage = (newPage) => { paginationState.pages[view] = newPage; };
 
     loadCurrentPage();
 }
@@ -338,10 +341,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     // -------------------------
 
     pagination = new PaginationController(
-        paginationState,
-        paginationElements,
-        loadCurrentPage
-    );
+    paginationState,
+    paginationElements,
+    () => paginationState.pages[activeView], // default getter
+    (page) => { paginationState.pages[activeView] = page; }, // default setter
+    loadCurrentPage
+);
 
     // -------------------------
     // Tab Switching
