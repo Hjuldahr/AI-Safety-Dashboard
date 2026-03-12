@@ -105,6 +105,10 @@
   font-size: 0.9rem;
 }
 
+.filter-item select {
+  padding-right: 2rem;
+}
+
 .filter-actions {
   display: flex;
   gap: 0.5rem;

@@ -108,7 +108,7 @@
 .table td {
   border: 1px solid var(--border-color);
 }
-.table select { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--input-bg); color: var(--text-dark); }
+.table select { padding: 0.5rem 2rem 0.5rem 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--input-bg); color: var(--text-dark); }
 .table button {
   padding: 0.5rem 1rem;
   background-color: var(--color-success);
