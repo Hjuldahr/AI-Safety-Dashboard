@@ -5,6 +5,7 @@ import User from '../models/user.js';
 import chartConstants from "../constants/charts.js";
 import HistTag from '../models/historicalTag.js';
 import Tag from '../models/tag.js';
+import mongoose from 'mongoose';
 
 // === Helper Query Builders ===
 const buildUserLogQuery = async ({ userID, eventType, startDate, endDate, search }) => {
@@ -79,8 +80,12 @@ const buildAILogQuery = async ({ modelName, startDate, endDate, search }) => {
     if (search) {
         const searchRegex = new RegExp(search, 'i');
         const orConditions = [
-            { modelName: searchRegex },
+            { modelName: searchRegex }
         ];
+
+        if (mongoose.Types.ObjectId.isValid(search)) {
+            orConditions.push({ _id: search });
+        }
 
         const matchingTags = await HistTag.find({ 
             name: searchRegex 

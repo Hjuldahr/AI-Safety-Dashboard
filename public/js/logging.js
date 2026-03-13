@@ -217,49 +217,6 @@ function renderAiAccordion(logs, accordion, isSummary = false) {
     }
 
     logs.forEach(log => accordion.appendChild(createAiAccordionItem(log, isSummary)));
-
-    /*
-    logs.forEach(log => {
-        const item = document.createElement('div');
-        item.className = 'accordion-item fade-in-row';
-        item.dataset.id = log._id;
-
-        // Timestamp
-        const timestamp = new Date(log.responseTimestamp || log.createdAt).toLocaleString();
-
-        // Header
-        const header = document.createElement('div');
-        header.className = 'accordion-header';
-        const modelName = log.modelName || 'Unknown Model';
-        const headerText = isSummary ? `${modelName} - Summary - ${timestamp}` : `${modelName} - ${timestamp}`;
-        header.innerHTML = `<p>${headerText}</p>`;
-
-        // Body
-        const body = document.createElement('div');
-        body.className = 'accordion-body hidden';
-        const pre = document.createElement('pre');
-
-        // Use content/summary fields or fallback to full JSON
-        const data = log._doc || log;
-        if (isSummary) {
-            pre.textContent = data.summary || data.content || JSON.stringify(data, null, 2);
-        } else {
-            pre.textContent = data.content || JSON.stringify(data, null, 2);
-        }
-
-        body.appendChild(pre);
-
-        // Toggle body visibility on header click
-        header.addEventListener('click', () => {
-            body.classList.toggle('hidden');
-            header.classList.toggle('active');
-        });
-
-        item.appendChild(header);
-        item.appendChild(body);
-        accordion.appendChild(item);
-    });
-    */
 }
 
 function createAiAccordionItem(log, isSummary = false) {
@@ -275,7 +232,7 @@ function createAiAccordionItem(log, isSummary = false) {
     header.className = 'accordion-header';
     const modelName = log.modelName || 'Unknown Model';
     const headerText = isSummary ? `${modelName} - Summary - ${timestamp}` : `${modelName} - ${timestamp}`;
-    header.innerHTML = `<p>${headerText}</p>`;
+    header.innerHTML = `<p><span class="db-id">${log._id}</span> ${headerText}</p>`;
 
     // Body
     const body = document.createElement('div');

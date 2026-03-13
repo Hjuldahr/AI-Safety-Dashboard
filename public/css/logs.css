@@ -276,8 +276,6 @@ input:checked+.slider:before {
   font-weight: 600;
 }
 
-
-
 .accordion-header:hover {
   background-color: #eee;
 }
@@ -394,4 +392,9 @@ input:checked+.slider:before {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.db-id{
+  color: #888;
+  font-size: 0.8em
 }
