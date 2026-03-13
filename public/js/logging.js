@@ -72,6 +72,7 @@ class PaginationController {
 
         this.el.paginationSlice.textContent = `${start} - ${end} of ${total} items`;
         this.el.paginationPageInput.value = page;
+        this.el.paginationPageInput.max = totalPages;
         this.el.paginationPageTotal.textContent = `of ${totalPages}`;
 
         this.el.paginationFirstPageBtn.disabled = page === 1;
