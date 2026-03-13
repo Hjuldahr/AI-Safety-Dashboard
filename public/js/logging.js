@@ -8,7 +8,8 @@ let isLive = true;
 const paginationState = {
     pageSize: 10,
     totals: { user: 0, ai: 0, summary: 0 },
-    pages: { user: 1, ai: 1, summary: 1 }
+    pages: { user: 1, ai: 1, summary: 1 },
+    total: 0
 };
 
 let pagination;
@@ -19,10 +20,9 @@ class PaginationController {
     constructor(state, elements, getPage, setPage, onPageChange) {
         this.state = state;
         this.el = elements;
-        this.getPage = getPage;   // function returning current page
-        this.setPage = setPage;   // function to update current page
+        this.getPage = getPage;
+        this.setPage = setPage;
         this.onPageChange = onPageChange;
-
         this.attachEvents();
     }
 
@@ -39,7 +39,6 @@ class PaginationController {
             const newSize = parseInt(e.target.value);
             this.state.pageSize = newSize;
 
-            // Clamp all views' pages to new max pages
             for (const view in this.state.pages) {
                 const total = this.state.totals[view] || 0;
                 const totalPages = Math.max(1, Math.ceil(total / newSize));
@@ -48,7 +47,6 @@ class PaginationController {
                 }
             }
 
-            // Reload current view at proper page
             const currentPage = this.state.pages[activeView] || 1;
             this.goto(currentPage);
         };
@@ -57,14 +55,14 @@ class PaginationController {
     goto(page) {
         const totalPages = Math.max(1, Math.ceil(this.state.total / this.state.pageSize));
         const newPage = Math.max(1, Math.min(page, totalPages));
-        this.setPage(newPage);           // store per-view
-        this.onPageChange(newPage);      // reload
+        this.setPage(newPage);
+        this.onPageChange(newPage);
     }
 
     update() {
         const view = activeView;
         const total = this.state.totals[view] || 0;
-        this.state.total = total; // optional, for legacy calculations
+        this.state.total = total;
 
         const page = this.getPage();
         const size = this.state.pageSize;
@@ -83,26 +81,22 @@ class PaginationController {
     }
 }
 
+// -------------------------
+// LOAD DATA
+// -------------------------
+
 async function loadCurrentPage() {
-
-    if (activeView === "user")
-        return loadUserLogs();
-
-    if (activeView === "ai")
-        return loadAiLogs();
-
-    if (activeView === "summary")
-        return loadAiSummaries();
+    if (activeView === "user") return loadUserLogs();
+    if (activeView === "ai") return loadAiLogs();
+    if (activeView === "summary") return loadAiSummaries();
 }
 
 async function loadUserLogs() {
-
-    elements.userLogTbody.innerHTML =
-        '<tr><td colspan="5">Loading...</td></tr>';
-
+    elements.userLogTbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
     const params = new URLSearchParams();
+    const page = paginationState.pages.user || 1;
 
-    params.set("page", paginationState.page);
+    params.set("page", page);
     params.set("limit", paginationState.pageSize);
 
     const start = elements.userFilterForm.querySelector('#filter-start-date').value;
@@ -112,83 +106,87 @@ async function loadUserLogs() {
 
     if (start) params.set("startDate", start);
     if (end) params.set("endDate", end);
-    if (search) params.set("search", search);
     if (type && type !== "all") params.set("eventType", type);
+    if (search) params.set("search", search);
 
-    const res = await fetch(`logs/api/user?${params}`);
-
-    const data = await res.json();
-
-    renderUserLogs(data.logs, elements.userLogTbody);
-
-    paginationState.totals.user = data.total;
-    pagination.update(data.total);
+    try {
+        const res = await fetch(`logs/api/user?${params}`);
+        const data = await res.json();
+        renderUserLogs(data.logs, elements.userLogTbody);
+        paginationState.totals.user = data.total;
+        pagination.update();
+    } catch (e) {
+        console.error('Failed to fetch user logs', e);
+        elements.userLogTbody.innerHTML = `<tr><td colspan="5">Error loading logs</td></tr>`;
+    }
 }
 
 async function loadAiLogs() {
-
     elements.aiLogAccordion.innerHTML = "<p>Loading...</p>";
-
     const params = new URLSearchParams();
+    const page = paginationState.pages.ai || 1;
 
-    params.set("page", paginationState.page);
+    params.set("page", page);
     params.set("limit", paginationState.pageSize);
 
     const model = elements.aiFilterForm.querySelector('#filter-model').value;
     const search = elements.aiFilterForm.querySelector('#ai-search').value;
+    const start = elements.aiFilterForm.querySelector('#ai-filter-start-date').value;
+    const end = elements.aiFilterForm.querySelector('#ai-filter-end-date').value;
 
     if (model && model !== "all") params.set("modelName", model);
     if (search) params.set("search", search);
+    if (start) params.set("startDate", start);
+    if (end) params.set("endDate", end);
 
-    const res = await fetch(`logs/api/ai?${params}`);
-
-    const data = await res.json();
-
-    renderAiAccordion(data.logs, elements.aiLogAccordion, elements);
-
-    paginationState.totals.ai = data.total;
-    pagination.update(data.total);
+    try {
+        const res = await fetch(`logs/api/ai?${params}`);
+        const data = await res.json();
+        renderAiAccordion(data.logs, elements.aiLogAccordion, false);
+        paginationState.totals.ai = data.total;
+        pagination.update();
+    } catch (e) {
+        console.error('Failed to fetch AI logs', e);
+        elements.aiLogAccordion.innerHTML = "<p>Error loading logs</p>";
+    }
 }
 
 async function loadAiSummaries() {
-
     elements.aiSummaryAccordion.innerHTML = "<p>Loading...</p>";
-
     const params = new URLSearchParams();
+    const page = paginationState.pages.summary || 1;
 
-    params.set("page", paginationState.page);
+    params.set("page", page);
     params.set("limit", paginationState.pageSize);
 
-    const res = await fetch(`logs/api/summary?${params}`);
+    const model = elements.aiSummaryFilterForm.querySelector('#summary-filter-model').value;
+    const search = elements.aiSummaryFilterForm.querySelector('#ai-summary-search').value;
+    const start = elements.aiSummaryFilterForm.querySelector('#summary-filter-start-date').value;
+    const end = elements.aiSummaryFilterForm.querySelector('#summary-filter-end-date').value;
 
-    const data = await res.json();
+    if (model && model !== "all") params.set("modelName", model);
+    if (search) params.set("search", search);
+    if (start) params.set("startDate", start);
+    if (end) params.set("endDate", end);
 
-    renderAiAccordion(
-        data.logs,
-        elements.aiSummaryAccordion,
-        elements,
-        true
-    );
-
-    paginationState.totals.summary = data.total;
-    pagination.update(data.total);
+    try {
+        const res = await fetch(`logs/api/summary?${params}`);
+        const data = await res.json();
+        renderAiAccordion(data.logs, elements.aiSummaryAccordion, true);
+        paginationState.totals.summary = data.total;
+        pagination.update();
+    } catch (e) {
+        console.error('Failed to fetch AI summaries', e);
+        elements.aiSummaryAccordion.innerHTML = "<p>Error loading summaries</p>";
+    }
 }
 
-function setView(view) {
-    activeView = view;
-
-    toggleViews(view, elements);
-
-    // Recreate or reconfigure pagination controller to use the right page for this view
-    pagination.getPage = () => paginationState.pages[view];
-    pagination.setPage = (newPage) => { paginationState.pages[view] = newPage; };
-
-    loadCurrentPage();
-}
+// -------------------------
+// RENDER FUNCTIONS
+// -------------------------
 
 function renderUserLogs(logs, tbody) {
-    tbody.innerHTML = ''; // Clear existing logs
-
+    tbody.innerHTML = '';
     if (!logs || logs.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5">No logs found.</td></tr>';
         return;
@@ -211,49 +209,47 @@ function renderUserLogs(logs, tbody) {
     });
 }
 
-function renderAiAccordion(logs, accordion, elements, isSummary = false) {
+function renderAiAccordion(logs, accordion, isSummary = false) {
     accordion.innerHTML = '';
     if (!logs || logs.length === 0) {
-        accordion.innerHTML = `<p>No AI ${isSummary ? 'summaries' : 'logs'} found.</p>`;
+        accordion.innerHTML = `<p>No ${isSummary ? 'summaries' : 'logs'} found.</p>`;
         return;
     }
 
-    logs.forEach((log, index) => {
+    logs.forEach(log => accordion.appendChild(createAiAccordionItem(log, isSummary)));
+
+    /*
+    logs.forEach(log => {
         const item = document.createElement('div');
         item.className = 'accordion-item fade-in-row';
         item.dataset.id = log._id;
 
+        // Timestamp
         const timestamp = new Date(log.responseTimestamp || log.createdAt).toLocaleString();
-
-        const headerText = isSummary
-            ? `${log.modelName || 'Unknown Model'} - Summary #${index + 1} - ${timestamp}`
-            : `${log.modelName || 'Unknown Model'} - ${timestamp}`;
 
         // Header
         const header = document.createElement('div');
         header.className = 'accordion-header';
-        header.innerHTML = `
-            <div class="accordion-header-content">
-                <div class="accordion-header-left-content">
-                    <p>${headerText}</p>
-                </div>
-            </div>
-        `;
+        const modelName = log.modelName || 'Unknown Model';
+        const headerText = isSummary ? `${modelName} - Summary - ${timestamp}` : `${modelName} - ${timestamp}`;
+        header.innerHTML = `<p>${headerText}</p>`;
 
         // Body
         const body = document.createElement('div');
         body.className = 'accordion-body hidden';
         const pre = document.createElement('pre');
 
-        // Show AI content or summary
+        // Use content/summary fields or fallback to full JSON
+        const data = log._doc || log;
         if (isSummary) {
-            pre.textContent = log.summary || log.content || JSON.stringify(log, null, 2);
+            pre.textContent = data.summary || data.content || JSON.stringify(data, null, 2);
         } else {
-            pre.textContent = log.content || JSON.stringify(log, null, 2);
+            pre.textContent = data.content || JSON.stringify(data, null, 2);
         }
 
         body.appendChild(pre);
 
+        // Toggle body visibility on header click
         header.addEventListener('click', () => {
             body.classList.toggle('hidden');
             header.classList.toggle('active');
@@ -263,49 +259,154 @@ function renderAiAccordion(logs, accordion, elements, isSummary = false) {
         item.appendChild(body);
         accordion.appendChild(item);
     });
+    */
 }
 
+function createAiAccordionItem(log, isSummary = false) {
+    const item = document.createElement('div');
+    item.className = 'accordion-item fade-in-row';
+    item.dataset.id = log._id;
 
-// Helper for dot class
+    // Timestamp
+    const timestamp = new Date(log.responseTimestamp || log.createdAt).toLocaleString();
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'accordion-header';
+    const modelName = log.modelName || 'Unknown Model';
+    const headerText = isSummary ? `${modelName} - Summary - ${timestamp}` : `${modelName} - ${timestamp}`;
+    header.innerHTML = `<p>${headerText}</p>`;
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'accordion-body hidden';
+    const pre = document.createElement('pre');
+
+    const data = log._doc || log;
+    if (isSummary) {
+        pre.textContent = data.summary || data.content || JSON.stringify(data, null, 2);
+    } else {
+        pre.textContent = data.content || JSON.stringify(data, null, 2);
+    }
+    body.appendChild(pre);
+
+    // Toggle body visibility
+    header.addEventListener('click', () => {
+        body.classList.toggle('hidden');
+        header.classList.toggle('active');
+    });
+
+    item.appendChild(header);
+    item.appendChild(body);
+
+    return item;
+}
+
+// -------------------------
+// HELPERS
+// -------------------------
+
 function getDotClass(eventType) {
     switch (eventType) {
+        // Authentication
         case 'Login':
-        case 'Signup': return 'log-dot-login';
-        case 'Logout': return 'log-dot-logout';
-        case 'Chart_Modified':
+        case 'Signup': 
+            return 'log-dot-login';
+        case 'Logout': 
+            return 'log-dot-logout';
+        // User management
+        case 'User_Created':
+        case 'User_Updated':
+            return 'log-dot-user';
+        case 'User_Deleted':
+            return 'log-dot-delete';
+        // Role management
+        case 'Role_Created':
+        case 'Role_Changed':
+            return 'log-dot-role';
+        case 'Role_Deleted':
+            return 'log-dot-delete';
+        // Alerts
         case 'Alert_Created':
-        case 'Alert_Modified': return 'log-dot-alert';
-        case 'Chart_Created':
-        case 'Report_Created': return 'log-dot-report';
-        case 'Alert_Deleted':
-        case 'Report_Deleted':
+        case 'Alert_Modified': 
+            return 'log-dot-alert';
+        case 'Alert_Deleted': 
+            return 'log-dot-delete';
+        // Reports
+        case 'Report_Created': 
+            return 'log-dot-report';
+        case 'Report_Deleted': 
+            return 'log-dot-delete';
+        // Charts
+        case 'Chart_Created': 
+            return 'log-dot-report';
+        case 'Chart_Modified': 
+            return 'log-dot-alert';
+        case 'Chart_Deleted': 
+            return 'log-dot-delete';
+        // Fallback
         case 'Failed_Login':
-        case 'Chart_Deleted': return 'log-dot-delete';
-        default: return 'log-dot-default';
+        case 'Unspecified_Event':
+        default: 
+            return 'log-dot-default';
     }
 }
 
-function toggleViews(view, elements) {
-    // Hide all views and deactivate buttons
-    [elements.userLogTbody.parentElement, elements.aiLogAccordion.parentElement, elements.aiSummaryAccordion.parentElement].forEach(v => v.classList.add('hidden'));
-    [elements.userLogsBtn, elements.aiLogsBtn, elements.aiSummariesBtn].forEach(b => b.classList.remove('active'));
+function setView(view) {
+    activeView = view;
 
+    // Hide all log views
+    [elements.userLogTbody.parentElement, elements.aiLogAccordion.parentElement, elements.aiSummaryAccordion.parentElement]
+        .forEach(v => v.classList.add('hidden'));
+
+    // Deactivate all tab buttons
+    [elements.userLogsBtn, elements.aiLogsBtn, elements.aiSummariesBtn]
+        .forEach(b => b.classList.remove('active'));
+
+    // Hide all filter forms first
+    [elements.userFilterForm, elements.aiFilterForm, elements.aiSummaryFilterForm]
+        .forEach(f => {
+            f.classList.add('hidden');
+            f.reset(); // reset values when switching tabs
+        });
+
+    // Toggle the selected view
     if (view === 'user') {
         elements.userLogsBtn.classList.add('active');
         elements.userLogTbody.parentElement.classList.remove('hidden');
+        elements.userFilterForm.classList.remove('hidden');
+
+        elements.manageTagsBtn.classList.add('hidden');
+        elements.liveUpdatesContainer.classList.add('hidden');
     } else if (view === 'ai') {
         elements.aiLogsBtn.classList.add('active');
         elements.aiLogAccordion.parentElement.classList.remove('hidden');
+        elements.aiFilterForm.classList.remove('hidden');
+
+        elements.manageTagsBtn.classList.remove('hidden');
+        elements.liveUpdatesContainer.classList.remove('hidden');
     } else if (view === 'summary') {
         elements.aiSummariesBtn.classList.add('active');
         elements.aiSummaryAccordion.parentElement.classList.remove('hidden');
+        elements.aiSummaryFilterForm.classList.remove('hidden');
+
+        elements.manageTagsBtn.classList.remove('hidden');
+        elements.liveUpdatesContainer.classList.remove('hidden');
     }
+
+    // Reconnect pagination getter/setter
+    pagination.getPage = () => paginationState.pages[view];
+    pagination.setPage = (page) => { paginationState.pages[view] = page; };
+
+    // Load data for the current view
+    loadCurrentPage();
 }
 
+// -------------------------
+// INITIALIZATION
+// -------------------------
+
 document.addEventListener("DOMContentLoaded", async () => {
-    // -------------------------
-    // Cache DOM elements
-    // -------------------------
 
     elements = {
         userLogTbody: document.getElementById("user-log-tbody"),
@@ -321,8 +422,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         aiSummariesBtn: document.getElementById("ai-summaries-btn"),
 
         manageTagsBtn: document.getElementById("open-tags-modal-btn"),
-        liveToggle: document.getElementById("live-update-toggle"),
-        liveUpdatesContainer: document.getElementById("live-updates-container")
+        liveUpdatesContainer: document.getElementById("live-updates-container"),
+        liveToggle: document.getElementById("live-update-toggle")
     };
 
     paginationElements = {
@@ -337,28 +438,188 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     // -------------------------
-    // Create Pagination Controller
+    // Pagination Controller
     // -------------------------
-
     pagination = new PaginationController(
-    paginationState,
-    paginationElements,
-    () => paginationState.pages[activeView], // default getter
-    (page) => { paginationState.pages[activeView] = page; }, // default setter
-    loadCurrentPage
-);
+        paginationState,
+        paginationElements,
+        () => paginationState.pages[activeView],
+        page => { paginationState.pages[activeView] = page; },
+        loadCurrentPage
+    );
 
     // -------------------------
     // Tab Switching
     // -------------------------
+    elements.userLogsBtn.onclick = () => setView('user');
+    elements.aiLogsBtn.onclick = () => setView('ai');
+    elements.aiSummariesBtn.onclick = () => setView('summary');
 
-    elements.userLogsBtn.onclick = () => setView("user");
-    elements.aiLogsBtn.onclick = () => setView("ai");
-    elements.aiSummariesBtn.onclick = () => setView("summary");
+    // -------------------------
+    // Filters & search submit
+    // -------------------------
+    elements.userFilterForm.addEventListener('submit', e => { e.preventDefault(); paginationState.pages.user = 1; loadUserLogs(); });
+    elements.aiFilterForm.addEventListener('submit', e => { e.preventDefault(); paginationState.pages.ai = 1; loadAiLogs(); });
+    elements.aiSummaryFilterForm.addEventListener('submit', e => { e.preventDefault(); paginationState.pages.summary = 1; loadAiSummaries(); });
+
+    // Clear filter buttons
+    elements.userFilterForm.querySelector('.clear-filters').addEventListener('click', () => { elements.userFilterForm.reset(); paginationState.pages.user = 1; loadUserLogs(); });
+    elements.aiFilterForm.querySelector('.clear-filters').addEventListener('click', () => { elements.aiFilterForm.reset(); paginationState.pages.ai = 1; loadAiLogs(); });
+    elements.aiSummaryFilterForm.querySelector('.clear-filters').addEventListener('click', () => { elements.aiSummaryFilterForm.reset(); paginationState.pages.summary = 1; loadAiSummaries(); });
 
     // -------------------------
     // Initial Load
     // -------------------------
+    await loadUserLogs();
+    await loadAiLogs();
+    await loadAiSummaries();
 
-    await loadCurrentPage();
+    // -------------------------
+    // Deep link quicklinks
+    // -------------------------
+    if (window.DEEP_LINK) {
+        const { view, id, page } = window.DEEP_LINK;
+        setView(view);
+
+        if (page) paginationState.pages[view] = page;
+        await loadCurrentPage();
+
+        let accordionEl;
+        if (view === 'ai') accordionEl = elements.aiLogAccordion;
+        if (view === 'summary') accordionEl = elements.aiSummaryAccordion;
+
+        const target = accordionEl?.querySelector(`[data-id="${id}"]`);
+        if (target) {
+            // Scroll to the item
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Highlight flash
+            target.classList.add('highlight-flash');
+            setTimeout(() => target.classList.remove('highlight-flash'), 3000);
+
+            // Open accordion body automatically
+            const header = target.querySelector('.accordion-header');
+            const body = target.querySelector('.accordion-body');
+            if (header && body) {
+                body.classList.remove('hidden');
+                header.classList.add('active');
+            }
+        }
+    }
+
+    setupLiveUpdates(elements, () => isLive);
 });
+
+function setupLiveUpdates(elements, getIsLive) {
+    try {
+        const evtSource = new EventSource('events'); // Your SSE endpoint
+
+        // Helper: Check if a log matches the active filters
+        const passesFilters = (logData, formElement) => {
+            const formData = new FormData(formElement);
+            const filterModel = formData.get('modelName');
+            const searchVal = formData.get('search');
+            const startVal = formData.get('startDate');
+            const endVal = formData.get('endDate');
+
+            const logTime = new Date(logData.responseTimestamp || logData.createdAt).getTime();
+
+            if (startVal && logTime < new Date(startVal).getTime()) return false;
+            if (endVal && logTime > new Date(endVal).getTime()) return false;
+            if (filterModel && filterModel !== 'all' && logData.modelName !== filterModel) return false;
+
+            if (searchVal) {
+                const searchLower = searchVal.toLowerCase();
+                const logString = JSON.stringify(logData).toLowerCase();
+                if (!logString.includes(searchLower)) return false;
+            }
+
+            return true;
+        };
+
+        // -------------------------
+        // AI Logs Listener
+        // -------------------------
+        evtSource.addEventListener('update', (event) => {
+            // Only run if live updates are enabled, we're on AI logs tab, and page 1
+            if (!getIsLive() || activeView !== 'ai' || paginationState.pages.ai !== 1) return;
+
+            try {
+                const logData = JSON.parse(event.data);
+
+                Object.values(logData).forEach(log => {
+                    // Skip if this is actually a summary
+                    if (log.summary) return;
+
+                    // Skip logs that don't pass the current filters
+                    if (!passesFilters(log, elements.aiFilterForm)) return;
+
+                    // Remove "No logs found" placeholder if present
+                    if (elements.aiLogAccordion.children.length === 1 &&
+                        elements.aiLogAccordion.firstElementChild.tagName === 'P') {
+                        elements.aiLogAccordion.innerHTML = '';
+                    }
+
+                    // Prepend new log
+                    const newItem = createAiAccordionItem(log, false);
+                    elements.aiLogAccordion.prepend(newItem);
+
+                    // Maintain only pageSize items in DOM
+                    while (elements.aiLogAccordion.children.length > paginationState.pageSize) {
+                        elements.aiLogAccordion.lastElementChild.remove();
+                    }
+
+                    // Update total count and pagination slice
+                    paginationState.totals.ai++;
+                    const page = paginationState.pages.ai;
+                    const total = paginationState.totals.ai;
+                    const start = (page - 1) * paginationState.pageSize + 1;
+                    const end = Math.min(page * paginationState.pageSize, total);
+
+                    elements.paginationSlice.textContent = `${start} - ${end} of ${total} items`;
+                    elements.paginationPageTotal.textContent = `of ${Math.ceil(total / paginationState.pageSize)}`;
+                });
+            } catch (err) {
+                console.error('SSE AI Log Error', err);
+            }
+        });
+
+        // -------------------------
+        // AI Summaries Listener
+        // -------------------------
+        evtSource.addEventListener('summary', (event) => {
+            if (!getIsLive() || paginationState.pages.summary !== 1) return;
+
+            try {
+                const summaryArray = JSON.parse(event.data);
+
+                summaryArray.forEach(log => {
+                    if (!passesFilters(log, elements.aiSummaryFilterForm)) return;
+
+                    // Remove "No summaries found" placeholder if present
+                    if (elements.aiSummaryAccordion.children.length === 1 && elements.aiSummaryAccordion.firstElementChild.tagName === 'P') {
+                        elements.aiSummaryAccordion.innerHTML = '';
+                    }
+
+                    const newItem = createAiAccordionItem(log, elements, true);
+                    elements.aiSummaryAccordion.prepend(newItem);
+
+                    // Maintain max items per page
+                    if (elements.aiSummaryAccordion.children.length > paginationState.pageSize) {
+                        elements.aiSummaryAccordion.lastElementChild.remove();
+                    }
+
+                    paginationState.totals.summary++;
+                    pagination.update();
+                });
+            } catch (err) {
+                console.error('SSE AI Summary Error', err);
+            }
+        });
+
+        // Close SSE connection when leaving page
+        window.addEventListener('beforeunload', () => evtSource.close());
+    } catch (err) {
+        console.error('SSE Setup Failed', err);
+    }
+}

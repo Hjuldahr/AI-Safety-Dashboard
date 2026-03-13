@@ -208,46 +208,29 @@ input:checked+.slider:before {
   height: 12px;
   border-radius: 50%;
   margin-right: 0.5rem;
-  /* Provides a slight offset for visual centering */
-  transform: translateY(1px);
+  transform: translateY(1px); /* Slight vertical centering */
 }
 
-.log-dot-login {
-  background-color: #28a745;
-}
+/* Authentication */
+.log-dot-login { background-color: #28a745; }   /* Green */
+.log-dot-signup { background-color: #17a2b8; }  /* Teal */
+.log-dot-logout { background-color: #6c757d; }  /* Gray */
 
-/* Green */
-.log-dot-signup {
-  background-color: #17a2b8;
-}
+/* User management */
+.log-dot-user { background-color: #20c997; }    /* Bright Teal */
 
-/* Teal */
-.log-dot-logout {
-  background-color: #6c757d;
-}
+/* Role management */
+.log-dot-role { background-color: #6610f2; }    /* Purple */
 
-/* Gray */
-.log-dot-alert {
-  background-color: #ffc107;
-}
+/* Alerts */
+.log-dot-alert { background-color: #ffc107; }   /* Yellow */
+.log-dot-report { background-color: #007bff; }  /* Blue */
 
-/* Yellow */
-.log-dot-report {
-  background-color: #007bff;
-}
+/* Deletions / critical */
+.log-dot-delete { background-color: #dc3545; }  /* Red */
 
-/* Blue */
-.log-dot-delete {
-  background-color: #dc3545;
-}
-
-/* Red */
-.log-dot-default {
-  background-color: #ccc;
-}
-
-/* Light Gray */
-
+/* Fallback / unspecified */
+.log-dot-default { background-color: #ccc; }    /* Light Gray */
 
 /* --- AI Log Accordion --- */
 .accordion-item {
