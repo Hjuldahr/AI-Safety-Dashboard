@@ -22,6 +22,9 @@ Additionally, we also remove the "breakdown" object from the AI Log when we turn
 object contains much more data than the rest of the object (which it must do so in order to break down the charts by topic or sub topic).
 Removing this object has the caveat that we can no longer split our charts by topic or sub topic when we are using AI Summaries - which is charts > 15m timeframe.
 
+## Searching
+Searching logs supports both attributes (GoodModel) and hexadecimal mongoose document ids (69b366ab5a01347f83945a80).
+
 ## Read Next
 - [User Management](user-management.md)
 - [Errors](errors.md)

@@ -38,6 +38,10 @@ const buildUserLogQuery = async ({ userID, eventType, startDate, endDate, search
             { details: searchRegex }
         ];
 
+        if (mongoose.Types.ObjectId.isValid(search)) {
+            orConditions.push({ _id: search });
+        }
+
         // Find users matching search
         try {
             const users = await User.find({
