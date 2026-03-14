@@ -10,12 +10,12 @@ const viewDefaultDemoPage = (req, res) => {
     const scenarioNames = Object.keys(getScenarios(activeModel));
     const currentScenario = getCurrentScenario(activeModel);
 
-    res.render('demo', { 
-        models: LOADED_MODELS, 
-        scenarios: scenarioNames, 
+    res.render('demo', {
+        models: LOADED_MODELS,
+        scenarios: scenarioNames,
         currentScenario: currentScenario,
         activeModel,
-        user: req.user 
+        user: req.user
     });
 };
 
@@ -23,12 +23,12 @@ const viewDemoPage = (req, res) => {
     const { model } = req.params;
     const scenarioNames = Object.keys(getScenarios(model));
     const currentScenario = getCurrentScenario(model);
-    res.render('demo', { 
-        models: LOADED_MODELS, 
-        scenarios: scenarioNames, 
+    res.render('demo', {
+        models: LOADED_MODELS,
+        scenarios: scenarioNames,
         currentScenario: currentScenario,
         activeModel: model,
-        user: req.user 
+        user: req.user
     });
 };
 
@@ -53,7 +53,7 @@ const listScenarios = (req, res) => {
 
 const applyScenario = (req, res) => {
     const { modelName, scenarioName } = req.body;
-    
+
     if (!modelName) {
         return res.status(400).json({ error: 'Model name is required' });
     }
@@ -72,7 +72,7 @@ const applyScenario = (req, res) => {
             trim: TRIM_COLOURS.Info,
             background: BACKGROUND_COLOURS.Info
         });
-        
+
     } catch (error) {
         console.error(`[Demo] Error setting to ${scenarioName}:`, error);
         res.status(500).json({ error: error.message });
@@ -102,10 +102,17 @@ const resetScenario = (req, res) => {
     }
 };
 
+const renderComponentLibrary = (req, res) => {
+    res.render('component_demo', {
+        user: req.user
+    })
+};
+
 export default {
     resetScenario,
     viewDemoPage,
     viewDefaultDemoPage,
     applyScenario,
-    listScenarios
+    listScenarios,
+    renderComponentLibrary
 };

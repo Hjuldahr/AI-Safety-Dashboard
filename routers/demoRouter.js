@@ -1,12 +1,12 @@
 import express from 'express';
-import demoController from '../controllers/demoController.js';
+import { renderDemoPage, applyScenario, resetScenario, listScenarios, renderComponentLibrary } from '../controllers/demoController.js';
 
 const router = express.Router();
 
-router.get('/', demoController.viewDefaultDemoPage);
-router.get('/view/:model', demoController.viewDemoPage);
-router.post('/apply', demoController.applyScenario);
-router.post('/list', demoController.listScenarios);
-router.post('/reset', demoController.resetScenario);
+router.get('/', renderDemoPage);
+router.get('/components', renderComponentLibrary);
+router.post('/apply', applyScenario);
+router.post('/list', listScenarios);
+router.post('/reset', resetScenario);
 
 export default router;

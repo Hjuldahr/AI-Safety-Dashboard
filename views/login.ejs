@@ -8,18 +8,34 @@
   <title>Login / Sign Up</title>
 
   <!-- CSS -->
-  <link rel="stylesheet" href="css/login.css">
-  <link rel="stylesheet" href="css/header.css">
-  <link rel="stylesheet" href="css/nav.css">
-  <link rel="stylesheet" href="css/notifications.css">
+  <link rel="stylesheet" href="css/themes/colors-default.css">
+  <link rel="stylesheet" id="theme-colors" href="">
+  <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
+  <link rel="stylesheet" href="css/pages/login.css">
 
   <!-- Scripts -->
   <script src="js/auth.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script src="js/notifications.js" defer></script>
+  <script src="js/darkMode.js"></script>
+  <script src="js/themeManager.js"></script>
 </head>
 
-<body>
+<body class="auth-page">
+  <script>
+    // Anti-FOUC: apply theme before paint
+    (function() {
+      var t = localStorage.getItem('theme');
+      if (t && t !== 'default') document.body.classList.add('theme-' + t);
+      // Swap color stylesheet link
+      var colorMap = { ocean: 'css/themes/colors-ocean.css', sunset: 'css/themes/colors-sunset.css' };
+      var colorLink = document.getElementById('theme-colors');
+      if (colorLink) colorLink.href = colorMap[t] || '';
+      // Swap layout stylesheet link
+      var layoutLink = document.getElementById('theme-layout');
+      if (layoutLink) layoutLink.href = (t === 'compact') ? 'css/layouts/compact.css' : 'css/layouts/default.css';
+    })();
+  </script>
 
   <div class="auth-container">
     <div class="title-container">

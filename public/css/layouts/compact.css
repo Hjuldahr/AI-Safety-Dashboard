@@ -1,0 +1,58 @@
+/* ==========================================================================
+   LAYOUT — COMPACT (top-nav variant)
+   Imports default layout, then overrides grid to use horizontal top-nav.
+   This file should be loaded INSTEAD of layouts/default.css when
+   the compact theme is active.
+   ========================================================================== */
+
+/* Import the default layout as the base */
+@import url('./default.css');
+
+/* ---------- Compact theme (top-nav layout, default colours) ---------- */
+body.theme-compact {
+  grid-template-columns: 1fr;
+  grid-template-rows: 60px auto 1fr;
+  grid-template-areas:
+    "header"
+    "nav"
+    "main";
+}
+
+body.theme-compact nav {
+  max-width: none;
+}
+
+body.theme-compact .site-nav {
+  flex-direction: row;
+  flex-wrap: wrap;
+  height: auto;
+  border-right: none;
+  border-bottom: 1px solid var(--nav-border-color);
+  padding: 0.5rem 1rem;
+  gap: 0.25rem;
+  justify-content: center;
+}
+
+body.theme-compact .site-nav a {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+body.theme-compact main.content {
+  padding: 1.5rem 2rem;
+}
+
+/* Compact + responsive: already top-nav, just tighten padding */
+@media screen and (max-width: 768px) {
+  body.theme-compact .site-nav {
+    padding: 0.4rem 0.5rem;
+    gap: 0.15rem;
+  }
+  body.theme-compact .site-nav a {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+  }
+  body.theme-compact main.content {
+    padding: 1rem;
+  }
+}

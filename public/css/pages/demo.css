@@ -1,0 +1,42 @@
+/* ==========================================================================
+   PAGE — DEMO
+   Demo page layout, status indicators, and demo-specific button variants.
+   ========================================================================== */
+.demo-page .main-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+}
+
+.container {
+  background-color: var(--primary-light);
+  padding: 2rem;
+  border-radius: 8px;
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+  border-color: var(--demo-border-color);
+  box-shadow: var(--shadow-lg);
+  border-left: 5px solid var(--btn-default-bg);
+}
+
+#status {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 4px;
+}
+.status-rogue {
+  background-color: var(--color-rogue-bg);
+  border: 1px solid var(--color-rogue);
+  color: var(--color-rogue);
+}
+.status-normal {
+  background-color: var(--color-teal-bg);
+  border: 1px solid var(--color-teal);
+  color: var(--color-teal);
+}
+
+/* Demo-specific button variants */
+.btn-rogue { background-color: var(--color-rogue); color: var(--color-black); }
+.btn-reset { background-color: var(--color-teal); color: var(--color-black); }
