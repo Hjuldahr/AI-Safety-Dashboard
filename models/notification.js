@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { NOTIFICATION_TYPES } from "../constants/notification.js";
+import { NOTIFICATION_TYPES, TRIM_COLOURS, BACKGROUND_COLOURS } from "../constants/notification.js";
 
 const NotificationSchema = new mongoose.Schema({
   message: { type: String, required: true },
@@ -9,8 +9,8 @@ const NotificationSchema = new mongoose.Schema({
     default: 'generic'
   },
   redirectUrl: { type: String, default: null },
-  background: { type: String, default: '#ffffff' },
-  trim: { type: String, default: '#ffffff' },
+  background: { type: String, default: BACKGROUND_COLOURS.Info },
+  trim: { type: String, default: TRIM_COLOURS.Info },
   timeout: { type: Number, default: 3 }, // seconds
   dismissible: { type: Boolean, default: true },
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag" }]

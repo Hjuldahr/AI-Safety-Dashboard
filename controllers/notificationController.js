@@ -1,4 +1,5 @@
 // notificationsController.js
+import { BACKGROUND_COLOURS, TRIM_COLOURS } from "../constants/notification.js";
 import Notification from "../models/Notification.js";
 import User from "../models/user.js";
 import { broadcastEvent } from "../server_side_events/scheduler.js";
@@ -33,8 +34,8 @@ const latest = async (req, res) => {
             redirectUrl: notif.redirectUrl || null,
             timeout: notif.timeout ?? 10,
             dismissible: notif.dismissible ?? true,
-            trim: notif.trim || "#ffffff",
-            background: notif.background || "#ffffff",
+            trim: notif.trim || TRIM_COLOURS.Info,
+            background: notif.background || BACKGROUND_COLOURS.Info,
             tags: notif.tags || []
         };
 

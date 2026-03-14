@@ -6,19 +6,19 @@ export const NOTIFICATION_TYPES = Object.freeze({
   Unknown: "Unknown"
 });
 export const TRIM_COLOURS = {
-    "Critical": "#dc2626",
-    "High": "#f97316",
-    "Medium": "#f59e0b",
-    "Info": "#3b82f6",
+    "Critical": "var(--color-critical)",
+    "High": "var(--color-high)",
+    "Medium": "var(--color-medium)",
+    "Info": "var(--color-info)",
     "Shutdown": "#cc0202",
     "Paused": "#f45b69",
     "Resumed": "#2ca58d"
 };
 export const BACKGROUND_COLOURS = {
-    "Critical": "#fee2e2",
-    "High": "#ffedd5",
-    "Medium": "#fef3c7",
-    "Info": "#dbeafe",
+    "Critical": "var(--color-critical-light)",
+    "High": "var(--color-high-light)",
+    "Medium": "var(--color-medium-light)",
+    "Info": "var(--color-info-light)",
     "Shutdown": "#fcdada",
     "Paused": "#ffe5e8",
     "Resumed": "#d1f3eb"
