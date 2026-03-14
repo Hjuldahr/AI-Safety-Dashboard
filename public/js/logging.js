@@ -14,7 +14,6 @@ let paginationSize = 10;
 
 function paginationSizeChange(newSize) {
     paginationSize = newSize || 10;
-    // TODO force current page to fetch on pagination size change
 }
 
 // --- PERMISSION CHECKS ---
