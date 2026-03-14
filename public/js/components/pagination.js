@@ -8,7 +8,85 @@
  */
 window.Pagination = (function() {
 
-    function render(container, totalPages, currentPage, onPageChange) {
+    function render(container, totalItems, currentPage, paginationSize, onPageChange) {
+        container.innerHTML = ''
+
+        const divLeft = document.createElement('div');
+        divLeft.classList.add('pagination-left');
+
+        // <p>Items per page</p>
+        const itemsPerPage = document.createElement('p');
+        itemsPerPage.innerText = 'Items per page';
+        divLeft.appendChild(itemsPerPage);
+
+        const paginationSizeSelect = document.createElement('select');
+        [10,20,30].forEach(e => {
+            const opt = document.createElement('option');
+            opt.value = e;
+            opt.innerText = e;
+            opt.selected = paginationSize === e;
+            paginationSizeSelect.appendChild(opt);
+        });
+        divLeft.appendChild(paginationSizeSelect);
+
+        const paginationSlice = document.createElement('p');
+        const sliceStart = Math.min(currentPage * paginationSize, totalItems);
+        const sliceEnd = Math.min(sliceStart + paginationSize, totalItems);
+        paginationSlice.innerText = `${sliceStart} - ${sliceEnd} of ${totalItems} items`
+        divLeft.appendChild(paginationSlice);
+
+        container.appendChild(divLeft);
+
+        const divRight = document.createElement('div');
+        divRight.classList.add('pagination-right');
+
+        const atStart = currentPage <= 1;
+        const totalPages = Math.round(totalItems / paginationSize);
+        const atEnd = currentPage >= totalPages;
+
+        const firstPageBtn = document.createElement('button');
+        firstPageBtn.innerHTML = '<i class="fa-solid fa-angles-left"></i> First';
+        firstPageBtn.disabled = atStart;
+        divRight.appendChild(firstPageBtn);
+
+        const prevPageBtn = document.createElement('button');
+        prevPageBtn.innerHTML = '<i class="fa-solid fa-angle-left"></i> Prev';
+        prevPageBtn.disabled = atStart;
+        prevPageBtn.onclick = onPageChange(currentPage - 1);
+        divRight.appendChild(prevPageBtn);
+
+        const paginationPage = document.createElement('input');
+        paginationPage.type = 'number';
+        paginationPage.min = 1;
+        paginationPage.value = currentPage;
+        paginationPage.max = totalPages;
+        paginationPage.style.width = "50px";
+        divRight.appendChild(paginationPage);
+
+        const paginationTotal = document.createElement('p');
+        paginationTotal.innerText = `of ${totalPages}`;
+        divRight.appendChild(paginationTotal);
+
+        const nextPageBtn = document.createElement('button');
+        nextPageBtn.innerHTML = 'Next <i class="fa-solid fa-angle-right"></i>';
+        nextPageBtn.disabled = atEnd;
+        divRight.appendChild(nextPageBtn);
+
+        const lastPageBtn = document.createElement('button');
+        lastPageBtn.innerHTML = 'Last <i class="fa-solid fa-angles-right"></i>';
+        lastPageBtn.disabled = atEnd;
+        divRight.appendChild(lastPageBtn);
+
+        container.appendChild(divRight);
+        
+        //const paginationFirstPageBtn = document.getElementById('paginationFirstPage');
+        //const paginationPrevPageBtn = document.getElementById('paginationPrevPage');
+
+        //paginationFirstPageBtn.addEventListener('click', () => onPageChange(1));
+
+        //paginationPrevPageBtn.addEventListener('click', () => onPageChange(currentPage - 1));
+
+        /*
         container.innerHTML = ''; // Clear old buttons
 
         if (totalPages <= 1) return;
@@ -17,7 +95,7 @@ window.Pagination = (function() {
         const createPageBtn = (page) => {
             const btn = document.createElement('button');
             btn.textContent = page;
-            if (page === currentPage) btn.classList.add('active');
+            if (page === currentPage) btn.classList.add.add('active');
             btn.addEventListener('click', () => onPageChange(page));
             return btn;
         };
@@ -88,6 +166,7 @@ window.Pagination = (function() {
         nextBtn.disabled = currentPage === totalPages;
         nextBtn.addEventListener('click', () => onPageChange(currentPage + 1));
         container.appendChild(nextBtn);
+        */
     }
 
     return {

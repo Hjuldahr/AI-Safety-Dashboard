@@ -11,7 +11,7 @@ let currentAiSummariesPage = 1;
 let totalAiLogs = 0;
 let totalAiSummaries = 0;
 // ToDo: let users define this
-const PAGE_LIMIT = 10;
+const paginationSize = 10;
 
 // --- PERMISSION CHECKS ---
 const hasPermission = (permission) => {
@@ -451,7 +451,7 @@ async function handleUserFilter(elements, page = 1) {
 
         // Render data and pagination
         renderUserLogs(data.logs, elements.userLogTbody);
-        Pagination.render(elements.paginationControls, data.pages, data.page, (newPage) => handleUserFilter(elements, newPage));
+        Pagination.render(elements.paginationControls, data.total, data.page, paginationSize, (newPage) => handleUserFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch logs:', error);
@@ -499,7 +499,7 @@ async function handleAiFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiLogAccordion, elements, false);
-        Pagination.render(elements.aiPaginationControls, data.pages, data.page, (newPage) => handleAiFilter(elements, newPage));
+        Pagination.render(elements.aiPaginationControls, data.total, data.page, paginationSize, (newPage) => handleAiFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch AI logs:', error);
@@ -547,7 +547,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiSummaryAccordion, elements, true);
-        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, (newPage) => handleAiSummaryFilter(elements, newPage));
+        Pagination.render(elements.aiSummaryPaginationControls, data.total, data.page, paginationSize, (newPage) => handleAiSummaryFilter(elements, newPage));
 
     } catch (error) {
         console.error('Failed to fetch AI summaries:', error);
@@ -607,8 +607,9 @@ function setupLiveUpdates(elements, getIsLive) {
                         // Re-render the pagination
                         Pagination.render(
                             elements.aiPaginationControls,
-                            newTotalPages,
+                            totalAiLogs,
                             currentAiLogsPage,
+                            paginationSize,
                             (newPage) => handleAiFilter(elements, newPage)
                         );
 
