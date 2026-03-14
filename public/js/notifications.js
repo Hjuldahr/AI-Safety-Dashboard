@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (id && localStorage.getItem('previousNotificationId') === id) return;
 
         content.innerHTML = `
-            <span class='notification-slide-text'>${n.message}</span><br>
+            <span class='notification-slide-text'>${n.message}</span>
             <span class='notification-slide-time'>
                 ${formatTime(n.createdAt || Date.now())}
             </span>
