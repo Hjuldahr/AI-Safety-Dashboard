@@ -1,6 +1,28 @@
+<script>
+  // Anti-FOUC: apply dark mode, theme class, and link hrefs before paint
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
+  }
+  (function() {
+    var theme = localStorage.getItem('theme');
+    if (theme && theme !== 'default') {
+      document.body.classList.add('theme-' + theme);
+    }
+    // Swap color stylesheet link
+    var colorMap = { ocean: 'css/themes/colors-ocean.css', sunset: 'css/themes/colors-sunset.css' };
+    var colorLink = document.getElementById('theme-colors');
+    if (colorLink) colorLink.href = colorMap[theme] || '';
+    // Swap layout stylesheet link
+    var layoutLink = document.getElementById('theme-layout');
+    if (layoutLink) layoutLink.href = (theme === 'compact') ? 'css/layouts/compact.css' : 'css/layouts/default.css';
+  })();
+</script>
 <header class="site-header">
     <h1>AI Safety Dashboard</h1>
     <div class="header-controls">
+        <button id="dark-mode-toggle" class="dark-mode-toggle" title="Toggle dark mode">
+            <i class="fa-solid fa-moon"></i>
+        </button>
         <% if(user){ %>
             <div class="userInfo">
                 <p id="user-name">User: <%= user.username%>
@@ -21,3 +43,5 @@
         <%- include('notifications') %>
     </div>
 </header>
+<script src="js/darkMode.js"></script>
+<script src="js/themeManager.js"></script>

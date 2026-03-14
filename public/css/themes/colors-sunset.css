@@ -1,0 +1,119 @@
+/* ==========================================================================
+   COLORS — SUNSET THEME
+   body.theme-sunset light + dark-mode overrides
+   ========================================================================== */
+
+/* ---------- Sunset theme (light) ---------- */
+body.theme-sunset {
+  --primary-color: #d97706;
+  --primary-hover: #b45309;
+  --primary-light: #fef3c7;
+  --green-color: #16a34a;
+  --body-bg: #fffbeb;
+  --text-dark: #78350f;
+  --text-light: #92643a;
+  --text-muted: #7a5c3a;
+  --color-muted: #b89b72;
+  --border-color: #fde68a;
+  --border-light: #e8d5a8;
+  --border-lighter: #fef3c7;
+  --shadow: 0 4px 6px -1px rgba(217,119,6,.1), 0 2px 4px -2px rgba(217,119,6,.08);
+  --shadow-md: 0 4px 6px rgba(217,119,6,.1);
+  --shadow-lg: 0 4px 12px rgba(217,119,6,.08);
+  --shadow-card-hover: 0 6px 16px rgba(217,119,6,.15);
+  --color-medium: #ca8a04;
+  --color-medium-light: #fef9c3;
+  --color-medium-border: #eab308;
+  --color-medium-dark: #854d0e;
+  --color-info: #2563eb;
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-warning: #eab308;
+  --btn-default-bg: #d97706;
+  --btn-default-hover: #b45309;
+  --btn-default-active: #92400e;
+  --alert-success-bg: #dcfce7;
+  --alert-success-text: #166534;
+  --alert-success-border: #86efac;
+  --log-dot-signup: #d97706;
+  --log-dot-report: #2563eb;
+  --log-dot-default: #e8d5a8;
+  --color-rogue: #e11d48;
+  --color-rogue-bg: rgba(225,29,72,.15);
+  --color-teal: #0d9488;
+  --color-teal-bg: rgba(13,148,136,.15);
+  --color-primary-btn: #d97706;
+  --demo-border-color: #fde68a;
+  --kpi-text-color: #7a5c3a;
+  --code-bg: #3b1f06;
+  --code-text: #fef3c7;
+  --back-btn-bg: #7a5c3a;
+  --timeframe-label-color: #78350f;
+  --timeframe-bg: #fffbeb;
+  --card-edit-bg: #fefce8;
+  --role-system-bg: #fef3c7;
+  --role-system-text: #92400e;
+  --edit-hover-color: #d97706;
+  --focus-ring: rgba(217,119,6,.3);
+  --focus-ring-light: rgba(217,119,6,.12);
+  --overlay-light: rgba(217,119,6,.04);
+  --tiny-group-border: rgba(217,119,6,.3);
+  --header-text-color: #78350f;
+  --button-bg-color: #fffbeb;
+  --button-hover-bg-color: #fef3c7;
+  --button-text-color: #78350f;
+  --primary-accent-color: #b45309;
+  --nav-bg-color: #fefce8;
+  --nav-link-color: #7a5c3a;
+  --nav-link-hover-bg: #fef9c3;
+  --nav-link-active-bg: #d97706;
+  --nav-border-color: #fde68a;
+}
+
+/* ---------- Sunset theme (dark) ---------- */
+body.theme-sunset.dark-mode {
+  --body-bg: #1c1007;
+  --card-bg: #2d1e0e;
+  --header-bg-color: #2d1e0e;
+  --nav-bg-color: #1c1007;
+  --text-dark: #fef3c7;
+  --text-light: #fbbf24;
+  --text-muted: #d4a053;
+  --color-muted: #a17838;
+  --border-color: #4a3520;
+  --border-light: #5c4430;
+  --border-lighter: #4a3520;
+  --nav-border-color: #4a3520;
+  --input-bg: #4a3520;
+  --primary-color: #fbbf24;
+  --primary-light: #78350f;
+  --header-text-color: #fef3c7;
+  --button-bg-color: #4a3520;
+  --button-hover-bg-color: #5c4430;
+  --button-text-color: #fef3c7;
+  --nav-link-color: #fbbf24;
+  --nav-link-hover-bg: #4a3520;
+  --color-info-light: #1e3a5f;
+  --color-info-dark: #93c5fd;
+  --btn-default-bg: #f59e0b;
+  --btn-default-hover: #d97706;
+  --btn-default-active: #b45309;
+  --alert-success-bg: #052e16;
+  --alert-success-text: #86efac;
+  --alert-success-border: #166534;
+  --demo-border-color: #78350f;
+  --kpi-text-color: #fbbf24;
+  --code-bg: #1a0f04;
+  --code-text: #fde68a;
+  --back-btn-bg: #5c4430;
+  --timeframe-label-color: #fbbf24;
+  --timeframe-bg: #241508;
+  --card-edit-bg: #2d1e0e;
+  --role-system-bg: #3b2510;
+  --role-system-text: #fbbf24;
+  --edit-hover-color: #fbbf24;
+  --focus-ring: rgba(251,191,36,.35);
+  --focus-ring-light: rgba(251,191,36,.15);
+  --tiny-group-border: rgba(251,191,36,.3);
+  --editing-header-bg: rgba(45,30,14,.95);
+}
