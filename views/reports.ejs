@@ -12,6 +12,8 @@
   <link rel="stylesheet" id="theme-colors" href="">
   <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
   <link rel="stylesheet" href="css/components/notifications.css">
+  <link rel="stylesheet" href="css/pages/reoprts.css">
+  
 
   <!-- Scripts -->
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
@@ -25,93 +27,92 @@
   <%- include('components/nav') %>
 
   <main class="content">
+    <div class="reports-container card">
+      <header class="report-header">
+        <h1><i class="fa-solid fa-chart-line"></i> Report Generator</h1>
+        <p>Configure and export custom model performance data.</p>
+      </header>
 
-    <!-- NOTE: IDs & names tuned to match public/js/reports.js -->
-    <form id="report-form" style="max-width: 700px; margin: 0 auto 24px;">
-      <h2>Generate a Report</h2>
+      <form id="report-form">
+        <section class="card">
+          <h3>General Configuration</h3>
+          <div class="input-grid">
+            <div class="field-group">
+              <label for="reportTitle">Report Title</label>
+              <input type="text" id="reportTitle" name="reportTitle" placeholder="e.g. Monthly Performance Overview" required />
+            </div>
+            <div class="field-group">
+              <label for="modelName">Target Model</label>
+              <select id="modelName" name="modelName">
+                <option value="GoodModel">Good Model</option>
+                <option value="BadModel">Bad Model</option>
+              </select>
+            </div>
+            <div class="field-group">
+              <label for="startDate">Start Date</label>
+              <input type="date" id="startDate" name="startDate" required />
+            </div>
+            <div class="field-group">
+              <label for="endDate">End Date</label>
+              <input type="date" id="endDate" name="endDate" required />
+            </div>
+          </div>
+        </section>
 
-      <label for="reportTitle">Report Title</label>
-      <input 
-          type="text" 
-          id="reportTitle" 
-          name="reportTitle" 
-          placeholder="e.g. Monthly Performance Overview"
-          required
-          style="width: 100%; padding: 8px; margin-bottom: 12px;"
-      />
+        <section class="card">
+          <div class="card-header">
+            <h3>Data Selection</h3>
+            <div class="template-pills">
+              <button type="button" class="pill" onclick="applyTemplate('safety')">🛡️ Safety</button>
+              <button type="button" class="pill" onclick="applyTemplate('efficiency')">⚡ Efficiency</button>
+              <button type="button" class="pill" onclick="applyTemplate('exec')">📊 Executive</button>
+              <button type="button" class="pill" onclick="applyTemplate('all')">🌐 Full Audit</button>
+            </div>
+          </div>
 
-      <label for="startDate">Start Date</label>
-      <input 
-          type="date" 
-          id="startDate" 
-          name="startDate"
-          required
-          style="width: 100%; padding: 8px; margin-bottom: 12px;"
-      />
+          <div class="checkbox-grid" id="metrics-grid">
+            <label class="check-item"><input type="checkbox" name="fields" value="policyCompliance"> Policy Compliance</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="responseHelpfulness"> Helpfulness</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="responseTime"> Response Time</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="energyConsumption"> Energy (J)</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="tokensUsed"> Tokens Used</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="gigaFlopsUsed"> GFLOPs</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="webLookups"> Web Lookups</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="toxicityScore"> Toxicity</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="piiDetected"> PII Detected</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="queryCount"> Query Count</label>
+            <label class="check-item"><input type="checkbox" name="fields" value="flaggedCount"> Flagged Count</label>
+          </div>
 
-      <label for="endDate">End Date</label>
-      <input 
-          type="date" 
-          id="endDate" 
-          name="endDate"
-          required
-          style="width: 100%; padding: 8px; margin-bottom: 12px;"
-      />
+          <div class="special-selection">
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="flaggedOutputs">
+              <strong>Include Raw Flagged Outputs</strong> (Detailed Appendix)
+            </label>
+          </div>
 
-      <label for="modelName">Model</label>
-      <select
-          id="modelName" 
-          name="modelName"
-          style="width: 100%; padding: 8px; margin-bottom: 12px;"
-      >
-          <option value="GoodModel">Good Model</option>
-          <option value="BadModel">Bad Model</option>
-      </select>
+          <div class="template-actions">
+            <button type="button" class="btn-secondary" onclick="alert('Configuration saved as template!')">
+              <i class="fa-solid fa-floppy-disk"></i> Save as New Template
+            </button>
+          </div>
+        </section>
 
-      <div style="display:flex; gap:12px;">
-        <button 
-            id="report-submit"
-            type="submit"
-            style="flex:1; padding: 10px; background: #4a79e0; color: white; border: none; cursor: pointer;"
-        >
-            Generate Report
-        </button>
+        <div class="action-bar">
+          <button id="report-submit" type="submit" class="btn-primary">Generate Preview</button>
+          <div class="download-group">
+            <button id="report-download" type="button" class="btn-download pdf">PDF</button>
+            <button id="report-download-csv" type="button" class="btn-download csv">CSV</button>
+            <button id="report-download-csv-aggregates" type="button" class="btn-download agg">Aggregates</button>
+          </div>
+        </div>
+      </form>
 
-        <button
-            id="report-download"
-            type="button"
-            style="flex:1; padding: 10px; background: #2c6f2c; color: white; border: none; cursor: pointer;"
-        >
-            Download PDF
-        </button>
-
-        <button
-            id="report-download-csv"
-            type="button"
-            style="flex:1; padding: 10px; background: #6b7280; color: white; border: none; cursor: pointer;"
-        >
-            Download CSV
-        </button>
-
-        <button
-            id="report-download-csv-aggregates"
-            type="button"
-            style="flex:1; padding: 10px; background: #5a57a9; color: white; border: none; cursor: pointer;"
-        >
-            Download Aggregates CSV
-        </button>
+      <div id="report-preview-wrapper">
+        <iframe id="report-preview"></iframe>
       </div>
-    </form>
-
-    <p id="report-status" style="text-align:center; color:#666;"></p>
-
-    <!-- Inline preview: hidden until a PDF is generated -->
-    <div id="report-preview-wrapper" style="max-width:900px; margin: 16px auto; display:none;">
-      <iframe id="report-preview" style="width:100%; height:800px; border:1px solid #ddd;"></iframe>
     </div>
-
   </main>
-
 </body>
 
 </html>

@@ -11,13 +11,30 @@ const setButtonState = (elements, disabled, text) => {
     }
 }
 
+function applyTemplate(type) {
+    const checkboxes = document.querySelectorAll('input[name="fields"]');
+    checkboxes.forEach(cb => cb.checked = false); // Reset
+
+    const templates = {
+        safety: ['policyCompliance', 'toxicityScore', 'piiDetected', 'flaggedCount', 'flaggedOutputs'],
+        efficiency: ['responseTime', 'energyConsumption', 'tokensUsed', 'gigaFlopsUsed'],
+        exec: ['policyCompliance', 'responseHelpfulness', 'queryCount'],
+        all: Array.from(checkboxes).map(cb => cb.value)
+    };
+
+    templates[type].forEach(val => {
+        const target = document.querySelector(`input[value="${val}"]`);
+        if (target) target.checked = true;
+    });
+}
+
 const handleReportSubmit = async (elements) => {
     if (isGeneratingReport) return;
     isGeneratingReport = true;
 
     if (elements.statusText) elements.statusText.textContent = 'Generating report... Please wait.';
     setButtonState(elements, true, 'Generating...');
-    
+
     // Clear previous preview
     if (elements.previewWrapper) elements.previewWrapper.style.display = 'none';
 
@@ -100,7 +117,7 @@ const handleDownload = (elements, endpoint) => {
         endDate: payload.endDate,
         modelName: payload.modelName,
     }).toString();
-    
+
     // Use the provided endpoint with the query parameters
     const downloadUrl = `${endpoint}?${params}`;
 
@@ -119,7 +136,7 @@ const handlePostDownload = async (elements, path) => {
 
     try {
         const formData = new FormData(formEl);
-        
+
         // Build the payload (same structure as PDF generation)
         const payload = {
             startDate: formData.get('startDate'),
@@ -144,7 +161,7 @@ const handlePostDownload = async (elements, path) => {
         // --- Critical step: Force browser to download the streamed response ---
         const blob = await response.blob();
         const contentDisposition = response.headers.get('Content-Disposition');
-        
+
         // Extract filename from header (e.g., attachment; filename="ai-aggregates-all-to-all.csv")
         let filename = 'download.csv';
         if (contentDisposition && contentDisposition.indexOf('filename=') !== -1) {

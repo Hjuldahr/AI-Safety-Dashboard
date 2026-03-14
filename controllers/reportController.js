@@ -78,27 +78,30 @@ const getAggregatedStats = async (query) => {
             maxEnergy: { $max: '$energyConsumption' },
             avgEnergy: { $avg: '$energyConsumption' },
             
-            // --- NEW FIELDS AGGREGATION ---
+            // Tokens Used
             minTokens: { $min: '$tokensUsed' }, 
             maxTokens: { $max: '$tokensUsed' },
             avgTokens: { $avg: '$tokensUsed' },
             
+            // Giga Flops Used
             minFlops: { $min: '$gigaFlopsUsed' }, 
             maxFlops: { $max: '$gigaFlopsUsed' },
             avgFlops: { $avg: '$gigaFlopsUsed' },
             
+            // Web Lookups
             minLookups: { $min: '$webLookups' }, 
             maxLookups: { $max: '$webLookups' },
             avgLookups: { $avg: '$webLookups' },
             
+            // Toxicity Score
             minToxicity: { $min: '$toxicityScore' }, 
             maxToxicity: { $max: '$toxicityScore' },
             avgToxicity: { $avg: '$toxicityScore' },
             
+            // PII Detected
             minPii: { $min: '$piiDetected' }, 
             maxPii: { $max: '$piiDetected' },
             avgPii: { $avg: '$piiDetected' }
-            // --- END NEW FIELDS AGGREGATION ---
         }
     };
 
@@ -187,13 +190,11 @@ const getTimeSeriesData = async (query) => {
             policyCompliance: "$policyCompliance",
             responseHelpfulness: "$responseHelpfulness",
             energyConsumption: "$energyConsumption",
-            // --- NEW FIELDS PROJECT ---
             tokensUsed: "$tokensUsed",
             gigaFlopsUsed: "$gigaFlopsUsed",
             webLookups: "$webLookups",
             toxicityScore: "$toxicityScore",
             piiDetected: "$piiDetected",
-            // --- END NEW FIELDS PROJECT ---
         }
     };
     
@@ -209,13 +210,11 @@ const getTimeSeriesData = async (query) => {
             avgPolicyCompliance: { $avg: '$policyCompliance' },
             avgResponseHelpfulness: { $avg: '$responseHelpfulness' },
             avgEnergyConsumption: { $avg: '$energyConsumption' },
-            // --- NEW FIELDS AVERAGE ---
             avgTokensUsed: { $avg: '$tokensUsed' },
             avgGigaFlopsUsed: { $avg: '$gigaFlopsUsed' },
             avgWebLookups: { $avg: '$webLookups' },
             avgToxicityScore: { $avg: '$toxicityScore' },
             avgPiiDetected: { $avg: '$piiDetected' },
-            // --- END NEW FIELDS AVERAGE ---
         }
     };
     
@@ -395,7 +394,7 @@ const createReport = async (req, res) => {
         ]);
         
         // Prepare template data
-        // The EJS template will now have access to all the new fields via the 'stats' object
+        // The EJS template will have access to all the fields via the 'stats' object
         const templateData = {
             reportTitle,
             startDate,
