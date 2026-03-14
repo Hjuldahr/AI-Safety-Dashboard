@@ -1,3 +1,13 @@
+/* ==========================================================================
+   PAGE — LOGS
+   Toolbar, tabs, filters, user log table columns, colored dots,
+   and AI accordion.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   TOOLBAR, TABS & FILTERS
+   ========================================================================== */
 /* --- Utility --- */
 .hidden {
   display: none !important;
@@ -11,7 +21,7 @@
   align-items: center;
   padding-bottom: 1rem;
   margin-bottom: 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-lighter);
   gap: 1rem;
   padding-right: 100px;
 }
@@ -32,17 +42,18 @@
   padding: 0.5rem 1rem;
   font-size: 1rem;
   font-weight: 600;
-  border: 1px solid #ccc;
-  background-color: #f9f9f9;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  color: var(--text-dark);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .log-tab-btn.active {
-  background-color: #007bff;
-  color: white;
-  border-color: #007bff;
+  background-color: var(--btn-default-bg);
+  color: var(--color-white);
+  border-color: var(--btn-default-bg);
 }
 
 .filter-group {
@@ -59,9 +70,11 @@
 .filter-group input[type="date"],
 .filter-group select {
   padding: 0.4rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.9rem;
+  background-color: var(--input-bg);
+  color: var(--text-dark);
 }
 
 
@@ -177,7 +190,7 @@ input:checked+.slider:before {
 
 .log-table th {
   font-weight: 600;
-  background-color: #fcfcfc;
+  background-color: var(--button-hover-bg-color);
 }
 
 /* Column widths */
@@ -213,37 +226,31 @@ input:checked+.slider:before {
 }
 
 .log-dot-login {
-  background-color: #28a745;
+  background-color: var(--log-dot-login);
 }
 
-/* Green */
 .log-dot-signup {
-  background-color: #17a2b8;
+  background-color: var(--log-dot-signup);
 }
 
-/* Teal */
 .log-dot-logout {
-  background-color: #6c757d;
+  background-color: var(--log-dot-logout);
 }
 
-/* Gray */
 .log-dot-alert {
-  background-color: #ffc107;
+  background-color: var(--log-dot-alert);
 }
 
-/* Yellow */
 .log-dot-report {
-  background-color: #007bff;
+  background-color: var(--log-dot-report);
 }
 
-/* Blue */
 .log-dot-delete {
-  background-color: #dc3545;
+  background-color: var(--log-dot-delete);
 }
 
-/* Red */
 .log-dot-default {
-  background-color: #ccc;
+  background-color: var(--log-dot-default);
 }
 
 /* Light Gray */
@@ -251,18 +258,19 @@ input:checked+.slider:before {
 
 /* --- AI Log Accordion --- */
 .accordion-item {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   margin-bottom: 0.5rem;
   overflow: hidden;
 }
 
 .accordion-header {
-  background-color: #f7f7f7;
+  background-color: var(--body-bg);
+  color: var(--text-dark);
   padding: 0.75rem 1rem;
 
   border: none;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--border-color);
 
   cursor: pointer;
   display: flex;
@@ -296,18 +304,18 @@ input:checked+.slider:before {
 
 
 .accordion-header:hover {
-  background-color: #eee;
+  background-color: var(--button-hover-bg-color);
 }
 
 .accordion-body {
   padding: 1rem;
-  background-color: #fff;
-  border-top: 1px solid #eee;
+  background-color: var(--card-bg);
+  border-top: 1px solid var(--border-color);
 }
 
 .accordion-body pre {
-  background-color: #2b2b2b;
-  color: #f8f8f2;
+  background-color: var(--code-bg);
+  color: var(--code-text);
   padding: 1rem;
   border-radius: 4px;
   white-space: pre-wrap;
@@ -407,7 +415,7 @@ input:checked+.slider:before {
   gap: 1rem;
 }
 
-.ai-log-links{
+.ai-log-links {
   display: flex;
   flex-direction: column;
   gap: 1rem;

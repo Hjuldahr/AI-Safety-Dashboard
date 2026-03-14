@@ -1,104 +1,33 @@
+/* ==========================================================================
+   COMPONENT — PAGINATION
+   Shared pagination controls (used on alerts and logs pages).
+   ========================================================================== */
 .pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;     
-  
-  border: 1px solid #eee;
-  border-radius: 10px;
-
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-.pagination-left, 
-.pagination-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.pagination-container input {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.pagination-container select {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-
-  /* 2. Add your SVG as a background image */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 384 512'%3E%3Cpath fill='%23666' d='M169.4 374.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 306.7 54.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z'/%3E%3C/svg%3E");
-  
-  /* 3. Position the arrow */
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 12px; /* Adjust size as needed */
-
-  /* 4. Extra padding on the right so text doesn't overlap the arrow */
-  padding-right: 2.2rem;
-}
-
-/* Optional: Add a hover effect to match common input behaviors */
-.pagination-container select:hover,
-.pagination-container input:hover {
-  border-color: #aaa;
-}
-
-/* Optional: Focus state for accessibility */
-.pagination-container select:focus,
-.pagination-container input:focus {
-  outline: none;
-  border-color: #007bff; /* Or your preferred brand color */
-}
-
-.pagination-container button {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pagination-container button:hover {
-  background-color: #f4f4f4;
-}
-
-.pagination-container button:disabled {
-  background-color: #f9f9f9;
-  color: #aaa;
-  cursor: not-allowed;
-}
-
-.pagination-container button.active {
-  background-color: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-/*
-.pagination {
-  margin-top: 1.5rem;
+  padding: 1rem;
   display: flex;
   justify-content: center;
-  align-items: center;
   gap: 0.5rem;
 }
-
-
-*/
+.pagination button {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-dark);
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.pagination button.active {
+  background: var(--primary-color);
+  color: var(--color-white);
+  border-color: var(--primary-color);
+}
+.pagination button:hover {
+  background-color: var(--body-bg);
+  transform: none;
+}
+.pagination button:disabled {
+  background-color: var(--body-bg);
+  color: var(--text-light);
+  cursor: not-allowed;
+}

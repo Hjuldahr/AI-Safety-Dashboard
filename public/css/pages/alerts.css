@@ -1,33 +1,19 @@
-:root {
-  --primary-color: #4f46e5;
-  --primary-hover: #4338ca;
-  --bg-color: #f3f4f6;
-  --card-bg: #ffffff;
-  --text-dark: #1f2937;
-  --text-light: #6b7280;
-  --border-color: #e5e7eb;
+/* ==========================================================================
+   PAGE — ALERTS
+   Stat cards, control bar, filters, alert-specific table styles,
+   charts dashboard, modals, tag management, and mobile responsive.
+   ========================================================================== */
 
-  --color-critical: #dc2626;
-  --color-high: #ea580c;
-  --color-medium: #d97706;
-  --color-info: #3b82f6;
-}
 
-body {
-  background-color: var(--bg-color);
-  color: var(--text-dark);
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  margin: 0;
-}
-
+/* ==========================================================================
+   STAT CARDS
+   ========================================================================== */
 .main-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 1rem;
 }
 
-/* --- 1. Dashboard Stats --- */
 .dashboard-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -42,12 +28,10 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px var(--overlay-subtle);
   border-left: 4px solid transparent;
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stat-card:hover {
@@ -57,6 +41,7 @@ body {
 
 .stat-card:active {
   transform: translateY(0);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-card.critical {
@@ -113,7 +98,10 @@ body {
   color: var(--text-light);
 }
 
-/* --- 2. Control Bar --- */
+
+/* ==========================================================================
+   CONTROL BAR & FILTERS
+   ========================================================================== */
 .control-bar {
   background: var(--card-bg);
   padding: 1rem;
@@ -124,7 +112,7 @@ body {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px var(--overlay-subtle);
 }
 
 .filter-group {
@@ -153,6 +141,15 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.9rem;
+}
+
+.filter-item select {
+  padding-right: 2rem;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .global-actions {
@@ -193,6 +190,7 @@ body {
   vertical-align: middle;
 }
 
+/* Level badges */
 .level-badge {
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
@@ -222,6 +220,7 @@ body {
   color: #1e40af;
 }
 
+/* Tag pills */
 .tags-cell {
   display: flex;
   align-items: center;
@@ -234,7 +233,7 @@ body {
   align-items: center;
   padding: 2px 8px;
   border-radius: 12px;
-  color: #fff;
+  color: var(--color-white);
   font-size: 0.75rem;
   white-space: nowrap;
 }
@@ -243,9 +242,9 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1px dashed #9ca3af;
+  border: 1px dashed var(--text-light);
   background: none;
-  color: #6b7280;
+  color: var(--text-light);
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -253,17 +252,55 @@ body {
   font-size: 1rem;
   line-height: 1;
   transition: all 0.2s;
+  box-shadow: none;
+  padding: 0;
 }
 
 .add-log-tag-btn:hover {
   border-color: var(--primary-color);
   color: var(--primary-color);
-  background: #eff6ff;
+  background: var(--primary-light);
+  transform: none;
 }
 
-/* Pagination */
-.pagination {
-  padding: 1rem;
+
+/* ==========================================================================
+   CHARTS DASHBOARD
+   ========================================================================== */
+.charts-dashboard {
+  padding: 1.5rem;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 2rem;
+}
+
+.charts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.charts-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-dark);
+}
+
+.charts-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 220px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem;
   display: flex;
   justify-content: center;
   gap: 0.5rem;
@@ -300,7 +337,7 @@ body {
   gap: 0.5rem;
 }
 
-/* Rule Builder Items */
+/* Rule builder */
 .rule-row {
   display: flex;
   gap: 0.5rem;
@@ -315,7 +352,11 @@ body {
   gap: 0.5rem;
 }
 
-/* --- Rule Builder & Input Refinement --- */
+/* Tag multiselect */
+.multiselect-container {
+  position: relative;
+  width: 100%;
+}
 
 /* Standardize all inputs/selects in the builder */
 .rule-row select,
@@ -342,6 +383,15 @@ body {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-radius: 4px;
+  background: var(--input-bg);
+  min-height: 42px;
+  cursor: text;
+}
+
+.tags-input-container:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--focus-ring-light);
 }
 
 /* Specific Rule Row Alignment */
@@ -407,8 +457,118 @@ body {
   padding: 0.4rem 0.8rem;
 }
 
+.tag-input-pill .remove-tag {
+  cursor: pointer;
+  font-weight: bold;
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--overlay-subtle);
+  font-size: 10px;
+}
 
-/* Active Rules List */
+.tag-input-pill .remove-tag:hover {
+  opacity: 1;
+  background: var(--overlay-medium);
+}
+
+.tags-search-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  min-width: 100px;
+  padding: 4px 0;
+  font-size: 0.9rem;
+  background: transparent;
+}
+
+.tags-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: var(--shadow-md);
+  margin-top: 4px;
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+
+.tags-dropdown-item {
+  padding: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-dark);
+}
+
+.tags-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.tags-dropdown-item:hover {
+  background-color: var(--body-bg);
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--overlay-subtle);
+}
+
+/* Tag manager rows */
+.tag-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tag-edit-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tag-edit-row input[type="text"] {
+  flex: 1;
+  padding: 0.4rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.tag-edit-row input[type="color"] {
+  width: 40px;
+  height: 34px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.tag-edit-row .delete-tag-btn {
+  color: var(--color-critical);
+  background: none;
+  border: 1px solid var(--color-critical-light);
+  padding: 0.4rem 0.6rem;
+  box-shadow: none;
+}
+
+.tag-edit-row .delete-tag-btn:hover {
+  background: var(--color-critical-light);
+  transform: none;
+}
+
+/* Active rules list */
 .live-alerts-list {
   list-style: none;
   padding: 0;
@@ -547,106 +707,133 @@ input:checked+.slider:before {
     width: 100%;
   }
 
-  .alert-log-table tr {
-    margin-bottom: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: #fff;
-    padding: 0.5rem;
-  }
-
-  .alert-log-table td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    text-align: right;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f3f4f6;
-  }
-
-  .alert-log-table td:last-child {
+  .live-alerts-list li:last-child {
     border-bottom: none;
   }
 
-  .alert-log-table td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: var(--text-light);
-    text-transform: uppercase;
-    font-size: 0.75rem;
-    margin-right: 1rem;
+  .alert-actions {
+    display: flex;
+    gap: 0.5rem;
   }
 
-  .control-bar {
-    flex-direction: column;
-    align-items: stretch;
+
+  /* ==========================================================================
+   MOBILE RESPONSIVE
+   ========================================================================== */
+  @media (max-width: 768px) {
+    .alert-log-table thead {
+      display: none;
+    }
+
+    .alert-log-table,
+    .alert-log-table tbody,
+    .alert-log-table tr,
+    .alert-log-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .alert-log-table tr {
+      margin-bottom: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--card-bg);
+      padding: 0.5rem;
+    }
+
+    .alert-log-table td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-align: right;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .alert-log-table td:last-child {
+      border-bottom: none;
+    }
+
+    .alert-log-table td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      color: var(--text-light);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      margin-right: 1rem;
+    }
+
+    .control-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filter-group {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .filter-item {
+      width: 100%;
+    }
+
+    .filter-item select,
+    .filter-item input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .alert-builder-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
-  .filter-group {
-    flex-direction: column;
-    width: 100%;
+  /* --- Dashboard Charts (Consolidated) --- */
+  .charts-dashboard {
+    padding: 1.5rem;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
   }
 
-  .filter-item {
-    width: 100%;
+  .charts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
   }
 
-  .filter-item select,
-  .filter-item input {
-    width: 100%;
-    box-sizing: border-box;
+  .charts-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-dark);
   }
 
-  .alert-builder-grid {
-    grid-template-columns: 1fr;
+  #chart-range-select {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    color: var(--text-dark);
   }
-}
 
-/* --- Dashboard Charts (Consolidated) --- */
-.charts-dashboard {
-  padding: 1.5rem;
-  background: var(--card-bg);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-}
+  .charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
 
-.charts-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.charts-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: var(--text-dark);
-}
-
-#chart-range-select {
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background: #fff;
-  color: var(--text-dark);
-}
-
-.charts-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.chart-wrapper {
-  position: relative;
-  height: 220px;
-  background: #fff;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.75rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  .chart-wrapper {
+    position: relative;
+    height: 220px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 }
 
 @media (max-width: 640px) {

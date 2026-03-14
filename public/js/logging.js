@@ -321,7 +321,7 @@ function createAiAccordionItem(log, elements, isSummary = false,) {
     const tagHeaderHTML = `<div class="tags-cell">${tagsHtml}</div>`;
     const infoBtnHTML = isSummary
         ? ""
-        : `<button class="btn btn-sm ai-log-info-btn" style="margin-right: 8px;">AI Log Info</button>`;
+        : `<button class="btn-primary ai-log-info-btn" style="margin-right: 8px;">AI Log Info</button>`;
     const contentBtnText = isSummary ? "AI Summary Content" : "AI Log Content";
     const contentBtnHTML = `<button class="btn btn-secondary ai-log-content-btn">${contentBtnText}</button>`;
 

@@ -1,0 +1,348 @@
+/* ==========================================================================
+   LAYOUT — DEFAULT (sidebar)
+   Core layout, header, navigation, buttons, and form controls
+   ========================================================================== */
+
+
+/* ==========================================================================
+   CORE LAYOUT  (fullSite.css)
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--body-bg);
+  color: var(--text-dark);
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: 60px auto;
+  grid-template-areas:
+    "header header"
+    "nav    main";
+  min-height: 100vh;
+}
+
+header {
+  grid-area: header;
+  position: sticky;
+  top: 0;
+  height: 60px;
+  background-color: var(--header-bg-color);
+  z-index: 10;
+  border-bottom: 1px solid var(--border-color);
+}
+
+nav {
+  grid-area: nav;
+  max-width: 300px;
+}
+
+main.content {
+  grid-area: main;
+  min-width: 0;
+  padding: 1rem 2rem;
+}
+
+@media screen and (max-width: 768px) {
+  body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "header"
+      "nav"
+      "main";
+  }
+  nav {
+    max-width: none;
+    display: flex;
+    justify-content: space-around;
+    border-bottom: 1px solid var(--border-color);
+  }
+  main.content { padding: 1rem; }
+}
+
+
+/* ==========================================================================
+   HEADER  (header.css)
+   ========================================================================== */
+.site-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem 2rem;
+  box-sizing: border-box;
+  background-color: var(--header-bg-color);
+  z-index: 100;
+}
+
+.site-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--header-text-color);
+  margin: 0;
+}
+
+.site-header .user-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.site-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.site-header .logout-form { margin: 0; }
+
+.site-header #logout-btn {
+  border: 1px solid var(--border-light);
+  background-color: var(--button-bg-color);
+  color: var(--header-text-color);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+.site-header #logout-btn:hover { background-color: var(--button-hover-bg-color); }
+
+.site-header a { color: var(--primary-accent-color); }
+.site-header a:hover { text-decoration: underline; }
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.site-header .login-button {
+  border: 1px solid var(--border-light);
+  background-color: var(--button-bg-color);
+  color: var(--header-text-color);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+}
+.site-header .login-button:hover { background-color: var(--button-hover-bg-color); }
+.site-header #login-text { color: var(--header-text-color); }
+
+
+/* ==========================================================================
+   NAVIGATION  (nav.css)
+   ========================================================================== */
+.site-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background-color: var(--nav-bg-color);
+  height: 100%;
+  border-right: 1px solid var(--nav-border-color);
+}
+
+.site-nav a {
+  color: var(--nav-link-color);
+  text-decoration: none;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.site-nav a:hover { background-color: var(--nav-link-hover-bg); }
+.site-nav a.active {
+  background-color: var(--nav-link-active-bg);
+  color: var(--nav-link-active-color);
+}
+
+/* Dark-mode toggle (in header) */
+.dark-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--header-text-color);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  padding: 0;
+}
+.dark-mode-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+
+/* ==========================================================================
+   BUTTONS  (shared)
+   ========================================================================== */
+button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background-color: var(--btn-default-bg);
+  color: var(--color-white);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  box-shadow: 0 2px 4px var(--overlay-subtle);
+}
+button:hover {
+  background-color: var(--btn-default-hover);
+  transform: translateY(-1px);
+}
+button:active {
+  background-color: var(--btn-default-active);
+  transform: translateY(1px);
+}
+
+.btn {
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  padding: 0.6rem 1rem;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: var(--primary-color);
+  color: var(--color-white);
+}
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-secondary {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-dark);
+}
+.btn-secondary:hover { background: var(--body-bg); }
+.btn-icon { padding: 0.4rem 0.8rem; }
+
+/* Logs-page button variants */
+.btn-primary:not(.btn) {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  background-color: var(--color-success);
+  color: var(--color-white);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-secondary:not(.btn) {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  color: var(--text-light);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-secondary:not(.btn):hover { background-color: var(--body-bg); }
+
+/* Login submit button */
+.submit-button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  background-color: var(--primary-color);
+  color: var(--color-white);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-xs);
+  transition: background-color 0.2s;
+}
+.submit-button:hover { background-color: var(--primary-hover); }
+
+/* Apply button */
+.btn-apply { background-color: var(--btn-default-bg); color: var(--color-white); }
+.btn-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* Admin danger button */
+.btn-danger { background-color: var(--color-danger); color: var(--color-white); }
+.btn-danger:hover { background-color: var(--color-danger-hover); }
+
+
+/* ==========================================================================
+   FORM CONTROLS  (shared)
+   ========================================================================== */
+select {
+  background-color: var(--input-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 35px 10px 15px;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%236b7280' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  appearance: none;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+  background-color: var(--input-bg);
+  color: var(--text-dark);
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-group input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  background-color: var(--input-bg);
+  color: var(--text-dark);
+}

@@ -1,0 +1,44 @@
+/* ==========================================================================
+   COMPONENT — TABLES
+   Shared table base styles used across alerts, logs, and admin pages.
+   ========================================================================== */
+.card {
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px var(--overlay-subtle);
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* ── Shared table base ── */
+.alert-log-table,
+.log-table,
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  background: var(--card-bg);
+}
+
+.alert-log-table th,
+.log-table th,
+.table th {
+  text-align: left;
+  padding: 0.75rem;
+  background-color: var(--body-bg);
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.alert-log-table td,
+.log-table td,
+.table td {
+  text-align: left;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}

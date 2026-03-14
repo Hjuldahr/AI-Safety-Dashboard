@@ -1,0 +1,898 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <base href="<%= process.env.PUBLIC_URL || '/' %>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Component Library</title>
+
+    <!-- Modular CSS — loads all files to verify every component -->
+    <link rel="stylesheet" href="css/themes/colors-default.css">
+    <link rel="stylesheet" id="theme-colors" href="">
+    <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
+    <link rel="stylesheet" href="css/components/notifications.css">
+    <link rel="stylesheet" href="css/components/tables.css">
+    <link rel="stylesheet" href="css/components/pagination.css">
+    <link rel="stylesheet" href="css/pages/alerts.css">
+    <link rel="stylesheet" href="css/pages/logs.css">
+    <link rel="stylesheet" href="css/pages/login.css">
+    <link rel="stylesheet" href="css/pages/dashboard.css">
+    <link rel="stylesheet" href="css/pages/demo.css">
+    <link rel="stylesheet" href="css/pages/admin.css">
+
+    <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+
+    <style>
+        /* Demo-only layout helpers — not part of the design system */
+        .demo-section {
+            margin-bottom: 3rem;
+            padding: 1.5rem;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            position: relative;
+        }
+        .demo-section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .demo-page-heading {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+        .demo-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .demo-columns { grid-template-columns: 1fr; }
+        }
+        /* Prevent demo-only login card from taking over the whole page layout */
+        .demo-auth-card {
+            max-width: 400px;
+            width: 100%;
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            padding: 2rem;
+        }
+        /* Scope demo control panel so it doesn't interfere */
+        .demo-control-panel {
+            background-color: var(--primary-light);
+            border-color: #c7d2fe;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-left: 5px solid #007bff;
+        }
+        .demo-control-panel h2 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        /* Demo model container mirrors demo.ejs .container */
+        .demo-model-container {
+            background-color: var(--primary-light);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            border-color: #c7d2fe;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-left: 5px solid #007bff;
+        }
+        /* Dark-mode toggle */
+        .dark-mode-toggle {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-dark);
+            font-size: 1.3rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s, color 0.3s, border-color 0.3s;
+            padding: 0;
+        }
+        .dark-mode-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        }
+        /* When dark mode is active, update hardcoded white backgrounds */
+        body.dark-mode .demo-auth-card { background-color: var(--card-bg); }
+        body.dark-mode .demo-control-panel { border-color: var(--border-color); }
+        body.dark-mode .demo-control-panel h2 { color: var(--text-dark); border-bottom-color: var(--border-color); }
+    </style>
+</head>
+<body>
+
+    <%- include('components/header') %>
+    <%- include('components/nav') %>
+
+    <main class="content">
+        <div class="main-container">
+            <h1 class="demo-page-heading">Component Library</h1>
+
+            <!-- ============================================================ -->
+            <!-- 1. ALERTS PAGE — Stat Cards  (from alerts.ejs)               -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Alerts Page &mdash; Stat Cards</span>
+                <div class="dashboard-stats">
+                    <div class="stat-card critical" data-level="Critical">
+                        <div class="stat-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-count">5</span>
+                            <span class="stat-label">Critical Alerts</span>
+                        </div>
+                    </div>
+                    <div class="stat-card high" data-level="High">
+                        <div class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-count">12</span>
+                            <span class="stat-label">High Alerts</span>
+                        </div>
+                    </div>
+                    <div class="stat-card medium" data-level="Medium">
+                        <div class="stat-icon"><i class="fa-solid fa-bell"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-count">28</span>
+                            <span class="stat-label">Medium Alerts</span>
+                        </div>
+                    </div>
+                    <div class="stat-card info" data-level="Info">
+                        <div class="stat-icon"><i class="fa-solid fa-circle-info"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-count">42</span>
+                            <span class="stat-label">Info Alerts</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 2. ALERTS PAGE — Control Bar & Filters  (from alerts.ejs)    -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Alerts Page &mdash; Control Bar &amp; Filters</span>
+                <section class="control-bar card">
+                    <form class="filter-group">
+                        <div class="filter-item">
+                            <label for="demo-filter-level">Level</label>
+                            <select id="demo-filter-level">
+                                <option value="all">All Levels</option>
+                                <option value="Critical">Critical</option>
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Info">Info</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label for="demo-filter-model">Model</label>
+                            <select id="demo-filter-model">
+                                <option value="all">All Models</option>
+                                <option value="GoodModel">Good Model</option>
+                                <option value="BadModel">Bad Model</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label for="demo-filter-tag">Tag</label>
+                            <select id="demo-filter-tag">
+                                <option value="all">All Tags</option>
+                                <option value="Safety">Safety</option>
+                                <option value="Privacy">Privacy</option>
+                            </select>
+                        </div>
+                        <div class="filter-item date-range">
+                            <label>Date Range</label>
+                            <div style="display:flex;gap:0.5rem;align-items:center">
+                                <input type="date">
+                                <span class="sep">-</span>
+                                <input type="date">
+                            </div>
+                        </div>
+                        <div class="filter-actions">
+                            <button type="button" class="btn btn-primary">Apply</button>
+                            <button type="button" class="btn btn-secondary clear-filters">Clear</button>
+                        </div>
+                    </form>
+                    <div class="global-actions">
+                        <button type="button" class="btn btn-secondary"><i class="fa-solid fa-tags"></i> Manage Tags</button>
+                        <button type="button" class="btn btn-secondary"><i class="fa-solid fa-list-check"></i> Active Alerts</button>
+                        <button type="button" class="btn btn-primary create-btn"><i class="fa-solid fa-plus"></i> Create Alert</button>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 3. ALERTS PAGE — Alert History Table  (from alerts.ejs)      -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Alerts Page &mdash; Alert History Table &amp; Badges</span>
+                <section class="card alert-log-panel">
+                    <div class="table-container">
+                        <table class="alert-log-table">
+                            <thead>
+                                <tr>
+                                    <th>Level</th>
+                                    <th>Time</th>
+                                    <th>Alert Name</th>
+                                    <th>Model</th>
+                                    <th>Triggered By</th>
+                                    <th>Tags</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="level-badge critical">Critical</span></td>
+                                    <td>2025-02-23 14:30</td>
+                                    <td>High Toxicity Detected</td>
+                                    <td>BadModel</td>
+                                    <td>toxicity &gt; 0.8</td>
+                                    <td class="tags-cell">
+                                        <span class="tag-pill" style="background:#ef4444;">Safety</span>
+                                        <button class="add-log-tag-btn">+</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="level-badge high">High</span></td>
+                                    <td>2025-02-23 12:15</td>
+                                    <td>PII Leakage Warning</td>
+                                    <td>GoodModel</td>
+                                    <td>piiDetected &gt; 0</td>
+                                    <td class="tags-cell">
+                                        <span class="tag-pill" style="background:#f59e0b;">Privacy</span>
+                                        <button class="add-log-tag-btn">+</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="level-badge medium">Medium</span></td>
+                                    <td>2025-02-23 09:45</td>
+                                    <td>Policy Score Below Threshold</td>
+                                    <td>BadModel</td>
+                                    <td>policyCompliance &lt; 60</td>
+                                    <td class="tags-cell">
+                                        <span class="tag-pill" style="background:#3b82f6;">Compliance</span>
+                                        <button class="add-log-tag-btn">+</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="level-badge info">Info</span></td>
+                                    <td>2025-02-22 22:00</td>
+                                    <td>High Response Time</td>
+                                    <td>GoodModel</td>
+                                    <td>responseTime &gt; 500</td>
+                                    <td class="tags-cell">
+                                        <button class="add-log-tag-btn">+</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <button class="active">1</button>
+                        <button>2</button>
+                        <button>3</button>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 4. ALERTS PAGE — Alert Charts Section (from alerts.ejs)      -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Alerts Page &mdash; Charts Dashboard</span>
+                <section class="charts-dashboard card" style="margin-bottom:0">
+                    <div class="charts-header">
+                        <h3>Alert Analytics</h3>
+                        <div class="chart-controls">
+                            <select>
+                                <option value="24h">Last 24 Hours</option>
+                                <option value="7d">Last 7 Days</option>
+                                <option value="30d">Last 30 Days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="charts-container">
+                        <div class="chart-wrapper">
+                            <span style="color:var(--text-light);font-size:0.85rem">Pie Chart Placeholder</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <span style="color:var(--text-light);font-size:0.85rem">Bar Chart Placeholder</span>
+                        </div>
+                        <div class="chart-wrapper">
+                            <span style="color:var(--text-light);font-size:0.85rem">Line Chart Placeholder</span>
+                        </div>
+                    </div>
+                </section>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 5. ALERTS PAGE — Modal (Create Alert)  (from alerts.ejs)     -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Alerts Page &mdash; Create Alert Modal</span>
+                <!-- Rendered inline (not as overlay) so it's visible in the demo -->
+                <div style="background:rgba(0,0,0,0.05);border-radius:8px;padding:1.5rem;">
+                    <div class="modal-content large-modal" style="position:relative;max-height:none;">
+                        <div class="modal-header">
+                            <h2>Create New Alert</h2>
+                            <button class="close-modal-btn">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert-builder-grid">
+                                <div class="form-group">
+                                    <label for="demo-alert-name">Alert Name</label>
+                                    <input type="text" id="demo-alert-name" placeholder="e.g. High Latency Check">
+                                </div>
+                                <div class="form-group">
+                                    <label for="demo-alert-level">Alert Level</label>
+                                    <select id="demo-alert-level">
+                                        <option value="">-- Select --</option>
+                                        <option value="Critical">Critical</option>
+                                        <option value="High">High</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Info">Info</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="demo-model-name">Model (Optional)</label>
+                                    <select id="demo-model-name">
+                                        <option value="">Any Model</option>
+                                        <option value="GoodModel">Good Model</option>
+                                        <option value="BadModel">Bad Model</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Alert Rule Condition</label>
+                                    <div class="rule-builder-inputs">
+                                        <div class="rule-row">
+                                            <select><option>toxicity</option><option>responseTime</option></select>
+                                            <select><option>&gt;</option><option>&lt;</option><option>=</option></select>
+                                            <input type="number" value="0.8" style="width:80px">
+                                        </div>
+                                    </div>
+                                    <div class="logical-operators-container">
+                                        <span class="rule-builder-note">(add another part to the rule)</span>
+                                        <div class="logical-operators">
+                                            <button type="button" class="btn btn-sm btn-secondary">AND</button>
+                                            <button type="button" class="btn btn-sm btn-secondary">OR</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group full-width tags-section">
+                                    <label>Assign Tags</label>
+                                    <div class="multiselect-container">
+                                        <div class="tags-input-container">
+                                            <span class="tag-input-pill" style="background-color:#ef4444;">Safety <span class="remove-tag">&times;</span></span>
+                                            <input type="text" class="tags-search-input" placeholder="Select tags..." readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary">Cancel</button>
+                            <button class="btn btn-primary">Save Alert</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 6. ALERTS PAGE — Manage Tags Modal  (from alerts.ejs)        -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Alerts Page &mdash; Manage Tags Modal</span>
+                <div style="background:rgba(0,0,0,0.05);border-radius:8px;padding:1.5rem;">
+                    <div class="modal-content medium-modal" style="position:relative;max-height:none;">
+                        <div class="modal-header">
+                            <h2>Manage Tags</h2>
+                            <button class="close-tags-btn">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="tag-manager-list">
+                                <div class="tag-edit-row">
+                                    <input type="text" value="Safety">
+                                    <input type="color" value="#ef4444">
+                                    <button class="delete-tag-btn"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                                <div class="tag-edit-row">
+                                    <input type="text" value="Privacy">
+                                    <input type="color" value="#f59e0b">
+                                    <button class="delete-tag-btn"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                                <div class="tag-edit-row">
+                                    <input type="text" value="Compliance">
+                                    <input type="color" value="#3b82f6">
+                                    <button class="delete-tag-btn"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-secondary" style="margin-top:10px">
+                                <i class="fa-solid fa-plus"></i> Add New Tag
+                            </button>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary">Cancel</button>
+                            <button class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 7. LOGS PAGE — Tabs & Filters  (from logs.ejs)               -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Logs Page &mdash; Toolbar, Tabs &amp; Filters</span>
+                <div class="logs-toolbar" style="border-bottom:1px solid #eee;padding-bottom:1rem;padding-right:0;">
+                    <div class="log-tabs">
+                        <button class="log-tab-btn active" type="button">User Logs</button>
+                        <button class="log-tab-btn" type="button">AI Logs</button>
+                        <button class="log-tab-btn" type="button">AI Summaries</button>
+                    </div>
+                    <div>
+                        <form class="filter-group">
+                            <button type="button" class="btn-secondary clear-filters">Clear</button>
+                            <label for="demo-user-search">Search:</label>
+                            <input type="text" id="demo-user-search" placeholder="Search logs...">
+                            <label for="demo-log-start">From:</label>
+                            <input type="date" id="demo-log-start">
+                            <label for="demo-log-end">To:</label>
+                            <input type="date" id="demo-log-end">
+                            <label for="demo-event-type">Event:</label>
+                            <select id="demo-event-type">
+                                <option value="all">All Events</option>
+                                <option value="Login">Login</option>
+                                <option value="Logout">Logout</option>
+                                <option value="Alert_Created">Alert Created</option>
+                                <option value="Alert_Modified">Alert Modified</option>
+                                <option value="Alert_Deleted">Alert Deleted</option>
+                                <option value="Report_Created">Report Created</option>
+                                <option value="Report_Deleted">Report Deleted</option>
+                            </select>
+                            <button type="button" class="btn-primary">Apply</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 8. LOGS PAGE — User Log Table  (from logs.ejs)               -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Logs Page &mdash; User Log Table</span>
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th class="col-type">Type</th>
+                            <th class="col-time">Timestamp</th>
+                            <th class="col-user">User</th>
+                            <th class="col-action">Action</th>
+                            <th class="col-details">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="log-dot log-dot-login"></span></td>
+                            <td>2025-02-23 08:12:34</td>
+                            <td>admin</td>
+                            <td>Login</td>
+                            <td>User logged in successfully</td>
+                        </tr>
+                        <tr>
+                            <td><span class="log-dot log-dot-alert"></span></td>
+                            <td>2025-02-23 09:45:12</td>
+                            <td>admin</td>
+                            <td>Alert_Created</td>
+                            <td>Created alert "High Toxicity Check"</td>
+                        </tr>
+                        <tr>
+                            <td><span class="log-dot log-dot-report"></span></td>
+                            <td>2025-02-23 10:30:00</td>
+                            <td>admin</td>
+                            <td>Report_Created</td>
+                            <td>Generated report "Monthly Overview"</td>
+                        </tr>
+                        <tr>
+                            <td><span class="log-dot log-dot-logout"></span></td>
+                            <td>2025-02-23 11:00:00</td>
+                            <td>admin</td>
+                            <td>Logout</td>
+                            <td>User logged out</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pagination">
+                    <button disabled>&laquo;</button>
+                    <button class="active">1</button>
+                    <button>2</button>
+                    <button>&raquo;</button>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 9. LOGS PAGE — AI Log Accordion  (from logs.ejs)             -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Logs Page &mdash; AI Log Accordion</span>
+                <div>
+                    <div class="accordion-item">
+                        <button class="accordion-header active" type="button">
+                            <span>GoodModel &mdash; 2025-02-23 14:22:05</span>
+                        </button>
+                        <div class="accordion-body">
+                            <pre>{
+  "modelName": "GoodModel",
+  "responseTime": 120,
+  "toxicity": 0.02,
+  "policyCompliance": 95,
+  "helpfulness": 88,
+  "piiDetected": 0
+}</pre>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <button class="accordion-header" type="button">
+                            <span>BadModel &mdash; 2025-02-23 14:20:31</span>
+                        </button>
+                    </div>
+                    <div class="accordion-item">
+                        <button class="accordion-header" type="button">
+                            <span>GoodModel &mdash; 2025-02-23 14:18:12</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 10. LOGIN PAGE — Auth Card & Tabs  (from login.ejs)          -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Login Page &mdash; Auth Card, Tabs &amp; Forms</span>
+                <div style="display:flex;justify-content:center;">
+                    <div class="demo-auth-card">
+                        <div class="tab-nav">
+                            <button class="tab-button tab-active" type="button">Sign In</button>
+                            <button class="tab-button" type="button">Sign Up</button>
+                        </div>
+
+                        <div class="error-message" style="display:block;">
+                            <span>Invalid credentials. Please try again.</span>
+                        </div>
+
+                        <form class="auth-form">
+                            <div class="form-group">
+                                <label for="demo-signInInput">Username or Email Address</label>
+                                <input type="text" id="demo-signInInput">
+                            </div>
+                            <div class="form-group">
+                                <label for="demo-signInPassword">Password</label>
+                                <input type="password" id="demo-signInPassword">
+                            </div>
+                            <div class="form-group">
+                                <button type="button" class="submit-button">Sign In</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 11. DASHBOARD PAGE — Control Panel  (from index.ejs)         -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Dashboard Page &mdash; Control Panel</span>
+                <div class="demo-control-panel">
+                    <h2>Dashboard Controls</h2>
+                    <div class="controls-group">
+                        <button type="button">&#9654; Start Graphs</button>
+                        <button type="button">&#128260; Refresh Graphs</button>
+                        <select>
+                            <option value="GoodModel">Good Model</option>
+                            <option value="BadModel">Bad Model</option>
+                        </select>
+                        <button type="button">Add New Chart</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 12. DASHBOARD PAGE — Chart Cards  (from index.ejs)           -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Dashboard Page &mdash; Chart Cards (Regular, Large, KPI)</span>
+                <div class="charts-container" style="padding:0;">
+                    <div class="chart-card chart-regular" style="flex-basis:calc(33.333% - 20px);height:200px;">
+                        <div class="chart-header">
+                            <div class="left-chart-buttons">
+                                <span class="zoom-label">REGULAR</span>
+                            </div>
+                            <div class="right-chart-buttons">
+                                <span class="edit-chart-btn" title="Edit"><i class="fa-solid fa-pen"></i></span>
+                                <span class="delete-chart-btn" title="Delete">&times;</span>
+                            </div>
+                        </div>
+                        <span style="color:var(--text-light);font-size:0.85rem;margin:auto;">Chart Placeholder</span>
+                    </div>
+                    <div class="chart-card chart-regular" style="flex-basis:calc(33.333% - 20px);height:200px;">
+                        <div class="kpi-content-wrapper">
+                            <p class="kpi-title">Response Time</p>
+                            <p class="kpi-value">142<span style="font-size:1rem;color:var(--text-light);"> ms</span></p>
+                        </div>
+                    </div>
+                    <div class="chart-card chart-regular" style="flex-basis:calc(33.333% - 20px);height:200px;">
+                        <span style="color:var(--text-light);font-size:0.85rem;margin:auto;">Chart Placeholder</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 13. REPORTS PAGE — Report Form  (from reports.ejs)           -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Reports Page &mdash; Generate Report Form</span>
+                <form style="max-width:700px;margin:0 auto;">
+                    <h2>Generate a Report</h2>
+
+                    <label for="demo-reportTitle">Report Title</label>
+                    <input type="text" id="demo-reportTitle" placeholder="e.g. Monthly Performance Overview" 
+                        style="width:100%;padding:8px;margin-bottom:12px;">
+
+                    <label for="demo-startDate">Start Date</label>
+                    <input type="date" id="demo-startDate" style="width:100%;padding:8px;margin-bottom:12px;">
+
+                    <label for="demo-endDate">End Date</label>
+                    <input type="date" id="demo-endDate" style="width:100%;padding:8px;margin-bottom:12px;">
+
+                    <label for="demo-modelName">Model</label>
+                    <select id="demo-modelName" style="width:100%;padding:8px;margin-bottom:12px;">
+                        <option value="GoodModel">Good Model</option>
+                        <option value="BadModel">Bad Model</option>
+                    </select>
+
+                    <div style="display:flex;gap:12px;">
+                        <button type="button" style="flex:1;padding:10px;background:#4a79e0;color:white;border:none;cursor:pointer;border-radius:4px;">Generate Report</button>
+                        <button type="button" style="flex:1;padding:10px;background:#2c6f2c;color:white;border:none;cursor:pointer;border-radius:4px;">Download PDF</button>
+                        <button type="button" style="flex:1;padding:10px;background:#6b7280;color:white;border:none;cursor:pointer;border-radius:4px;">Download CSV</button>
+                        <button type="button" style="flex:1;padding:10px;background:#5a57a9;color:white;border:none;cursor:pointer;border-radius:4px;">Download Aggregates CSV</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 14. DEMO PAGE — Model Controller  (from demo.ejs)            -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Demo Page &mdash; Model Demo Controller</span>
+                <div style="display:flex;justify-content:center;">
+                    <div class="demo-model-container">
+                        <h1 style="color:#bb86fc;margin-bottom:2rem;">Model Demo Controller</h1>
+
+                        <label for="demo-modelSelect">Select Model:</label>
+                        <select id="demo-modelSelect">
+                            <option value="GoodModel">GoodModel</option>
+                            <option value="BadModel">BadModel</option>
+                        </select>
+                        <br><br>
+                        <label for="demo-scenarioSelect">Select Scenario:</label>
+                        <select id="demo-scenarioSelect">
+                            <option value="normal">normal</option>
+                            <option value="rogue">rogue</option>
+                        </select>
+                        <br><br>
+                        <div class="btn-group">
+                            <button type="button" class="btn-apply">Apply Scenario</button>
+                            <button type="button" class="btn-reset">Reset To Normal</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 15. USER MANAGEMENT — Admin Panel  (from admin/users.ejs)    -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Admin &mdash; User Management Panel</span>
+                <div class="admin-panel">
+                    <div class="panel-section">
+                        <h3>Users</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>admin</td>
+                                    <td>admin@example.com</td>
+                                    <td>
+                                        <select>
+                                            <option selected>admin</option>
+                                            <option>user</option>
+                                            <option>viewer</option>
+                                        </select>
+                                    </td>
+                                    <td><button type="button">Save</button></td>
+                                </tr>
+                                <tr>
+                                    <td>johndoe</td>
+                                    <td>john@example.com</td>
+                                    <td>
+                                        <select>
+                                            <option>admin</option>
+                                            <option selected>user</option>
+                                            <option>viewer</option>
+                                        </select>
+                                    </td>
+                                    <td><button type="button">Save</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="panel-section">
+                        <h3>Roles</h3>
+                        <h4 style="margin-top:0;">Create New Role</h4>
+                        <form>
+                            <div class="form-group">
+                                <label for="demo-role-name">Role Name:</label>
+                                <input type="text" id="demo-role-name" placeholder="e.g., moderator">
+                            </div>
+                            <div class="form-group">
+                                <label for="demo-role-desc">Description:</label>
+                                <textarea id="demo-role-desc" placeholder="Describe this role's purpose"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Permissions:</label>
+                                <div class="permissions-list">
+                                    <div class="permission-item">
+                                        <input type="checkbox" id="demo-perm-1" checked>
+                                        <label for="demo-perm-1">view:alerts</label>
+                                    </div>
+                                    <div class="permission-item">
+                                        <input type="checkbox" id="demo-perm-2" checked>
+                                        <label for="demo-perm-2">view:logs</label>
+                                    </div>
+                                    <div class="permission-item">
+                                        <input type="checkbox" id="demo-perm-3">
+                                        <label for="demo-perm-3">manage:users</label>
+                                    </div>
+                                    <div class="permission-item">
+                                        <input type="checkbox" id="demo-perm-4">
+                                        <label for="demo-perm-4">create:graph</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="button-group">
+                                <button type="button" class="btn-primary">Create Role</button>
+                                <button type="button" class="btn-secondary">Clear</button>
+                            </div>
+                        </form>
+                        <hr>
+                        <h4>Existing Roles</h4>
+                        <div class="roles-list">
+                            <div class="role-item">
+                                <div class="role-info">
+                                    <h4>admin <span class="role-badge system">System</span></h4>
+                                    <p>Full system access</p>
+                                </div>
+                            </div>
+                            <div class="role-item">
+                                <div class="role-info">
+                                    <h4>user</h4>
+                                    <p>Standard user access</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 16. NOTIFICATIONS — Bell & Dropdown  (from notifications.ejs)-->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Global &mdash; Notification Bell &amp; Dropdown</span>
+                <div style="display:flex;justify-content:flex-end;">
+                    <div class="alert-popup-container" style="position:relative;">
+                        <div class="notification-history show" style="position:relative;top:0;">
+                            <div class="notification-history-header">Notifications</div>
+                            <ul>
+                                <li class="notification-history-item critical">
+                                    <a href="#">
+                                        <span class="alert-text">Critical: High Toxicity Detected on BadModel</span>
+                                        <span class="alert-time">2 minutes ago</span>
+                                    </a>
+                                </li>
+                                <li class="notification-history-item high">
+                                    <a href="#">
+                                        <span class="alert-text">High: PII Leakage Warning on GoodModel</span>
+                                        <span class="alert-time">15 minutes ago</span>
+                                    </a>
+                                </li>
+                                <li class="notification-history-item medium">
+                                    <a href="#">
+                                        <span class="alert-text">Medium: Policy score below threshold</span>
+                                        <span class="alert-time">1 hour ago</span>
+                                    </a>
+                                </li>
+                                <li class="notification-history-item info">
+                                    <a href="#">
+                                        <span class="alert-text">Info: High response time recorded</span>
+                                        <span class="alert-time">3 hours ago</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <button class="notification-bell" type="button">
+                            <i class="fa-solid fa-bell"></i>
+                            <span class="notification-badge show">4</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <!-- 17. BUTTONS — All Variants                                   -->
+            <!-- ============================================================ -->
+            <section class="demo-section">
+                <span class="demo-section-title">Global &mdash; Button Variants</span>
+                <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+                    <button type="button" class="btn btn-primary">Primary</button>
+                    <button type="button" class="btn btn-secondary">Secondary</button>
+                    <button type="button" class="btn btn-primary"><i class="fa-solid fa-plus"></i> With Icon</button>
+                    <button type="button" class="btn btn-icon btn-secondary"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="btn-primary">btn-primary (logs)</button>
+                    <button type="button" class="btn-secondary">btn-secondary (logs)</button>
+                    <button type="button" class="submit-button" style="width:auto;padding:0.5rem 1.5rem;">Submit Button (login)</button>
+                    <button type="button" class="btn-apply">Apply Scenario</button>
+                    <button type="button" class="btn-reset">Reset To Normal</button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Floating dark-mode toggle -->
+    <button class="dark-mode-toggle" id="dark-mode-toggle" title="Toggle dark mode">
+        <i class="fa-solid fa-moon"></i>
+    </button>
+
+    <script>
+        const toggle = document.getElementById('dark-mode-toggle');
+        const icon = toggle.querySelector('i');
+
+        toggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            toggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+        });
+    </script>
+</body>
+</html>
