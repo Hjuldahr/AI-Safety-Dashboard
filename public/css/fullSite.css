@@ -48,6 +48,8 @@ main.content {
   padding: 1rem 2rem;
 }
 
+
+
 @media screen and (max-width: 768px) {
   nav {
     max-width: none;
