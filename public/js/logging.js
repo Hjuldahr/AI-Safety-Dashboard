@@ -10,15 +10,18 @@ let currentAiSummariesPage = 1;
 
 let totalAiLogs = 0;
 let totalAiSummaries = 0;
-// ToDo: let users define this
-const PAGE_LIMIT = 10;
+let paginationSize = 10;
+
+function paginationSizeChange(newSize) {
+    paginationSize = newSize || 10;
+}
 
 // --- PERMISSION CHECKS ---
 const hasPermission = (permission) => {
     return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
 };
 
-// Tags State
+// Tags Statef
 const tagsCache = {};
 const histTagsCache = {};
 let openAILogModal;
@@ -434,7 +437,7 @@ async function handleUserFilter(elements, page = 1) {
     // Build URL query string
     const params = new URLSearchParams();
     params.set('page', page);
-    params.set('limit', 10); // Or make this a configurable constant
+    params.set('limit', paginationSize || 10); // Or make this a configurable constant
     if (startVal) params.set('startDate', startVal);
     if (endVal) params.set('endDate', endVal);
     if (eventType && eventType !== 'all') params.set('eventType', eventType);
@@ -451,7 +454,14 @@ async function handleUserFilter(elements, page = 1) {
 
         // Render data and pagination
         renderUserLogs(data.logs, elements.userLogTbody);
-        Pagination.render(elements.paginationControls, data.pages, data.page, (newPage) => handleUserFilter(elements, newPage));
+        Pagination.render(
+            elements.paginationControls, 
+            data.total, 
+            data.page, 
+            paginationSize, 
+            (newPage) => handleUserFilter(elements, newPage),
+            paginationSizeChange
+        );
 
     } catch (error) {
         console.error('Failed to fetch logs:', error);
@@ -479,7 +489,7 @@ async function handleAiFilter(elements, page = 1) {
     // Build URL query string
     const params = new URLSearchParams();
     params.set('page', page);
-    params.set('limit', 10); // Using same limit as user logs
+    params.set('limit', paginationSize || 10); // Using same limit as user logs
     if (modelName && modelName !== 'all') {
         params.set('modelName', modelName);
     }
@@ -499,7 +509,14 @@ async function handleAiFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiLogAccordion, elements, false);
-        Pagination.render(elements.aiPaginationControls, data.pages, data.page, (newPage) => handleAiFilter(elements, newPage));
+        Pagination.render(
+            elements.aiPaginationControls, 
+            data.total, 
+            data.page, 
+            paginationSize, 
+            (newPage) => handleAiFilter(elements, newPage),
+            paginationSizeChange
+        );
 
     } catch (error) {
         console.error('Failed to fetch AI logs:', error);
@@ -527,7 +544,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
     // Build URL query string
     const params = new URLSearchParams();
     params.set('page', page);
-    params.set('limit', 10); // Using same limit as user logs
+    params.set('limit', paginationSize || 10); // Using same limit as user logs
     if (modelName && modelName !== 'all') {
         params.set('modelName', modelName);
     }
@@ -547,7 +564,14 @@ async function handleAiSummaryFilter(elements, page = 1) {
 
         // Render data and pagination
         renderAiAccordion(data.logs, elements.aiSummaryAccordion, elements, true);
-        Pagination.render(elements.aiSummaryPaginationControls, data.pages, data.page, (newPage) => handleAiSummaryFilter(elements, newPage));
+        Pagination.render(
+            elements.aiSummaryPaginationControls, 
+            data.total, 
+            data.page, 
+            paginationSize, 
+            (newPage) => handleAiSummaryFilter(elements, newPage),
+            paginationSizeChange
+        );
 
     } catch (error) {
         console.error('Failed to fetch AI summaries:', error);
@@ -602,17 +626,19 @@ function setupLiveUpdates(elements, getIsLive) {
                         elements.aiLogAccordion.prepend(newItem);
 
                         totalAiLogs++;
-                        const newTotalPages = Math.ceil(totalAiLogs / PAGE_LIMIT);
+                        const newTotalPages = Math.ceil(totalAiLogs / paginationSize);
 
                         // Re-render the pagination
                         Pagination.render(
                             elements.aiPaginationControls,
-                            newTotalPages,
+                            totalAiLogs,
                             currentAiLogsPage,
-                            (newPage) => handleAiFilter(elements, newPage)
+                            paginationSize,
+                            (newPage) => handleAiFilter(elements, newPage),
+                            paginationSizeChange
                         );
 
-                        if (elements.aiLogAccordion.children.length > PAGE_LIMIT) {
+                        if (elements.aiLogAccordion.children.length > paginationSize) {
                             elements.aiLogAccordion.lastElementChild.remove();
                         }
                     }

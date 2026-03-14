@@ -1,9 +1,9 @@
 let activeModel = "GoodModel";
 let isPaused = false;
 
-const pauseText = "⏸ Pause Graphs";
+const pauseText = "<i class='fa-solid fa-pause'></i> Pause SSE";
 const pauseColour = "#f45b69ff";
-const playText = "▶ Resume Graphs";
+const playText = "<i class='fa-solid fa-play'></i> Resume SSE";
 const playColour = "#2ca58dff"
 
 const loadChartsFromDatabase = window.DashboardApp.actions.loadCharts; // get the helper method exposed in the chartDataManager.js file.
@@ -22,7 +22,6 @@ async function initAdminControls() {
     const toggleButton = document.querySelector("#toggle-button"); //<button>
     const refreshButton = document.querySelector("#refresh-button"); //<button>
     const modelSelect = document.querySelector("#model-select"); //<select>
-
 
     // Logic to hide admin controls for non-admin users:
     const isAdmin = document.querySelector("#isAdmin");

@@ -28,10 +28,10 @@
                 <p id="user-name">User: <%= user.username%>
                 </p>
                 <a href="profile" class="profile-icon" title="Profile" style="margin-right:0.5rem;">
-                    <i class="fa-solid fa-user"></i>
+                    <i class="fa-solid fa-user-gear"></i>
                 </a>
                 <form action="api/logout" method="post" class="logout-form">
-                    <button type="submit" id="logout-btn">Logout</button>
+                    <button type="submit" id="logout-btn"><i class='fa-solid fa-door-closed'></i> Logout</button>
                 </form>
             </div>
 
@@ -42,6 +42,15 @@
                 <% } %>
         <%- include('notifications') %>
     </div>
+    <script>
+        const logoutBtn = document.getElementById('logout-btn');
+        logoutBtn.addEventListener('mouseenter', () => 
+            logoutBtn.innerHTML = "<i class='fa-solid fa-door-open'></i> Logout"
+        );
+        logoutBtn.addEventListener('mouseleave', () => 
+            logoutBtn.innerHTML = "<i class='fa-solid fa-door-closed'></i> Logout"
+        );
+    </script>
 </header>
 <script src="js/darkMode.js"></script>
 <script src="js/themeManager.js"></script>

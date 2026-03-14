@@ -5,8 +5,16 @@
 .pagination {
   padding: 1rem;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   gap: 0.5rem;
+  align-items: center;
+  border: 1px solid var(--border-lighter);
+}
+.pagination-left, 
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .pagination button {
   padding: 0.5rem 0.75rem;

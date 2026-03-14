@@ -1,0 +1,21 @@
+<div class="pagination-container">
+    <!-- Left Group -->
+    <div class="pagination-left">
+        <p>Items per page</p>
+        <select name="paginationSize" id="paginationSize">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+        </select>
+        <p id="paginationSlice">1 - 10 of 76 items</p>
+    </div>
+    <!-- Right Group -->
+    <div class="pagination-right">
+        <button id="paginationFirstPage"><i class="fa-solid fa-angles-left"></i> First</button>
+        <button id="paginationPrevPage"><i class="fa-solid fa-angle-left"></i> Prev</button>
+        <input id="paginationPage" type="number" min="1" value="1" style="width: 50px;"> 
+        <p id="paginationTotal">of 8</p>
+        <button id="paginationNextPage">Next <i class="fa-solid fa-angle-right"></i></button>
+        <button id="paginationLastPage">Last <i class="fa-solid fa-angles-right"></i></button>
+    </div>
+</div>
