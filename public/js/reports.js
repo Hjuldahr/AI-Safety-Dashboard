@@ -15,6 +15,7 @@ function applyTemplate(type) {
     const checkboxes = document.querySelectorAll('input[name="fields"]');
     checkboxes.forEach(cb => cb.checked = false); // Reset
 
+    // ToDo: Move these to a constants file
     const templates = {
         safety: ['policyCompliance', 'toxicityScore', 'piiDetected', 'flaggedCount', 'flaggedOutputs'],
         efficiency: ['responseTime', 'energyConsumption', 'tokensUsed', 'gigaFlopsUsed'],
