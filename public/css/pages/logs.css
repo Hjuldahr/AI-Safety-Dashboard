@@ -190,7 +190,7 @@ input:checked+.slider:before {
 
 .log-table th {
   font-weight: 600;
-  background-color: #fcfcfc;
+  background-color: var(--button-hover-bg-color);
 }
 
 /* Column widths */

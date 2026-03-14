@@ -93,7 +93,7 @@
   cursor: pointer;
 }
 .tag-edit-row .delete-tag-btn {
-  color: #dc2626;
+  color: var(--color-danger);
   background: none;
   border: 1px solid #fee2e2;
   padding: 0.4rem 0.6rem;
