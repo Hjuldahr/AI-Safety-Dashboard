@@ -1,9 +1,9 @@
 // --- GLOBAL STATE ---
 let isGeneratingReport = false;
-let lastPdfUrl = null; // object URL of last generated PDF
+let lastPdfUrl = null; 
+let cutoffTimestamp = 0; // Will hold the value passed from EJS
 
 // --- HELPER FUNCTION ---
-
 const setButtonState = (elements, disabled, text) => {
     if (elements.submitBtn) {
         elements.submitBtn.disabled = disabled;
@@ -11,9 +11,10 @@ const setButtonState = (elements, disabled, text) => {
     }
 }
 
+// Ensure your template function grabs the special checkbox too if 'all' is clicked
 function applyTemplate(type) {
     const checkboxes = document.querySelectorAll('input[name="fields"]');
-    checkboxes.forEach(cb => cb.checked = false); // Reset
+    checkboxes.forEach(cb => cb.checked = false); 
 
     const templates = {
         safety: ['policyCompliance', 'toxicityScore', 'piiDetected', 'flaggedCount', 'flaggedOutputs'],
@@ -28,6 +29,45 @@ function applyTemplate(type) {
     });
 }
 
+/**
+ * Checks the selected dates against the cutoff time and 
+ * adjusts the UI (enabling/disabling seconds, and the appendix checkbox).
+ */
+const evaluateFidelityState = () => {
+    const startInput = document.getElementById('startDate');
+    const endInput = document.getElementById('endDate');
+    const appendixCheckbox = document.querySelector('input[value="flaggedOutputs"]');
+    
+    // Safety check for the cutoff timestamp
+    if (!cutoffTimestamp) return;
+
+    // Use Date.now() as a fallback if the inputs are currently empty
+    const startMs = startInput.value ? new Date(startInput.value).getTime() : Date.now();
+    const endMs = endInput.value ? new Date(endInput.value).getTime() : Date.now();
+
+    // If the entire timeframe is BEFORE the cutoff (Low Fidelity Only)
+    if (endMs < cutoffTimestamp) {
+        startInput.step = "60"; // Minutes only
+        endInput.step = "60";
+        // Appendix relies on AI_Logs, so disable it if we only have summaries
+        if (appendixCheckbox) {
+            appendixCheckbox.checked = false;
+            appendixCheckbox.disabled = true;
+            appendixCheckbox.parentElement.style.opacity = '0.5';
+            appendixCheckbox.parentElement.title = 'Raw flagged outputs are not available for dates older than the retention period.';
+        }
+    } else {
+        // High or Split Fidelity (Has some AI_Logs)
+        startInput.step = "1"; // Allow seconds selection
+        endInput.step = "1";
+        if (appendixCheckbox) {
+            appendixCheckbox.disabled = false;
+            appendixCheckbox.parentElement.style.opacity = '1';
+            appendixCheckbox.parentElement.title = '';
+        }
+    }
+};
+
 const handleReportSubmit = async (elements) => {
     if (isGeneratingReport) return;
     isGeneratingReport = true;
@@ -35,7 +75,6 @@ const handleReportSubmit = async (elements) => {
     if (elements.statusText) elements.statusText.textContent = 'Generating report... Please wait.';
     setButtonState(elements, true, 'Generating...');
 
-    // Clear previous preview
     if (elements.previewWrapper) elements.previewWrapper.style.display = 'none';
 
     try {
@@ -43,35 +82,36 @@ const handleReportSubmit = async (elements) => {
         if (!formEl) throw new Error('Report form not found');
 
         const formData = new FormData(formEl);
+        
+        // --- CRITICAL UPDATE: Extract Array of Fields ---
+        // FormData.getAll() retrieves an array of all checked inputs with name="fields"
+        const selectedFields = formData.getAll('fields');
 
-        // Build payload using the same naming as the controller expects
+        if (selectedFields.length === 0) {
+            throw new Error('Please select at least one data field to generate a report.');
+        }
+
         const payload = {
             reportTitle: formData.get('reportTitle'),
             startDate: formData.get('startDate'),
             endDate: formData.get('endDate'),
-            reportType: formData.get('reportType'),
             modelName: formData.get('modelName'),
-            notes: formData.get('notes')
+            fields: selectedFields // Pass the array to the backend!
         };
 
-        // POST to the chosen route
         const response = await fetch('reports', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
-        // FIX: Robust error handling
         if (!response.ok) {
             const text = await response.text().catch(() => '');
             let errorMessage = `HTTP ${response.status} failed.`;
-
-            // Attempt to parse JSON error message from the server
             try {
                 const errorData = JSON.parse(text);
                 errorMessage = errorData.message || errorData.error || errorMessage;
             } catch (e) {
-                // Not JSON, use the status text
                 errorMessage = `Server Error (${response.status}): ${text.substring(0, 100)}...`;
             }
             throw new Error(errorMessage);
@@ -79,7 +119,6 @@ const handleReportSubmit = async (elements) => {
 
         const pdfBlob = await response.blob();
 
-        // Clean up previous object URL
         if (lastPdfUrl) {
             URL.revokeObjectURL(lastPdfUrl);
             lastPdfUrl = null;
@@ -88,7 +127,6 @@ const handleReportSubmit = async (elements) => {
         const pdfUrl = URL.createObjectURL(pdfBlob);
         lastPdfUrl = pdfUrl;
 
-        // Show preview iframe
         if (elements.previewWrapper && elements.previewFrame) {
             elements.previewFrame.src = pdfUrl;
             elements.previewWrapper.style.display = 'block';
@@ -99,36 +137,12 @@ const handleReportSubmit = async (elements) => {
     } catch (error) {
         console.error('Failed to generate report:', error);
         if (elements.statusText) elements.statusText.textContent = `Error: ${error.message}`;
-        alert('Failed to generate report. Check console for details.');
+        alert(`Failed to generate report: ${error.message}`);
     } finally {
         isGeneratingReport = false;
-        setButtonState(elements, false, 'Generate Report');
+        setButtonState(elements, false, 'Generate Preview');
     }
 };
-
-
-const handleDownload = (elements, endpoint) => {
-    const formData = new FormData(elements.form);
-    const payload = Object.fromEntries(formData.entries());
-
-    // Construct the query string from the form data (startDate, endDate, modelName)
-    const params = new URLSearchParams({
-        startDate: payload.startDate,
-        endDate: payload.endDate,
-        modelName: payload.modelName,
-    }).toString();
-
-    // Use the provided endpoint with the query parameters
-    const downloadUrl = `${endpoint}?${params}`;
-
-    // Create a temporary anchor element and click it to trigger the download
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = true; // Ensures the browser initiates a download
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-}
 
 const handlePostDownload = async (elements, path) => {
     const formEl = elements.form;
@@ -136,33 +150,33 @@ const handlePostDownload = async (elements, path) => {
 
     try {
         const formData = new FormData(formEl);
+        
+        // Ensure CSV downloads also respect the selected fields if you ever update the CSV generator to be dynamic
+        const selectedFields = formData.getAll('fields');
 
-        // Build the payload (same structure as PDF generation)
         const payload = {
             startDate: formData.get('startDate'),
             endDate: formData.get('endDate'),
-            modelName: formData.get('modelName')
-            // Only need the filters
+            modelName: formData.get('modelName'),
+            fields: selectedFields 
         };
 
         const response = await fetch(path, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload) // Send data in the body
+            body: JSON.stringify(payload) 
         });
 
+        // ... rest of your handlePostDownload logic remains exactly the same ...
         if (!response.ok) {
-            // Handle the 404/No data found case gracefully
             const errorData = await response.json().catch(() => ({ message: 'Server error during download.' }));
             alert(`Download Failed: ${errorData.message}`);
             return;
         }
 
-        // --- Critical step: Force browser to download the streamed response ---
         const blob = await response.blob();
         const contentDisposition = response.headers.get('Content-Disposition');
 
-        // Extract filename from header (e.g., attachment; filename="ai-aggregates-all-to-all.csv")
         let filename = 'download.csv';
         if (contentDisposition && contentDisposition.indexOf('filename=') !== -1) {
             filename = contentDisposition.split('filename=')[1].replace(/"/g, '');
@@ -175,7 +189,7 @@ const handlePostDownload = async (elements, path) => {
         document.body.appendChild(a);
         a.click();
         a.remove();
-        window.URL.revokeObjectURL(url); // Clean up memory
+        window.URL.revokeObjectURL(url);
 
     } catch (e) {
         console.error("CSV Download Error:", e);
@@ -195,6 +209,26 @@ document.addEventListener('DOMContentLoaded', () => {
         previewFrame: document.getElementById('report-preview'),
         statusText: document.getElementById('report-status')
     };
+    
+    // --- NEW: Initialize Fidelity Logic ---
+    const bodyCutoff = document.body.getAttribute('data-cutoff');
+    if (bodyCutoff) {
+        cutoffTimestamp = parseInt(bodyCutoff, 10);
+        
+        // Format the timestamp to a readable date for the notice banner
+        const cutoffDateObj = new Date(cutoffTimestamp);
+        const displaySpan = document.getElementById('cutoff-display-date');
+        if (displaySpan) {
+            displaySpan.textContent = cutoffDateObj.toLocaleString();
+        }
+    }
+
+    // Attach listeners to date inputs to re-evaluate fidelity dynamically
+    const startInput = document.getElementById('startDate');
+    const endInput = document.getElementById('endDate');
+    if (startInput) startInput.addEventListener('change', evaluateFidelityState);
+    if (endInput) endInput.addEventListener('change', evaluateFidelityState);
+
 
     // Bind events (guard for missing elements)
     if (elements.form) {
@@ -210,7 +244,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('No report available. Generate a report first.');
                 return;
             }
-            // trigger download of last generated PDF
             const a = document.createElement('a');
             a.href = lastPdfUrl;
             const title = (elements.form && elements.form.querySelector('#reportTitle'))?.value || 'dashboard-report';
@@ -223,16 +256,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (elements.downloadCsvBtn) {
         elements.downloadCsvBtn.addEventListener('click', () => {
-            handlePostDownload(elements, 'reports/download-csv'); // Now uses generic function
+            handlePostDownload(elements, 'reports/download-csv'); 
         });
     }
 
     if (elements.downloadAggregatesCsvBtn) {
         elements.downloadAggregatesCsvBtn.addEventListener('click', () => {
-            handlePostDownload(elements, 'reports/download-aggregates'); // Now uses generic function
+            handlePostDownload(elements, 'reports/download-aggregates'); 
         });
     }
 
-    // Set initial button state
-    setButtonState(elements, false, 'Generate Report');
+    setButtonState(elements, false, 'Generate Preview');
+    
+    // Run initial evaluation on load
+    evaluateFidelityState();
 });

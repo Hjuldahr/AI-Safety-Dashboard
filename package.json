@@ -9,6 +9,7 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.1",
+    "chartjs-node-canvas": "^5.0.0",
     "connect-mongo": "^5.1.0",
     "cookie-parser": "^1.4.7",
     "denque": "^2.1.0",

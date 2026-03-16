@@ -13,7 +13,7 @@
   <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
   <link rel="stylesheet" href="css/components/notifications.css">
   <link rel="stylesheet" href="css/pages/reports.css">
-  
+
 
   <!-- Scripts -->
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
@@ -21,17 +21,22 @@
   <script src="js/reports.js" defer></script>
 </head>
 
-<body>
+<body data-cutoff="<%= cutoffTime %>">
 
   <%- include('components/header') %>
   <%- include('components/nav') %>
 
   <main class="content">
     <div class="reports-container card">
-      <header class="report-header">
+      <div class="report-header">
         <h1><i class="fa-solid fa-chart-line"></i> Report Generator</h1>
         <p>Configure and export custom model performance data.</p>
-      </header>
+
+        <div id="fidelity-notice" class="notice-banner" style="margin-top: 15px; padding: 10px; border-radius: 5px; background-color: #e0f2fe; border: 1px solid #7dd3fc; color: #0369a1; font-size: 0.9rem;">
+          <i class="fa-solid fa-circle-info"></i> <strong>Data Retention Notice:</strong>
+          High-fidelity data (1-second resolution + flagged output strings) is available for dates after <span id="cutoff-display-date">...</span>. Older dates will use 1-minute summaries.
+        </div>
+      </div>
 
       <form id="report-form">
         <section class="card">
@@ -49,12 +54,12 @@
               </select>
             </div>
             <div class="field-group">
-              <label for="startDate">Start Date</label>
-              <input type="date" id="startDate" name="startDate" required />
+              <label for="startDate">Start Date & Time</label>
+              <input type="datetime-local" id="startDate" name="startDate" step="60" required />
             </div>
             <div class="field-group">
-              <label for="endDate">End Date</label>
-              <input type="date" id="endDate" name="endDate" required />
+              <label for="endDate">End Date & Time</label>
+              <input type="datetime-local" id="endDate" name="endDate" step="60" required />
             </div>
           </div>
         </section>
