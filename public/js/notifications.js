@@ -196,6 +196,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = n.id;
         if (id && localStorage.getItem('previousNotificationId') === id) return;
 
+        const alreadyVisible = container.classList.contains('show');
+
+        // Replace content
         content.innerHTML = `
             <span class='notification-slide-text'>${n.message}</span>
             <span class='notification-slide-time'>
@@ -204,14 +207,18 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         container.style.backgroundColor = n.trim;
-        container.classList.remove('hidden');
-        container.offsetHeight;
-        container.classList.add('show');
+
+        // Only trigger animation if not already visible
+        if (!alreadyVisible) {
+            container.classList.remove('hidden');
+            container.offsetHeight;
+            container.classList.add('show');
+        }
 
         if (id) localStorage.setItem('previousNotificationId', id);
-
         currentNotification = n;
 
+        // Reset dismiss timer
         if (n.dismissible !== false) {
             if (dismissTimer) clearTimeout(dismissTimer);
             if (n.timeout) {
