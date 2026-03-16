@@ -16,7 +16,16 @@ const formatDisplayDate = (dateString) => {
 const renderDeepDive = (title, logId, sourceModel, alerts) => {
     if (!logId) return '';
     
-    // Determine the correct route based on the data source
+    const alertEmojis = { critical: '🚫', high: '⚠️', medium: '🔔', info: 'ℹ️' };
+
+    // Mapping levels to specific colors (Border and Text)
+    const alertStyles = {
+        critical: { border: '#ef4444', text: '#b91c1c', bg: '#fef2f2' }, // Red
+        high:     { border: '#f97316', text: '#c2410c', bg: '#fff7ed' }, // Orange
+        medium:   { border: '#eab308', text: '#a16207', bg: '#fefce8' }, // Yellow/Gold
+        info:     { border: '#3b82f6', text: '#1d4ed8', bg: '#eff6ff' }  // Blue
+    };
+    
     const routePrefix = sourceModel === 'AI_Log' ? 'ai' : 'summary';
     const logUrl = `${process.env.PUBLIC_URL || ''}logs/view/${routePrefix}/${logId}`;
     
@@ -31,18 +40,24 @@ const renderDeepDive = (title, logId, sourceModel, alerts) => {
         html += `<div class="no-alerts">✅ No alerts triggered by this log.</div>`;
     } else {
         html += `<ul class="alerts-list">`;
-        // Render up to 5 alerts
         const displayAlerts = alerts.slice(0, 5);
+        
         displayAlerts.forEach(a => {
+            const level = a.alertLevel.toLowerCase();
             const alertUrl = `${process.env.PUBLIC_URL || ''}alerts/view/${a.alertLogId}`;
+            const emoji = alertEmojis[level] || '🚨';
+            const style = alertStyles[level] || { border: '#6b7280', text: '#374151', bg: '#f3f4f6' };
+            
+            // Applying inline styles for the PDF engine
             html += `
-                <li class="alert-item">
-                    <a href="${alertUrl}">🚨 <strong>${a.alertLevel.toUpperCase()}:</strong> ${a.alertName}</a>
+                <li class="alert-item" style="border-left: 4px solid ${style.border}; background-color: ${style.bg}; margin-bottom: 5px; padding: 8px; border-radius: 4px;">
+                    <a href="${alertUrl}" style="color: ${style.text}; text-decoration: none;">
+                        ${emoji} <strong>${a.alertLevel.toUpperCase()}:</strong> ${a.alertName}
+                    </a>
                 </li>`;
         });
         html += `</ul>`;
 
-        // Handle overflow message
         if (alerts.length > 5) {
             const searchUrl = `${process.env.PUBLIC_URL || ''}alerts?search=${logId}`;
             html += `
