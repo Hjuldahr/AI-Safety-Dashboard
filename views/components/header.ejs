@@ -1,10 +1,17 @@
 <script>
-  // Anti-FOUC: apply dark mode, theme class, and link hrefs before paint
-  if (localStorage.getItem('darkMode') === 'true') {
-    document.body.classList.add('dark-mode');
-  }
+    // Anti-FOUC: apply server-rendered user preferences before paint
+    window.USER_PREFERENCES = {
+        preferredTheme: "<%= (typeof user !== 'undefined' && user && user.preferredTheme) ? user.preferredTheme : 'default' %>",
+        darkModeEnabled: <%= (typeof user !== 'undefined' && user && user.darkModeEnabled) ? 'true' : 'false' %>,
+        isAuthenticated: <%= (typeof user !== 'undefined' && !!user) ? 'true' : 'false' %>
+    };
+
+    if (window.USER_PREFERENCES.darkModeEnabled) {
+        document.body.classList.add('dark-mode');
+    }
+
   (function() {
-    var theme = localStorage.getItem('theme');
+        var theme = (window.USER_PREFERENCES && window.USER_PREFERENCES.preferredTheme) || 'default';
     if (theme && theme !== 'default') {
       document.body.classList.add('theme-' + theme);
     }
