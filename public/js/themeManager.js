@@ -9,7 +9,6 @@
 (function () {
   'use strict';
 
-  const STORAGE_PREFIX = 'theme';
   const THEME_CLASSES = ['theme-ocean', 'theme-sunset', 'theme-compact']; // 'default' = no class
 
   // Map theme name → color CSS file path (relative to public/)
@@ -22,13 +21,12 @@
   const LAYOUT_DEFAULT = 'css/layouts/default.css';
   const LAYOUT_COMPACT = 'css/layouts/compact.css';
 
-  function getStorageKey() {
-    const el = document.getElementById('user-name');
-    if (el) {
-      const username = el.textContent.replace('User:', '').trim();
-      if (username) return STORAGE_PREFIX + '_' + username;
-    }
-    return STORAGE_PREFIX;
+  function getUserPreferences() {
+    return window.USER_PREFERENCES || {
+      preferredTheme: 'default',
+      darkModeEnabled: false,
+      isAuthenticated: false
+    };
   }
 
   /** Remove all theme classes from body */
@@ -60,31 +58,46 @@
     updateLayoutLink(name);
   }
 
-  // Apply saved theme immediately (runs before DOMContentLoaded)
-  const earlyKey = getStorageKey();
-  const earlyTheme = localStorage.getItem(earlyKey);
-  if (earlyTheme && earlyTheme !== 'default') {
-    applyTheme(earlyTheme);
+  async function persistThemePreference(themeName) {
+    const prefs = getUserPreferences();
+    if (!prefs.isAuthenticated) return;
+
+    try {
+      const response = await fetch('/api/profile/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferredTheme: themeName })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to save theme preference');
+      }
+    } catch (error) {
+      console.error('Error saving theme preference:', error);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    const STORAGE_KEY = getStorageKey();
-
-    // Re-apply in case early check used the wrong key
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) applyTheme(saved);
+    const prefs = getUserPreferences();
+    const currentTheme = prefs.preferredTheme || 'default';
+    applyTheme(currentTheme);
 
     // Hook up the theme selector (on demo page)
     const selector = document.getElementById('theme-select');
     if (!selector) return;
 
     // Set the dropdown to current theme
-    if (saved) selector.value = saved;
+    selector.value = currentTheme;
 
     selector.addEventListener('change', () => {
       const theme = selector.value;
       applyTheme(theme);
-      localStorage.setItem(STORAGE_KEY, theme);
+      window.USER_PREFERENCES = {
+        ...getUserPreferences(),
+        preferredTheme: theme
+      };
+      persistThemePreference(theme);
     });
   });
 })();

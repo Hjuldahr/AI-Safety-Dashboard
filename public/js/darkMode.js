@@ -1,43 +1,45 @@
 /**
  * Dark Mode Toggle
- * Persists user preference in localStorage on a per-user basis.
- * Falls back to a generic key when no user is logged in.
+ * Uses server-rendered preferences for initial state.
+ * Persists preference to DB for authenticated users.
  */
 (function () {
   'use strict';
 
-  const STORAGE_PREFIX = 'darkMode';
+  function getUserPreferences() {
+    return window.USER_PREFERENCES || {
+      preferredTheme: 'default',
+      darkModeEnabled: false,
+      isAuthenticated: false
+    };
+  }
 
-  /**
-   * Derive a per-user storage key.
-   * The header contains `<p id="user-name">User: username</p>` when logged in.
-   * On the login page (no header) we fall back to a generic key.
-   */
-  function getStorageKey() {
-    const el = document.getElementById('user-name');
-    if (el) {
-      const username = el.textContent.replace('User:', '').trim();
-      if (username) return STORAGE_PREFIX + '_' + username;
+  async function persistDarkModePreference(enabled) {
+    const prefs = getUserPreferences();
+    if (!prefs.isAuthenticated) return;
+
+    try {
+      const response = await fetch('/api/profile/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ darkModeEnabled: enabled })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to save dark mode preference');
+      }
+    } catch (error) {
+      console.error('Error saving dark mode preference:', error);
     }
-    return STORAGE_PREFIX;
   }
 
-  // Apply saved preference immediately to prevent flash of wrong theme.
-  // At this point the DOM may not be ready so we check both the generic key
-  // and try to read the user-name element (available if script runs after header).
-  const earlyKey = getStorageKey();
-  if (localStorage.getItem(earlyKey) === 'true') {
-    document.body.classList.add('dark-mode');
-  }
-
-  // Wait for DOM so the toggle button and header username are available
   document.addEventListener('DOMContentLoaded', () => {
-    const STORAGE_KEY = getStorageKey();
+    const prefs = getUserPreferences();
 
-    // Re-apply in case the early check used the wrong key
-    if (localStorage.getItem(STORAGE_KEY) === 'true') {
+    if (prefs.darkModeEnabled) {
       document.body.classList.add('dark-mode');
-    } else if (localStorage.getItem(STORAGE_KEY) === 'false') {
+    } else {
       document.body.classList.remove('dark-mode');
     }
 
@@ -57,7 +59,13 @@
 
     toggle.addEventListener('click', () => {
       document.body.classList.toggle('dark-mode');
-      localStorage.setItem(STORAGE_KEY, isDark());
+      const enabled = isDark();
+      window.USER_PREFERENCES = {
+        ...getUserPreferences(),
+        darkModeEnabled: enabled
+      };
+
+      persistDarkModePreference(enabled);
       updateIcon();
     });
   });

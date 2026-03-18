@@ -10,4 +10,7 @@ router.get('/profile', isAuthenticated, controller.getProfilePage);
 // API: change password
 router.post('/api/profile/password', isAuthenticated, controller.changePassword);
 
+// API: update user theme/dark mode preferences
+router.post('/api/profile/preferences', isAuthenticated, controller.updatePreferences);
+
 export default router;

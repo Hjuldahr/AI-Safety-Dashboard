@@ -24,6 +24,15 @@ const UserSchema = new mongoose.Schema({
         type: [String],
         default: ['viewer'] // Every new user is a 'viewer' by default
     },
+    preferredTheme: {
+        type: String,
+        enum: ['default', 'ocean', 'sunset', 'compact'],
+        default: 'default'
+    },
+    darkModeEnabled: {
+        type: Boolean,
+        default: false
+    },
     // Timestamp of when user last saw notifications (server-side unread tracking)
     notificationsLastSeen: {
         type: Date,
