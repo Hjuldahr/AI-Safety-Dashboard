@@ -36,6 +36,16 @@ const alert_model_Schema = new mongoose.Schema({
   },
   // Tags associated with this alert
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag" }],
+  // Whether the alert is disabled (won't be evaluated)
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+  // Whether the alert is muted (won't send notifications but still logs)
+  muted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // ---------- Helper / Statics ----------
