@@ -18,6 +18,8 @@ const AlertSnapshotSchema = new Schema({
     disabled: Boolean,
     muted: Boolean
 }, { _id: false });
+
+// Schema for AlertLog
 const AlertLogSchema = new Schema({
 
     alert: {
