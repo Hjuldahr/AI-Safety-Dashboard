@@ -18,16 +18,22 @@ This file contains information about the rest of the documentation available abo
 - There are several other pages used to drive functionality to the above pages:
 	- [Login / Signup](authentication.md)
 	- [User Management](user-management.md)
+	- [Demo Controls](demo-controls.md)
 
 ## API Documentation
-- We are have created OpenAPI documentation which is availible [here](http://localhost:2121/api/docs/).
-- We are using [Swagger](https://swagger.io/) to render the api documentation.
+- We have created OpenAPI documentation which is available [here](http://localhost:2121/api/docs/).
+- We are using [Swagger](https://swagger.io/) to render the API documentation.
+
+## Reference
+- [Constants Reference](constants.md) — documentation for all shared constants (charts, roles, permissions, notifications, SSE)
+- [Development Environment](development-environment.md) — how the dev environment works, project structure, Docker setup
+- [AI Integration Guide](ai-integration.md) — how to replace the fake data generator with a real AI system
 
 ## Errors
-- Information about how the sites errors are logged can be found in [Errors](errors.md).
+- Information about how the site's errors are logged can be found in [Errors](errors.md).
 
 ## Open API Documentation
-- Open API documentation is provided in [API Documentation](http://localhost:2121/api/docs).
+- Open API documentation is provided at [API Documentation](http://localhost:2121/api/docs).
 - It is also available at `[Domain]/api/docs/`.
 - More information about this in [About OpenAPI Documentation](openapi_documentation.md)
 

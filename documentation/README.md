@@ -1,8 +1,5 @@
-# CST8414-Applied-Research-Project
-This project is to create an "AI Safety Dashboard". The Dashboard is intended to monitor a live LLM-based AI and provides metrics on
-how the AI is performing. The system allows for customization of which paramteters are accepted / used for alerts and the charts, however
-a basic example of one such parameter might be `Policy Compliance`.
-
+# AI Safety Dashboard
+This project is an AI Safety Dashboard that monitors live LLM-based AI systems and provides real-time metrics on model performance, safety, and compliance. The system allows customization of which parameters are tracked, supports configurable alerts, and provides comprehensive reporting.
 
 ## Project Info
 - Team Members: Daniel Bierman, Michael Dagher, Nicholas Jacques, Robert Ohly.
@@ -11,13 +8,26 @@ a basic example of one such parameter might be `Policy Compliance`.
 - Course Names: Applied Research Project 1 & 2
 - Course Codes: CST8414 & CST8515.
 
+## Key Features
+- Real-time dashboard with customizable charts (line, bar, pie, measure)
+- Configurable alert system with rule-based evaluation
+- PDF and CSV report generation
+- Role-based access control with custom roles
+- Real-time notifications via Server-Sent Events
+- Tag management for organizing alerts and logs
+- Demo scenarios for testing model behavior
+- OpenAPI/Swagger API documentation
 
-## Quick Links:
+## Quick Links
 * [Introduction](introduction.md)
 * [Installation](installation.md)
 * [Authentication](authentication.md)
 * [API Documentation](http://localhost:2121/api/docs)
 
+## Reference
+* [Constants Reference](constants.md)
+* [Development Environment](development-environment.md)
+* [AI Integration Guide](ai-integration.md)
 
 ## Head back to the Dashboard
 * [Development Dashboard](http://localhost:2121/)

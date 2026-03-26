@@ -1,26 +1,55 @@
 # Logs
-The Logs page is broadly responsible for 3 main things:
-1. User Logs
-2. AI Logs (Recent Logs)
-3. AI Summaries (Long Term Logs)
+The Logs page provides access to three types of log data. It is available at `[Domain]/logs`.
+
+Requires the `view:logs` permission.
 
 ## User Logs
-These track the interactions that users have on the site. Things like logging in, creating, modifying, deleting a chart, creating a report, etc.
-They provide a historical view of user's interactions with the site.
+User logs track interactions that users have on the site: logging in, creating/modifying/deleting charts, creating reports, changing roles, etc. They provide an audit trail of user activity.
 
-## AI Logs
-These are the high fidelity logs that are generated and stored every second. Only a certain limit of these logs are kept. Currently that
-is 1 days worth of logs. After that the AI Logs are deleted. In order to keep data long term, thats where we turn to the "AI Summaries"
+### Event Types
+| Event | Description |
+|---|---|
+| `Login` | User logged in |
+| `Logout` | User logged out |
+| `Signup` | New user registered |
+| `Alert_Created` | Alert definition created |
+| `Alert_Modified` | Alert definition updated |
+| `Alert_Deleted` | Alert definition removed |
+| `Report_Created` | Report generated |
+| `Report_Deleted` | Report removed |
+| `Chart_Created` | Chart configuration created |
+| `Chart_Modified` | Chart configuration updated |
+| `Chart_Deleted` | Chart configuration removed |
+| `Unspecified_Event` | Fallback for uncategorized events |
 
-- ToDo: Update this once admins can choose how long to keep logs for.
+User logs can be filtered by user, event type, date range, and search text. They support pagination and can be exported as CSV or PDF.
 
-## AI Summaries
-AI Summaries are made every minute and contain a summarized version of the 60 AI Logs that where generated over that minute. This allows us to store less logs, 
-while still having a good amount of granularity for report generation.
+## AI Logs (Recent Logs)
+These are high-fidelity logs generated and stored every second. Each entry contains all metrics from the `DATA_DICTIONARY` (see [Constants Reference](constants.md)) plus a `breakdown` object with per-topic and per-subtopic data.
 
-Additionally, we also remove the "breakdown" object from the AI Log when we turn it into a Summary. This is because the breakdown
-object contains much more data than the rest of the object (which it must do so in order to break down the charts by topic or sub topic).
-Removing this object has the caveat that we can no longer split our charts by topic or sub topic when we are using AI Summaries - which is charts > 15m timeframe.
+AI Logs are kept for **1 day** (`AI_LOG_CUTOFF` in `constants/sse.js`). After that, they are deleted. For long-term data, see AI Summaries below.
+
+AI logs can be filtered by model name, date range, and search text. Individual log entries can be viewed in detail and tagged with historical tags.
+
+### Log Tagging
+Individual AI log entries can be tagged for organization and tracking. Tags are applied as historical tags (immutable snapshots) so the tag state is preserved even if the original tag is later modified.
+
+## AI Summaries (Long Term Logs)
+AI Summaries are created every minute and contain an averaged version of the 60 AI Logs generated over that minute. This allows long-term data storage with reduced volume.
+
+Key differences from AI Logs:
+- The `breakdown` object is **removed** from summaries to save storage
+- Charts with timeframes longer than 15 minutes use summary data
+- Topic/sub-topic splitting is not available for summary-based timeframes
+
+AI summaries can be filtered by model name and date range.
+
+## Exporting Logs
+Logs can be exported in two formats:
+- **CSV** — comma-separated values for spreadsheet analysis
+- **PDF** — formatted document with event details
+
+Export requires the `export:logs` permission.
 
 ## Read Next
 - [User Management](user-management.md)
