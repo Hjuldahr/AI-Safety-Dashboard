@@ -1,72 +1,94 @@
-/**
- * Dark Mode Toggle
- * Uses server-rendered preferences for initial state.
- * Persists preference to DB for authenticated users.
- */
 (function () {
   'use strict';
 
-  function getUserPreferences() {
+  const MODES = ['light', 'dark', 'auto'];
+
+  function getPrefs() {
     return window.USER_PREFERENCES || {
-      preferredTheme: 'default',
-      darkModeEnabled: window.matchMedia('(prefers-color-scheme: dark)').matches,
+      preferredColour: 'auto',
       isAuthenticated: false
     };
   }
 
-  async function persistDarkModePreference(enabled) {
-    const prefs = getUserPreferences();
+  function getSystemDark() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  function resolveIsDark(mode) {
+    if (mode === 'dark') return true;
+    if (mode === 'light') return false;
+    return getSystemDark(); // auto
+  }
+
+  function applyMode(mode) {
+    const isDark = resolveIsDark(mode);
+    document.body.classList.toggle('dark-mode', isDark);
+  }
+
+  function nextMode(current) {
+    const i = MODES.indexOf(current);
+    return MODES[(i + 1) % MODES.length];
+  }
+
+  async function persist(mode) {
+    const prefs = getPrefs();
     if (!prefs.isAuthenticated) return;
 
     try {
-      const response = await fetch('/api/profile/preferences', {
+      await fetch('/api/profile/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ darkModeEnabled: enabled })
+        body: JSON.stringify({ preferredColour: mode })
       });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || 'Failed to save dark mode preference');
-      }
-    } catch (error) {
-      console.error('Error saving dark mode preference:', error);
+    } catch (e) {
+      console.error('Failed to save colour pref:', e);
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const prefs = getUserPreferences();
-
-    if (prefs.darkModeEnabled ?? window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-
+  function updateIcon(mode) {
     const toggle = document.getElementById('dark-mode-toggle');
     if (!toggle) return;
 
     const icon = toggle.querySelector('i');
-    const isDark = () => document.body.classList.contains('dark-mode');
+    if (!icon) return;
 
-    // Set initial icon state
-    function updateIcon() {
-      if (!icon) return;
-      icon.className = isDark() ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-      toggle.title = isDark() ? 'Switch to light mode' : 'Switch to dark mode';
-    }
-    updateIcon();
+    if (mode === 'dark') icon.className = 'fa-solid fa-moon';
+    else if (mode === 'light') icon.className = 'fa-solid fa-sun';
+    else icon.className = 'fa-solid fa-circle-half-stroke';
+
+    toggle.title = `Mode: ${mode}`;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    let prefs = getPrefs();
+    let mode = prefs.preferredColour || 'auto';
+
+    applyMode(mode);
+    updateIcon(mode);
+
+    const toggle = document.getElementById('dark-mode-toggle');
+    if (!toggle) return;
 
     toggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark-mode');
-      const enabled = isDark();
+      mode = nextMode(mode);
+
+      applyMode(mode);
+      updateIcon(mode);
+
       window.USER_PREFERENCES = {
-        ...getUserPreferences(),
-        darkModeEnabled: enabled
+        ...prefs,
+        preferredColour: mode
       };
 
-      persistDarkModePreference(enabled);
-      updateIcon();
+      persist(mode);
+
+      const select = document.getElementById('colour-select');
+      if (select) select.value = mode;
     });
+
+    window.matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => {
+        if (mode === 'auto') applyMode('auto');
+      });
   });
 })();

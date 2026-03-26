@@ -2,6 +2,7 @@ import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
 
 const ALLOWED_THEMES = new Set(['default', 'ocean', 'sunset', 'compact']);
+const ALLOWED_COLOURS = new Set(['light', 'dark', 'auto']);
 
 const parseBoolean = (value) => {
   if (typeof value === 'boolean') return value;
@@ -16,13 +17,11 @@ const parseBoolean = (value) => {
 export const getProfilePage = async (req, res) => {
   try {
     const safeTheme = ALLOWED_THEMES.has(req.user?.preferredTheme) ? req.user.preferredTheme : 'default';
-    const safeDarkMode = Boolean(req.user?.darkModeEnabled);
 
     res.render('profile', {
       user: {
         ...req.user,
         preferredTheme: safeTheme,
-        darkModeEnabled: safeDarkMode
       }
     });
   } catch (err) {
@@ -36,11 +35,11 @@ export const updatePreferences = async (req, res) => {
     const userId = req.user && req.user._id;
     if (!userId) return res.status(401).json({ message: 'Not authenticated' });
 
-    const { preferredTheme, darkModeEnabled } = req.body || {};
+    const { preferredTheme, preferredColour } = req.body || {};
     const hasTheme = preferredTheme !== undefined;
-    const hasDarkMode = darkModeEnabled !== undefined;
+    const hasColour = preferredColour !== undefined;
 
-    if (!hasTheme && !hasDarkMode) {
+    if (!hasTheme && !hasColour) {
       return res.status(400).json({ message: 'No preference values provided' });
     }
 
@@ -53,12 +52,11 @@ export const updatePreferences = async (req, res) => {
       updates.preferredTheme = preferredTheme;
     }
 
-    if (hasDarkMode) {
-      const parsedDarkMode = parseBoolean(darkModeEnabled);
-      if (parsedDarkMode === null) {
-        return res.status(400).json({ message: 'Invalid dark mode value' });
+    if (preferredColour !== undefined) {
+      if (!ALLOWED_COLOURS.has(preferredColour)) {
+        return res.status(400).json({ message: 'Invalid colour mode' });
       }
-      updates.darkModeEnabled = parsedDarkMode;
+      updates.preferredColour = preferredColour;
     }
 
     const user = await User.findById(userId);
@@ -73,7 +71,7 @@ export const updatePreferences = async (req, res) => {
       success: true,
       preferences: {
         preferredTheme: user.preferredTheme,
-        darkModeEnabled: user.darkModeEnabled
+        preferredColour: user.preferredColour
       }
     });
   } catch (err) {
