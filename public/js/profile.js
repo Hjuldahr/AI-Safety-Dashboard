@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('change-password-form');
   const messages = document.getElementById('profile-messages');
 
+  /*
   const colourSelect = document.getElementById('colour-select');
 
   colourSelect.addEventListener('change', async () => {
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error(err);
     }
   });
+  */
 
   function showMessage(msg, type='success'){
     messages.innerHTML = `<div class="alert ${type==='success' ? 'alert-success' : 'alert-error'}">${msg}</div>`;
