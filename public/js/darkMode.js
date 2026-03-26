@@ -9,7 +9,7 @@
   function getUserPreferences() {
     return window.USER_PREFERENCES || {
       preferredTheme: 'default',
-      darkModeEnabled: false,
+      darkModeEnabled: window.matchMedia('(prefers-color-scheme: dark)').matches,
       isAuthenticated: false
     };
   }
@@ -37,7 +37,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const prefs = getUserPreferences();
 
-    if (prefs.darkModeEnabled) {
+    if (prefs.darkModeEnabled ?? window.matchMedia('(prefers-color-scheme: dark)').matches) {
       document.body.classList.add('dark-mode');
     } else {
       document.body.classList.remove('dark-mode');

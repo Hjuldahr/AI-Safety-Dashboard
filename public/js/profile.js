@@ -1,3 +1,4 @@
+// profile.js
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('change-password-form');
   const messages = document.getElementById('profile-messages');
