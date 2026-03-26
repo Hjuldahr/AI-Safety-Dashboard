@@ -22,7 +22,7 @@
   text-align: left;
   padding: 0.9rem 1rem;
   border: none;
-  background: var(--panel-header-bg, #f3f4f6);
+  background: var(--panel-header-bg);
   cursor: pointer;
   font-size: 1rem;
   font-weight: 600;
