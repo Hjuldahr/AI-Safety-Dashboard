@@ -11,7 +11,6 @@
   <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
   <link rel="stylesheet" href="css/components/notifications.css">
 
-
   <script>
     window.CURRENT_USER_ID = "<%= user ? user._id : '' %>";
   </script>
@@ -61,6 +60,12 @@
     <!-- Theme Management -->
     <div class="panel-section" style="max-width: 600px; margin-bottom: 2rem;">
       <h3>Theme</h3>
+      <label for="colour-select">Select Colour:</label>
+      <select id="colour-select">
+        <option value="light" <%= user.preferredColour === 'light' ? 'selected' : '' %>>☀ Light</option>
+        <option value="dark" <%= user.preferredColour === 'dark' ? 'selected' : '' %>>☾ Dark</option>
+        <option value="auto" <%= user.preferredColour === 'auto' ? 'selected' : '' %>>◐ Auto</option> <!--From browser-->
+      </select><br><br>
       <label for="theme-select">Select Theme:</label>
       <select id="theme-select">
         <option value="default" <%= user.preferredTheme === 'default' ? 'selected' : '' %>>Default</option>
@@ -69,7 +74,6 @@
         <option value="compact" <%= user.preferredTheme === 'compact' ? 'selected' : '' %>>Compact (Top Nav)</option>
       </select>
 </main>
-
   <script src="/js/profile.js" defer></script>
 </body>
 </html>

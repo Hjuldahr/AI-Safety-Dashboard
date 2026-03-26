@@ -29,9 +29,10 @@ const UserSchema = new mongoose.Schema({
         enum: ['default', 'ocean', 'sunset', 'compact'],
         default: 'default'
     },
-    darkModeEnabled: {
-        type: Boolean,
-        default: false
+    preferredColour: {
+        type: String,
+        enum: ['light', 'dark', 'auto'],
+        default: 'auto'
     },
     // Timestamp of when user last saw notifications (server-side unread tracking)
     notificationsLastSeen: {

@@ -1,103 +1,161 @@
-/**
- * Theme Manager
- * Toggles theme by swapping CSS classes on <body> AND updating
- * the <link id="theme-colors"> and <link id="theme-layout"> hrefs
- * so modular color/layout files are loaded correctly.
- *
- * Available themes: 'default', 'ocean', 'sunset', 'compact'
- */
 (function () {
   'use strict';
 
-  const THEME_CLASSES = ['theme-ocean', 'theme-sunset', 'theme-compact']; // 'default' = no class
+  const THEMES = ['default', 'ocean', 'sunset', 'compact'];
+  const MODES = ['light', 'dark', 'auto'];
 
-  // Map theme name → color CSS file path (relative to public/)
   const COLOR_FILES = {
     ocean: 'css/themes/colors-ocean.css',
     sunset: 'css/themes/colors-sunset.css'
   };
 
-  // Layout CSS files
   const LAYOUT_DEFAULT = 'css/layouts/default.css';
   const LAYOUT_COMPACT = 'css/layouts/compact.css';
 
-  function getUserPreferences() {
+  function getPrefs() {
     return window.USER_PREFERENCES || {
       preferredTheme: 'default',
-      darkModeEnabled: false,
+      preferredColour: 'auto',
       isAuthenticated: false
     };
   }
 
-  /** Remove all theme classes from body */
-  function clearTheme() {
-    THEME_CLASSES.forEach(cls => document.body.classList.remove(cls));
+  function setPrefs(newPrefs) {
+    window.USER_PREFERENCES = {
+      ...getPrefs(),
+      ...newPrefs
+    };
   }
 
-  /** Update the <link id="theme-colors"> href */
-  function updateColorLink(name) {
-    const link = document.getElementById('theme-colors');
-    if (!link) return;
-    link.href = COLOR_FILES[name] || '';
+  function getSystemDark() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
-  /** Update the <link id="theme-layout"> href */
-  function updateLayoutLink(name) {
-    const link = document.getElementById('theme-layout');
-    if (!link) return;
-    link.href = (name === 'compact') ? LAYOUT_COMPACT : LAYOUT_DEFAULT;
+  function resolveDark(mode) {
+    if (mode === 'dark') return true;
+    if (mode === 'light') return false;
+    return getSystemDark(); // auto
   }
 
-  /** Apply a theme name ('default', 'ocean', 'sunset', 'compact') */
+  function applyColour(mode) {
+    const isDark = resolveDark(mode);
+    document.body.classList.toggle('dark-mode', isDark);
+  }
+
   function applyTheme(name) {
-    clearTheme();
+    document.body.classList.remove('theme-ocean', 'theme-sunset', 'theme-compact');
+
     if (name && name !== 'default') {
       document.body.classList.add('theme-' + name);
     }
-    updateColorLink(name);
-    updateLayoutLink(name);
-  }
 
-  async function persistThemePreference(themeName) {
-    const prefs = getUserPreferences();
-    if (!prefs.isAuthenticated) return;
+    const colorLink = document.getElementById('theme-colors');
+    if (colorLink) colorLink.href = COLOR_FILES[name] || '';
 
-    try {
-      const response = await fetch('/api/profile/preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferredTheme: themeName })
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || 'Failed to save theme preference');
-      }
-    } catch (error) {
-      console.error('Error saving theme preference:', error);
+    const layoutLink = document.getElementById('theme-layout');
+    if (layoutLink) {
+      layoutLink.href = (name === 'compact') ? LAYOUT_COMPACT : LAYOUT_DEFAULT;
     }
   }
 
+  function updateButton(mode) {
+    const btn = document.getElementById('dark-mode-toggle');
+    if (!btn) return;
+
+    const icon = btn.querySelector('i');
+    if (!icon) return;
+
+    if (mode === 'dark') icon.className = 'fa-solid fa-moon';
+    else if (mode === 'light') icon.className = 'fa-solid fa-sun';
+    else icon.className = 'fa-solid fa-circle-half-stroke';
+
+    btn.title = `Mode: ${mode}`;
+  }
+
+  function syncUI(mode, theme) {
+    const colourSelect = document.getElementById('colour-select');
+    if (colourSelect && colourSelect.value !== mode) {
+      colourSelect.value = mode;
+    }
+
+    const themeSelect = document.getElementById('theme-select');
+    if (themeSelect && themeSelect.value !== theme) {
+      themeSelect.value = theme;
+    }
+
+    updateButton(mode);
+  }
+
+  function nextMode(current) {
+    const i = MODES.indexOf(current);
+    return MODES[(i + 1) % MODES.length];
+  }
+
+  async function persist(updates) {
+    const prefs = getPrefs();
+    if (!prefs.isAuthenticated) return;
+
+    try {
+      await fetch('/api/profile/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+    } catch (e) {
+      console.error('Failed to persist preferences:', e);
+    }
+  }
+
+  function applyAll({ preferredTheme, preferredColour }) {
+    applyTheme(preferredTheme);
+    applyColour(preferredColour);
+    syncUI(preferredColour, preferredTheme);
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
-    const prefs = getUserPreferences();
-    const currentTheme = prefs.preferredTheme || 'default';
-    applyTheme(currentTheme);
+    let prefs = getPrefs();
 
-    // Hook up the theme selector (on demo page)
-    const selector = document.getElementById('theme-select');
-    if (!selector) return;
+    applyAll(prefs);
 
-    // Set the dropdown to current theme
-    selector.value = currentTheme;
+    const themeSelect = document.getElementById('theme-select');
+    if (themeSelect) {
+      themeSelect.addEventListener('change', () => {
+        const theme = themeSelect.value;
 
-    selector.addEventListener('change', () => {
-      const theme = selector.value;
-      applyTheme(theme);
-      window.USER_PREFERENCES = {
-        ...getUserPreferences(),
-        preferredTheme: theme
-      };
-      persistThemePreference(theme);
-    });
+        setPrefs({ preferredTheme: theme });
+        applyAll(getPrefs());
+        persist({ preferredTheme: theme });
+      });
+    }
+
+    const colourSelect = document.getElementById('colour-select');
+    if (colourSelect) {
+      colourSelect.addEventListener('change', () => {
+        const mode = colourSelect.value;
+
+        setPrefs({ preferredColour: mode });
+        applyAll(getPrefs());
+        persist({ preferredColour: mode });
+      });
+    }
+
+    const toggle = document.getElementById('dark-mode-toggle');
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        const current = getPrefs().preferredColour;
+        const next = nextMode(current);
+
+        setPrefs({ preferredColour: next });
+        applyAll(getPrefs());
+        persist({ preferredColour: next });
+      });
+    }
+
+    window.matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => {
+        if (getPrefs().preferredColour === 'auto') {
+          applyColour('auto');
+        }
+      });
   });
 })();
