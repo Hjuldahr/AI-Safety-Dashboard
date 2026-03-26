@@ -26,7 +26,7 @@ const UserSchema = new mongoose.Schema({
     },
     preferredTheme: {
         type: String,
-        enum: ['default', 'ocean', 'sunset', 'compact'],
+        enum: ['default', 'ocean', 'sunset', 'viridian', 'sakura', 'cosmic', 'noctis', 'contrast', 'compact'],
         default: 'default'
     },
     preferredColour: {

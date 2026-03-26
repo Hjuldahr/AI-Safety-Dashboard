@@ -1,0 +1,203 @@
+/* ==========================================================================
+   COLORS — NOCTIS THEME
+   body.theme-noctis light + dark-mode overrides
+   Optimized for low-blue light (red/orange skew)
+   ========================================================================== */
+
+/* ---------- Noctis theme (light) ---------- */
+body.theme-noctis {
+  /* Brand / Primary */
+  --primary-color: #d97706;        /* golden amber */
+  --primary-hover: #b45309;
+  --primary-light: #ffedd5;
+  --green-color: #16a34a;
+
+  /* Generic palette */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Light-mode palette */
+  --body-bg: #fff7ed;             /* warm light */
+  --card-bg: #fffaf0;
+  --text-dark: #78350f;           /* dark amber */
+  --text-light: #9a3412;
+  --text-muted: #92400e;
+  --color-muted: #c2410c;
+  --border-color: #fcd34d;
+  --border-light: #fde68a;
+  --border-lighter: #fef3c7;
+  --shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.1), 0 2px 4px -2px rgba(217, 119, 6, 0.08);
+  --shadow-md: 0 4px 6px rgba(217, 119, 6, 0.1);
+  --shadow-lg: 0 4px 12px rgba(217, 119, 6, 0.08);
+  --shadow-card-hover: 0 6px 16px rgba(217, 119, 6, 0.15);
+  --input-bg: #fffaf0;
+
+  /* Severity / status */
+  --color-critical: #dc2626;
+  --color-critical-light: #fee2e2;
+  --color-critical-dark: #991b1b;
+  --color-high: #ea580c;
+  --color-high-light: #ffedd5;
+  --color-high-border: #f97316;
+  --color-high-dark: #9a3412;
+  --color-medium: #d97706;
+  --color-medium-light: #fef3c7;
+  --color-medium-border: #f59e0b;
+  --color-medium-dark: #78350f;
+  --color-info: #c2410c;
+  --color-info-light: #fef3c7;
+  --color-info-dark: #7c2d12;
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-warning: #f59e0b;
+
+  /* Buttons */
+  --btn-default-bg: #d97706;
+  --btn-default-hover: #b45309;
+  --btn-default-active: #92400e;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+
+  /* Notification */
+  --notification-badge-bg: #ef4444;
+
+  /* Error / Feedback */
+  --error-bg: #fee2e2;
+  --error-border: #f87171;
+  --error-text: #b91c1c;
+  --alert-success-bg: #dcfce7;
+  --alert-success-text: #166534;
+  --alert-success-border: #4ade80;
+  --alert-error-bg: #fef2f2;
+  --alert-error-text: #b91c1c;
+  --alert-error-border: #f87171;
+
+  /* Log dots */
+  --log-dot-login: #16a34a;
+  --log-dot-signup: #d97706;
+  --log-dot-logout: #92400e;
+  --log-dot-alert: #f59e0b;
+  --log-dot-report: #c2410c;
+  --log-dot-delete: #dc2626;
+  --log-dot-default: #fde68a;
+
+  /* Demo / Rogue */
+  --color-rogue: #b91c1c;
+  --color-rogue-bg: rgba(185,28,28,.2);
+  --color-teal: #16a34a;
+  --color-teal-bg: rgba(22,163,74,.2);
+  --color-primary-btn: #d97706;
+  --demo-border-color: #fcd34d;
+
+  /* KPI */
+  --kpi-text-color: #78350f;
+
+  /* Code block */
+  --code-bg: #3f1d0b;
+  --code-text: #ffedd5;
+
+  /* Back button */
+  --back-btn-bg: #78350f;
+
+  /* Timeframe / card edit */
+  --timeframe-label-color: #78350f;
+  --timeframe-bg: #fffbf5;
+  --card-edit-bg: #fffaf0;
+
+  /* Role badge system */
+  --role-system-bg: #ffedd5;
+  --role-system-text: #78350f;
+
+  /* Chart icons */
+  --delete-hover-color: #ef4444;
+  --edit-hover-color: #d97706;
+
+  /* Chart degraded overlay */
+  --degraded-bg: #fff7ed;
+  --degraded-border: #fcd34d;
+  --degraded-text: #78350f;
+
+  /* Focus ring */
+  --focus-ring: rgba(217,119,6,0.25);
+  --focus-ring-light: rgba(217,119,6,0.1);
+
+  /* Overlay */
+  --overlay-bg: rgba(0,0,0,.5);
+  --overlay-light: rgba(217,119,6,.04);
+  --overlay-subtle: rgba(217,119,6,.15);
+  --overlay-medium: rgba(217,119,6,.25);
+
+  /* Tiny group wrapper */
+  --tiny-group-border: rgba(217,119,6,.3);
+
+  /* Editing header */
+  --editing-header-bg: rgba(255,250,240,.9);
+
+  /* Header */
+  --header-text-color: #78350f;
+  --header-bg-color: #fffaf0;
+  --button-bg-color: #ffedd5;
+  --button-hover-bg-color: #fde68a;
+  --button-text-color: #78350f;
+  --primary-accent-color: #b45309;
+
+  /* Nav */
+  --nav-bg-color: #fffaf0;
+  --nav-link-color: #78350f;
+  --nav-link-hover-bg: #fde68a;
+  --nav-link-active-bg: #d97706;
+  --nav-link-active-color: #ffffff;
+  --nav-border-color: #fde68a;
+}
+
+/* ---------- Noctis theme (dark) ---------- */
+body.theme-noctis.dark-mode {
+  --body-bg: #1f1a16;             /* dark warm background */
+  --card-bg: #2b2119;
+  --header-bg-color: #2b2119;
+  --nav-bg-color: #1f1a16;
+  --text-dark: #ffe7c6;
+  --text-light: #fcd34d;
+  --text-muted: #fbbf24;
+  --color-muted: #f59e0b;
+  --border-color: #78350f;
+  --border-light: #92400e;
+  --border-lighter: #78350f;
+  --nav-border-color: #78350f;
+  --shadow: 0 4px 6px -1px rgba(217,119,6,0.5);
+  --shadow-md: 0 4px 6px rgba(217,119,6,0.4);
+  --shadow-lg: 0 4px 12px rgba(217,119,6,0.3);
+  --shadow-card-hover: 0 6px 16px rgba(217,119,6,0.4);
+  --input-bg: #2b2119;
+  --primary-color: #f59e0b;
+  --primary-light: #78350f;
+  --header-text-color: #ffe7c6;
+  --button-bg-color: #78350f;
+  --button-hover-bg-color: #92400e;
+  --button-text-color: #ffe7c6;
+  --nav-link-color: #fcd34d;
+  --nav-link-hover-bg: #2b2119;
+  --color-info-light: #78350f;
+  --color-info-dark: #fcd34d;
+  --btn-default-bg: #d97706;
+  --btn-default-hover: #b45309;
+  --btn-default-active: #92400e;
+  --alert-success-bg: #052f16;
+  --alert-success-text: #86efac;
+  --alert-success-border: #166534;
+  --demo-border-color: #92400e;
+  --kpi-text-color: #fcd34d;
+  --code-bg: #1c140b;
+  --code-text: #ffedd5;
+  --back-btn-bg: #92400e;
+  --timeframe-label-color: #fcd34d;
+  --timeframe-bg: #261b12;
+  --card-edit-bg: #2b2119;
+  --role-system-bg: #78350f;
+  --role-system-text: #ffe7c6;
+  --edit-hover-color: #f59e0b;
+  --focus-ring: rgba(245,158,11,0.35);
+  --focus-ring-light: rgba(245,158,11,0.15);
+  --tiny-group-border: rgba(245,158,11,0.3);
+  --editing-header-bg: rgba(43,33,25,.95);
+}
