@@ -27,7 +27,7 @@ const buildReportQuery = ({ modelName, startDate, endDate }) => {
         query.responseTimestamp = {}; 
         
         if (startDate) {
-            // Start boundary: UTC midnoctis of the start date (inclusive)
+            // Start boundary: UTC midnight of the start date (inclusive)
             const startOfDayUTC = new Date(startDate + 'T00:00:00.000Z');
             query.responseTimestamp.$gte = startOfDayUTC.getTime();
         }

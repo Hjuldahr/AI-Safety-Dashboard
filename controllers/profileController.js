@@ -1,7 +1,7 @@
 import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
 
-const ALLOWED_THEMES = new Set(['default', 'ocean', 'sunset', 'compact', 'viridian', 'sakura', 'cosmic', 'noctis', 'contrast']);
+const ALLOWED_THEMES = new Set(['default', 'ocean', 'sunset', 'compact', 'viridian', 'sakura', 'cosmic', 'contrast']);
 const ALLOWED_COLOURS = new Set(['light', 'dark', 'auto']);
 
 // Render profile page

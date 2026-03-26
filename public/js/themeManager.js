@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const THEMES = ['default', 'ocean', 'sunset', 'compact', 'viridian', 'sakura', 'cosmic', 'noctis', 'contrast'];
+  const THEMES = ['default', 'ocean', 'sunset', 'compact', 'viridian', 'sakura', 'cosmic', 'contrast'];
   const MODES = ['light', 'dark', 'auto'];
 
   const COLOR_FILES = {
@@ -10,7 +10,6 @@
     viridian: 'css/themes/colors-viridian.css',
     sakura: 'css/themes/colors-sakura.css',
     cosmic: 'css/themes/colors-cosmic.css',
-    noctis: 'css/themes/colors-noctis.css',
     contrast: 'css/themes/colors-contrast.css'
   };
 
