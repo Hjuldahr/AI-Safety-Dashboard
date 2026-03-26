@@ -367,9 +367,31 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // --- LIVE UPDATES (SSE) ---
+    function getSharedEventSource() {
+        if (window.__sharedEventSource && window.__sharedEventSource.readyState !== EventSource.CLOSED) {
+            return window.__sharedEventSource;
+        }
+
+        const evtSource = new EventSource('events');
+
+        evtSource.addEventListener('open', () => console.log('Shared SSE connection opened (alerts).'));
+        evtSource.addEventListener('error', () => {
+            console.warn('Shared SSE connection closed or disconnected (alerts).');
+        });
+
+        window.__sharedEventSource = evtSource;
+
+        window.addEventListener('beforeunload', () => {
+            try { window.__sharedEventSource?.close(); } catch (e) { }
+            window.__sharedEventSource = null;
+        });
+
+        return evtSource;
+    }
+
     function setupLiveUpdates() {
         try {
-            const evtSource = new EventSource('events');
+            const evtSource = getSharedEventSource();
 
             evtSource.addEventListener('alert', (event) => {
                 if (!isLive) return;

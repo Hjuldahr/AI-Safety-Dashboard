@@ -30,6 +30,12 @@ export const initCreateAlertModal = (modalManager, options) => {
 
     await tagSelector.init();
 
+    const cleanupTagSelector = () => {
+      tagSelector.destroy();
+      modalManager.unregisterCloseCallback(cleanupTagSelector);
+    };
+    modalManager.registerCloseCallback(cleanupTagSelector);
+
     // Setup the save logic using our 'elements' references
     const handleSave = async () => {
       const payload = {

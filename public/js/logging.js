@@ -4,6 +4,28 @@ import ModalManager from './components/modals.js';
 // --- GLOBAL STATE ---
 let isLive = true;
 
+function getSharedEventSource() {
+    if (window.__sharedEventSource && window.__sharedEventSource.readyState !== EventSource.CLOSED) {
+        return window.__sharedEventSource;
+    }
+
+    const evtSource = new EventSource('events');
+
+    evtSource.addEventListener('open', () => console.log('Shared SSE connection opened (logging).'));
+    evtSource.addEventListener('error', () => {
+        console.warn('Shared SSE connection closed or disconnected (logging).');
+    });
+
+    window.__sharedEventSource = evtSource;
+
+    window.addEventListener('beforeunload', () => {
+        try { window.__sharedEventSource?.close(); } catch (e) { }
+        window.__sharedEventSource = null;
+    });
+
+    return evtSource;
+}
+
 let currentLogsPage = 1;
 let currentAiLogsPage = 1;
 let currentAiSummariesPage = 1;
@@ -583,7 +605,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
 // --- LIVE UPDATES (SSE) ---
 function setupLiveUpdates(elements, getIsLive) {
     try {
-        const evtSource = new EventSource('events');
+        const evtSource = getSharedEventSource();
 
         // Helper to check if an incoming log matches the current form filters
         const passesFilters = (logData, formElement) => {
