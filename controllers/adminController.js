@@ -3,6 +3,8 @@ import User_Log from '../models/User_Log.js';
 import { Role } from '../models/role.js';
 import { roles as rolesConfig } from "../constants/roles.js";
 import { permissions as permissionsConfig } from "../constants/permissions.js";
+import SystemSetting from '../models/SystemSetting.js';
+import { AI_LOG_CUTOFF } from '../constants/sse.js';
 
 // Render the user management page
 export const getUsersPage = async (req, res) => {
@@ -234,6 +236,42 @@ export const deleteUser = async (req, res) => {
   }
 };
 
+// Get the current AI log cutoff setting
+export const getSystemSettings = async (req, res) => {
+  try {
+    const setting = await SystemSetting.findOne({ key: 'ai_log_cutoff' }).lean();
+    const aiLogCutoff = (setting && typeof setting.value === 'number') ? setting.value : AI_LOG_CUTOFF;
+    res.json({ aiLogCutoff });
+  } catch (err) {
+    console.error('Error fetching system settings:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update the AI log cutoff setting
+export const updateAiLogCutoff = async (req, res) => {
+  try {
+    const { value } = req.body;
+
+    if (typeof value !== 'number' || value <= 0) {
+      return res.status(400).json({ message: 'Invalid cutoff value.' });
+    }
+
+    await SystemSetting.findOneAndUpdate(
+      { key: 'ai_log_cutoff' },
+      { key: 'ai_log_cutoff', value },
+      { upsert: true }
+    );
+
+    User_Log.addLog(req.user._id, 'Setting_Changed', `Changed AI log cutoff to ${value}ms`).catch(err => console.error('Failed to write log:', err));
+
+    res.json({ success: true, aiLogCutoff: value });
+  } catch (err) {
+    console.error('Error updating AI log cutoff:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export default {
   getUsersPage,
   listUsers,
@@ -242,5 +280,7 @@ export default {
   getAvailablePermissions,
   createRole,
   deleteRole,
-  deleteUser
+  deleteUser,
+  getSystemSettings,
+  updateAiLogCutoff
 };

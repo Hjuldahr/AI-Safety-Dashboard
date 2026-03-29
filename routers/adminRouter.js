@@ -29,4 +29,8 @@ router.delete('/api/roles/:name', isAuthenticated, authorize('manage:roles'), co
 // API: delete a user
 router.delete('/api/users/:id', isAuthenticated, authorize('manage:users'), controller.deleteUser);
 
+// API: system settings
+router.get('/api/settings', isAuthenticated, authorize('manage:users'), controller.getSystemSettings);
+router.put('/api/settings/ai-log-cutoff', isAuthenticated, authorize('manage:users'), controller.updateAiLogCutoff);
+
 export default router;

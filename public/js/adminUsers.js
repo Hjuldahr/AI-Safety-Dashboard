@@ -433,4 +433,51 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (rolesContainer) {
     loadRoles();
   }
+
+  // ---- System Settings ----
+  const aiLogCutoffSelect = document.getElementById('ai-log-cutoff');
+  const saveAiLogCutoffBtn = document.getElementById('save-ai-log-cutoff');
+  const systemMessagesDiv = document.getElementById('system-messages');
+
+  function showSystemMessage(message, type = 'success') {
+    if (!systemMessagesDiv) return;
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+    systemMessagesDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+    setTimeout(() => { systemMessagesDiv.innerHTML = ''; }, 5000);
+  }
+
+  if (aiLogCutoffSelect) {
+    // Load current setting
+    try {
+      const res = await fetch('admin/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        aiLogCutoffSelect.value = String(data.aiLogCutoff);
+        // If the value doesn't match any option, it stays on the first option
+      }
+    } catch (err) {
+      console.error('Error loading system settings:', err);
+    }
+
+    saveAiLogCutoffBtn?.addEventListener('click', async () => {
+      const value = Number(aiLogCutoffSelect.value);
+      try {
+        const res = await fetch('admin/api/settings/ai-log-cutoff', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value })
+        });
+
+        if (res.ok) {
+          showSystemMessage('AI log retention updated successfully.');
+        } else {
+          const data = await res.json();
+          showSystemMessage(data.message || 'Error updating setting.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showSystemMessage('Error updating setting.', 'error');
+      }
+    });
+  }
 });

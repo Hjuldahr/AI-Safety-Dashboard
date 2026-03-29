@@ -6,7 +6,7 @@ import puppeteer from 'puppeteer';
 import AI_Log from '../models/AI_Log.js';
 import chartConstants from "../constants/charts.js";
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
-import { AI_LOG_CUTOFF } from '../constants/sse.js';
+import { getAiLogCutoff } from '../helpers/getAiLogCutoff.js';
 import AI_Summary from '../models/AI_Summary.js';
 import AlertLog from '../models/alert_log.js';
 import User_Log from '../models/User_Log.js';
@@ -501,7 +501,8 @@ const generateAggregateCsvRows = (stats) => {
  * Controller to render the reports page.
  */
 const getPage = async (req, res) => {
-    const cutoffTime = Date.now() - AI_LOG_CUTOFF;
+    const aiLogCutoff = await getAiLogCutoff();
+    const cutoffTime = Date.now() - aiLogCutoff;
     const templates = await ReportTemplate.find().sort({ createdAt: 1 }).lean().exec();
 
     res.render('reports', {
@@ -542,7 +543,8 @@ const createReport = async (req, res) => {
         const endMs = endDate ? new Date(endDate).getTime() : Date.now();
 
         // Determine exactly where our data retention line is right now
-        const cutoffTime = Date.now() - AI_LOG_CUTOFF;
+        const aiLogCutoff = await getAiLogCutoff();
+        const cutoffTime = Date.now() - aiLogCutoff;
 
         // The Cutoff Router (Determine Fidelity)
         let fidelity = 'split';
