@@ -367,26 +367,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // --- LIVE UPDATES (SSE) ---
+    // SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
     function getSharedEventSource() {
-        if (window.__sharedEventSource && window.__sharedEventSource.readyState !== EventSource.CLOSED) {
-            return window.__sharedEventSource;
-        }
-
-        const evtSource = new EventSource('events');
-
-        evtSource.addEventListener('open', () => console.log('Shared SSE connection opened (alerts).'));
-        evtSource.addEventListener('error', () => {
-            console.warn('Shared SSE connection closed or disconnected (alerts).');
-        });
-
-        window.__sharedEventSource = evtSource;
-
-        window.addEventListener('beforeunload', () => {
-            try { window.__sharedEventSource?.close(); } catch (e) { }
-            window.__sharedEventSource = null;
-        });
-
-        return evtSource;
+        return window.__sseManager.getSharedEventSource();
     }
 
     function setupLiveUpdates() {

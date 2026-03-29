@@ -23,6 +23,8 @@
     window.CONSTANTS = <%- JSON.stringify(constants) %>;
   </script>
 
+  <!-- SSE SharedWorker (must load before any SSE consumers) -->
+  <script src="js/sseManager.js"></script>
   <!-- Chart Scripts -->
   <script src="js/charts/chartUtils.js" defer></script>
   <script src="js/charts/chartDataManager.js" defer></script>
