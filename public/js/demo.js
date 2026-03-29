@@ -13,6 +13,14 @@ class DemoManager {
         this.resetBtn = document.querySelector('.btn-reset');
 
         this.initEventListeners();
+
+        /*
+        if (window.DEEP_LINK && window.DEEP_LINK.view === 'demo') {
+            console.log("Deep link found: ", window.DEEP_LINK);
+            const { model } = window.DEEP_LINK;
+            this.model
+        }
+        */
     }
 
     initEventListeners() {

@@ -1,10 +1,11 @@
+// profile.js
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('change-password-form');
   const messages = document.getElementById('profile-messages');
 
   function showMessage(msg, type='success'){
     messages.innerHTML = `<div class="alert ${type==='success' ? 'alert-success' : 'alert-error'}">${msg}</div>`;
-    setTimeout(()=> messages.innerHTML='';, 5000);
+    setTimeout(()=> messages.innerHTML='', 5000);
   }
 
   form.addEventListener('submit', async (e) => {

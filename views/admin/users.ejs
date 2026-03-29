@@ -4,7 +4,7 @@
   <base href="<%= process.env.PUBLIC_URL || '/' %>">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Management</title>
+  <title>Management</title>
 
   <!-- CSS -->
   <link rel="stylesheet" href="css/themes/colors-default.css">
@@ -27,62 +27,96 @@
   <%- include('../components/nav') %>
 
   <main class="content">
-    <h2>User Management</h2>
+    <h2>Management</h2>
 
     <div class="admin-panel">
+
       <!-- Users Section -->
-      <div class="panel-section">
-        <h3>Users</h3>
-        <div id="users-container">
-          <!-- Table is rendered by client JS -->
-        </div>
-      </div>
+      <section class="collapsible-section" data-section="users">
+        <button type="button" class="collapse-toggle" aria-expanded="true">Users ▾</button>
+        <div class="collapsible-content" id="users-section">
+          <div class="panel-section">
 
-      <!-- Roles Section -->
-      <div class="panel-section">
-        <h3>Roles</h3>
-        
-        <!-- Create New Role Form -->
-        <div style="margin-bottom: 2rem;">
-          <h4 style="margin-top: 0;">Create New Role</h4>
-          
-          <div id="role-messages"></div>
-
-          <form id="create-role-form">
-            <div class="form-group">
-              <label for="role-name">Role Name:</label>
-              <input type="text" id="role-name" placeholder="e.g., moderator" required minlength="3" maxlength="50">
-            </div>
-
-            <div class="form-group">
-              <label for="role-description">Description:</label>
-              <textarea id="role-description" placeholder="Describe this role's purpose" required minlength="5" maxlength="500"></textarea>
-            </div>
-
-            <div class="form-group">
-              <label>Permissions:</label>
-              <div class="permissions-list" id="permissions-list">
-                <!-- Permissions are loaded by client JS -->
+            <!-- Search and Filter Section -->
+            <div class="admin-section" style="margin-bottom: 1.5rem;">
+              <h4 style="margin-top: 0; font-size: 0.95rem; color: #666; margin-bottom: 0.75rem;">Search & Filter</h4>
+              <div class="filter-group">
+                <input type="text" id="user-search" class="form-control" placeholder="Search username or email..." />
+                <select id="role-filter" class="form-control">
+                  <option value="">All Roles</option>
+                </select>
+                <button id="refresh-users" type="button" class="btn btn-secondary" title="Refresh users list">
+                  <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                </button>
               </div>
             </div>
 
-            <div class="button-group">
-              <button type="submit" class="btn-primary">Create Role</button>
-              <button type="reset" class="btn-secondary">Clear</button>
+            <!-- Bulk Actions Section -->
+            <div class="admin-section" style="margin-bottom: 1.5rem;">
+              <h4 style="margin-top: 0; font-size: 0.95rem; color: #666; margin-bottom: 0.75rem;">Bulk Actions</h4>
+              <div class="bulk-actions">
+                <select id="bulk-role-select" class="form-control">
+                  <option value="">-- Change role to --</option>
+                </select>
+                <button id="apply-bulk-role" type="button" class="btn btn-primary">Apply</button>
+                <button id="delete-selected" type="button" class="btn btn-danger">Delete Selected</button>
+              </div>
             </div>
-          </form>
-        </div>
 
-        <hr>
-
-        <!-- Existing Roles -->
-        <h4>Existing Roles</h4>
-        <div id="roles-list" class="roles-list">
-          <!-- Roles are rendered by client JS -->
+            <!-- Users Table -->
+            <div id="users-container">
+              <!-- Table is rendered by client JS -->
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <!-- Roles Section -->
+      <section class="collapsible-section" data-section="roles">
+        <button type="button" class="collapse-toggle" aria-expanded="true">Roles ▾</button>
+        <div class="collapsible-content" id="roles-section">
+          <div class="panel-section">
+            <!-- Create New Role Section -->
+            <div class="admin-section">
+              <h4>Create New Role</h4>
+              <div id="role-messages"></div>
+              <form id="create-role-form">
+                <div class="form-group">
+                  <label for="role-name">Role Name:</label>
+                  <input type="text" id="role-name" placeholder="e.g., moderator" required minlength="3" maxlength="50">
+                </div>
+
+                <div class="form-group">
+                  <label for="role-description">Description:</label>
+                  <textarea id="role-description" placeholder="Describe this role's purpose" required minlength="5" maxlength="500"></textarea>
+                </div>
+
+                <div class="form-group">
+                  <label>Permissions:</label>
+                  <div class="permissions-list" id="permissions-list">
+                    <!-- Permissions are loaded by client JS -->
+                  </div>
+                </div>
+
+                <div class="button-group">
+                  <button type="submit" class="btn-primary">Create Role</button>
+                  <button type="reset" class="btn-secondary">Clear</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Existing Roles Section -->
+            <div class="admin-section">
+              <h4>Existing Roles</h4>
+              <div id="roles-list" class="roles-list">
+                <!-- Roles are rendered by client JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
-
   </main>
 
   <script>

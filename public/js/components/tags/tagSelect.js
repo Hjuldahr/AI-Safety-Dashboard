@@ -15,6 +15,10 @@ export default class TagSelect {
         this.tagsCache = {};
         this.selectedTags = [];
         this.onSelectionChange = options.onSelectionChange || null;
+
+        this.handleContainerClick = null;
+        this.handleDocumentClick = null;
+        this.isInitialized = false;
     }
 
     async init(initialSelectedIds = []) {
@@ -47,7 +51,7 @@ export default class TagSelect {
 
     setupEventListeners() {
         // Toggle dropdown on container click
-        this.container.addEventListener('click', (e) => {
+        this.handleContainerClick = (e) => {
             if (e.target.classList.contains('remove-tag')) {
                 this.removeTag(e.target.dataset.id);
                 return;
@@ -56,14 +60,19 @@ export default class TagSelect {
             const isVisible = this.dropdown.style.display === 'block';
             this.dropdown.style.display = isVisible ? 'none' : 'block';
             if (!isVisible) this.renderDropdown();
-        });
+        };
+
+        this.container.addEventListener('click', this.handleContainerClick);
 
         // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
+        this.handleDocumentClick = (e) => {
             if (this.container && !this.container.contains(e.target) && !this.dropdown.contains(e.target)) {
                 this.dropdown.style.display = 'none';
             }
-        });
+        };
+
+        document.addEventListener('click', this.handleDocumentClick);
+        this.isInitialized = true;
     }
 
     render() {
@@ -144,5 +153,22 @@ export default class TagSelect {
     reset() {
         this.selectedTags = [];
         this.render();
+    }
+
+    destroy() {
+        if (!this.isInitialized) return;
+
+        if (this.container && this.handleContainerClick) {
+            this.container.removeEventListener('click', this.handleContainerClick);
+            this.handleContainerClick = null;
+        }
+
+        if (this.handleDocumentClick) {
+            document.removeEventListener('click', this.handleDocumentClick);
+            this.handleDocumentClick = null;
+        }
+
+        this.isInitialized = false;
+        this.dropdown.style.display = 'none';
     }
 }

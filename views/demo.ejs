@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo [<%= activeModel %>] <%= currentScenario %> </title>
+    <title>Demo [<%= currentModel %>] <%= currentScenario %> </title>
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/themes/colors-default.css">
@@ -17,7 +17,7 @@
     <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
     <script src="/js/notifications.js" defer></script>
 </head>
-<body>
+<body class="demo-page">
     <%- include('components/header') %>
     <%- include('components/nav') %>
 
@@ -29,7 +29,7 @@
                 <label for="modelSelect">Select Model:</label>
                 <select id="modelSelect">
                     <% models.forEach(function(model) { %>
-                        <option value="<%= model %>" <%= (model === activeModel) ? "selected" : "" %>><%= model %></option>
+                        <option value="<%= model %>" <%= (model === currentModel) ? "selected" : "" %>><%= model %></option>
                     <% }); %>
                 </select>
                 <br><br>
@@ -46,16 +46,6 @@
                 </div>
             
                 <div id="status"></div>
-
-                <hr style="margin: 2rem 0;">
-                <h2>Theme</h2>
-                <label for="theme-select">Select Theme:</label>
-                <select id="theme-select">
-                    <option value="default">Default</option>
-                    <option value="ocean">Ocean</option>
-                    <option value="sunset">Sunset</option>
-                    <option value="compact">Compact (Top Nav)</option>
-                </select>
             </div>
         </div>
     </main>

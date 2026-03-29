@@ -10,6 +10,8 @@ body.theme-ocean {
   --primary-light: #cffafe;
   --green-color: #14b8a6;
   --body-bg: #ecfeff;
+  --card-bg: #ffffff;
+  --panel-header-bg: #cffafe;
   --text-dark: #164e63;
   --text-light: #67818a;
   --text-muted: #4b6b77;
@@ -70,6 +72,7 @@ body.theme-ocean {
 body.theme-ocean.dark-mode {
   --body-bg: #0c1a25;
   --card-bg: #132f42;
+  --panel-header-bg: #1e4a62;
   --header-bg-color: #132f42;
   --nav-bg-color: #0c1a25;
   --text-dark: #e0f2fe;

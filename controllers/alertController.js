@@ -164,7 +164,7 @@ const getAIAlerts = async (req, res) => {
 
 const createAlert = async (req, res) => {
   try {
-    const { alertName, alertLevel, alertRule, created, modelName, tags } =
+    const { alertName, alertLevel, alertRule, created, modelName, tags, disabled, muted } =
       req.body;
 
     let normalizedRule;
@@ -183,6 +183,8 @@ const createAlert = async (req, res) => {
       created,
       modelName: modelName || null,
       tags: Array.isArray(tags) ? tags : [],
+      disabled: disabled || false,
+      muted: muted || false,
     });
     await newAlert.save();
 

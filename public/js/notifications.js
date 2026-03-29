@@ -196,22 +196,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = n.id;
         if (id && localStorage.getItem('previousNotificationId') === id) return;
 
+        const alreadyVisible = container.classList.contains('show');
+
+        // Replace content
         content.innerHTML = `
-            <span class='notification-slide-text'>${n.message}</span><br>
+            <span class='notification-slide-text'>${n.message}</span>
             <span class='notification-slide-time'>
                 ${formatTime(n.createdAt || Date.now())}
             </span>
         `;
 
         container.style.backgroundColor = n.trim;
-        container.classList.remove('hidden');
-        container.offsetHeight;
-        container.classList.add('show');
+
+        // Only trigger animation if not already visible
+        if (!alreadyVisible) {
+            container.classList.remove('hidden');
+            container.offsetHeight;
+            container.classList.add('show');
+        }
 
         if (id) localStorage.setItem('previousNotificationId', id);
-
         currentNotification = n;
 
+        // Reset dismiss timer
         if (n.dismissible !== false) {
             if (dismissTimer) clearTimeout(dismissTimer);
             if (n.timeout) {
@@ -288,10 +295,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // SSE
     // =========================
 
+    function getSharedEventSource() {
+        if (window.__sharedEventSource && window.__sharedEventSource.readyState !== EventSource.CLOSED) {
+            return window.__sharedEventSource;
+        }
+
+        const evtSource = new EventSource(API.events);
+
+        evtSource.addEventListener('open', () => console.log('Shared SSE connection opened (notifications).'));
+        evtSource.addEventListener('error', () => {
+            console.warn('Shared SSE connection closed or disconnected (notifications).');
+        });
+
+        window.__sharedEventSource = evtSource;
+
+        window.addEventListener('beforeunload', () => {
+            try { window.__sharedEventSource?.close(); } catch (e) { }
+            window.__sharedEventSource = null;
+        });
+
+        return evtSource;
+    }
+
     let evtSource = null;
 
     try {
-        evtSource = new EventSource(API.events);
+        evtSource = getSharedEventSource();
 
         evtSource.addEventListener('notification', async (ev) => {
             try {

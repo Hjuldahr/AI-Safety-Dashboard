@@ -5,6 +5,12 @@ import { initAlertLogModal } from "./components/alerts/alertLogModal.js";
 import TagSelect from './components/tags/tagSelect.js';
 import ModalManager from './components/modals.js';
 
+let paginationSize = 10;
+
+function paginationSizeChange(newSize) {
+    paginationSize = newSize || 10;
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
 
     const hasPermission = (permission) => {
@@ -282,7 +288,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         currentHistoryPage = page;
         if (alertLogBody) alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
         const params = new URLSearchParams(new FormData(historyFilterForm));
-        params.set('page', page); params.set('limit', 10);
+        params.set('page', page); 
+        params.set('limit', paginationSize || 10);
         try {
             const res = await fetch(`alerts/api/history?${params.toString()}`);
             const data = await res.json();
@@ -295,7 +302,14 @@ document.addEventListener('DOMContentLoaded', async function () {
                     alertLogBody.appendChild(tr);
                 });
             }
-            if (historyPagination) Pagination.render(historyPagination, data.pages, data.page, (newPage) => loadAlertHistory(newPage));
+            if (historyPagination) Pagination.render(
+                historyPagination, 
+                data.total,
+                data.page, 
+                paginationSize, 
+                (newPage) => loadAlertHistory(newPage),
+                paginationSizeChange
+            );
         } catch (e) { console.error(e); }
     }
 
@@ -353,9 +367,31 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // --- LIVE UPDATES (SSE) ---
+    function getSharedEventSource() {
+        if (window.__sharedEventSource && window.__sharedEventSource.readyState !== EventSource.CLOSED) {
+            return window.__sharedEventSource;
+        }
+
+        const evtSource = new EventSource('events');
+
+        evtSource.addEventListener('open', () => console.log('Shared SSE connection opened (alerts).'));
+        evtSource.addEventListener('error', () => {
+            console.warn('Shared SSE connection closed or disconnected (alerts).');
+        });
+
+        window.__sharedEventSource = evtSource;
+
+        window.addEventListener('beforeunload', () => {
+            try { window.__sharedEventSource?.close(); } catch (e) { }
+            window.__sharedEventSource = null;
+        });
+
+        return evtSource;
+    }
+
     function setupLiveUpdates() {
         try {
-            const evtSource = new EventSource('events');
+            const evtSource = getSharedEventSource();
 
             evtSource.addEventListener('alert', (event) => {
                 if (!isLive) return;

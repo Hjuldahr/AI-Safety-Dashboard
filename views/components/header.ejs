@@ -1,10 +1,25 @@
 <script>
-  // Anti-FOUC: apply dark mode, theme class, and link hrefs before paint
-  if (localStorage.getItem('darkMode') === 'true') {
-    document.body.classList.add('dark-mode');
-  }
+    // Anti-FOUC: apply server-rendered user preferences before paint
+    window.USER_PREFERENCES = {
+        preferredTheme: "<%= user?.preferredTheme || 'default' %>",
+        preferredColour: "<%= user?.preferredColour || 'auto' %>",
+        isAuthenticated: <%= !!user %>
+    };
+
+    (function applyInitialColour() {
+        const pref = window.USER_PREFERENCES.preferredColour;
+
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        const isDark =
+            pref === 'dark' ||
+            (pref === 'auto' && systemDark);
+
+        document.body.classList.toggle('dark-mode', isDark);
+    })();
+
   (function() {
-    var theme = localStorage.getItem('theme');
+        var theme = (window.USER_PREFERENCES && window.USER_PREFERENCES.preferredTheme) || 'default';
     if (theme && theme !== 'default') {
       document.body.classList.add('theme-' + theme);
     }
@@ -28,10 +43,10 @@
                 <p id="user-name">User: <%= user.username%>
                 </p>
                 <a href="profile" class="profile-icon" title="Profile" style="margin-right:0.5rem;">
-                    <i class="fa-solid fa-user"></i>
+                    <i class="fa-solid fa-user-gear"></i>
                 </a>
                 <form action="api/logout" method="post" class="logout-form">
-                    <button type="submit" id="logout-btn">Logout</button>
+                    <button type="submit" id="logout-btn"><i class='fa-solid fa-door-closed'></i> Logout</button>
                 </form>
             </div>
 
@@ -42,6 +57,14 @@
                 <% } %>
         <%- include('notifications') %>
     </div>
+    <script>
+        const logoutBtn = document.getElementById('logout-btn');
+        logoutBtn.addEventListener('mouseenter', () => 
+            logoutBtn.innerHTML = "<i class='fa-solid fa-door-open'></i> Logout"
+        );
+        logoutBtn.addEventListener('mouseleave', () => 
+            logoutBtn.innerHTML = "<i class='fa-solid fa-door-closed'></i> Logout"
+        );
+    </script>
 </header>
-<script src="js/darkMode.js"></script>
 <script src="js/themeManager.js"></script>

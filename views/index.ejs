@@ -37,7 +37,7 @@
 
 </head>
 
-<body>
+<body class="dashboard-page">
 
   <%- include('components/header') %>
 
@@ -46,7 +46,9 @@
   <main class="content">
     <!-- Charts -->
     <div class="controls-panel">
-      <h2>Dashboard Controls</h2>
+      <div class="controls-panel-header">
+        <h2>Dashboard Controls</h2>
+      </div>
 
       <%- include('components/controlPanel') %>
 
@@ -59,6 +61,7 @@
     <div class="charts-container" id="dynamic-charts-container">
     </div>
   </main>
+  <script src="js/dashboardFullscreen.js" defer></script>
 </body>
 
 </html>

@@ -5,29 +5,22 @@ import { LOADED_MODELS, setScenario, clearScenario, getScenarios, getCurrentScen
 import { sendNotification } from './notificationController.js';
 import { TRIM_COLOURS, BACKGROUND_COLOURS } from "../constants/notification.js";
 
-const viewDefaultDemoPage = (req, res) => {
-    const { activeModel } = schedulerState;
-    const scenarioNames = Object.keys(getScenarios(activeModel));
-    const currentScenario = getCurrentScenario(activeModel);
-
-    res.render('demo', {
-        models: LOADED_MODELS,
-        scenarios: scenarioNames,
-        currentScenario: currentScenario,
-        activeModel,
-        user: req.user
-    });
-};
-
 const viewDemoPage = (req, res) => {
-    const { model } = req.params;
-    const scenarioNames = Object.keys(getScenarios(model));
-    const currentScenario = getCurrentScenario(model);
+    const requestedModel = req.query.model;
+    const currentModel =
+        requestedModel && LOADED_MODELS.includes(requestedModel)
+            ? requestedModel
+            : schedulerState.activeModel;
+
+    const scenarios = getScenarios(currentModel) || {};
+    const scenarioNames = Object.keys(scenarios);
+    const currentScenario = getCurrentScenario(currentModel);
+
     res.render('demo', {
         models: LOADED_MODELS,
         scenarios: scenarioNames,
-        currentScenario: currentScenario,
-        activeModel: model,
+        currentScenario,
+        currentModel,
         user: req.user
     });
 };
@@ -61,13 +54,13 @@ const applyScenario = (req, res) => {
     try {
         setScenario(modelName, scenarioName);
         console.log(`[Demo] Model ${modelName} set to ${scenarioName}.`);
-        res.json({ success: true, message: `${modelName} is now ${scenarioName}.` });
+        res.json({ success: true, message: `[${modelName}] Was set to ${scenarioName} by ${req.user.username}` });
 
         sendNotification({
-            message: `${modelName} is now ${scenarioName}.`,
+            message: `[${modelName}] Was set to ${scenarioName} by ${req.user.username}.`,
             category: "Demo",
             dismissible: true,
-            redirectUrl: `/demo/view/${modelName}`,
+            redirectUrl: `/demo?model=${modelName}`,
             autoCalculateTimeout: true,
             trim: TRIM_COLOURS.Info,
             background: BACKGROUND_COLOURS.Info
@@ -85,12 +78,12 @@ const resetScenario = (req, res) => {
     try {
         clearScenario(modelName);
         console.log(`[Demo] Model ${modelName} reset to normal.`);
-        res.json({ success: true, message: `${modelName} is back to normal.` });
+        res.json({ success: true, message: `[${modelName}] Was reset to Normal by ${req.user.username}` });
 
         sendNotification({
-            message: `${modelName} is back to normal.`,
+            message: `[${modelName}] Was reset to Normal by ${req.user.username}`,
             category: "Demo",
-            redirectUrl: `/demo/view/${modelName}`,
+            redirectUrl: `/demo?model=${modelName}`,
             autoCalculateTimeout: true,
             trim: TRIM_COLOURS.Info,
             background: BACKGROUND_COLOURS.Info
@@ -111,7 +104,6 @@ const renderComponentLibrary = (req, res) => {
 export default {
     resetScenario,
     viewDemoPage,
-    viewDefaultDemoPage,
     applyScenario,
     listScenarios,
     renderComponentLibrary

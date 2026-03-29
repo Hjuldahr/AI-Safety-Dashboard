@@ -83,6 +83,12 @@ export function initAILogModal(modalManager, { onSaveSuccess }) {
 
         await tagSelect.init(activeTagIds);
 
+        const cleanupTagSelect = () => {
+            tagSelect.destroy();
+            modalManager.unregisterCloseCallback(cleanupTagSelect);
+        };
+        modalManager.registerCloseCallback(cleanupTagSelect);
+
         // Build the Footer (Save & Cancel buttons)
         const footerNode = document.createElement('div');
         footerNode.className = "modal-footer-inner";

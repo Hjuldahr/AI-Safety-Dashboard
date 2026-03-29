@@ -1,16 +1,40 @@
-/* 'Notifications' is just the Alert Popup (Top Right) */
+/* ==========================================================================
+   VARIABLES — ALERTS / NOTIFICATIONS
+   ========================================================================== */
 :root {
-  --primary-color: #4f46e5;
-  --primary-light: #e0e7ff;
-  --green-color: #22c55e;
-  --border-color: #d1d5db;
-  --card-bg: #ffffff;
-  --body-bg: #f3f4f6;
-  --text-dark: #1f2937;
-  --text-light: #6b7280;
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  /* Primary / Brand */
+  --primary-color: var(--theme-primary-color);
+  --primary-light: var(--theme-primary-light);
+  --green-color: var(--theme-green-color);
+
+  /* Borders */
+  --border-color: var(--theme-border-color);
+  --border-light: var(--theme-border-light);
+  --border-lighter: var(--theme-border-lighter);
+
+  /* Backgrounds */
+  --card-bg: var(--theme-card-bg);
+  --body-bg: var(--theme-body-bg);
+
+  /* Text */
+  --text-dark: var(--theme-text-dark);
+  --text-light: var(--theme-text-light);
+  --text-muted: var(--theme-text-muted);
+  --color-white: var(--theme-color-white);
+
+  /* Shadows */
+  --shadow: var(--theme-shadow);
+
+  /* Alert / notification specific */
+  --alert-badge-bg: var(--theme-alert-badge-bg, var(--theme-critical-color, #ef4444));
+  --alert-badge-text: var(--theme-alert-badge-text, var(--color-white));
+  --alert-time-color: var(--theme-alert-time-color, var(--text-light));
+  --notification-hover-bg: var(--theme-notification-hover-bg, rgba(0,0,0,0.04));
 }
 
+/* ==========================================================================
+   ALERT POPUP / BELL
+   ========================================================================== */
 .alert-popup-container {
   position: flex;
   top: 4rem;
@@ -50,10 +74,6 @@
   justify-content: center;
   cursor: pointer;
   box-shadow: var(--shadow);
-}
-
-/* Positioning for badge */
-.notification-bell {
   position: relative;
 }
 
@@ -61,9 +81,8 @@
   position: absolute;
   top: 6px;
   right: 6px;
-  background-color: #ef4444;
-  /* red */
-  color: #fff;
+  background-color: var(--alert-badge-bg);
+  color: var(--alert-badge-text);
   border-radius: 999px;
   padding: 2px 6px;
   font-size: 0.7rem;
@@ -73,7 +92,6 @@
   line-height: 1;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
   display: none;
-  /* hidden when zero */
 }
 
 .notification-badge.show {
@@ -87,10 +105,8 @@
 
 .notification-history {
   display: none;
-  /* Hidden by default */
   position: absolute;
   top: calc(100% + 10px);
-  /* Position below the bell with a small gap */
   right: 0;
   width: 350px;
   background-color: var(--card-bg);
@@ -102,7 +118,6 @@
   z-index: 1000;
 }
 
-/* Class added by JS to show the dropdown */
 .notification-history.show {
   display: block;
 }
@@ -111,7 +126,7 @@
   padding: 0.75rem 1rem;
   font-weight: 600;
   border-bottom: 1px solid var(--border-color);
-  background-color: #f9fafb;
+  background-color: var(--body-bg);
   font-size: 0.95rem;
 }
 
@@ -130,7 +145,6 @@
   border-bottom: none;
 }
 
-/* Make the entire list item clickable */
 .notification-history-item a {
   display: block;
   color: inherit;
@@ -141,64 +155,92 @@
 }
 
 .notification-history-item a:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--notification-hover-bg);
 }
 
-/* Style for the main alert message */
-.alert-text {
-  display: block;
-  /* Ensures it takes its own line */
-}
-
-/* Style for the timestamp */
-.alert-time {
-  display: block;
-  font-size: 0.8em;
-  color: #6b7280;
-  /* A color similar to var(--text-light) */
-  margin-top: 0.35rem;
-  opacity: 0.9;
-}
-
+.alert-text,
 .notification-slide-text {
   display: block;
-  /* Ensures it takes its own line */
 }
 
-/* Style for the timestamp */
+.alert-time,
 .notification-slide-time {
   display: block;
   font-size: 0.8em;
+  color: var(--alert-time-color);
   margin-top: 0.35rem;
   opacity: 0.9;
 }
 
 .notification-slide {
   border-radius: 25px 0px 0px 25px;
-  color: white;
+  color: var(--color-white);
   padding: 15px 25px;
   position: fixed;
   z-index: 1000;
   right: 0;
   top: 75px;
 
-  /* animation base */
   transform: translateX(120%);
   opacity: 0;
   transition: transform 0.45s cubic-bezier(.22, .9, .31, 1), opacity 0.3s ease;
   pointer-events: none;
 }
 
-/* visible state (slides in) */
 .notification-slide.show {
   transform: translateX(0);
   opacity: 1;
   pointer-events: auto;
 }
 
-/* hidden but still animatable */
 .notification-slide.hidden {
   transform: translateX(120%);
   opacity: 0;
   pointer-events: none;
+}
+
+/* ==========================================================================
+   PAGINATION (example component)
+   ========================================================================== */
+.pagination {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+  border: 1px solid var(--border-lighter);
+}
+
+.pagination-left, 
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination button {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-dark);
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.pagination button.active {
+  background: var(--primary-color);
+  color: var(--color-white);
+  border-color: var(--primary-color);
+}
+
+.pagination button:hover {
+  background-color: var(--body-bg);
+  transform: none;
+}
+
+.pagination button:disabled {
+  background-color: var(--body-bg);
+  color: var(--text-light);
+  cursor: not-allowed;
 }

@@ -4,13 +4,22 @@
       <% if (user && user.roles.includes('admin')) { %>
       <input type="hidden" value="true" id="isAdmin">
       <% } %>
+      <button id="add_new_chart"><i class="fa-solid fa-plus"></i> Add New Chart</button>
+      <button id="refresh-button"><i class="fa-solid fa-rotate-right"></i> Refresh Graphs</button>
       <button id="toggle-button">Loading graph state...</button>
-      <button id="refresh-button">🔄 Refresh Graphs</button>
+      <button
+        id="dashboard-fullscreen-toggle"
+        class="dashboard-fullscreen-toggle"
+        type="button"
+        aria-pressed="false"
+        title="Enter fullscreen dashboard mode"
+      >
+        <i class="fa-solid fa-expand"></i> Fullscreen
+      </button>
       <select id="model-select">
         <option value="GoodModel">Good Model</option>
         <option value="BadModel">Bad Model</option>
       </select>
-      <button id="add_new_chart">Add New Chart</button>
     </div>
     <div id="new-chart-modal"></div>
   </div>

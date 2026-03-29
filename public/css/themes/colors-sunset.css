@@ -10,6 +10,8 @@ body.theme-sunset {
   --primary-light: #fef3c7;
   --green-color: #16a34a;
   --body-bg: #fffbeb;
+  --card-bg: #ffffff;
+  --panel-header-bg: #fde68a;
   --text-dark: #78350f;
   --text-light: #92643a;
   --text-muted: #7a5c3a;
@@ -74,6 +76,7 @@ body.theme-sunset {
 body.theme-sunset.dark-mode {
   --body-bg: #1c1007;
   --card-bg: #2d1e0e;
+  --panel-header-bg: #4a3520;
   --header-bg-color: #2d1e0e;
   --nav-bg-color: #1c1007;
   --text-dark: #fef3c7;
