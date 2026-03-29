@@ -18,4 +18,9 @@ router.get('/history/:id/pdf', isAuthenticated, authorize('view:reports'), repor
 router.get('/history/:id/download/:type', isAuthenticated, authorize('export:report'), reportController.downloadFromHistory);
 router.delete('/history/:id', isAuthenticated, authorize('create:report'), reportController.deleteReport);
 
+// Report Templates
+router.get('/templates', isAuthenticated, authorize('view:reports'), reportController.getTemplates);
+router.post('/templates', isAuthenticated, authorize('create:report'), reportController.createTemplate);
+router.delete('/templates/:id', isAuthenticated, authorize('create:report'), reportController.deleteTemplate);
+
 export default router;

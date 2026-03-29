@@ -39,6 +39,7 @@
       KNOWN_MODELS
     } = window.CONSTANTS;
     window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+    window.REPORT_TEMPLATES = <%- JSON.stringify(templates || []) %>;
   </script>
 
   <%- include('components/header') %>
@@ -97,12 +98,7 @@
         <section class="card">
           <div class="card-header">
             <h3>Data Selection</h3>
-            <div class="template-pills">
-              <button type="button" class="pill" onclick="applyTemplate('safety')">🛡️ Safety</button>
-              <button type="button" class="pill" onclick="applyTemplate('efficiency')">⚡ Efficiency</button>
-              <button type="button" class="pill" onclick="applyTemplate('exec')">📊 Executive</button>
-              <button type="button" class="pill" onclick="applyTemplate('all')">🌐 Full Audit</button>
-            </div>
+            <div class="template-pills" id="template-pills"></div>
           </div>
 
           <div class="checkbox-grid" id="metrics-grid">
@@ -150,7 +146,7 @@
           </div>
 
           <div class="template-actions">
-            <button type="button" class="btn-secondary" onclick="alert('Configuration saved as template!')">
+            <button type="button" class="btn-secondary" id="save-template-btn">
               <i class="fa-solid fa-floppy-disk"></i> Save as New Template
             </button>
           </div>

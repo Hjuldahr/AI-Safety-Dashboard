@@ -11,6 +11,7 @@ import AI_Summary from '../models/AI_Summary.js';
 import AlertLog from '../models/alert_log.js';
 import User_Log from '../models/User_Log.js';
 import ReportRecord from '../models/ReportRecord.js';
+import ReportTemplate from '../models/ReportTemplate.js';
 import * as h5wasm from 'h5wasm/node';
 import fs from "fs";
 
@@ -499,14 +500,16 @@ const generateAggregateCsvRows = (stats) => {
 /**
  * Controller to render the reports page.
  */
-const getPage = (req, res) => {
+const getPage = async (req, res) => {
     const cutoffTime = Date.now() - AI_LOG_CUTOFF;
+    const templates = await ReportTemplate.find().sort({ createdAt: 1 }).lean().exec();
 
     res.render('reports', {
         title: 'Reports',
         cutoffTime: cutoffTime,
         user: req.user,
-        constants: chartConstants
+        constants: chartConstants,
+        templates
     });
 };
 
@@ -1047,6 +1050,59 @@ const deleteReport = async (req, res) => {
     }
 };
 
+// ===============================================
+// === REPORT TEMPLATE FUNCTIONS =================
+// ===============================================
+
+/**
+ * Creates a new report template.
+ */
+const createTemplate = async (req, res) => {
+    try {
+        const { name, icon, fields } = req.body;
+        if (!name || !fields || !fields.length) {
+            return res.status(400).json({ message: 'Template name and at least one field are required.' });
+        }
+        const template = await ReportTemplate.create({
+            name,
+            icon: icon || '',
+            fields
+        });
+        res.status(201).json(template);
+    } catch (err) {
+        console.error('Create Template Error:', err);
+        res.status(500).json({ message: 'Failed to create template', error: err.message });
+    }
+};
+
+/**
+ * Deletes a report template by ID.
+ */
+const deleteTemplate = async (req, res) => {
+    try {
+        const template = await ReportTemplate.findById(req.params.id).exec();
+        if (!template) return res.status(404).json({ message: 'Template not found' });
+        await template.deleteOne();
+        res.json({ message: 'Template deleted successfully' });
+    } catch (err) {
+        console.error('Delete Template Error:', err);
+        res.status(500).json({ message: 'Failed to delete template', error: err.message });
+    }
+};
+
+/**
+ * Returns all report templates as JSON.
+ */
+const getTemplates = async (req, res) => {
+    try {
+        const templates = await ReportTemplate.find().sort({ createdAt: 1 }).lean().exec();
+        res.json(templates);
+    } catch (err) {
+        console.error('Get Templates Error:', err);
+        res.status(500).json({ message: 'Failed to fetch templates', error: err.message });
+    }
+};
+
 export default {
     createReport,
     getPage,
@@ -1057,5 +1113,8 @@ export default {
     getHistory,
     getHistoryPdf,
     downloadFromHistory,
-    deleteReport
+    deleteReport,
+    createTemplate,
+    deleteTemplate,
+    getTemplates
 };
