@@ -37,7 +37,7 @@ body {
 .report-header p, .card-header p{
     color: var(--secondary);
     margin: 0px;
-    margin-top: 10px;
+    margin-bottom: 10px ;
 }
 
 /* Cards */
@@ -87,7 +87,18 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    /* margin-bottom: 1rem; */
+}
+
+.card-header-no-space{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.card-header-no-space h3{
+    padding-bottom: 0px;
+    margin-bottom: 10px;
 }
 
 .template-pills {
