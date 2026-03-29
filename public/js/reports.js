@@ -285,7 +285,7 @@ const handleReportSubmit = async (elements) => {
         alert(`Failed to generate report: ${error.message}`);
     } finally {
         isGeneratingReport = false;
-        setButtonState(elements, false, 'Generate Preview');
+        setButtonState(elements, false, 'Generate Report');
     }
 };
 
@@ -427,6 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    setButtonState(elements, false, 'Generate Preview');
+    setButtonState(elements, false, 'Generate Report');
     evaluateFidelityState();
 });

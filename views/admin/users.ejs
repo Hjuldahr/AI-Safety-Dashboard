@@ -71,6 +71,36 @@
         </div>
       </section>
 
+      <!-- System Section -->
+      <section class="collapsible-section" data-section="system">
+        <button type="button" class="collapse-toggle" aria-expanded="true">System ▾</button>
+        <div class="collapsible-content" id="system-section">
+          <div class="panel-section">
+            <div class="admin-section">
+              <h4>AI Log Retention</h4>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                AI logs older than this duration are automatically deleted. Summaries are kept regardless.
+              </p>
+              <div id="system-messages"></div>
+              <div class="form-group" style="max-width: 300px;">
+                <label for="ai-log-cutoff">Keep AI logs for:</label>
+                <select id="ai-log-cutoff" class="form-control">
+                  <option value="3600000">1 Hour</option>
+                  <option value="21600000">6 Hours</option>
+                  <option value="43200000">12 Hours</option>
+                  <option value="86400000">1 Day</option>
+                  <option value="259200000">3 Days</option>
+                  <option value="604800000">1 Week</option>
+                  <option value="1209600000">2 Weeks</option>
+                  <option value="2592000000">1 Month</option>
+                </select>
+              </div>
+              <button id="save-ai-log-cutoff" type="button" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Roles Section -->
       <section class="collapsible-section" data-section="roles">
         <button type="button" class="collapse-toggle" aria-expanded="true">Roles ▾</button>

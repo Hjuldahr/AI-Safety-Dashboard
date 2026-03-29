@@ -1,6 +1,7 @@
 // server_side_events/scheduler.js
 import { AIAnalyzer } from '../data_analysis_pipeline/AIAnalyzer.js';
-import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
+import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
+import { getAiLogCutoff } from '../helpers/getAiLogCutoff.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
@@ -193,7 +194,8 @@ async function createSummary() {
             broadcastEvent('summary', summary);
 
             // Delete extra
-            const cutoff = Date.now() - AI_LOG_CUTOFF;
+            const aiLogCutoff = await getAiLogCutoff();
+            const cutoff = Date.now() - aiLogCutoff;
             await AI_Log.deleteMany({ responseTimestamp: { $lt: cutoff } });
         }
     } catch (err) {
