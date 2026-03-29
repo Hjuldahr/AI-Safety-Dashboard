@@ -4,11 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // CONFIG
     // =========================
     const API = {
-        latest: '/notifications/latest',
-        history: '/notifications/history',
-        unreadCount: '/notifications/unread',
-        markRead: '/notifications/mark-read',
-        events: '/events'
+        latest: 'notifications/latest',
+        history: 'notifications/history',
+        unreadCount: 'notifications/unread',
+        markRead: 'notifications/mark-read',
+        events: 'events'
     };
 
     // =========================

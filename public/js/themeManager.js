@@ -109,7 +109,7 @@
     if (!prefs.isAuthenticated) return;
 
     try {
-      await fetch('/api/profile/preferences', {
+      await fetch('api/profile/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
