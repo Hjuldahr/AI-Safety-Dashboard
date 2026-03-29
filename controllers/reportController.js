@@ -2,12 +2,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import ejs from 'ejs';
 import puppeteer from 'puppeteer';
-import AI_Log from '../models/AI_Log.js'; // AI_Log model is used
-import { DATA_DICTIONARY } from '../constants/charts.js';
+import AI_Log from '../models/AI_Log.js';
+import chartConstants from "../constants/charts.js";
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { AI_LOG_CUTOFF } from '../constants/sse.js';
 import AI_Summary from '../models/AI_Summary.js';
 import AlertLog from '../models/alert_log.js';
+import * as h5wasm from 'h5wasm/node';
 
 // Resolve __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -20,6 +21,8 @@ const DEFAULT_DATA_POINTS = 60;
 const chartWidth = 800;
 const chartHeight = 400;
 const chartJSNodeCanvas = new ChartJSNodeCanvas({ width: chartWidth, height: chartHeight });
+
+const DATA_DICTIONARY = chartConstants.DATA_DICTIONARY;
 
 // ===============================================
 // === UTILITY & HELPER FUNCTIONS ================
@@ -122,7 +125,7 @@ const generateChartImage = async (timeSeriesData, fieldKey) => {
                     beginAtZero: true,
                     ticks: {
                         // Format large numbers (70,000,000 -> 70M)
-                        callback: function(value) {
+                        callback: function (value) {
                             if (value >= 1e6) return (value / 1e6).toFixed(0) + 'M';
                             if (value >= 1e3) return (value / 1e3).toFixed(0) + 'k';
                             return value;
@@ -450,80 +453,36 @@ const renderPdfFromTemplate = async (templateName, templateData) => {
 
 /**
  * Utility to generate rows for the aggregate CSV download.
+ * Now fully dynamic based on the DATA_DICTIONARY.
  */
 const generateAggregateCsvRows = (stats) => {
-    const csvRows = ["Metric,Value,Unit"];
+    const csvRows = ["Metric,Value"];
 
-    const addRow = (metricName, value, unit) => {
-        // Use the round helper for consistency and to ensure 2 decimal places in CSV
+    const addRow = (metricName, value) => {
+        // Handle potential undefined/null values safely
         const safeValue = round(value).toFixed(2);
-        csvRows.push(`"${metricName}","${safeValue}","${unit}"`);
+        csvRows.push(`"${metricName}","${safeValue}"`);
     };
 
-    csvRows.push(`"Total Logs Analyzed","${stats.count}","logs"`);
+    // Global count row
+    csvRows.push(`"Total Logs Analyzed","${stats.count}"`);
 
-    // Response Time
-    const rt = stats.responseTime;
-    addRow("Response Time - Average", rt.avg, "ms");
-    addRow("Response Time - Minimum", rt.min, "ms");
-    addRow("Response Time - Maximum", rt.max, "ms");
+    // Iterate through the dictionary to find numeric metrics
+    Object.keys(DATA_DICTIONARY).forEach(fieldKey => {
+        const config = DATA_DICTIONARY[fieldKey];
+        const data = stats[fieldKey];
 
-    // Policy Compliance
-    const pc = stats.policy;
-    addRow("Policy Compliance - Average", pc.avg, "score");
-    addRow("Policy Compliance - Minimum", pc.min, "score");
-    addRow("Policy Compliance - Maximum", pc.max, "score");
+        // Skip if it's not a numeric metric or if the data doesn't exist in the stats object
+        if (config.dataType !== 'numeric' || !data) return;
 
-    // Response Helpfulness
-    const rh = stats.helpfulness;
-    addRow("Response Helpfulness - Average", rh.avg, "score");
-    addRow("Response Helpfulness - Minimum", rh.min, "score");
-    addRow("Response Helpfulness - Maximum", rh.max, "score");
+        // Visual break in the CSV for readability
+        csvRows.push("");
 
-    // Energy Consumption
-    const ec = stats.energy;
-    addRow("Energy Consumption - Average", ec.avg, "units");
-    addRow("Energy Consumption - Minimum", ec.min, "units");
-    addRow("Energy Consumption - Maximum", ec.max, "units");
-
-    // --- NEW FIELDS CSV GENERATION ---
-
-    // Token Usage
-    const tkn = stats.tokens;
-    csvRows.push(``); // Blank line for separation
-    addRow("Tokens Used - Average", tkn.avg, "tokens");
-    addRow("Tokens Used - Minimum", tkn.min, "tokens");
-    addRow("Tokens Used - Maximum", tkn.max, "tokens");
-
-    // Giga Flops Used
-    const gflp = stats.gigaFlops;
-    csvRows.push(``);
-    addRow("Giga Flops Used - Average", gflp.avg, "GFLOPs");
-    addRow("Giga Flops Used - Minimum", gflp.min, "GFLOPs");
-    addRow("Giga Flops Used - Maximum", gflp.max, "GFLOPs");
-
-    // Web Lookups
-    const wbl = stats.webLookups;
-    csvRows.push(``);
-    addRow("Web Lookups - Average", wbl.avg, "lookups");
-    addRow("Web Lookups - Minimum", wbl.min, "lookups");
-    addRow("Web Lookups - Maximum", wbl.max, "lookups");
-
-    // Toxicity Score
-    const tsc = stats.toxicity;
-    csvRows.push(``);
-    addRow("Toxicity Score - Average", tsc.avg, "score");
-    addRow("Toxicity Score - Minimum", tsc.min, "score");
-    addRow("Toxicity Score - Maximum", tsc.max, "score");
-
-    // PII Detected
-    const pii = stats.piiDetected;
-    csvRows.push(``);
-    addRow("PII Detected - Average", pii.avg, "count");
-    addRow("PII Detected - Minimum", pii.min, "count");
-    addRow("PII Detected - Maximum", pii.max, "count");
-
-    // --- END NEW FIELDS CSV GENERATION ---
+        // Add the three standard aggregate rows
+        addRow(`${config.label} - Average`, data.avg);
+        addRow(`${config.label} - Minimum`, data.min);
+        addRow(`${config.label} - Maximum`, data.max);
+    });
 
     return csvRows.join('\n');
 };
@@ -542,7 +501,8 @@ const getPage = (req, res) => {
     res.render('reports', {
         title: 'Reports',
         cutoffTime: cutoffTime,
-        user: req.user
+        user: req.user,
+        constants: chartConstants
     });
 };
 
@@ -698,95 +658,197 @@ const createReport = async (req, res) => {
         res.status(500).json({ message: 'Failed to generate report', error: err.message });
     }
 };
+
+
 /**
- * Controller to download raw AI logs as a CSV file.
+ * Dynamically generates CSV content based on the DATA_DICTIONARY.
+ * This ensures new metrics are added to exports automatically.
  */
-const downloadCsv = async (req, res) => {
+const generateDynamicCsv = (data, title = "Export") => {
+    if (!data || data.length === 0) return "";
+
+    // Identify numeric/categorical fields from dictionary to use as headers
+    const dictFields = Object.keys(DATA_DICTIONARY).filter(key =>
+        ['numeric', 'categorical', 'timestamp'].includes(DATA_DICTIONARY[key].dataType)
+    );
+
+    // Header row
+    const headers = ['id', 'displayDate', ...dictFields];
+    const rows = [headers.join(',')];
+
+    data.forEach(item => {
+        const values = headers.map(header => {
+            let val = '';
+            if (header === 'id') val = item._id?.toString();
+            else if (header === 'displayDate') val = new Date(item.responseTimestamp).toISOString();
+            else val = item[header] ?? '';
+
+            // Escape for CSV
+            return `"${('' + val).replace(/"/g, '""')}"`;
+        });
+        rows.push(values.join(','));
+    });
+
+    return rows.join('\n');
+};
+
+// ===============================================
+// === EXPRESS CONTROLLER FUNCTIONS ==============
+// ===============================================
+
+/**
+ * Helper to handle the "No Data" response for exports
+ */
+const handleEmptyExport = (res, type) => {
+    return res.status(404).json({
+        message: `No ${type} found for the selected criteria. The date range may be empty.`
+    });
+};
+
+/**
+ * Raw AI Logs (High Fidelity)
+ */
+export const downloadAiLogs = async (req, res) => {
     try {
         const { modelName, startDate, endDate } = req.body;
         const query = buildReportQuery({ modelName, startDate, endDate });
-
         const logs = await AI_Log.find(query).lean().exec();
 
-        if (logs.length === 0) {
-            return res.status(404).json({ message: 'No logs found for the selected criteria. The date range may be empty.' });
-        }
+        if (!logs.length) return handleEmptyExport(res, 'AI Logs');
 
-        // Define headers with new fields
-        const headers = [
-            'responseDate', 'modelName', 'policyCompliance', 'responseHelpfulness',
-            'responseTime', 'energyConsumption',
-            'tokensUsed', 'gigaFlopsUsed', 'webLookups', 'toxicityScore', 'piiDetected',
-            'queryCount', 'responseTimestamp', '_id'
-        ];
-        const csvRows = [headers.join(',')];
-
-        // Generate log rows
-        for (const log of logs) {
-            // Create a temporary object with all fields flattened and formatted
-            const logData = {
-                _id: log._id.toString(),
-                modelName: log.modelName,
-                policyCompliance: log.policyCompliance,
-                responseHelpfulness: log.responseHelpfulness,
-                responseTime: log.responseTime,
-                energyConsumption: log.energyConsumption,
-                // --- NEW FIELDS MAPPED ---
-                tokensUsed: log.tokensUsed,
-                gigaFlopsUsed: log.gigaFlopsUsed,
-                webLookups: log.webLookups,
-                toxicityScore: log.toxicityScore,
-                piiDetected: log.piiDetected,
-                // --- END NEW FIELDS MAPPED ---
-                queryCount: log.queryCount,
-                responseTimestamp: log.responseTimestamp,
-                responseDate: new Date(log.responseTimestamp).toISOString(),
-            };
-
-            const values = headers.map(header => {
-                const value = logData[header] !== undefined ? logData[header] : '';
-                // Simple CSV escaping
-                const escaped = ('' + value).replace(/"/g, '""');
-                return `"${escaped}"`;
-            });
-            csvRows.push(values.join(','));
-        }
-
-        const csvContent = csvRows.join('\n');
-
+        const csv = generateDynamicCsv(logs, "AI Logs");
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="ai-logs-${modelName}-${startDate || 'all'}-to-${endDate || 'all'}.csv"`);
-        return res.send(csvContent);
-
+        res.setHeader('Content-Disposition', `attachment; filename="ai-logs-${Date.now()}.csv"`);
+        return res.send(csv);
     } catch (err) {
-        console.error('Download CSV Error:', err);
-        res.status(500).json({ message: 'Failed to generate CSV due to a server error.', error: err.message });
+        console.error("Error Generating AI Logs Export: ", err);
+        res.status(500).json({ message: 'AI Logs Export failed', error: err.message });
     }
 };
 
 /**
- * Controller to download aggregate statistics as a CSV file.
+ * AI Summaries (Low Fidelity / 1min)
  */
-const downloadAggregatesCsv = async (req, res) => {
+export const downloadAiSummaries = async (req, res) => {
+    try {
+        const { modelName, startDate, endDate } = req.body;
+        const query = buildReportQuery({ modelName, startDate, endDate });
+        const summaries = await AI_Summary.find(query).lean().exec();
+
+        if (!summaries.length) return handleEmptyExport(res, 'Summaries');
+
+        const csv = generateDynamicCsv(summaries, "AI Summaries");
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="ai-summaries-${Date.now()}.csv"`);
+        return res.send(csv);
+    } catch (err) {
+        console.error("Error Generating Summary Export: ", err);
+        res.status(500).json({ message: 'Summary Export failed', error: err.message });
+    }
+};
+
+/**
+ * Aggregates (The Min/Max/Avg Table)
+ */
+export const downloadAggregatesCsv = async (req, res) => {
     try {
         const { modelName, startDate, endDate } = req.body;
         const query = buildReportQuery({ modelName, startDate, endDate });
 
-        const stats = await getAggregatedStats(query);
+        // We use the same aggregation logic that powers the UI
+        const numericFields = Object.keys(DATA_DICTIONARY)
+            .filter(f => DATA_DICTIONARY[f].dataType === 'numeric');
 
-        if (stats.count === 0) {
-            return res.status(404).json({ message: 'No data found to calculate aggregates.' });
-        }
+        const stats = await getAggregatedStats(query, numericFields, AI_Log, 'AI_Log');
 
-        const csvContent = generateAggregateCsvRows(stats);
+        if (stats.count === 0) return handleEmptyExport(res, 'Aggregates');
 
+        const csvContent = generateAggregateCsvRows(stats); // This was already good, just needed the trigger
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="ai-aggregates-${modelName}-${startDate || 'all'}-to-${endDate || 'all'}.csv"`);
+        res.setHeader('Content-Disposition', `attachment; filename="ai-aggregates-${Date.now()}.csv"`);
         return res.send(csvContent);
+    } catch (err) {
+        console.error("Error Generating Aggregate Export: ", err);
+        res.status(500).json({ message: 'Aggregate Export failed', error: err.message });
+    }
+};
+
+/**
+ * HDF5 Helpers
+ */
+
+// Helper to resolve nested paths (e.g., "breakdown.topic")
+const getNestedValue = (obj, path) => {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+};
+
+const writeStructuredData = (group, data) => {
+    if (!data.length) return;
+
+    // Iterate through every field defined in your dictionary
+    Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
+        const { dbPath, dataType } = config;
+
+        // 1. Extract the column from the array of objects
+        const columnData = data.map(item => {
+            const val = getNestedValue(item, dbPath);
+
+            if (dataType === 'numeric') return val ?? 0;
+            if (dataType === 'timestamp') return new Date(val).getTime(); // Store as numeric epoch
+            return val ? String(val) : ""; // Categorical/String
+        });
+
+        // 2. Create the dataset with the proper type
+        group.create_dataset({
+            name: key,
+            data: columnData,
+            // HDF5 optimization: store numbers as floats/ints, everything else as string
+            dtype: dataType === 'numeric' || dataType === 'timestamp' ? 'f8' : undefined
+        });
+    });
+};
+
+/**
+ * HDF5 (All-in-one bundle)
+ */
+export const downloadHdf5 = async (req, res) => {
+    const filePath = path.join(__dirname, `../temp/report-${Date.now()}.h5`);
+
+    try {
+        await h5wasm.ready;
+
+        const { modelName, startDate, endDate } = req.body;
+        const query = buildReportQuery({ modelName, startDate, endDate });
+
+        const [logs, summaries] = await Promise.all([
+            AI_Log.find(query).lean().exec(),
+            AI_Summary.find(query).lean().exec()
+        ]);
+
+        if (!logs.length && !summaries.length) return handleEmptyExport(res, 'Data');
+
+        // Create HDF5 File
+        const file = new h5wasm.File(filePath, 'w');
+
+        // Create Groups
+        const logGroup = file.create_group('raw_logs');
+        const summaryGroup = file.create_group('summaries');
+
+        if (logs.length) writeStructuredData(logGroup, logs);
+        if (summaries.length) writeStructuredData(summaryGroup, summaries);
+
+        // file.create_attribute("model_version", modelName, [1], "string");
+        // file.create_attribute("export_timestamp", new Date().toISOString(), [1], "string");
+
+        file.close();
+
+        res.download(filePath, `AI-Project-Data.h5`, () => {
+            import('fs').then(fs => fs.unlinkSync(filePath));
+        });
 
     } catch (err) {
-        console.error('Download Aggregates CSV Error:', err);
-        res.status(500).json({ message: 'Failed to generate aggregate CSV due to a server error.', error: err.message });
+        console.error("HDF5 Error:", err);
+        res.status(500).json({ message: 'HDF5 Generation failed', error: err.message });
     }
 };
 
@@ -794,6 +856,8 @@ const downloadAggregatesCsv = async (req, res) => {
 export default {
     createReport,
     getPage,
-    downloadCsv,
-    downloadAggregatesCsv
+    downloadAiLogs,
+    downloadAiSummaries,
+    downloadAggregatesCsv,
+    downloadHdf5
 };

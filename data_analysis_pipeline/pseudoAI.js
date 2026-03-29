@@ -28,7 +28,7 @@ function applyGeneralizationBias(topicWeights, previousGeneralizations, decayFac
   // OPTIMIZATION: Use a standard for-loop. 
   // Denque allows direct index access: queue.get(i)
   for (let i = 0; i < len; i++) {
-    const prev = previousGeneralizations.get(i); // Use .get() for O(1) access
+    const prev = previousGeneralizations[i]; // Use .get() for O(1) access
     if (!prev) continue;
 
     const weight = Math.pow(decayFactor, len - i - 1);
@@ -166,7 +166,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     applyGeneralizationBias(modelConfig.TOPIC_WEIGHTS, previousGeneralizations);
 
   const seasonal = getSeasonalModifiers();
-  const lastGen = previousGeneralizations.peekBack() || null;
+  const lastGen = previousGeneralizations.at(-1) || null;
   const longTerm = applyLongTermEnvironment(topicWeights, lastGen);
   const adjustedTopicWeights = { ...longTerm.topicWeights };
 

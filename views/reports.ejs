@@ -21,7 +21,21 @@
   <script src="js/reports.js" defer></script>
 </head>
 
+<% 
+  const DATA_DICTIONARY = constants.DATA_DICTIONARY;
+%>
+
 <body data-cutoff="<%= cutoffTime %>">
+
+  <script>
+    //Grab the constants sent on page load
+    window.CONSTANTS = <%- JSON.stringify(constants) %>;
+    const {
+      DATA_DICTIONARY,
+      KNOWN_MODELS
+    } = window.CONSTANTS;
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+  </script>
 
   <%- include('components/header') %>
   <%- include('components/nav') %>
@@ -76,24 +90,32 @@
           </div>
 
           <div class="checkbox-grid" id="metrics-grid">
-            <label class="check-item"><input type="checkbox" name="fields" value="policyCompliance"> Policy Compliance</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="responseHelpfulness"> Helpfulness</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="responseTime"> Response Time</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="energyConsumption"> Energy (J)</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="tokensUsed"> Tokens Used</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="gigaFlopsUsed"> GFLOPs</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="webLookups"> Web Lookups</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="toxicityScore"> Toxicity</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="piiDetected"> PII Detected</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="queryCount"> Query Count</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="flaggedCount"> Flagged Count</label>
+            <% for(const field in DATA_DICTIONARY){ %>
+            <!-- Check if its a 'special' field - like model name or topic -->
+            <% if(["special", "remove", "flaggedOutputs"].includes(DATA_DICTIONARY[field].summarize)) {continue;} %>
+            <label class="check-item"><input type="checkbox" name="fields" value="<%= DATA_DICTIONARY[field].dbPath %>"> <%= DATA_DICTIONARY[field].label %></label>
+            <% } %>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h3>Appendices</h3>
           </div>
 
+          <!-- ToDo: update this section with new Appendices (AI Logs, Summaries, and Alerts) -->
           <div class="special-selection">
             <label class="check-item special">
               <input type="checkbox" name="fields" value="flaggedOutputs">
               <strong>Include Raw Flagged Outputs</strong> (Detailed Appendix)
             </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h3>Save Report Template?</h3>
+            <p class="card-header-text">Speed up creating a similar report in the future.</p>
           </div>
 
           <div class="template-actions">
@@ -103,12 +125,15 @@
           </div>
         </section>
 
+
         <div class="action-bar">
           <button id="report-submit" type="submit" class="btn-primary">Generate Preview</button>
           <div class="download-group">
             <button id="report-download" type="button" class="btn-download pdf">PDF</button>
-            <button id="report-download-csv" type="button" class="btn-download csv">CSV</button>
+            <button id="report-download-ai-logs" type="button" class="btn-download ai-logs">AI Logs</button>
+            <button id="report-download-ai-summaries" type="button" class="btn-download ai-summaries">AI Summaries</button>
             <button id="report-download-csv-aggregates" type="button" class="btn-download agg">Aggregates</button>
+            <button id="report-download-hdf5" type="button" class="btn-download ai-logs">HDF5 (includes logs + summaries)</button>
           </div>
         </div>
       </form>

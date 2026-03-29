@@ -203,8 +203,10 @@ document.addEventListener('DOMContentLoaded', () => {
         form: document.getElementById('report-form'),
         submitBtn: document.getElementById('report-submit'),
         downloadBtn: document.getElementById('report-download'),
-        downloadCsvBtn: document.getElementById('report-download-csv'),
+        downloadAILogsBtn: document.getElementById('report-download-ai-logs'),
+        downloadAISummariesBtn: document.getElementById('report-download-ai-summaries'),
         downloadAggregatesCsvBtn: document.getElementById('report-download-csv-aggregates'),
+        downloadHDF5Btn: document.getElementById("report-download-hdf5"),
         previewWrapper: document.getElementById('report-preview-wrapper'),
         previewFrame: document.getElementById('report-preview'),
         statusText: document.getElementById('report-status')
@@ -254,15 +256,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (elements.downloadCsvBtn) {
-        elements.downloadCsvBtn.addEventListener('click', () => {
-            handlePostDownload(elements, 'reports/download-csv'); 
+    if (elements.downloadAILogsBtn) {
+        elements.downloadAILogsBtn.addEventListener('click', () => {
+            handlePostDownload(elements, 'reports/download-logs'); 
+        });
+    }
+
+    if (elements.downloadAISummariesBtn) {
+        elements.downloadAISummariesBtn.addEventListener('click', () => {
+            handlePostDownload(elements, 'reports/download-summaries'); 
         });
     }
 
     if (elements.downloadAggregatesCsvBtn) {
         elements.downloadAggregatesCsvBtn.addEventListener('click', () => {
             handlePostDownload(elements, 'reports/download-aggregates'); 
+        });
+    }
+
+    if (elements.downloadHDF5Btn) {
+        elements.downloadHDF5Btn.addEventListener('click', () => {
+            handlePostDownload(elements, 'reports/download-hdf5'); 
         });
     }
 

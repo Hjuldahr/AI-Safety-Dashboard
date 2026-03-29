@@ -1,24 +1,14 @@
-FROM node:20-alpine
+FROM node:20
 
 # Create the folder inside the container
 WORKDIR /app
 
 # --- Install Chromium and dependencies ---
 # Installs Chromium, specific font libraries, and graphical dependencies required by Alpine
-RUN apk add --no-cache \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      ttf-freefont \
-      nodejs \
-      yarn
-
-# --- Puppeteer Configuration ---
-# Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+RUN apt-get update && \
+    apt-get install -y \
+    chromium \
+    libhdf5-dev 
 
 # Copy package.json first (for better caching)
 COPY package.json ./

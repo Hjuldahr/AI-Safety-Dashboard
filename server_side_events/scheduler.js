@@ -5,7 +5,6 @@ import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
 import { evaluateAndTagLogs, finalizeAlertLogs } from "./alertEvaluator.js";
-import Denque from "denque";
 import { sendNotification } from '../controllers/notificationController.js';
 import { NOTIFICATION_TYPES, BACKGROUND_COLOURS, TRIM_COLOURS } from '../constants/notification.js';
 import User_Log from '../models/User_Log.js';
@@ -21,7 +20,7 @@ let summaryInterval = null;
 
 // ---------- Model Simulation ----------
 const MAX_PREV_GENS = 60;
-let previousGeneralizations = new Denque();
+let previousGeneralizations = []; //switching to array to avoid critical vulnerabilites
 
 //One method for all models
 //ToDo: Make this dynamic so that it follows constants/charts.js
@@ -30,7 +29,7 @@ async function generateModelData(modelName) {
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
     const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralizations);
     previousGeneralizations.push(summary);
-    if (previousGeneralizations.length > MAX_PREV_GENS) previousGeneralizations.removeOne(0);
+    if (previousGeneralizations.length > MAX_PREV_GENS) previousGeneralizations.shift();
 
     // Format for DB/SSE
     return {

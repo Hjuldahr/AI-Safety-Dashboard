@@ -34,7 +34,7 @@ body {
     color: var(--primary);
 }
 
-.report-header p {
+.report-header p, .card-header p{
     color: var(--secondary);
     margin: 0px;
     margin-top: 10px;

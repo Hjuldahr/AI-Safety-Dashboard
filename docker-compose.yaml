@@ -12,7 +12,7 @@ services:
       - DEFAULT_ADD_EMAIL=${DEFAULT_ADD_EMAIL}
       - DEFAULT_APP_PASSWORD=${DEFAULT_APP_PASSWORD}
       - SESSION_SECRET=${SESSION_SECRET}
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
     networks:
       - web-main-net
 
