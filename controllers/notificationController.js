@@ -1,6 +1,6 @@
 // notificationsController.js
+import Notification from "../models/notification.js";
 import { BACKGROUND_COLOURS, TRIM_COLOURS } from "../constants/notification.js";
-import Notification from "../models/Notification.js";
 import User from "../models/user.js";
 import { broadcastEvent } from "../server_side_events/scheduler.js";
 

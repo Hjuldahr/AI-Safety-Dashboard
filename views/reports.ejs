@@ -12,26 +12,62 @@
   <link rel="stylesheet" id="theme-colors" href="">
   <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
   <link rel="stylesheet" href="css/components/notifications.css">
+  <link rel="stylesheet" href="css/components/pagination.css">
+  <link rel="stylesheet" href="css/components/modals.css">
   <link rel="stylesheet" href="css/pages/reports.css">
-  
+
 
   <!-- Scripts -->
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script src="js/components/pagination.js" defer></script>
   <script src="js/notifications.js" defer></script>
   <script src="js/reports.js" defer></script>
+  <script src="js/reportHistory.js" type="module" defer></script>
 </head>
 
-<body>
+<% 
+  const DATA_DICTIONARY = constants.DATA_DICTIONARY;
+%>
+
+<body data-cutoff="<%= cutoffTime %>">
+
+  <script>
+    //Grab the constants sent on page load
+    window.CONSTANTS = <%- JSON.stringify(constants) %>;
+    const {
+      DATA_DICTIONARY,
+      KNOWN_MODELS
+    } = window.CONSTANTS;
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+    window.REPORT_TEMPLATES = <%- JSON.stringify(templates || []) %>;
+  </script>
 
   <%- include('components/header') %>
   <%- include('components/nav') %>
 
   <main class="content">
+
+    <div class="reports-tabs">
+      <button class="report-tab-btn active" data-view="generator">
+        <i class="fa-solid fa-chart-line"></i> Report Generator
+      </button>
+      <button class="report-tab-btn" data-view="history">
+        <i class="fa-solid fa-clock-rotate-left"></i> Report History
+      </button>
+    </div>
+
+    <!-- GENERATOR TAB -->
+    <div id="generator-view" class="report-view">
     <div class="reports-container card">
-      <header class="report-header">
+      <div class="report-header">
         <h1><i class="fa-solid fa-chart-line"></i> Report Generator</h1>
         <p>Configure and export custom model performance data.</p>
-      </header>
+
+        <div id="fidelity-notice" class="notice-banner" style="margin-top: 15px; padding: 10px; border-radius: 5px; background-color: #e0f2fe; border: 1px solid #7dd3fc; color: #0369a1; font-size: 0.9rem;">
+          <i class="fa-solid fa-circle-info"></i> <strong>Data Retention Notice:</strong>
+          High-fidelity data (1-second resolution + flagged output strings) is available for dates after <span id="cutoff-display-date">...</span>. Older dates will use 1-minute summaries.
+        </div>
+      </div>
 
       <form id="report-form">
         <section class="card">
@@ -49,12 +85,12 @@
               </select>
             </div>
             <div class="field-group">
-              <label for="startDate">Start Date</label>
-              <input type="date" id="startDate" name="startDate" required />
+              <label for="startDate">Start Date & Time</label>
+              <input type="datetime-local" id="startDate" name="startDate" step="60" required />
             </div>
             <div class="field-group">
-              <label for="endDate">End Date</label>
-              <input type="date" id="endDate" name="endDate" required />
+              <label for="endDate">End Date & Time</label>
+              <input type="datetime-local" id="endDate" name="endDate" step="60" required />
             </div>
           </div>
         </section>
@@ -62,48 +98,69 @@
         <section class="card">
           <div class="card-header">
             <h3>Data Selection</h3>
-            <div class="template-pills">
-              <button type="button" class="pill" onclick="applyTemplate('safety')">🛡️ Safety</button>
-              <button type="button" class="pill" onclick="applyTemplate('efficiency')">⚡ Efficiency</button>
-              <button type="button" class="pill" onclick="applyTemplate('exec')">📊 Executive</button>
-              <button type="button" class="pill" onclick="applyTemplate('all')">🌐 Full Audit</button>
-            </div>
+            <div class="template-pills" id="template-pills"></div>
           </div>
 
           <div class="checkbox-grid" id="metrics-grid">
-            <label class="check-item"><input type="checkbox" name="fields" value="policyCompliance"> Policy Compliance</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="responseHelpfulness"> Helpfulness</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="responseTime"> Response Time</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="energyConsumption"> Energy (J)</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="tokensUsed"> Tokens Used</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="gigaFlopsUsed"> GFLOPs</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="webLookups"> Web Lookups</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="toxicityScore"> Toxicity</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="piiDetected"> PII Detected</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="queryCount"> Query Count</label>
-            <label class="check-item"><input type="checkbox" name="fields" value="flaggedCount"> Flagged Count</label>
+            <% for(const field in DATA_DICTIONARY){ %>
+            <!-- Check if its a 'special' field - like model name or topic -->
+            <% if(["special", "remove", "flaggedOutputs"].includes(DATA_DICTIONARY[field].summarize)) {continue;} %>
+            <label class="check-item"><input type="checkbox" name="fields" value="<%= DATA_DICTIONARY[field].dbPath %>"> <%= DATA_DICTIONARY[field].label %></label>
+            <% } %>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header card-header-no-space">
+            <h3>Appendices</h3>
           </div>
 
-          <div class="special-selection">
+          <div>
             <label class="check-item special">
               <input type="checkbox" name="fields" value="flaggedOutputs">
-              <strong>Include Raw Flagged Outputs</strong> (Detailed Appendix)
+              <strong>Flagged Outputs</strong> &mdash; Raw flagged safety outputs
             </label>
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="appendixAiLogs">
+              <strong>AI Logs</strong> &mdash; High-fidelity log entries
+            </label>
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="appendixAiSummaries">
+              <strong>AI Summaries</strong> &mdash; 1-minute aggregated summaries
+            </label>
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="appendixUserLogs">
+              <strong>User Logs</strong> &mdash; User activity during timeframe
+            </label>
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="appendixAlertLogs">
+              <strong>Alert Logs</strong> &mdash; Triggered alerts during timeframe
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header card-header-no-space">
+            <h3>Save Report Template?</h3>
+            <p class="card-header-text">Speed up creating a similar report in the future.</p>
           </div>
 
           <div class="template-actions">
-            <button type="button" class="btn-secondary" onclick="alert('Configuration saved as template!')">
+            <button type="button" class="btn-secondary" id="save-template-btn">
               <i class="fa-solid fa-floppy-disk"></i> Save as New Template
             </button>
           </div>
         </section>
 
+
         <div class="action-bar">
-          <button id="report-submit" type="submit" class="btn-primary">Generate Preview</button>
+          <button id="report-submit" type="submit" class="btn-primary"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Preview</button>
           <div class="download-group">
-            <button id="report-download" type="button" class="btn-download pdf">PDF</button>
-            <button id="report-download-csv" type="button" class="btn-download csv">CSV</button>
-            <button id="report-download-csv-aggregates" type="button" class="btn-download agg">Aggregates</button>
+            <button id="report-download" type="button" class="btn-download pdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+            <button id="report-download-ai-logs" type="button" class="btn-download ai-logs"><i class="fa-solid fa-database"></i> AI Logs</button>
+            <button id="report-download-ai-summaries" type="button" class="btn-download ai-summaries"><i class="fa-solid fa-list"></i> AI Summaries</button>
+            <button id="report-download-csv-aggregates" type="button" class="btn-download agg"><i class="fa-solid fa-chart-bar"></i> Aggregates</button>
+            <button id="report-download-hdf5" type="button" class="btn-download ai-logs"><i class="fa-solid fa-cube"></i> HDF5 (includes logs + summaries)</button>
           </div>
         </div>
       </form>
@@ -112,6 +169,27 @@
         <iframe id="report-preview"></iframe>
       </div>
     </div>
+    </div><!-- end generator-view -->
+
+    <!-- HISTORY TAB -->
+    <div id="history-view" class="report-view hidden">
+      <div class="reports-container card">
+        <div class="report-header">
+          <h1><i class="fa-solid fa-clock-rotate-left"></i> Report History</h1>
+          <p>View and download previously generated reports.</p>
+        </div>
+
+        <div id="history-list"></div>
+        <div id="history-pagination" class="pagination"></div>
+        <div id="history-empty" class="history-empty-state hidden">
+          <i class="fa-solid fa-folder-open"></i>
+          <p>No reports have been generated yet.</p>
+        </div>
+      </div>
+    </div><!-- end history-view -->
+
+    <%- include('components/modal') %>
+
   </main>
 </body>
 

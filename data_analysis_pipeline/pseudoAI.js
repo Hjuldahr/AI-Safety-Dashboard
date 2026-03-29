@@ -11,7 +11,7 @@ import flaggedOutputPool from './flagged_output_pool/flagged_output_pool.json' w
 function applyGeneralizationBias(topicWeights, previousGeneralizations, decayFactor = 0.95) {
   // Denque uses .length just like an array
   const len = previousGeneralizations ? previousGeneralizations.length : 0;
-  
+
   if (len === 0) {
     return {
       topicWeights: { ...topicWeights },
@@ -28,7 +28,7 @@ function applyGeneralizationBias(topicWeights, previousGeneralizations, decayFac
   // OPTIMIZATION: Use a standard for-loop. 
   // Denque allows direct index access: queue.get(i)
   for (let i = 0; i < len; i++) {
-    const prev = previousGeneralizations.get(i); // Use .get() for O(1) access
+    const prev = previousGeneralizations[i]; // Use .get() for O(1) access
     if (!prev) continue;
 
     const weight = Math.pow(decayFactor, len - i - 1);
@@ -86,7 +86,7 @@ function applyLongTermEnvironment(topicWeights, previousGeneralization) {
   const weekAngle = (dayOfWeek / 7) * 2 * Math.PI;
   const weekendBoost = (Math.sin(weekAngle - Math.PI / 2) + 1) / 2;
 
-  const hourAngle = ((hour - 2) / 24) * 2 * Math.PI; 
+  const hourAngle = ((hour - 2) / 24) * 2 * Math.PI;
   const hourBoost = 0.7 + 0.6 * Math.sin(hourAngle);
 
   if (previousGeneralization?.breakdown) {
@@ -166,7 +166,7 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     applyGeneralizationBias(modelConfig.TOPIC_WEIGHTS, previousGeneralizations);
 
   const seasonal = getSeasonalModifiers();
-  const lastGen = previousGeneralizations.peekBack() || null;
+  const lastGen = previousGeneralizations.at(-1) || null;
   const longTerm = applyLongTermEnvironment(topicWeights, lastGen);
   const adjustedTopicWeights = { ...longTerm.topicWeights };
 
@@ -189,10 +189,10 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     1,
     Math.floor(
       baseQueries *
-        longTerm.hourBoost *
-        intervalDuration *
-        volumeBias *
-        seasonal.trafficMultiplier
+      longTerm.hourBoost *
+      intervalDuration *
+      volumeBias *
+      seasonal.trafficMultiplier
     )
   );
 
@@ -206,7 +206,8 @@ export function generateCalls(modelName, intervalDuration, previousGeneralizatio
     const subMod = modelConfig.SUBTOPIC_CHARACTERISTICS_MODIFIERS[sub_topic] || {};
 
     const isChaos = random.getRandomBool(0.01);
-    const toxicityChance = isChaos ? 0.5 : (subMod.toxicityChance ?? baseChar.toxicityChance) * characteristicBias.toxicity;
+    const rawToxicityChance = isChaos ? 0.5 : (subMod.toxicityChance ?? baseChar.toxicityChance) * characteristicBias.toxicity;
+    const toxicityChance = rawToxicityChance * 0.001;
     const piiChance = isChaos ? 0.5 : (subMod.piiChance ?? baseChar.piiChance) * characteristicBias.pii;
     const webLookupChance = isChaos ? 0.8 : (subMod.webLookupChance ?? baseChar.webLookupChance ?? 0);
 

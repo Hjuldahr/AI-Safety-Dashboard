@@ -11,7 +11,7 @@ import MongoStore from 'connect-mongo';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
-import { connectDB, seedDataBase, seedCharts } from './config/database.js';
+import { connectDB, seedDataBase, seedCharts, seedReportTemplates } from './config/database.js';
 import { sendNotification } from './controllers/notificationController.js';
 import { SHUTDOWN_MESSAGE } from "./constants/notification.js";
 
@@ -148,6 +148,7 @@ connectDB()
 .then(async () => {
     await seedDataBase();
     await seedCharts();
+    await seedReportTemplates();
     startServer();
 })
 .catch((err) => {

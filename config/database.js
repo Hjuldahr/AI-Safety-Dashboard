@@ -1,7 +1,9 @@
 import User from '../models/user.js';
 import Chart_Config from '../models/Chart_Config.js';
+import ReportTemplate from '../models/ReportTemplate.js';
 import mongoose from 'mongoose';
 import defaultCharts from './seed_data/defaultCharts.json' with { type: 'json' };
+import defaultReportTemplates from './seed_data/defaultReportTemplates.json' with { type: 'json' };
 import { seedDefaultRoles } from './seedRoles.js';
 
 
@@ -66,4 +68,18 @@ const seedCharts = async () => {
     }
 };
 
-export { connectDB, seedDataBase, seedCharts };
+const seedReportTemplates = async () => {
+    try {
+        const count = await ReportTemplate.countDocuments();
+        if (count > 0) {
+            console.log("-INFO- Report template(s) already exist in DB, no defaults created.");
+            return;
+        }
+        await ReportTemplate.insertMany(defaultReportTemplates);
+        console.log("-INFO- Default report templates seeded successfully.");
+    } catch (error) {
+        console.error('Error seeding default report templates:', error);
+    }
+};
+
+export { connectDB, seedDataBase, seedCharts, seedReportTemplates };
