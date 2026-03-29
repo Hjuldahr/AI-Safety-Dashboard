@@ -295,10 +295,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // SSE
     // =========================
 
+    function getSharedEventSource() {
+        if (window.__sharedEventSource && window.__sharedEventSource.readyState !== EventSource.CLOSED) {
+            return window.__sharedEventSource;
+        }
+
+        const evtSource = new EventSource(API.events);
+
+        evtSource.addEventListener('open', () => console.log('Shared SSE connection opened (notifications).'));
+        evtSource.addEventListener('error', () => {
+            console.warn('Shared SSE connection closed or disconnected (notifications).');
+        });
+
+        window.__sharedEventSource = evtSource;
+
+        window.addEventListener('beforeunload', () => {
+            try { window.__sharedEventSource?.close(); } catch (e) { }
+            window.__sharedEventSource = null;
+        });
+
+        return evtSource;
+    }
+
     let evtSource = null;
 
     try {
-        evtSource = new EventSource(API.events);
+        evtSource = getSharedEventSource();
 
         evtSource.addEventListener('notification', async (ev) => {
             try {

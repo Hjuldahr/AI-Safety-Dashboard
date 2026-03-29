@@ -16,6 +16,7 @@ class ModalManager {
         this.closeBtns = this.overlay.querySelectorAll(".close-modal-btn");
         this.footer = document.getElementById("global-modal-footer");
         this.visible = false;
+        this.closeCallbacks = new Set();
 
         // Handle "X" and "Cancel" buttons
         this.closeBtns.forEach(btn => {
@@ -43,7 +44,26 @@ class ModalManager {
         this.appear();
     }
 
+    registerCloseCallback(callback) {
+        if (typeof callback === 'function') {
+            this.closeCallbacks.add(callback);
+        }
+    }
+
+    unregisterCloseCallback(callback) {
+        if (this.closeCallbacks.has(callback)) {
+            this.closeCallbacks.delete(callback);
+        }
+    }
+
     close() {
+        // Execute cleanup callbacks (e.g. for components with attached listeners)
+        this.closeCallbacks.forEach(cb => {
+            try { cb(); }
+            catch (err) { console.error('Modal cleanup handler failed:', err); }
+        });
+        this.closeCallbacks.clear();
+
         this.body.innerHTML = "";
         this.disappear();
     }

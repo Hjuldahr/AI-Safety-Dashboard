@@ -587,6 +587,32 @@
   border-bottom: none;
 }
 
+.live-alerts-list li.disabled {
+  opacity: 0.6;
+  background-color: #f5f5f5;
+}
+
+.live-alerts-list li.muted {
+  background-color: #fff3cd;
+}
+
+.status-indicator {
+  font-size: 0.8em;
+  padding: 0.2em 0.5em;
+  border-radius: 3px;
+  margin-left: 0.5em;
+}
+
+.status-indicator.disabled {
+  background-color: #6c757d;
+  color: white;
+}
+
+.status-indicator.muted {
+  background-color: #ffc107;
+  color: black;
+}
+
 .alert-actions {
   display: flex;
   gap: 0.5rem;

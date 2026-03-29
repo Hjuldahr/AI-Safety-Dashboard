@@ -37,12 +37,22 @@ export function initActiveAlertsModal(modalManager, { onEdit, onDeleteSuccess })
 
             alerts.forEach(alert => {
                 const li = document.createElement('li');
+                const disabledClass = alert.disabled ? 'disabled' : '';
+                const mutedClass = alert.muted ? 'muted' : '';
                 li.innerHTML = `
-                    <div>
+                    <div class="${disabledClass} ${mutedClass}">
                         <span class="level-badge ${alert.alertLevel.toLowerCase()}">${alert.alertLevel}</span> 
                         <strong>${alert.alertName}</strong>
+                        ${alert.disabled ? '<span class="status-indicator disabled">Disabled</span>' : ''}
+                        ${alert.muted ? '<span class="status-indicator muted">Muted</span>' : ''}
                     </div>
                     <div class="alert-actions">
+                        <button class="btn btn-secondary btn-icon disable-btn" title="${alert.disabled ? 'Enable' : 'Disable'}">
+                            <i class="fa-solid ${alert.disabled ? 'fa-play' : 'fa-pause'}"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-icon mute-btn" title="${alert.muted ? 'Unmute' : 'Mute'}">
+                            <i class="fa-solid ${alert.muted ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
+                        </button>
                         <button class="btn btn-secondary btn-icon edit-btn" title="Edit">
                             <i class="fa-solid fa-pen"></i>
                         </button>
@@ -51,6 +61,32 @@ export function initActiveAlertsModal(modalManager, { onEdit, onDeleteSuccess })
                         </button>
                     </div>
                 `;
+
+                // Disable/Enable Logic
+                li.querySelector('.disable-btn').onclick = async () => {
+                    const newDisabled = !alert.disabled;
+                    await fetch(`alerts/${alert._id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ disabled: newDisabled })
+                    });
+                    onDeleteSuccess(); // Refresh the list
+                    const newBody = await assembleBody();
+                    modalManager.body.replaceChildren(newBody);
+                };
+
+                // Mute/Unmute Logic
+                li.querySelector('.mute-btn').onclick = async () => {
+                    const newMuted = !alert.muted;
+                    await fetch(`alerts/${alert._id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ muted: newMuted })
+                    });
+                    onDeleteSuccess(); // Refresh the list
+                    const newBody = await assembleBody();
+                    modalManager.body.replaceChildren(newBody);
+                };
 
                 // Edit Logic
                 li.querySelector('.edit-btn').onclick = () => {

@@ -6,6 +6,29 @@
     const { DATA_DICTIONARY, TIMEFRAME_CONFIG } = window.CONSTANTS;
     const { CACHE_MAX_POINTS } = window.DashboardApp.constants;
 
+    function getSharedEventSource() {
+        if (window.__sharedEventSource && window.__sharedEventSource.readyState !== EventSource.CLOSED) {
+            return window.__sharedEventSource;
+        }
+
+        const evtSource = new EventSource('events');
+
+        evtSource.addEventListener('open', () => console.log('Shared SSE connection opened (chartDataManager).'));
+        evtSource.addEventListener('error', () => {
+            console.warn('Shared SSE connection closed or disconnected (chartDataManager).');
+            // Let EventSource auto-reconnect; only close on unload.
+        });
+
+        window.__sharedEventSource = evtSource;
+
+        window.addEventListener('beforeunload', () => {
+            try { window.__sharedEventSource?.close(); } catch (e) { }
+            window.__sharedEventSource = null;
+        });
+
+        return evtSource;
+    }
+
     // reset the logs obj on reload
     window.DashboardApp.logs = {};
 
@@ -219,8 +242,7 @@
 
     // ---------- SSE Updates (batched) ----------
     function setupSSE() {
-        const evtSource = new EventSource('events');
-        window.__chartEvtSource = evtSource;
+        const evtSource = getSharedEventSource();
 
         let pendingUpdates = []; // Store latest updates
         let rafScheduled = false;
@@ -408,7 +430,7 @@
         await loadChartsFromDatabase();
         setupSSE();
         window.addEventListener('beforeunload', () => {
-            if (window.__chartEvtSource) { window.__chartEvtSource.close(); window.__chartEvtSource = null; }
+            if (window.__sharedEventSource) { window.__sharedEventSource.close(); window.__sharedEventSource = null; }
             localStorage.setItem('scrollpos', window.scrollY);
         });
         document.getElementById('model-select')?.addEventListener('change', populateAllCharts);

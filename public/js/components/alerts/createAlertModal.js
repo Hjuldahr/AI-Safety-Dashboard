@@ -30,6 +30,12 @@ export const initCreateAlertModal = (modalManager, options) => {
 
     await tagSelector.init();
 
+    const cleanupTagSelector = () => {
+      tagSelector.destroy();
+      modalManager.unregisterCloseCallback(cleanupTagSelector);
+    };
+    modalManager.registerCloseCallback(cleanupTagSelector);
+
     // Setup the save logic using our 'elements' references
     const handleSave = async () => {
       const payload = {
@@ -38,6 +44,8 @@ export const initCreateAlertModal = (modalManager, options) => {
         modelName: elements.modelSelect.value,
         alertRule: buildRuleJSON(elements.rulesContainer, DATA_DICTIONARY),
         tags: tagSelector.getSelectedIds(),
+        disabled: elements.disabledCheckbox.checked,
+        muted: elements.mutedCheckbox.checked,
         ...(currentEditId ? {} : { created: Date.now() })
       };
 
@@ -63,6 +71,8 @@ export const initCreateAlertModal = (modalManager, options) => {
       elements.nameInput.value = editData.alertName;
       elements.levelSelect.value = editData.alertLevel;
       elements.modelSelect.value = editData.modelName || "";
+      elements.disabledCheckbox.checked = editData.disabled || false;
+      elements.mutedCheckbox.checked = editData.muted || false;
       populateRuleBuilder(elements.rulesContainer, editData.alertRule, DATA_DICTIONARY);
 
       const tagIds = (editData.tags || []).map(t => t._id || t);
@@ -90,6 +100,8 @@ function buildAlertModalBody(DATA_DICTIONARY, KNOWN_MODELS, tagsCache) {
     nameInput: null,
     levelSelect: null,
     modelSelect: null,
+    disabledCheckbox: null,
+    mutedCheckbox: null,
     selectedTags: []
   };
   elements.rulesContainer.id = "rules-container";
@@ -109,12 +121,22 @@ function buildAlertModalBody(DATA_DICTIONARY, KNOWN_MODELS, tagsCache) {
           </div>
           <div class="tags-dropdown" id="modal-tags-dropdown" style="display: none;"></div>
         </div>
+        <div class="form-group full-width">
+          <label>
+            <input type="checkbox" class="disabled-checkbox" /> Disabled
+          </label>
+          <label style="margin-left: 20px;">
+            <input type="checkbox" class="muted-checkbox" /> Muted
+          </label>
+        </div>
     `;
 
   // Map the references
   elements.nameInput = body.querySelector('.name-input');
   elements.levelSelect = body.querySelector('.level-select');
   elements.modelSelect = body.querySelector('.model-select');
+  elements.disabledCheckbox = body.querySelector('.disabled-checkbox');
+  elements.mutedCheckbox = body.querySelector('.muted-checkbox');
   elements.tagsContainer = body.querySelector('#modal-tags-container');
   elements.tagsSearch = body.querySelector('#modal-tags-search');
   elements.tagsDropdown = body.querySelector('#modal-tags-dropdown');

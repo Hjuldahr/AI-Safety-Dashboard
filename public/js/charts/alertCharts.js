@@ -96,8 +96,14 @@
             if (charts.line) charts.line.destroy();
 
             const datasets = Object.keys(timeSeries).map(level => {
-                // Sort by time
-                const points = (timeSeries[level] || []).sort((a,b) => new Date(a.x) - new Date(b.x));
+                const points = (timeSeries[level] || [])
+                    .map(pt => {
+                        const xDate = pt && pt.x ? new Date(pt.x) : null;
+                        return { x: xDate, y: pt && typeof pt.y === 'number' ? pt.y : null };
+                    })
+                    .filter(pt => pt.x instanceof Date && !Number.isNaN(pt.x.getTime()) && pt.y !== null)
+                    .sort((a, b) => a.x - b.x);
+
                 return {
                     label: level,
                     data: points,
@@ -121,10 +127,9 @@
                         }
                     },
                     scales: {
-                        x: { 
+                        x: {
                             type: 'time',
-                            time: { unit: 'hour', displayFormats: { hour: 'MMM d, HH:mm' } },
-                            parsing: false 
+                            time: { unit: 'hour', displayFormats: { hour: 'MMM d, HH:mm' } }
                         },
                         y: { beginAtZero: true, ticks: { precision: 0 } }
                     }
