@@ -954,12 +954,13 @@ const HISTORY_PAGE_LIMIT = 10;
 const getHistory = async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = parseInt(req.query.limit) || HISTORY_PAGE_LIMIT;
 
         const [records, total] = await Promise.all([
             ReportRecord.find()
                 .sort({ createdAt: -1 })
-                .skip((page - 1) * HISTORY_PAGE_LIMIT)
-                .limit(HISTORY_PAGE_LIMIT)
+                .skip((page - 1) * limit)
+                .limit(limit)
                 .lean()
                 .exec(),
             ReportRecord.countDocuments()
@@ -968,7 +969,7 @@ const getHistory = async (req, res) => {
         res.json({
             reports: records,
             page,
-            totalPages: Math.ceil(total / HISTORY_PAGE_LIMIT),
+            totalPages: Math.ceil(total / limit),
             total
         });
     } catch (err) {
