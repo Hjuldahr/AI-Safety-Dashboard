@@ -9,6 +9,7 @@ import { AI_LOG_CUTOFF } from '../constants/sse.js';
 import AI_Summary from '../models/AI_Summary.js';
 import AlertLog from '../models/alert_log.js';
 import * as h5wasm from 'h5wasm/node';
+import fs from "fs";
 
 // Resolve __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -837,13 +838,10 @@ export const downloadHdf5 = async (req, res) => {
         if (logs.length) writeStructuredData(logGroup, logs);
         if (summaries.length) writeStructuredData(summaryGroup, summaries);
 
-        // file.create_attribute("model_version", modelName, [1], "string");
-        // file.create_attribute("export_timestamp", new Date().toISOString(), [1], "string");
-
         file.close();
 
         res.download(filePath, `AI-Project-Data.h5`, () => {
-            import('fs').then(fs => fs.unlinkSync(filePath));
+            fs.unlinkSync(filePath);
         });
 
     } catch (err) {
