@@ -12,4 +12,10 @@ router.post('/download-summaries', isAuthenticated, authorize('export:report'), 
 router.post('/download-aggregates', isAuthenticated, authorize('export:report'), reportController.downloadAggregatesCsv);
 router.post('/download-hdf5', isAuthenticated, authorize('export:report'), reportController.downloadHdf5);
 
+// Report History
+router.get('/history', isAuthenticated, authorize('view:reports'), reportController.getHistory);
+router.get('/history/:id/pdf', isAuthenticated, authorize('view:reports'), reportController.getHistoryPdf);
+router.get('/history/:id/download/:type', isAuthenticated, authorize('export:report'), reportController.downloadFromHistory);
+router.delete('/history/:id', isAuthenticated, authorize('create:report'), reportController.deleteReport);
+
 export default router;

@@ -12,13 +12,17 @@
   <link rel="stylesheet" id="theme-colors" href="">
   <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
   <link rel="stylesheet" href="css/components/notifications.css">
+  <link rel="stylesheet" href="css/components/pagination.css">
+  <link rel="stylesheet" href="css/components/modals.css">
   <link rel="stylesheet" href="css/pages/reports.css">
 
 
   <!-- Scripts -->
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script src="js/components/pagination.js" defer></script>
   <script src="js/notifications.js" defer></script>
   <script src="js/reports.js" defer></script>
+  <script src="js/reportHistory.js" type="module" defer></script>
 </head>
 
 <% 
@@ -41,6 +45,18 @@
   <%- include('components/nav') %>
 
   <main class="content">
+
+    <div class="reports-tabs">
+      <button class="report-tab-btn active" data-view="generator">
+        <i class="fa-solid fa-chart-line"></i> Report Generator
+      </button>
+      <button class="report-tab-btn" data-view="history">
+        <i class="fa-solid fa-clock-rotate-left"></i> Report History
+      </button>
+    </div>
+
+    <!-- GENERATOR TAB -->
+    <div id="generator-view" class="report-view">
     <div class="reports-container card">
       <div class="report-header">
         <h1><i class="fa-solid fa-chart-line"></i> Report Generator</h1>
@@ -127,13 +143,13 @@
 
 
         <div class="action-bar">
-          <button id="report-submit" type="submit" class="btn-primary">Generate Preview</button>
+          <button id="report-submit" type="submit" class="btn-primary"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Preview</button>
           <div class="download-group">
-            <button id="report-download" type="button" class="btn-download pdf">PDF</button>
-            <button id="report-download-ai-logs" type="button" class="btn-download ai-logs">AI Logs</button>
-            <button id="report-download-ai-summaries" type="button" class="btn-download ai-summaries">AI Summaries</button>
-            <button id="report-download-csv-aggregates" type="button" class="btn-download agg">Aggregates</button>
-            <button id="report-download-hdf5" type="button" class="btn-download ai-logs">HDF5 (includes logs + summaries)</button>
+            <button id="report-download" type="button" class="btn-download pdf"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+            <button id="report-download-ai-logs" type="button" class="btn-download ai-logs"><i class="fa-solid fa-database"></i> AI Logs</button>
+            <button id="report-download-ai-summaries" type="button" class="btn-download ai-summaries"><i class="fa-solid fa-list"></i> AI Summaries</button>
+            <button id="report-download-csv-aggregates" type="button" class="btn-download agg"><i class="fa-solid fa-chart-bar"></i> Aggregates</button>
+            <button id="report-download-hdf5" type="button" class="btn-download ai-logs"><i class="fa-solid fa-cube"></i> HDF5 (includes logs + summaries)</button>
           </div>
         </div>
       </form>
@@ -142,6 +158,27 @@
         <iframe id="report-preview"></iframe>
       </div>
     </div>
+    </div><!-- end generator-view -->
+
+    <!-- HISTORY TAB -->
+    <div id="history-view" class="report-view hidden">
+      <div class="reports-container card">
+        <div class="report-header">
+          <h1><i class="fa-solid fa-clock-rotate-left"></i> Report History</h1>
+          <p>View and download previously generated reports.</p>
+        </div>
+
+        <div id="history-list"></div>
+        <div id="history-pagination" class="pagination"></div>
+        <div id="history-empty" class="history-empty-state hidden">
+          <i class="fa-solid fa-folder-open"></i>
+          <p>No reports have been generated yet.</p>
+        </div>
+      </div>
+    </div><!-- end history-view -->
+
+    <%- include('components/modal') %>
+
   </main>
 </body>
 

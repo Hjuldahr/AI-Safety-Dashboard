@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ejs from 'ejs';
@@ -8,6 +9,7 @@ import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { AI_LOG_CUTOFF } from '../constants/sse.js';
 import AI_Summary from '../models/AI_Summary.js';
 import AlertLog from '../models/alert_log.js';
+import ReportRecord from '../models/ReportRecord.js';
 import * as h5wasm from 'h5wasm/node';
 import fs from "fs";
 
@@ -650,6 +652,23 @@ const createReport = async (req, res) => {
 
         const pdfBuffer = await renderPdfFromTemplate('reportTemplate', templateData);
 
+        // Save the report record and PDF to disk
+        const recordId = new mongoose.Types.ObjectId();
+        const pdfFilename = `${recordId}.pdf`;
+        const storagePath = path.join(__dirname, '../storage/reports', pdfFilename);
+        fs.writeFileSync(storagePath, pdfBuffer);
+
+        await ReportRecord.create({
+            _id: recordId,
+            title: reportTitle,
+            modelName,
+            startDate,
+            endDate,
+            fields: selectedFields,
+            fidelity,
+            pdfFilename
+        });
+
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `inline; filename="${modelName}-report.pdf"`);
         return res.send(pdfBuffer);
@@ -851,11 +870,125 @@ export const downloadHdf5 = async (req, res) => {
 };
 
 
+// ===============================================
+// === REPORT HISTORY FUNCTIONS ==================
+// ===============================================
+
+const HISTORY_PAGE_LIMIT = 10;
+
+/**
+ * Returns paginated report history as JSON.
+ */
+const getHistory = async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+
+        const [records, total] = await Promise.all([
+            ReportRecord.find()
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * HISTORY_PAGE_LIMIT)
+                .limit(HISTORY_PAGE_LIMIT)
+                .lean()
+                .exec(),
+            ReportRecord.countDocuments()
+        ]);
+
+        res.json({
+            reports: records,
+            page,
+            totalPages: Math.ceil(total / HISTORY_PAGE_LIMIT),
+            total
+        });
+    } catch (err) {
+        console.error('Get Report History Error:', err);
+        res.status(500).json({ message: 'Failed to fetch report history', error: err.message });
+    }
+};
+
+/**
+ * Serves a stored PDF by report record ID.
+ */
+const getHistoryPdf = async (req, res) => {
+    try {
+        const record = await ReportRecord.findById(req.params.id).lean().exec();
+        if (!record) return res.status(404).json({ message: 'Report not found' });
+
+        const filePath = path.resolve(__dirname, '../storage/reports', record.pdfFilename);
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ message: 'PDF file not found on disk' });
+        }
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${record.title}.pdf"`);
+        return res.sendFile(filePath);
+    } catch (err) {
+        console.error('Get History PDF Error:', err);
+        res.status(500).json({ message: 'Failed to retrieve PDF', error: err.message });
+    }
+};
+
+/**
+ * Re-generates a download using stored report params.
+ * The `type` param maps to an existing download handler.
+ */
+const downloadFromHistory = async (req, res) => {
+    try {
+        const record = await ReportRecord.findById(req.params.id).lean().exec();
+        if (!record) return res.status(404).json({ message: 'Report not found' });
+
+        // Reconstruct req.body from the stored record so existing handlers can process it
+        req.body = {
+            modelName: record.modelName,
+            startDate: record.startDate,
+            endDate: record.endDate,
+            fields: record.fields
+        };
+
+        const type = req.params.type;
+        switch (type) {
+            case 'logs': return downloadAiLogs(req, res);
+            case 'summaries': return downloadAiSummaries(req, res);
+            case 'aggregates': return downloadAggregatesCsv(req, res);
+            case 'hdf5': return downloadHdf5(req, res);
+            default: return res.status(400).json({ message: `Unknown download type: ${type}` });
+        }
+    } catch (err) {
+        console.error('Download From History Error:', err);
+        res.status(500).json({ message: 'Failed to process download', error: err.message });
+    }
+};
+
+/**
+ * Deletes a report record and its associated PDF file.
+ */
+const deleteReport = async (req, res) => {
+    try {
+        const record = await ReportRecord.findById(req.params.id).exec();
+        if (!record) return res.status(404).json({ message: 'Report not found' });
+
+        // Remove PDF from disk
+        const filePath = path.join(__dirname, '../storage/reports', record.pdfFilename);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+
+        await record.deleteOne();
+        res.json({ message: 'Report deleted successfully' });
+    } catch (err) {
+        console.error('Delete Report Error:', err);
+        res.status(500).json({ message: 'Failed to delete report', error: err.message });
+    }
+};
+
 export default {
     createReport,
     getPage,
     downloadAiLogs,
     downloadAiSummaries,
     downloadAggregatesCsv,
-    downloadHdf5
+    downloadHdf5,
+    getHistory,
+    getHistoryPdf,
+    downloadFromHistory,
+    deleteReport
 };
