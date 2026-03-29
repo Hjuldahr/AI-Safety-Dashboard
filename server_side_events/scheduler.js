@@ -1,10 +1,14 @@
 // server_side_events/scheduler.js
 import { AIAnalyzer } from '../data_analysis_pipeline/AIAnalyzer.js';
-import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
+import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
+import { getAiLogCutoff } from '../helpers/getAiLogCutoff.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
-import evaluateAlerts from "./alertEvaluator.js";
+import { evaluateAndTagLogs, finalizeAlertLogs } from "./alertEvaluator.js";
+import { sendNotification } from '../controllers/notificationController.js';
+import { NOTIFICATION_TYPES, BACKGROUND_COLOURS, TRIM_COLOURS } from '../constants/notification.js';
+import User_Log from '../models/User_Log.js';
 
 // ---------- Shutdown Guard ----------
 let shuttingDown = false;
@@ -16,14 +20,17 @@ let schedulerInterval = null;
 let summaryInterval = null;
 
 // ---------- Model Simulation ----------
-let previousGeneralization = []
+const MAX_PREV_GENS = 60;
+let previousGeneralizations = []; //switching to array to avoid critical vulnerabilites
 
 //One method for all models
+//ToDo: Make this dynamic so that it follows constants/charts.js
 async function generateModelData(modelName) {
 
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
-    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralization);
-    previousGeneralization = summary;
+    const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralizations);
+    previousGeneralizations.push(summary);
+    if (previousGeneralizations.length > MAX_PREV_GENS) previousGeneralizations.shift();
 
     // Format for DB/SSE
     return {
@@ -40,6 +47,7 @@ async function generateModelData(modelName) {
         queryCount: summary.queryCount,
         responseTimestamp: summary.responseTimestamp,
         breakdown: summary.breakdown,
+        flaggedCount: summary.flaggedCount,
         flaggedOutputs: summary.flaggedOutputs
     };
 }
@@ -117,7 +125,7 @@ function safeWriteAll(sseData, targetUserId = null) {
 function broadcastEvent(eventType, data) {
     try {
         if (shuttingDown) return;
-        
+
         const sseData = `event: ${eventType}\n` + `data: ${JSON.stringify(data)}\n\n`;
         pruneDeadClients();
         const target = data?._targetUser || null;
@@ -139,18 +147,33 @@ async function schedulerTick() {
             data[model] = await generateModelData(model);
         }
 
-        // Add all the logs to the DB
-        await AI_Log.addLogs(Object.values(data));
-
-        // Evaluate alerts
+        // Evaluate alerts and attach tag IDs to the raw data objects
+        let pendingAlerts = [];
         try {
-            await evaluateAlerts(data, { cooldownMs: ALERTS_COOLDOWN });
+            pendingAlerts = await evaluateAndTagLogs(data, { cooldownMs: ALERTS_COOLDOWN });
         } catch (alertErr) {
             console.error('Error evaluating alerts:', alertErr);
         }
 
+        // Add all the logs to the DB
+        const insertedLogs = await AI_Log.addLogs(Object.values(data));
+
+        await AI_Log.populate(insertedLogs, { path: 'tags' });
+
+        // Convert the returned DB docs into the map format
+        const logsMap = {};
+        insertedLogs.forEach(log => {
+            const logObj = log.toObject ? log.toObject() : log;
+            logsMap[logObj.modelName] = logObj;
+        });
+
+        // Create the AlertLog documents
+        if (pendingAlerts.length > 0) {
+            await finalizeAlertLogs(pendingAlerts, logsMap);
+        }
+
         // Broadcast real-time update to clients
-        broadcastEvent('update', data);
+        broadcastEvent('update', logsMap);
 
     } catch (err) {
         console.error('Scheduler tick error:', err);
@@ -166,10 +189,13 @@ async function createSummary() {
 
         if (summaries.length > 0) {
             // Save to the summary collection
-            await AI_Summary.insertMany(summaries);
+            const summary = await AI_Summary.insertMany(summaries);
+
+            broadcastEvent('summary', summary);
 
             // Delete extra
-            const cutoff = Date.now() - AI_LOG_CUTOFF;
+            const aiLogCutoff = await getAiLogCutoff();
+            const cutoff = Date.now() - aiLogCutoff;
             await AI_Log.deleteMany({ responseTimestamp: { $lt: cutoff } });
         }
     } catch (err) {
@@ -198,21 +224,46 @@ function stopScheduler() {
     }
 }
 
-function updateSchedulerSettings({ isPaused, activeModel, interval }) {
-    let restart = false;
+function updateSchedulerSettings(newState, user) {
+    const prevIsPaused = schedulerState.isPaused;
+    let shouldRestart = false;
 
-    if (typeof isPaused === 'boolean' && isPaused !== schedulerState.isPaused) {
-        schedulerState.isPaused = isPaused;
-        console.log(`[Scheduler] ${isPaused ? 'Paused' : 'Resumed'}`);
-        restart = true;
+    // ===== Pause / Resume Handling =====
+    if (typeof newState.isPaused === 'boolean' && newState.isPaused !== prevIsPaused) {
+        schedulerState.isPaused = newState.isPaused;
+        shouldRestart = true;
+
+        const action = newState.isPaused ? 'Paused' : 'Resumed';
+
+        console.log(`[Scheduler] ${action}`);
+
+        if (user?._id && user?.username) {
+            User_Log
+                .addLog(user._id, 'User_Updated', `User ${action} Scheduler`)
+                .catch(err => console.error('Failed to write log:', err));
+
+            sendNotification({
+                message: `[Scheduler] was ${action} by ${user.username}`,
+                category: NOTIFICATION_TYPES.Server,
+                redirectUrl: '/',
+                autoCalculateTimeout: true,
+                trim: TRIM_COLOURS[action],
+                background: BACKGROUND_COLOURS[action]
+            });
+        }
     }
 
-    if (activeModel) {
-        schedulerState.activeModel = activeModel;
-        console.log('[Scheduler] Active model changed to', activeModel);
+    // ===== Active Model Handling =====
+    if (newState.activeModel && newState.activeModel !== schedulerState.activeModel) {
+        schedulerState.activeModel = newState.activeModel;
+        console.log('[Scheduler] Active model changed to', newState.activeModel);
+        shouldRestart = true;
     }
 
-    if (restart) startScheduler();
+    // ===== Restart if needed =====
+    if (shouldRestart) {
+        startScheduler();
+    }
 }
 
 function setupScheduler() {

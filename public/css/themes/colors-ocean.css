@@ -1,0 +1,118 @@
+/* ==========================================================================
+   COLORS — OCEAN THEME
+   body.theme-ocean light + dark-mode overrides
+   ========================================================================== */
+
+/* ---------- Ocean theme (light) ---------- */
+body.theme-ocean {
+  --primary-color: #0891b2;
+  --primary-hover: #0e7490;
+  --primary-light: #cffafe;
+  --green-color: #14b8a6;
+  --body-bg: #ecfeff;
+  --card-bg: #ffffff;
+  --panel-header-bg: #cffafe;
+  --text-dark: #164e63;
+  --text-light: #67818a;
+  --text-muted: #4b6b77;
+  --color-muted: #8fa8b3;
+  --border-color: #a5f3fc;
+  --border-light: #b2e0ea;
+  --border-lighter: #d5f5fa;
+  --shadow: 0 4px 6px -1px rgba(8,145,178,.1), 0 2px 4px -2px rgba(8,145,178,.08);
+  --shadow-md: 0 4px 6px rgba(8,145,178,.1);
+  --shadow-lg: 0 4px 12px rgba(8,145,178,.08);
+  --shadow-card-hover: 0 6px 16px rgba(8,145,178,.15);
+  --color-info: #0ea5e9;
+  --color-info-light: #e0f2fe;
+  --color-info-dark: #0369a1;
+  --color-success: #14b8a6;
+  --color-success-hover: #0d9488;
+  --btn-default-bg: #0891b2;
+  --btn-default-hover: #0e7490;
+  --btn-default-active: #155e75;
+  --alert-success-bg: #ccfbf1;
+  --alert-success-text: #115e59;
+  --alert-success-border: #5eead4;
+  --log-dot-login: #14b8a6;
+  --log-dot-signup: #06b6d4;
+  --log-dot-report: #0ea5e9;
+  --log-dot-default: #b2e0ea;
+  --color-teal: #14b8a6;
+  --color-teal-bg: rgba(20,184,166,.2);
+  --color-primary-btn: #0891b2;
+  --demo-border-color: #a5f3fc;
+  --kpi-text-color: #4b6b77;
+  --code-bg: #1e3a4c;
+  --code-text: #e0f2fe;
+  --back-btn-bg: #4b6b77;
+  --timeframe-label-color: #3b6b7a;
+  --timeframe-bg: #ecfeff;
+  --card-edit-bg: #f0fdfa;
+  --role-system-bg: #cffafe;
+  --role-system-text: #155e75;
+  --edit-hover-color: #0891b2;
+  --focus-ring: rgba(8,145,178,.3);
+  --focus-ring-light: rgba(8,145,178,.12);
+  --overlay-light: rgba(8,145,178,.04);
+  --tiny-group-border: rgba(8,145,178,.3);
+  --header-text-color: #164e63;
+  --button-bg-color: #ecfeff;
+  --button-hover-bg-color: #cffafe;
+  --button-text-color: #164e63;
+  --primary-accent-color: #0e7490;
+  --nav-bg-color: #f0fdfa;
+  --nav-link-color: #3b6b7a;
+  --nav-link-hover-bg: #ccfbf1;
+  --nav-link-active-bg: #0891b2;
+  --nav-border-color: #a5f3fc;
+}
+
+/* ---------- Ocean theme (dark) ---------- */
+body.theme-ocean.dark-mode {
+  --body-bg: #0c1a25;
+  --card-bg: #132f42;
+  --panel-header-bg: #1e4a62;
+  --header-bg-color: #132f42;
+  --nav-bg-color: #0c1a25;
+  --text-dark: #e0f2fe;
+  --text-light: #7dd3fc;
+  --text-muted: #93b8cc;
+  --color-muted: #5a8fa8;
+  --border-color: #1e4a62;
+  --border-light: #2a5f7a;
+  --border-lighter: #1e4a62;
+  --nav-border-color: #1e4a62;
+  --input-bg: #1e4a62;
+  --primary-color: #22d3ee;
+  --primary-light: #164e63;
+  --header-text-color: #e0f2fe;
+  --button-bg-color: #1e4a62;
+  --button-hover-bg-color: #2a5f7a;
+  --button-text-color: #e0f2fe;
+  --nav-link-color: #7dd3fc;
+  --nav-link-hover-bg: #1e4a62;
+  --color-info-light: #0c3547;
+  --color-info-dark: #7dd3fc;
+  --btn-default-bg: #06b6d4;
+  --btn-default-hover: #0891b2;
+  --btn-default-active: #0e7490;
+  --alert-success-bg: #042f2e;
+  --alert-success-text: #5eead4;
+  --alert-success-border: #115e59;
+  --demo-border-color: #155e75;
+  --kpi-text-color: #7dd3fc;
+  --code-bg: #0a1929;
+  --code-text: #bae6fd;
+  --back-btn-bg: #2a5f7a;
+  --timeframe-label-color: #7dd3fc;
+  --timeframe-bg: #0c2a3a;
+  --card-edit-bg: #132f42;
+  --role-system-bg: #0c3547;
+  --role-system-text: #7dd3fc;
+  --edit-hover-color: #22d3ee;
+  --focus-ring: rgba(34,211,238,.35);
+  --focus-ring-light: rgba(34,211,238,.15);
+  --tiny-group-border: rgba(34,211,238,.3);
+  --editing-header-bg: rgba(19,47,66,.95);
+}

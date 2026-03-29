@@ -1,320 +1,199 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <base href="<%= process.env.PUBLIC_URL || '/' %>" />
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Alerts Dashboard</title>
 
-    <link rel="stylesheet" href="css/fullSite.css" />
-    <link rel="stylesheet" href="css/header.css" />
-    <link rel="stylesheet" href="css/alerts.css" />
-    <link rel="stylesheet" href="css/nav.css" />
-    <link rel="stylesheet" href="css/notifications.css" />
+<head>
+  <base href="<%= process.env.PUBLIC_URL || '/' %>" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alerts Dashboard</title>
+  <link rel="stylesheet" href="css/themes/colors-default.css" />
+  <link rel="stylesheet" id="theme-colors" href="" />
+  <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css" />
+  <link rel="stylesheet" href="css/components/notifications.css" />
+  <link rel="stylesheet" href="css/components/tables.css" />
+  <link rel="stylesheet" href="css/components/pagination.css" />
+  <link rel="stylesheet" href="css/pages/alerts.css" />
+  <link rel="stylesheet" href="css/components/modals.css">
+  <link rel="stylesheet" href="css/components/tagSelect.css">
 
-    <script src="js/components/pagination.js" defer></script>
-    <script src="js/alerts.js" defer></script>
-    <script
-      src="https://kit.fontawesome.com/dd0a7425a6.js"
-      crossorigin="anonymous"
-    ></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script src="js/charts/alertCharts.js"></script>
-    <script src="js/notifications.js" defer></script>
-  </head>
+  <script src="js/sseManager.js"></script>
+  <script src="js/components/pagination.js" defer></script>
+  <script type="module" src="js/alerts.js" defer></script>
+  <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="js/charts/alertCharts.js"></script>
+  <script src="js/notifications.js" defer></script>
+  <script type="module" src="js/components/tags/tagModal.js"></script>
+</head>
 
-  <body>
-    <script>
-      window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
-    </script>
-    <script id="constants-json" type="application/json">
-      <%- JSON.stringify(constants || {}) %>
-    </script>
-    <script>
-      window.CONSTANTS = JSON.parse(
-        document.getElementById("constants-json").textContent,
-      );
-      const { DATA_DICTIONARY, KNOWN_MODELS } = window.CONSTANTS;
-    </script>
+<body>
+  <script>
+    //Grab the constants sent on page load
+    window.CONSTANTS = <%- JSON.stringify(constants) %>;
+    window.DEEP_LINK = <%- JSON.stringify(deepLink) %>;
+    const {
+      DATA_DICTIONARY,
+      KNOWN_MODELS
+    } = window.CONSTANTS;
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
+  </script>
 
-    <%- include('components/header') %> <%- include('components/nav') %>
+  <%- include('components/header') %>
 
-    <main class="content">
-      <div class="main-container">
-        <!-- New Dashboard Section -->
-        <section class="charts-dashboard card" style="margin-bottom: 2rem">
-          <div class="charts-header">
-            <h3>Alert Analytics</h3>
-            <div class="chart-controls">
-              <select id="chart-range-select">
-                <option value="24h">Last 24 Hours</option>
-                <option value="7d">Last 7 Days</option>
-                <option value="30d">Last 30 Days</option>
-              </select>
-            </div>
-          </div>
-          <div class="charts-container">
-            <div class="chart-wrapper">
-              <canvas id="chart-pie"></canvas>
-            </div>
-            <div class="chart-wrapper">
-              <canvas id="chart-bar"></canvas>
-            </div>
-            <div class="chart-wrapper">
-              <canvas id="chart-line"></canvas>
-            </div>
-          </div>
-        </section>
-        <section class="dashboard-stats">
-          <div class="stat-card critical" data-level="Critical">
-            <div class="stat-icon">
-              <i class="fa-solid fa-circle-exclamation"></i>
-            </div>
-            <div class="stat-info">
-              <span class="stat-count" id="count-critical">0</span>
-              <span class="stat-label">Critical Alerts</span>
-            </div>
-          </div>
-          <div class="stat-card high" data-level="High">
-            <div class="stat-icon">
-              <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
-            <div class="stat-info">
-              <span class="stat-count" id="count-high">0</span>
-              <span class="stat-label">High Alerts</span>
-            </div>
-          </div>
-          <div class="stat-card medium" data-level="Medium">
-            <div class="stat-icon"><i class="fa-solid fa-bell"></i></div>
-            <div class="stat-info">
-              <span class="stat-count" id="count-medium">0</span>
-              <span class="stat-label">Medium Alerts</span>
-            </div>
-          </div>
-          <div class="stat-card info" data-level="Info">
-            <div class="stat-icon"><i class="fa-solid fa-circle-info"></i></div>
-            <div class="stat-info">
-              <span class="stat-count" id="count-info">0</span>
-              <span class="stat-label">Info Alerts</span>
-            </div>
-          </div>
-        </section>
+  <%- include('components/nav') %>
 
-        <section class="control-bar card">
-          <form id="history-filter-form" class="filter-group">
-            <div class="filter-item">
-              <label for="filter-level">Level</label>
-              <select id="filter-level" name="level">
-                <option value="all">All Levels</option>
-                <option value="Critical">Critical</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Info">Info</option>
-              </select>
-            </div>
-
-            <div class="filter-item">
-              <label for="filter-model">Model</label>
-              <select
-                id="filter-model"
-                name="modelName"
-                class="model-select-dynamic"
-              ></select>
-            </div>
-
-            <div class="filter-item">
-              <label for="filter-tag">Tag</label>
-              <select id="filter-tag" name="tag">
-                <option value="all">All Tags</option>
-              </select>
-            </div>
-
-            <div class="filter-item date-range">
-              <label>Date Range</label>
-              <div style="display: flex; gap: 0.5rem; align-items: center">
-                <input type="date" id="filter-start-date" name="startDate" />
-                <span class="sep">-</span>
-                <input type="date" id="filter-end-date" name="endDate" />
-              </div>
-            </div>
-
-            <div class="filter-actions">
-              <button type="submit" class="btn btn-primary">Apply</button>
-              <button type="button" class="btn btn-secondary clear-filters">
-                Clear
-              </button>
-            </div>
-          </form>
-
-          <div class="global-actions">
-            <button id="open-tags-modal-btn" class="btn btn-secondary">
-              <i class="fa-solid fa-tags"></i> Manage Tags
-            </button>
-            <button id="open-manage-modal-btn" class="btn btn-secondary">
-              <i class="fa-solid fa-list-check"></i> Active Alerts
-            </button>
-            <button
-              id="open-create-modal-btn"
-              class="btn btn-primary create-btn"
-            >
-              <i class="fa-solid fa-plus"></i> Create Alert
-            </button>
-          </div>
-        </section>
-
-        <section class="card alert-log-panel">
-          <div class="table-container">
-            <table class="alert-log-table">
-              <thead>
-                <tr>
-                  <th>Level</th>
-                  <th>Time</th>
-                  <th>Alert Name</th>
-                  <th>Model</th>
-                  <th>Triggered By</th>
-                  <th>Tags</th>
-                </tr>
-              </thead>
-              <tbody id="alert-log-body">
-                <tr>
-                  <td colspan="6">Loading history...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div id="history-pagination" class="pagination"></div>
-        </section>
-      </div>
-
-      <div id="alert-modal" class="modal-overlay" style="display: none">
-        <div class="modal-content large-modal">
-          <div class="modal-header">
-            <h2 id="modal-title">Create New Alert</h2>
-            <button class="close-modal-btn">&times;</button>
-          </div>
-
-          <div class="modal-body">
-            <div class="alert-builder-grid">
-              <div class="form-group">
-                <label for="alert-name">Alert Name</label>
-                <input
-                  type="text"
-                  id="alert-name"
-                  placeholder="e.g. High Latency Check"
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="alert-level">Alert Level</label>
-                <select id="alert-level">
-                  <option value="">-- Select --</option>
-                  <option value="Critical">Critical</option>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Info">Info</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="model-name">Model (Optional)</label>
-                <select id="model-name" class="model-select-dynamic"></select>
-              </div>
-
-              <div class="form-group full-width">
-                <label>Alert Rule Condition</label>
-                <div class="rule-builder-inputs" id="rules-container"></div>
-                <div class="logical-operators-container">
-                  <span class="rule-builder-note"
-                    >(add another part to the rule)</span
-                  >
-                  <div class="logical-operators">
-                    <button
-                      class="btn btn-sm btn-secondary add-rule-btn"
-                      data-logic="AND"
-                    >
-                      AND
-                    </button>
-                    <button
-                      class="btn btn-sm btn-secondary add-rule-btn"
-                      data-logic="OR"
-                    >
-                      OR
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-group full-width tags-section">
-                <label>Assign Tags</label>
-                <div class="multiselect-container" id="tags-multiselect">
-                  <div class="tags-input-container" id="tags-input-container">
-                    <input
-                      type="text"
-                      id="tags-search-input"
-                      class="tags-search-input"
-                      placeholder="Select tags..."
-                      readonly
-                    />
-                  </div>
-                  <div
-                    class="tags-dropdown"
-                    id="tags-dropdown-list"
-                    style="display: none"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button class="btn btn-secondary close-modal-btn">Cancel</button>
-            <button id="save-alert-btn" class="btn btn-primary">
-              Save Alert
-            </button>
+  <main class="content">
+    <div class="main-container">
+      <!-- New Dashboard Section -->
+      <section class="charts-dashboard card" style="margin-bottom: 2rem">
+        <div class="charts-header">
+          <h3>Alert Analytics</h3>
+          <div class="chart-controls">
+            <select id="chart-range-select">
+              <option value="24h">Last 24 Hours</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+            </select>
           </div>
         </div>
-      </div>
-
-      <div id="manage-modal" class="modal-overlay" style="display: none">
-        <div class="modal-content medium-modal">
-          <div class="modal-header">
-            <h2>Active Rules</h2>
-            <button class="close-manage-btn">&times;</button>
+        <div class="charts-container">
+          <div class="chart-wrapper">
+            <canvas id="chart-pie"></canvas>
           </div>
-          <div class="modal-body">
-            <ul id="live-alerts-list" class="live-alerts-list"></ul>
+          <div class="chart-wrapper">
+            <canvas id="chart-bar"></canvas>
           </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary close-manage-btn">Close</button>
+          <div class="chart-wrapper">
+            <canvas id="chart-line"></canvas>
           </div>
         </div>
-      </div>
-
-      <div id="tags-modal" class="modal-overlay" style="display: none">
-        <div class="modal-content medium-modal">
-          <div class="modal-header">
-            <h2>Manage Tags</h2>
-            <button class="close-tags-btn">&times;</button>
+      </section>
+      <section class="dashboard-stats">
+        <div class="stat-card critical" data-level="Critical">
+          <div class="stat-icon">
+            <i class="fa-solid fa-circle-exclamation"></i>
           </div>
-          <div class="modal-body">
-            <div id="tag-manager-rows" class="tag-manager-list"></div>
-            <button
-              id="add-tag-row-btn"
-              class="btn btn-sm btn-secondary"
-              style="margin-top: 10px"
-            >
-              <i class="fa-solid fa-plus"></i> Add New Tag
-            </button>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary close-tags-btn">Cancel</button>
-            <button id="save-tags-btn" class="btn btn-primary">
-              Save Changes
-            </button>
+          <div class="stat-info">
+            <span class="stat-count" id="count-critical">0</span>
+            <span class="stat-label">Critical Alerts</span>
           </div>
         </div>
-      </div>
-    </main>
-  </body>
+        <div class="stat-card high" data-level="High">
+          <div class="stat-icon">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-count" id="count-high">0</span>
+            <span class="stat-label">High Alerts</span>
+          </div>
+        </div>
+        <div class="stat-card medium" data-level="Medium">
+          <div class="stat-icon"><i class="fa-solid fa-bell"></i></div>
+          <div class="stat-info">
+            <span class="stat-count" id="count-medium">0</span>
+            <span class="stat-label">Medium Alerts</span>
+          </div>
+        </div>
+        <div class="stat-card info" data-level="Info">
+          <div class="stat-icon"><i class="fa-solid fa-circle-info"></i></div>
+          <div class="stat-info">
+            <span class="stat-count" id="count-info">0</span>
+            <span class="stat-label">Info Alerts</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="control-bar card">
+        <form id="history-filter-form" class="filter-group">
+          <div class="filter-item">
+            <label for="filter-level">Level</label>
+            <select id="filter-level" name="level">
+              <option value="all">All Levels</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Info">Info</option>
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label for="filter-model">Model</label>
+            <select id="filter-model" name="modelName" class="model-select-dynamic"></select>
+          </div>
+
+          <div class="filter-item">
+            <label for="filter-tag">Tag</label>
+            <select id="filter-tag" name="tag">
+              <option value="all">All Tags</option>
+            </select>
+          </div>
+
+          <div class="filter-item date-range">
+            <label>Date Range</label>
+            <div style="display: flex; gap: 0.5rem; align-items: center">
+              <input type="date" id="filter-start-date" name="startDate" />
+              <span class="sep">-</span>
+              <input type="date" id="filter-end-date" name="endDate" />
+            </div>
+          </div>
+
+          <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <button type="button" class="btn btn-secondary clear-filters">
+              Clear
+            </button>
+          </div>
+        </form>
+
+        <div class="global-actions">
+          <button id="open-tags-modal-btn" class="btn btn-secondary">
+            <i class="fa-solid fa-tags"></i> Manage Tags
+          </button>
+          <button id="open-manage-modal-btn" class="btn btn-secondary">
+            <i class="fa-solid fa-list-check"></i> Active Alerts
+          </button>
+          <button id="open-create-modal-btn" class="btn btn-primary create-btn">
+            <i class="fa-solid fa-plus"></i> Create Alert
+          </button>
+        </div>
+        <div class="filter-actions">
+          <div class="live-toggle-container">
+            <label class="switch">
+              <input type="checkbox" id="live-update-toggle" checked>
+              <span class="slider round"></span>
+            </label>
+            <span class="live-label">Live Updates</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card alert-log-panel">
+        <div class="table-container">
+          <table class="alert-log-table">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Time</th>
+                <th>Alert Name</th>
+                <th>Model</th>
+                <th>Triggered By</th>
+                <th>Tags</th>
+              </tr>
+            </thead>
+            <tbody id="alert-log-body">
+              <tr>
+                <td colspan="6">Loading history...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="history-pagination" class="pagination"></div>
+      </section>
+    </div>
+
+    <%- include('components/modal') %>
+  </main>
+</body>
+
 </html>

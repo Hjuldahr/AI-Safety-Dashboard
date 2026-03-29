@@ -1,5 +1,5 @@
-import { Role } from '../../models/role.js';
-import {roles as defaultRoles} from "../roles.js";
+import { Role } from '../models/role.js';
+import {roles as defaultRoles} from "../constants/roles.js";
 
 /**
  * Seeds the database with default roles

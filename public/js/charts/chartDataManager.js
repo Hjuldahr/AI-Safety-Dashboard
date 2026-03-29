@@ -6,6 +6,11 @@
     const { DATA_DICTIONARY, TIMEFRAME_CONFIG } = window.CONSTANTS;
     const { CACHE_MAX_POINTS } = window.DashboardApp.constants;
 
+    // SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
+    function getSharedEventSource() {
+        return window.__sseManager.getSharedEventSource();
+    }
+
     // reset the logs obj on reload
     window.DashboardApp.logs = {};
 
@@ -219,8 +224,7 @@
 
     // ---------- SSE Updates (batched) ----------
     function setupSSE() {
-        const evtSource = new EventSource('events');
-        window.__chartEvtSource = evtSource;
+        const evtSource = getSharedEventSource();
 
         let pendingUpdates = []; // Store latest updates
         let rafScheduled = false;
@@ -408,7 +412,7 @@
         await loadChartsFromDatabase();
         setupSSE();
         window.addEventListener('beforeunload', () => {
-            if (window.__chartEvtSource) { window.__chartEvtSource.close(); window.__chartEvtSource = null; }
+            if (window.__sharedEventSource) { window.__sharedEventSource.close(); window.__sharedEventSource = null; }
             localStorage.setItem('scrollpos', window.scrollY);
         });
         document.getElementById('model-select')?.addEventListener('change', populateAllCharts);

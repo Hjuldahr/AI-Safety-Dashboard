@@ -14,27 +14,36 @@ const AlertSnapshotSchema = new Schema({
     alertRule: Schema.Types.Mixed,
     // Preserve tags as simple objects at time of firing
     // (No longer preserving tags in the snapshot — tags are stored as refs on the log)
-    created: Date
+    created: Date,
+    disabled: Boolean,
+    muted: Boolean
 }, { _id: false });
 
 // Schema for AlertLog
 const AlertLogSchema = new Schema({
+
     alert: {
         type: Schema.Types.ObjectId,
         ref: 'Alert',
         required: true
     },
-    // Current tags (refs) — may be empty; snapshot contains preserved tag objects
-    tags: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
+
+    tags: [{ type: Schema.Types.ObjectId, ref: 'HistoricalTag' }],
+
+    // AI Logs associated with the alert. There should always be 1, and max = number of AI models.
+    logs: [{ type: mongoose.Schema.Types.ObjectId, ref: "AI_Logs" }],
+
     alertSnapshot: {
         type: AlertSnapshotSchema,
         required: false
     },
+
     timestamp: {
         type: Date,
         default: Date.now,
         required: true
     }
+    
 });
 
 const AlertLog = mongoose.model('AlertLog', AlertLogSchema);

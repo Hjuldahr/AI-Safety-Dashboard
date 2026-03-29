@@ -1,19 +1,31 @@
-import { LOADED_MODELS, setScenario, clearScenario, getScenarios, getCurrentScenario } from '../data_analysis_pipeline/utilities/modelRegistry.js';
+// demoController.js
 
-export const renderDemoPage = (req, res) => {
-    // TODO set curret scenario as default
-    const firstModel = LOADED_MODELS[0];
-    const scenarioNames = Object.keys(getScenarios(firstModel));
-    const currentScenario = getCurrentScenario(firstModel);
-    res.render('demo', { 
-        models: LOADED_MODELS, 
-        scenarios: scenarioNames, 
+import { schedulerState } from '../server_side_events/schedulerState.js';
+import { LOADED_MODELS, setScenario, clearScenario, getScenarios, getCurrentScenario } from '../data_analysis_pipeline/utilities/modelRegistry.js';
+import { sendNotification } from './notificationController.js';
+import { TRIM_COLOURS, BACKGROUND_COLOURS } from "../constants/notification.js";
+
+const viewDemoPage = (req, res) => {
+    const requestedModel = req.query.model;
+    const currentModel =
+        requestedModel && LOADED_MODELS.includes(requestedModel)
+            ? requestedModel
+            : schedulerState.activeModel;
+
+    const scenarios = getScenarios(currentModel) || {};
+    const scenarioNames = Object.keys(scenarios);
+    const currentScenario = getCurrentScenario(currentModel);
+
+    res.render('demo', {
+        models: LOADED_MODELS,
+        scenarios: scenarioNames,
         currentScenario,
-        user: req.user 
+        currentModel,
+        user: req.user
     });
 };
 
-export const listScenarios = (req, res) => {
+const listScenarios = (req, res) => {
     const { modelName } = req.body;
 
     if (!modelName) {
@@ -32,9 +44,9 @@ export const listScenarios = (req, res) => {
     });
 };
 
-export const applyScenario = (req, res) => {
+const applyScenario = (req, res) => {
     const { modelName, scenarioName } = req.body;
-    
+
     if (!modelName) {
         return res.status(400).json({ error: 'Model name is required' });
     }
@@ -42,23 +54,57 @@ export const applyScenario = (req, res) => {
     try {
         setScenario(modelName, scenarioName);
         console.log(`[Demo] Model ${modelName} set to ${scenarioName}.`);
-        res.json({ success: true, message: `${modelName} is now ${scenarioName}.` });
-        
+        res.json({ success: true, message: `[${modelName}] Was set to ${scenarioName} by ${req.user.username}` });
+
+        sendNotification({
+            message: `[${modelName}] Was set to ${scenarioName} by ${req.user.username}.`,
+            category: "Demo",
+            dismissible: true,
+            redirectUrl: `/demo?model=${modelName}`,
+            autoCalculateTimeout: true,
+            trim: TRIM_COLOURS.Info,
+            background: BACKGROUND_COLOURS.Info
+        });
+
     } catch (error) {
         console.error(`[Demo] Error setting to ${scenarioName}:`, error);
         res.status(500).json({ error: error.message });
     }
 };
 
-export const resetScenario = (req, res) => {
+const resetScenario = (req, res) => {
     const { modelName } = req.body;
 
     try {
         clearScenario(modelName);
         console.log(`[Demo] Model ${modelName} reset to normal.`);
-        res.json({ success: true, message: `${modelName} is back to normal.` });
+        res.json({ success: true, message: `[${modelName}] Was reset to Normal by ${req.user.username}` });
+
+        sendNotification({
+            message: `[${modelName}] Was reset to Normal by ${req.user.username}`,
+            category: "Demo",
+            redirectUrl: `/demo?model=${modelName}`,
+            autoCalculateTimeout: true,
+            trim: TRIM_COLOURS.Info,
+            background: BACKGROUND_COLOURS.Info
+        });
+
     } catch (error) {
         console.error('[Demo] Error going back to normal:', error);
         res.status(500).json({ error: error.message });
     }
+};
+
+const renderComponentLibrary = (req, res) => {
+    res.render('component_demo', {
+        user: req.user
+    })
+};
+
+export default {
+    resetScenario,
+    viewDemoPage,
+    applyScenario,
+    listScenarios,
+    renderComponentLibrary
 };

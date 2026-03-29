@@ -1,26 +1,24 @@
+import { initCreateAlertModal } from './components/alerts/createAlertModal.js';
+import { initActiveAlertsModal } from './components/alerts/activeAlertsModal.js';
+import { initLogTagModal } from './components/alerts/logTagModal.js';
+import { initAlertLogModal } from "./components/alerts/alertLogModal.js";
+import TagSelect from './components/tags/tagSelect.js';
+import ModalManager from './components/modals.js';
+
+let paginationSize = 10;
+
+function paginationSizeChange(newSize) {
+    paginationSize = newSize || 10;
+}
+
 document.addEventListener('DOMContentLoaded', async function () {
-  
+
     const hasPermission = (permission) => {
         return window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes(permission);
     };
-    
+
     // --- DOM REFERENCES ---
     const addAlertBtn = document.getElementById('add-alert-btn');
-    const alertModal = document.getElementById('alert-modal');
-    const manageModal = document.getElementById('manage-modal');
-    const tagsModal = document.getElementById('tags-modal');
-    const modalTitle = document.getElementById('modal-title');
-    
-    const openCreateBtn = document.getElementById('open-create-modal-btn');
-    const openManageBtn = document.getElementById('open-manage-modal-btn');
-    const openTagsBtn = document.getElementById('open-tags-modal-btn');
-    const saveAlertBtn = document.getElementById('save-alert-btn');
-    const saveTagsBtn = document.getElementById('save-tags-btn');
-    
-    // Close Buttons
-    const closeBtns = document.querySelectorAll('.close-modal-btn');
-    const closeManageBtns = document.querySelectorAll('.close-manage-btn');
-    const closeTagsBtns = document.querySelectorAll('.close-tags-btn');
 
     // Stats
     const countCrit = document.getElementById('count-critical');
@@ -29,44 +27,89 @@ document.addEventListener('DOMContentLoaded', async function () {
     const countInfo = document.getElementById('count-info');
     const statCards = document.querySelectorAll('.stat-card');
 
-    // Builder
-    const alertNameInput = document.getElementById('alert-name');
-    const alertLevelSelect = document.getElementById('alert-level');
-    const modelSelect = document.getElementById('model-name');
-    const rulesContainer = document.getElementById('rules-container');
-    const logicalOperatorsContainer = document.querySelector('.logical-operators-container');
-    
     // Manage/History
-    const liveAlertsList = document.getElementById('live-alerts-list');
     const alertLogBody = document.getElementById('alert-log-body');
     const historyPagination = document.getElementById('history-pagination');
     const historyFilterForm = document.getElementById('history-filter-form');
-    const tagManagerRows = document.getElementById('tag-manager-rows');
-    const addTagRowBtn = document.getElementById('add-tag-row-btn');
 
     // State
     const liveAlertsCache = {};
     const tagsCache = {};
-    const selectedTags = []; // For Rule Builder
-    let currentEditId = null;
     let currentHistoryPage = 1;
-    let deletedTagIds = []; // For Tag Manager
+
+    const liveToggle = document.getElementById('live-update-toggle');
+    let isLive = true;
+
+    if (liveToggle) {
+        liveToggle.addEventListener('change', async (e) => {
+            isLive = e.target.checked;
+            // Visual indicator that updates are paused
+            alertLogBody.style.opacity = isLive ? "1" : "0.9";
+
+            if (isLive) {
+                await loadAlertHistory(currentHistoryPage);
+            }
+        });
+    }
+
 
     // Constants
-    const { DATA_DICTIONARY, KNOWN_MODELS } = window.CONSTANTS || { DATA_DICTIONARY: {}, KNOWN_MODELS: [] };
-    
-    // OPERATORS (Includes 'eq' / Equal To)
-    const OPERATOR_MAP = { 'gt': '$gt', 'gte': '$gte', 'lt': '$lt', 'lte': '$lte', 'eq': '$eq' };
-    const OP_REVERSE_MAP = { '$gt': 'gt', '$gte': 'gte', '$lt': 'lt', '$lte': 'lte', '$eq': 'eq' };
-  
-   // Hide add alert button if user doesn't have permission
+    const { DATA_DICTIONARY, KNOWN_MODELS } = window.CONSTANTS;
+
+    // Hide add alert button if user doesn't have permission
     if (addAlertBtn && !hasPermission('create:alert')) {
         addAlertBtn.style.display = 'none';
     }
-  
+
+    // --- POPUP MODALS ---
+    const modalManager = new ModalManager();
+
+    // Initialize the components
+    // Create Alert
+    const openCreateAlertModal = initCreateAlertModal(modalManager, {
+        tagsCache,
+        DATA_DICTIONARY: window.CONSTANTS.DATA_DICTIONARY,
+        KNOWN_MODELS: window.CONSTANTS.KNOWN_MODELS,
+        onSaveSuccess: () => {
+            loadLiveAlerts();
+            loadAlertHistory(1);
+        }
+    });
+
+    // Active Alerts
+    const openActiveAlertsModal = initActiveAlertsModal(modalManager, {
+        onEdit: (alertObj) => {
+            // Re-use your existing edit logic
+            const tagIds = (alertObj.tags || []).map(t => t._id || t);
+            alertTagSelect.setSelectedIds(tagIds);
+            openCreateAlertModal(alertObj);
+        },
+        onDeleteSuccess: () => {
+            loadLiveAlerts(); // Refresh dashboard stats
+        }
+    });
+
+    // Adding / Editing Alert Log Tags
+    const openLogTagModal = initLogTagModal(modalManager, {
+        tagsCache,
+        onSaveSuccess: () => {
+            loadAlertHistory(currentHistoryPage);
+        }
+    });
+
+    const alertTagSelect = new TagSelect({
+        containerId: 'tags-input-container',
+        searchInputId: 'tags-search-input',
+        dropdownId: 'tags-dropdown-list'
+    });
+
+    const openAlertLogModal = initAlertLogModal(modalManager);
+
+    // --- CHART LOGIC ---
+    const chartRangeSelect = document.getElementById('chart-range-select');
 
 
-    // --- 1. INITIALIZATION ---
+    // --- INITIALIZATION ---
     async function init() {
         try {
             const tData = await apiListTags();
@@ -76,19 +119,91 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Populate dropdowns AFTER tags are loaded
         populateModelDropdowns();
 
+        await alertTagSelect.init();
+
         await loadLiveAlerts();
-        await loadLiveAlerts();
-        await loadLiveAlerts();
-        await loadAlertHistory(1);
+
+        if (window.DEEP_LINK && window.DEEP_LINK.view === 'alert') {
+            console.log("Deep link found: ", window.DEEP_LINK);
+            const { id, page } = window.DEEP_LINK;
+
+            // Render the specific page the alert lives on
+            await loadAlertHistory(page);
+
+            // Pause live alerts
+            isLive = false;
+            liveToggle.checked = false;
+
+            // Locate the row, scroll to it, and open the modal
+            setTimeout(() => {
+                const targetRow = document.querySelector(`tr[data-log-id="${id}"]`);
+                if (targetRow) {
+                    targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Optional: Add the same highlight-flash effect you use in logging.js
+                    targetRow.classList.add('highlight-flash');
+                    setTimeout(() => targetRow.classList.remove('highlight-flash'), 3000);
+                }
+
+                // Open the info modal
+                openAlertLogModal(id);
+            }, 100); // Slight delay ensures the DOM is fully painted after the await
+
+        } else {
+            // Standard load behavior
+            await loadAlertHistory(1);
+        }
+
         await initCharts();
         setupLiveUpdates();
     }
 
-    // --- CHART LOGIC ---
-    const chartRangeSelect = document.getElementById('chart-range-select');
+
+    // --- EVENT LISTENERS ---
+
+    // Open Manage Rules
+    const openManageBtn = document.getElementById('open-manage-modal-btn');
+    if (openManageBtn) {
+        openManageBtn.addEventListener('click', openActiveAlertsModal);
+    }
+
+    // Open Create Rule
+    const openCreateBtn = document.getElementById('open-create-modal-btn');
+    if (openCreateBtn) {
+        openCreateBtn.addEventListener('click', () => openCreateAlertModal());
+    }
+
+    // Open Edit Alert Log Tags
+    if (alertLogBody) {
+        alertLogBody.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('add-log-tag-btn')) return;
+
+            const logId = e.target.dataset.id;
+            const currentIds = (e.target.dataset.tags || '').split(',').filter(Boolean);
+
+            // Call our new clean refactored function
+            openLogTagModal(logId, currentIds);
+        });
+    }
+
+    // Sets up listeners for clicking on alert log
+    if (alertLogBody) {
+        alertLogBody.addEventListener('click', (e) => {
+            // Ignore clicks if they hit the "Add Tag" button or its icon
+            if (e.target.closest('.add-log-tag-btn')) return;
+
+            // Find the closest row to get the log ID
+            const tr = e.target.closest('tr');
+            if (tr) {
+                // We need to store the ID on the row itself when creating it
+                const logId = tr.dataset.logId;
+                if (logId) openAlertLogModal(logId);
+            }
+        });
+    }
 
     async function initCharts() {
-        if(chartRangeSelect) {
+        if (chartRangeSelect) {
             chartRangeSelect.addEventListener('change', () => fetchAndRenderCharts());
         }
         await fetchAndRenderCharts();
@@ -99,23 +214,23 @@ document.addEventListener('DOMContentLoaded', async function () {
             const range = chartRangeSelect ? chartRangeSelect.value : '24h';
             const end = new Date();
             let start = new Date();
-            if(range === '24h') start.setTime(end.getTime() - 24*60*60*1000);
-            else if(range === '7d') start.setTime(end.getTime() - 7*24*60*60*1000);
-            else if(range === '30d') start.setTime(end.getTime() - 30*24*60*60*1000);
+            if (range === '24h') start.setTime(end.getTime() - 24 * 60 * 60 * 1000);
+            else if (range === '7d') start.setTime(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+            else if (range === '30d') start.setTime(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-            const params = new URLSearchParams({ 
-                startDate: start.toISOString(), 
-                endDate: end.toISOString() 
+            const params = new URLSearchParams({
+                startDate: start.toISOString(),
+                endDate: end.toISOString()
             });
 
             const res = await fetch(`alerts/api/stats?${params.toString()}`);
             const data = await res.json();
-            
+
             // Use new AlertCharts builder
             if (window.AlertCharts) {
                 window.AlertCharts.render(data);
             }
-        } catch(e) { console.error('Chart load failed', e); }
+        } catch (e) { console.error('Chart load failed', e); }
     }
 
     function populateModelDropdowns() {
@@ -130,392 +245,88 @@ document.addEventListener('DOMContentLoaded', async function () {
         if (tagFilter) {
             let html = '<option value="all">All Tags</option>';
             // Sort tags alphabetically
-            const sorted = Object.values(tagsCache).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+            const sorted = Object.values(tagsCache).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             sorted.forEach(t => html += `<option value="${t._id}">${t.name}</option>`);
             tagFilter.innerHTML = html;
         }
     }
 
-
-    // --- 2. MODAL CONTROLS ---
-
-    // Rule Builder
-    function openBuilder(isEdit = false) {
-        alertModal.style.display = 'flex';
-        modalTitle.textContent = isEdit ? 'Edit Alert Rule' : 'Create New Alert Rule';
-        saveAlertBtn.textContent = isEdit ? 'Update Alert' : 'Save Alert';
-    }
-    function closeBuilder() {
-        alertModal.style.display = 'none';
-        currentEditId = null;
-        resetBuilderForm();
-    }
-    function resetBuilderForm() {
-        alertNameInput.value = ''; alertLevelSelect.value = ''; 
-        if(modelSelect) modelSelect.value = '';
-        rulesContainer.innerHTML = ''; addEmptyRuleRow();
-        selectedTags.length = 0; renderTagInput();
-    }
-    openCreateBtn.addEventListener('click', () => { resetBuilderForm(); openBuilder(false); });
-    closeBtns.forEach(b => b.addEventListener('click', closeBuilder));
-
-    // Manage Rules Modal
-    openManageBtn.addEventListener('click', () => { manageModal.style.display = 'flex'; });
-    closeManageBtns.forEach(b => b.addEventListener('click', () => { manageModal.style.display = 'none'; }));
-
-    // Tag Manager Modal
-    if (openTagsBtn) {
-        openTagsBtn.addEventListener('click', () => {
-            deletedTagIds = [];
-            renderTagManager();
-            tagsModal.style.display = 'flex';
-        });
-    }
-    closeTagsBtns.forEach(b => b.addEventListener('click', () => { tagsModal.style.display = 'none'; }));
-
-
-    // --- 3. TAG MANAGER LOGIC ---
-    function renderTagManager() {
-        tagManagerRows.innerHTML = '';
-        const tags = Object.values(tagsCache).sort((a,b)=>a.name.localeCompare(b.name));
-        tags.forEach(t => addTagRowUI(t._id, t.name, t.color));
-        if(tags.length === 0) addTagRowUI(null, '', '#888888');
-    }
-
-    function addTagRowUI(id, name, color) {
-        const row = document.createElement('div');
-        row.className = 'tag-edit-row';
-        row.innerHTML = `
-            <input type="text" placeholder="Tag Name" value="${name||''}" class="tag-name-input" data-original-id="${id||''}">
-            <input type="color" value="${color||'#888888'}" class="tag-color-input">
-            <button class="btn btn-secondary delete-tag-btn"><i class="fa-solid fa-trash"></i></button>
-        `;
-        row.querySelector('.delete-tag-btn').addEventListener('click', () => {
-            if(id) deletedTagIds.push(id);
-            row.remove();
-        });
-        tagManagerRows.appendChild(row);
-    }
-
-    if (addTagRowBtn) {
-        addTagRowBtn.addEventListener('click', () => {
-            addTagRowUI(null, '', '#888888');
-            tagManagerRows.scrollTop = tagManagerRows.scrollHeight;
-        });
-    }
-
-    if (saveTagsBtn) {
-        saveTagsBtn.addEventListener('click', async () => {
-            const rows = tagManagerRows.querySelectorAll('.tag-edit-row');
-            const originalIds = [], newNames = [], colors = [];
-            let isValid = true; const seen = new Set();
-            
-            rows.forEach(r => {
-                const name = r.querySelector('.tag-name-input').value.trim();
-                const color = r.querySelector('.tag-color-input').value;
-                const oid = r.querySelector('.tag-name-input').dataset.originalId || null;
-                if(!name) return;
-                if(seen.has(name.toLowerCase())) { alert(`Duplicate: ${name}`); isValid = false; return; }
-                seen.add(name.toLowerCase());
-                newNames.push(name); colors.push(color); originalIds.push(oid);
-            });
-            if(!isValid) return;
-
-            try {
-                await apiSyncTags({ originalIds, newNames, colors, deletions: deletedTagIds });
-                // Reload Tags
-                const updated = await apiListTags();
-                Object.keys(tagsCache).forEach(k=>delete tagsCache[k]);
-                updated.forEach(t=>tagsCache[t._id]=t);
-                // Refresh UIs
-                renderTagInput(); 
-                populateModelDropdowns(); // updates filter
-                loadAlertHistory(currentHistoryPage);
-                tagsModal.style.display = 'none';
-                alert('Tags saved.');
-            } catch(e) { alert('Save failed: '+e.message); }
-        });
-    }
-
-
-    // --- 4. LIVE ALERTS (STATS & LIST) ---
+    // --- LIVE ALERTS (STATS & LIST) ---
     async function loadLiveAlerts() {
         try {
             const data = await apiGetLiveAlerts();
             const alerts = data.alerts || [];
-            Object.keys(liveAlertsCache).forEach(k=>delete liveAlertsCache[k]);
+            Object.keys(liveAlertsCache).forEach(k => delete liveAlertsCache[k]);
             alerts.forEach(a => liveAlertsCache[a._id] = a);
 
             const counts = { Critical: 0, High: 0, Medium: 0, Info: 0 };
-            alerts.forEach(a => { if(counts[a.alertLevel] !== undefined) counts[a.alertLevel]++; });
-            
+            alerts.forEach(a => { if (counts[a.alertLevel] !== undefined) counts[a.alertLevel]++; });
+
             countCrit.innerText = counts.Critical;
             countHigh.innerText = counts.High;
             countMed.innerText = counts.Medium;
             countInfo.innerText = counts.Info;
-
-            renderManageList(alerts);
-        } catch(e) { console.error(e); }
+        } catch (e) { console.error(e); }
     }
 
-    function renderManageList(alerts) {
-        liveAlertsList.innerHTML = '';
-        if(alerts.length === 0) { liveAlertsList.innerHTML = '<li style="color:#888;">No active rules.</li>'; return; }
-        alerts.forEach(a => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <div><span class="level-badge ${a.alertLevel.toLowerCase()}">${a.alertLevel}</span> <strong>${a.alertName}</strong></div>
-                <div class="alert-actions">
-                    <button class="btn btn-secondary btn-icon edit-alert-btn" data-id="${a._id}"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn btn-secondary btn-icon delete-alert-btn" data-id="${a._id}" style="color:#dc2626;"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            `;
-            liveAlertsList.appendChild(li);
-        });
-    }
-
-    liveAlertsList.addEventListener('click', async (e) => {
-        const btn = e.target.closest('button');
-        if(!btn) return;
-        const id = btn.dataset.id;
-        if(btn.classList.contains('delete-alert-btn')) {
-            if(confirm('Delete rule?')) { await apiDeleteAlert(id); await loadLiveAlerts(); }
-        }
-        if(btn.classList.contains('edit-alert-btn')) {
-            const obj = liveAlertsCache[id];
-            if(obj) startEdit(obj);
-        }
-    });
-
-    function startEdit(obj) {
-        currentEditId = obj._id;
-        alertNameInput.value = obj.alertName;
-        alertLevelSelect.value = obj.alertLevel;
-        if(modelSelect) modelSelect.value = obj.modelName || '';
-        rulesContainer.innerHTML = '';
-        populateRuleBuilderFromRule(obj.alertRule);
-        selectedTags.length = 0;
-        if(obj.tags) obj.tags.forEach(t => selectedTags.push(t._id));
-        renderTagInput();
-        manageModal.style.display = 'none';
-        openBuilder(true);
-    }
-    
     statCards.forEach(c => c.addEventListener('click', () => {
         document.getElementById('filter-level').value = c.dataset.level;
         loadAlertHistory(1);
     }));
 
 
-    // --- 5. RULE BUILDER ---
-    function createRuleRowHTML(op) {
-        const del = op ? '<button class="btn btn-secondary btn-icon delete-rule-btn">&times;</button>' : '';
-        const opts = Object.keys(DATA_DICTIONARY).filter(k=>DATA_DICTIONARY[k].dataType==='numeric')
-            .map(k=>`<option value="${k}">${DATA_DICTIONARY[k].label}</option>`).join('');
-        
-        // English operators
-        return `
-            <span class="logic-separator" style="font-weight:bold; font-size:0.8rem; margin-right:8px;">${op}</span>
-            <select class="data-type"><option value="">-- Data --</option>${opts}</select>
-            <select class="operator-type">
-                <option value="">-- Operator --</option>
-                <option value="gt">Greater Than</option>
-                <option value="gte">Greater Than or Equal To</option>
-                <option value="lt">Less Than</option>
-                <option value="lte">Less Than or Equal To</option>
-                <option value="eq">Equal To</option>
-            </select>
-            <input type="text" placeholder="Value" class="value-input" style="width:80px;">
-            ${del}
-        `;
-    }
-    function addEmptyRuleRow() {
-        const d = document.createElement('div'); d.className='rule-row'; d.innerHTML=createRuleRowHTML('');
-        rulesContainer.appendChild(d);
-    }
-    logicalOperatorsContainer.addEventListener('click', e => {
-        if(e.target.classList.contains('add-rule-btn')) {
-            const d = document.createElement('div'); d.className='rule-row';
-            d.innerHTML=createRuleRowHTML(e.target.dataset.logic);
-            rulesContainer.appendChild(d);
-        }
-    });
-    rulesContainer.addEventListener('click', e => {
-        if(e.target.classList.contains('delete-rule-btn')) e.target.closest('.rule-row').remove();
-    });
-
-    function buildRuleJSON() {
-        const rows = rulesContainer.querySelectorAll('.rule-row');
-        const conds = []; let logic = null; let valid = true;
-        rows.forEach((r, i) => {
-            const type = r.querySelector('.data-type').value;
-            const op = r.querySelector('.operator-type').value;
-            const val = r.querySelector('.value-input').value;
-            const sep = r.querySelector('.logic-separator');
-            if(i>0 && sep && !logic) logic = sep.textContent.trim()==='AND'?'$and':'$or';
-            if(type && op && val) {
-                const c = {}; c[DATA_DICTIONARY[type].dbPath] = {}; c[DATA_DICTIONARY[type].dbPath][OPERATOR_MAP[op]] = parseFloat(val);
-                conds.push(c);
-            } else valid = false;
-        });
-        if(!valid || conds.length===0) return null;
-        if(conds.length===1) return conds[0];
-        const f = {}; f[logic||'$and'] = conds;
-        return f;
-    }
-
-    function populateRuleBuilderFromRule(rule) {
-        let parts = [];
-        if (rule.$and) parts = rule.$and.map(x => ({...x, logic: 'AND'}));
-        else if (rule.$or) parts = rule.$or.map(x => ({...x, logic: 'OR'}));
-        else parts = [{...rule, logic: ''}];
-
-        parts.forEach((p, i) => {
-            const dbField = Object.keys(p).find(k => k !== 'logic');
-            const inner = p[dbField];
-            const mongoOp = Object.keys(inner)[0];
-            const val = inner[mongoOp];
-            const dictKey = Object.keys(DATA_DICTIONARY).find(k => DATA_DICTIONARY[k].dbPath === dbField);
-            
-            const row = document.createElement('div');
-            row.className = 'rule-row';
-            row.innerHTML = createRuleRowHTML(i > 0 ? (i===1 ? (rule.$and?'AND':'OR') : 'AND') : ''); 
-            if(dictKey) row.querySelector('.data-type').value = dictKey;
-            if(OP_REVERSE_MAP[mongoOp]) row.querySelector('.operator-type').value = OP_REVERSE_MAP[mongoOp];
-            row.querySelector('.value-input').value = val;
-            rulesContainer.appendChild(row);
-        });
-        if(parts.length === 0) addEmptyRuleRow();
-    }
-
-
-    // --- 6. MULTISELECT DROPDOWN (RULE BUILDER) ---
-    const tagsInputContainer = document.getElementById('tags-input-container');
-    const tagsSearchInput = document.getElementById('tags-search-input');
-    const tagsDropdown = document.getElementById('tags-dropdown-list');
-
-    function renderTagInput() {
-        if(!tagsInputContainer) return;
-        const pills = tagsInputContainer.querySelectorAll('.tag-input-pill');
-        pills.forEach(c => c.remove());
-
-        selectedTags.forEach(id => {
-            const t = tagsCache[id];
-            if(!t) return;
-            const pill = document.createElement('div');
-            pill.className = 'tag-input-pill';
-            pill.style.backgroundColor = t.color;
-            pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
-            tagsInputContainer.insertBefore(pill, tagsSearchInput);
-        });
-        
-        // Hide/Show placeholder based on selection
-        if(tagsSearchInput) tagsSearchInput.placeholder = selectedTags.length > 0 ? '' : 'Select tags...';
-    }
-
-    function renderTagDropdown() {
-        if(!tagsDropdown) return;
-        tagsDropdown.innerHTML = '';
-        const available = Object.values(tagsCache)
-            .filter(t => !selectedTags.includes(t._id))
-            .sort((a,b) => a.name.localeCompare(b.name));
-            
-        if(available.length === 0) {
-            tagsDropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
-            return;
-        }
-
-        available.forEach(t => {
-            const item = document.createElement('div');
-            item.className = 'tags-dropdown-item';
-            item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
-            item.addEventListener('click', () => {
-                selectedTags.push(t._id);
-                renderTagInput();
-                renderTagDropdown();
-                if(tagsSearchInput) {
-                    tagsSearchInput.value = '';
-                    tagsSearchInput.focus();
-                }
-            });
-            tagsDropdown.appendChild(item);
-        });
-    }
-
-    // Event Listeners
-    if(tagsInputContainer) {
-        tagsInputContainer.addEventListener('click', (e) => {
-            if(e.target.classList.contains('remove-tag')) { 
-                const id = e.target.dataset.id;
-                const idx = selectedTags.indexOf(id);
-                if(idx > -1) selectedTags.splice(idx, 1);
-                renderTagInput();
-                // If dropdown is open, update it to show the removed tag
-                if(tagsDropdown.style.display === 'block') renderTagDropdown();
-                return;
-            }
-            // Toggle dropdown
-            if(tagsDropdown) {
-                const isVisible = tagsDropdown.style.display === 'block';
-                tagsDropdown.style.display = isVisible ? 'none' : 'block';
-                if(!isVisible) renderTagDropdown();
-            }
-        });
-    }
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if(tagsInputContainer && tagsDropdown && !tagsInputContainer.contains(e.target) && !tagsDropdown.contains(e.target)) {
-            tagsDropdown.style.display = 'none';
-        }
-    });
-
-    saveAlertBtn.addEventListener('click', async () => {
-        const name = alertNameInput.value, level = alertLevelSelect.value, rule = buildRuleJSON();
-        if(!name || !level || !rule) return alert('Fill required fields');
-        const payload = { alertName: name, alertLevel: level, alertRule: rule, modelName: modelSelect.value, tags: selectedTags };
-        try {
-            if(currentEditId) await apiUpdateAlert(currentEditId, payload);
-            else { payload.created=Date.now(); await apiCreateAlert(payload); }
-            closeBuilder(); await loadLiveAlerts(); await loadAlertHistory(1);
-        } catch(e) { alert(e.message); }
+    // tagsUpdated is called by tagModal.js when updating tags
+    document.addEventListener('tagsUpdated', () => {
+        // Refresh the local data
+        populateModelDropdowns();
+        loadAlertHistory(currentHistoryPage);
     });
 
 
-    // --- 7. HISTORY TABLE ---
+    // --- HISTORY TABLE ---
     async function loadAlertHistory(page = 1) {
         currentHistoryPage = page;
-        if(alertLogBody) alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+        if (alertLogBody) alertLogBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
         const params = new URLSearchParams(new FormData(historyFilterForm));
-        params.set('page', page); params.set('limit', 10);
+        params.set('page', page); 
+        params.set('limit', paginationSize || 10);
         try {
             const res = await fetch(`alerts/api/history?${params.toString()}`);
             const data = await res.json();
-            if(alertLogBody) {
+            if (alertLogBody) {
                 alertLogBody.innerHTML = '';
-                if(!data.logs || data.logs.length===0) { alertLogBody.innerHTML = '<tr><td colspan="6">No history.</td></tr>'; return; }
-                
+                if (!data.logs || data.logs.length === 0) { alertLogBody.innerHTML = '<tr><td colspan="6">No history.</td></tr>'; return; }
+
                 data.logs.forEach(log => {
                     const tr = createAlertRow(log);
                     alertLogBody.appendChild(tr);
                 });
             }
-            if(historyPagination) Pagination.render(historyPagination, data.pages, data.page, (newPage) => loadAlertHistory(newPage));
-        } catch(e) { console.error(e); }
+            if (historyPagination) Pagination.render(
+                historyPagination, 
+                data.total,
+                data.page, 
+                paginationSize, 
+                (newPage) => loadAlertHistory(newPage),
+                paginationSizeChange
+            );
+        } catch (e) { console.error(e); }
     }
 
     function createAlertRow(log) {
         const tr = document.createElement('tr');
-        const date = new Date(log.created || log.timestamp).toLocaleString('en-CA', {hour12:true}).replace(',','');
-        const tagsHtml = (log.tags||[]).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
-        const tagIds = (log.tags||[]).map(t=>t._id).join(',');
-        const snapshot = log.alertSnapshot || {}; 
-        
+        tr.dataset.logId = log._id;
+        tr.style.cursor = 'pointer';
+        const date = new Date(log.created || log.timestamp).toLocaleString('en-CA', { hour12: true }).replace(',', '');
+        const tagsHtml = (log.tags || []).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
+        const tagIds = (log.tags || []).map(t => t._id).join(',');
+        const snapshot = log.alertSnapshot || {};
+
         // Handle flattened or nested structure
         const level = log.level || snapshot.alertLevel || 'Info';
         const alertName = log.alertName || snapshot.alertName || 'Alert';
         const modelName = log.modelName || snapshot.modelName || '-';
-        
+
         // Use server-sent humanRule, or fallback to snapshot
         // Logic relying on backend format now.
         const humanRule = log.humanRule || (snapshot.alertRule ? JSON.stringify(snapshot.alertRule) : '');
@@ -535,10 +346,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         `;
         // Add animation class for new rows
         tr.classList.add('fade-in-row');
+
         return tr;
     }
 
-    // --- 8. LOG TAGGING MODAL (Dynamic) ---
+    // --- LOG TAGGING MODAL (Dynamic) ---
+    // ToDo: Refactor this to use ModalManager
     if (alertLogBody) {
         alertLogBody.addEventListener('click', (e) => {
             if (!e.target.classList.contains('add-log-tag-btn')) return;
@@ -548,169 +361,94 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    function openLogTagModal(logId, currentTagIds) {
-        // Create a temporary modal in the DOM
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.style.display = 'flex';
-        
-        const modal = document.createElement('div');
-        modal.className = 'modal-content medium-modal';
-        
-        modal.innerHTML = `
-            <div class="modal-header"><h2>Tag Alert Log</h2><button class="close-dyn-btn">&times;</button></div>
-            <div class="modal-body" style="min-height: 250px;">
-                <div class="multiselect-container">
-                    <div class="tags-input-container" id="dyn-tags-input">
-                        <input type="text" id="dyn-tags-search" class="tags-search-input" placeholder="Select tags..." readonly />
-                    </div>
-                    <div class="tags-dropdown" id="dyn-tags-dropdown" style="display: none;"></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary close-dyn-btn">Cancel</button>
-                <button id="dyn-save" class="btn btn-primary">Save Tags</button>
-            </div>
-        `;
-        overlay.appendChild(modal);
-        document.body.appendChild(overlay);
-
-        // State for this modal
-        const selected = [...currentTagIds];
-        const inputContainer = modal.querySelector('#dyn-tags-input');
-        const searchInput = modal.querySelector('#dyn-tags-search');
-        const dropdown = modal.querySelector('#dyn-tags-dropdown');
-
-        function renderDynInput() {
-            const pills = inputContainer.querySelectorAll('.tag-input-pill');
-            pills.forEach(c => c.remove());
-
-            selected.forEach(id => {
-                const t = tagsCache[id];
-                if(!t) return;
-                const pill = document.createElement('div');
-                pill.className = 'tag-input-pill';
-                pill.style.backgroundColor = t.color;
-                pill.innerHTML = `${t.name} <span class="remove-tag" data-id="${t._id}">&times;</span>`;
-                inputContainer.insertBefore(pill, searchInput);
-            });
-            
-            searchInput.placeholder = selected.length > 0 ? '' : 'Select tags...';
-        }
-
-        function renderDynDropdown() {
-            dropdown.innerHTML = '';
-            const available = Object.values(tagsCache)
-                .filter(t => !selected.includes(t._id))
-                .sort((a,b) => a.name.localeCompare(b.name));
-                
-            if(available.length === 0) {
-                dropdown.innerHTML = '<div style="padding:0.5rem; color:#888;">No more tags</div>';
-                return;
-            }
-
-            available.forEach(t => {
-                const item = document.createElement('div');
-                item.className = 'tags-dropdown-item';
-                item.innerHTML = `<div class="color-dot" style="background:${t.color}"></div> ${t.name}`;
-                item.addEventListener('click', () => {
-                    selected.push(t._id);
-                    renderDynInput();
-                    renderDynDropdown();
-                    searchInput.value = '';
-                    searchInput.focus();
-                });
-                dropdown.appendChild(item);
-            });
-        }
-
-        // Event Listeners
-        inputContainer.addEventListener('click', (e) => {
-            if(e.target.classList.contains('remove-tag')) { 
-                const id = e.target.dataset.id;
-                const idx = selected.indexOf(id);
-                if(idx > -1) selected.splice(idx, 1);
-                renderDynInput();
-                if(dropdown.style.display === 'block') renderDynDropdown();
-                return;
-            }
-            const isVisible = dropdown.style.display === 'block';
-            dropdown.style.display = isVisible ? 'none' : 'block';
-            if(!isVisible) renderDynDropdown();
-        });
-
-        // Close dropdown when clicking outside (scoped to this modal overlay)
-        overlay.addEventListener('click', (e) => {
-            if(e.target === overlay) return; // overlay click handled by close logic? mainly want to catch clicks outside dropdown
-            if(!inputContainer.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.style.display = 'none';
-            }
-        });
-
-        renderDynInput();
-        
-        const close = () => { document.body.removeChild(overlay); };
-        modal.querySelectorAll('.close-dyn-btn').forEach(b => b.onclick = close);
-
-        modal.querySelector('#dyn-save').onclick = async () => {
-            try {
-                await fetch(`alerts/api/logs/${logId}/tags`, {
-                    method: 'PUT', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ tags: selected })
-                });
-                close();
-                loadAlertHistory(currentHistoryPage);
-            } catch(e) { alert('Failed to update tags'); }
-        };
-    }
-
     if (historyFilterForm) {
         historyFilterForm.addEventListener('submit', e => { e.preventDefault(); loadAlertHistory(1); });
         document.querySelector('.clear-filters').addEventListener('click', () => { historyFilterForm.reset(); loadAlertHistory(1); });
     }
 
-    // --- 9. LIVE UPDATES (SSE) ---
+    // --- LIVE UPDATES (SSE) ---
+    // SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
+    function getSharedEventSource() {
+        return window.__sseManager.getSharedEventSource();
+    }
+
     function setupLiveUpdates() {
         try {
-            const evtSource = new EventSource('events');
-            
+            const evtSource = getSharedEventSource();
+
             evtSource.addEventListener('alert', (event) => {
+                if (!isLive) return;
                 try {
                     const alertData = JSON.parse(event.data);
-                    
-                    // 1. Live Counters & Charts
+
+                    // Live Counters & Charts
                     loadLiveAlerts();
                     fetchAndRenderCharts();
 
-                    // 2. Log Table (Prepend if on page 1)
+                    // Log Table (Prepend if on page 1)
                     if (currentHistoryPage === 1 && alertLogBody) {
+                        // --- Giant Filter Section ---
+                        // This section just checks the incoming logs and doesn't
+                        // display them if they should be filtered out.
+                        const formData = new FormData(historyFilterForm);
+                        const filterLevel = formData.get('level'); // Ensure these 'name' attributes match your HTML
+                        const filterModel = formData.get('modelName');
+                        const filterTag = formData.get('tag');
+                        const alert = alertData.alertSnapshot;
+                        const startDateVal = formData.get('startDate');
+                        const endDateVal = formData.get('endDate');
+                        const alertTime = new Date(alertData.timestamp).getTime();
+
+                        if (startDateVal) {
+                            const startTs = new Date(startDateVal).getTime();
+                            if (alertTime < startTs) return; // Alert is too old for this filter
+                        }
+
+                        if (endDateVal) {
+                            const endTs = new Date(endDateVal).getTime();
+                            if (alertTime > endTs) return; // Alert is newer than the selected range
+                        }
+
+                        // Check Level (if not 'all')
+                        if (filterLevel && filterLevel !== 'all' && alert.alertLevel !== filterLevel) {
+                            return;
+                        }
+
+                        // Check Model (if not 'all')
+                        if (filterModel && filterModel !== 'all' && alert.modelName !== filterModel) {
+                            return;
+                        }
+
+                        // Check Tag (if not 'all')
+                        if (filterTag && filterTag !== 'all') {
+                            const hasTag = (alertData.originalTagIDs || []).some(t => t._id === filterTag);
+                            if (!hasTag) return;
+                        }
+
                         // Remove "No history" row if present
-                        if(alertLogBody.children.length === 1 && alertLogBody.firstElementChild.innerText.includes('No history')) {
+                        if (alertLogBody.children.length === 1 && alertLogBody.firstElementChild.innerText.includes('No history')) {
                             alertLogBody.innerHTML = '';
                         }
-                        
+
                         const tr = createAlertRow(alertData);
                         alertLogBody.prepend(tr);
 
                         // Keep list size managed
-                        if(alertLogBody.children.length > 10) {
+                        if (alertLogBody.children.length > 10) {
                             alertLogBody.lastElementChild.remove();
                         }
                     }
-                } catch(e) { console.error('SSE Error', e); }
+                } catch (e) { console.error('SSE Error', e); }
             });
 
             window.addEventListener('beforeunload', () => evtSource.close());
-        } catch(e) { console.error('SSE Setup Failed', e); }
+        } catch (e) { console.error('SSE Setup Failed', e); }
     }
 
     // --- API WRAPPERS ---
-    async function apiGetLiveAlerts() { return fetch('alerts/live').then(r=>r.json()); }
-    async function apiListTags() { return fetch('/tags').then(r=>r.json()).then(d=>d.tags); }
-    async function apiCreateAlert(p) { return fetch('alerts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
-    async function apiUpdateAlert(id, p) { return fetch(`alerts/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
-    async function apiDeleteAlert(id) { return fetch(`alerts/${id}`, {method:'DELETE'}).then(r=>r.json()); }
-    async function apiSyncTags(p) { return fetch('/tags/sync', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p)}).then(r=>r.json()); }
+    async function apiGetLiveAlerts() { return fetch('alerts/live').then(r => r.json()); }
+    async function apiListTags() { return fetch('tags').then(r => r.json()).then(d => d.tags); }
+    async function apiDeleteAlert(id) { return fetch(`alerts/${id}`, { method: 'DELETE' }).then(r => r.json()); }
 
     init();
 });

@@ -1,0 +1,263 @@
+/* ==========================================================================
+   COLORS — DEFAULT THEME
+   :root light-mode variables + body.dark-mode overrides
+   ========================================================================== */
+:root {
+  /* Brand / Primary */
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #e0e7ff;
+  --green-color: #22c55e;
+
+  /* Generic palette */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Light-mode palette (default) */
+  --body-bg: #f3f4f6;
+  --card-bg: #ffffff;
+  --panel-header-bg: #e5e7eb;
+  --text-dark: #1f2937;
+  --text-light: #6b7280;
+  --text-muted: #555555;
+  --color-muted: #999999;
+  --border-color: #e5e7eb;
+  --border-light: #cccccc;
+  --border-lighter: #eeeeee;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.12);
+  --input-bg: #ffffff;
+
+  /* Severity / status */
+  --color-critical: #dc2626;
+  --color-critical-light: #fee2e2;
+  --color-critical-dark: #991b1b;
+  --color-high: #ea580c;
+  --color-high-light: #ffedd5;
+  --color-high-border: #f97316;
+  --color-high-dark: #9a3412;
+  --color-medium: #d97706;
+  --color-medium-light: #fef3c7;
+  --color-medium-border: #f59e0b;
+  --color-medium-dark: #92400e;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+  --color-info-dark: #1e40af;
+  --color-success: #28a745;
+  --color-success-hover: #218838;
+  --color-warning: #ffc107;
+
+  /* Button defaults */
+  --btn-default-bg: #007bff;
+  --btn-default-hover: #0056b3;
+  --btn-default-active: #004085;
+  --color-danger: #dc3545;
+  --color-danger-hover: #c82333;
+
+  /* Notification */
+  --notification-badge-bg: #ef4444;
+
+  /* Error / Feedback */
+  --error-bg: #fee2e2;
+  --error-border: #f87171;
+  --error-text: #b91c1c;
+  --alert-success-bg: #d4edda;
+  --alert-success-text: #155724;
+  --alert-success-border: #c3e6cb;
+  --alert-error-bg: #f8d7da;
+  --alert-error-text: #721c24;
+  --alert-error-border: #f5c6cb;
+
+  /* Log dots */
+  --log-dot-login: #28a745;
+  --log-dot-signup: #17a2b8;
+  --log-dot-logout: #6c757d;
+  --log-dot-alert: #ffc107;
+  --log-dot-report: #007bff;
+  --log-dot-delete: #dc3545;
+  --log-dot-default: #cccccc;
+
+  /* Demo / Rogue */
+  --color-rogue: #cf6679;
+  --color-rogue-bg: rgba(207, 102, 121, 0.2);
+  --color-teal: #03dac6;
+  --color-teal-bg: rgba(3, 218, 198, 0.2);
+  --color-primary-btn: #2ca58d;
+  --demo-border-color: #c7d2fe;
+
+  /* KPI */
+  --kpi-text-color: dimgrey;
+
+  /* Code block */
+  --code-bg: #2b2b2b;
+  --code-text: #f8f8f2;
+
+  /* Back button */
+  --back-btn-bg: #585555;
+
+  /* Timeframe / card edit */
+  --timeframe-label-color: #475569;
+  --timeframe-bg: #f1f5f9;
+  --card-edit-bg: #f9f9f9;
+
+  /* Role badge system */
+  --role-system-bg: #cfe2ff;
+  --role-system-text: #084298;
+
+  /* Chart icons */
+  --delete-hover-color: #f45b69;
+  --edit-hover-color: #007acc;
+
+  /* Chart degraded overlay */
+  --degraded-bg: #fff3cd;
+  --degraded-border: #ffeeba;
+  --degraded-text: #856404;
+
+  /* Focus ring */
+  --focus-ring: rgba(79, 70, 229, 0.25);
+  --focus-ring-light: rgba(79, 70, 229, 0.1);
+
+  /* Overlay */
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --overlay-light: rgba(0, 0, 0, 0.04);
+  --overlay-subtle: rgba(0, 0, 0, 0.2);
+  --overlay-medium: rgba(0, 0, 0, 0.4);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.12);
+
+  /* Tiny group wrapper */
+  --tiny-group-border: rgba(0, 122, 204, 0.3);
+
+  /* Editing header */
+  --editing-header-bg: rgba(255, 255, 255, 0.9);
+
+  /* Header (from header.css) */
+  --header-text-color: #333333;
+  --header-bg-color: #ffffff;
+  --button-bg-color: #f0f2f5;
+  --button-hover-bg-color: #e4e6e8;
+  --button-text-color: #333333;
+  --primary-accent-color: #0056b3;
+
+  /* Nav (from nav.css) */
+  --nav-bg-color: #f8f9fa;
+  --nav-link-color: #495057;
+  --nav-link-hover-bg: #e9ecef;
+  --nav-link-active-bg: #0056b3;
+  --nav-link-active-color: #ffffff;
+  --nav-border-color: #dee2e6;
+}
+
+/* Dark-mode overrides — toggle via body.dark-mode */
+body.dark-mode {
+  --body-bg: #111827;
+  --card-bg: #1f2937;
+  --panel-header-bg: #374151;
+  --header-bg-color: #1f2937;
+  --nav-bg-color: #111827;
+  --text-dark: #f9fafb;
+  --text-light: #9ca3af;
+  --text-muted: #a1a1aa;
+  --color-muted: #71717a;
+  --border-color: #374151;
+  --border-light: #4b5563;
+  --border-lighter: #374151;
+  --nav-border-color: #374151;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.4);
+  --input-bg: #374151;
+  --primary-color: #818cf8;
+  --primary-light: #312e81;
+  --header-text-color: #f9fafb;
+  --button-bg-color: #374151;
+  --button-hover-bg-color: #4b5563;
+  --button-text-color: #f9fafb;
+  --nav-link-color: #d1d5db;
+  --nav-link-hover-bg: #374151;
+
+  /* Severity light backgrounds (dark-mode) */
+  --color-critical-light: #450a0a;
+  --color-critical-dark: #fca5a5;
+  --color-high-light: #431407;
+  --color-high-dark: #fdba74;
+  --color-medium-light: #451a03;
+  --color-medium-dark: #fcd34d;
+  --color-info-light: #1e3a5f;
+  --color-info-dark: #93c5fd;
+
+  /* Buttons */
+  --btn-default-bg: #3b82f6;
+  --btn-default-hover: #2563eb;
+  --btn-default-active: #1d4ed8;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+
+  /* Notification */
+  --notification-badge-bg: #f87171;
+
+  /* Error / Feedback (dark-mode) */
+  --error-bg: #450a0a;
+  --error-border: #b91c1c;
+  --error-text: #fca5a5;
+  --alert-success-bg: #052e16;
+  --alert-success-text: #86efac;
+  --alert-success-border: #166534;
+  --alert-error-bg: #450a0a;
+  --alert-error-text: #fca5a5;
+  --alert-error-border: #991b1b;
+
+  /* Demo / Rogue */
+  --color-rogue-bg: rgba(207, 102, 121, 0.3);
+  --color-teal-bg: rgba(3, 218, 198, 0.3);
+  --demo-border-color: #4338ca;
+
+  /* KPI */
+  --kpi-text-color: #9ca3af;
+
+  /* Code block */
+  --code-bg: #111827;
+  --code-text: #e5e7eb;
+
+  /* Back button */
+  --back-btn-bg: #4b5563;
+
+  /* Timeframe / card edit */
+  --timeframe-label-color: #94a3b8;
+  --timeframe-bg: #1e293b;
+  --card-edit-bg: #1f2937;
+
+  /* Role badge system */
+  --role-system-bg: #1e3a5f;
+  --role-system-text: #93c5fd;
+
+  /* Chart icons */
+  --delete-hover-color: #f87171;
+  --edit-hover-color: #60a5fa;
+
+  /* Chart degraded overlay */
+  --degraded-bg: #451a03;
+  --degraded-border: #92400e;
+  --degraded-text: #fcd34d;
+
+  /* Focus ring */
+  --focus-ring: rgba(129, 140, 248, 0.35);
+  --focus-ring-light: rgba(129, 140, 248, 0.15);
+
+  /* Overlay */
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --overlay-light: rgba(255, 255, 255, 0.04);
+  --overlay-subtle: rgba(255, 255, 255, 0.1);
+  --overlay-medium: rgba(255, 255, 255, 0.2);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+
+  /* Tiny group wrapper */
+  --tiny-group-border: rgba(96, 165, 250, 0.3);
+
+  /* Editing header */
+  --editing-header-bg: rgba(31, 41, 55, 0.95);
+}

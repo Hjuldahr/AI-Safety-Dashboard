@@ -2,7 +2,7 @@ import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
 import ChartConfig from '../models/Chart_Config.js';
 import User_Log from '../models/User_Log.js';
-import { TIMEFRAME_CONFIG, KNOWN_MODELS, DATA_DICTIONARY } from "../config/constants.js";
+import { TIMEFRAME_CONFIG, KNOWN_MODELS, DATA_DICTIONARY } from "../constants/charts.js";
 
 
 const saveGraph = async (req, res) => {
@@ -165,6 +165,8 @@ const reorderCharts = async (req, res) => {
 };
 
 // Updated to send back recent data for all models in the database
+// ToDo: This method is doing to much and is being run too frequently
+// Its being run every chart zoom, re-order, delete, etc.
 const getRecentData = async (req, res) => {
     try {
         // get the chart configs
@@ -347,7 +349,7 @@ const getDownsampledSummary = async (modelName, startTime, bucketSizeMs) => {
 
     Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
         // Do not average or sum these fields
-        if (config.summarize === "remove" || config.dataType === "timestamp" || key === "modelName") return;
+        if (config.summarize === "remove" || config.dataType === "timestamp" || key === "modelName" || config.dataType === "flaggedOutputs") return;
 
         // Map "avg" -> "$avg", "sum" -> "$sum"
         groupStage[key] = { [`$${config.summarize}`]: `$${key}` };

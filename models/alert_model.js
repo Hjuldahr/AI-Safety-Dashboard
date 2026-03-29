@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import constants from "../config/constants.js";
+import chartConstants from "../constants/charts.js";
 
 // === alert_model Schema ===
 const alert_model_Schema = new mongoose.Schema({
@@ -15,6 +15,7 @@ const alert_model_Schema = new mongoose.Schema({
     default: null,
   },
   // Alert level (e.g., Critical, High, Medium, Info)
+  // ToDo: Move this to a constants file.
   alertLevel: {
     type: String,
     required: true,
@@ -35,13 +36,23 @@ const alert_model_Schema = new mongoose.Schema({
   },
   // Tags associated with this alert
   tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag" }],
+  // Whether the alert is disabled (won't be evaluated)
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+  // Whether the alert is muted (won't send notifications but still logs)
+  muted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // ---------- Helper / Statics ----------
 // Build display <-> db field mappings from the central DATA_DICTIONARY
 // to avoid duplication and keep server/client in sync.
 const dataDict =
-  constants && constants.DATA_DICTIONARY ? constants.DATA_DICTIONARY : {};
+  chartConstants && chartConstants.DATA_DICTIONARY ? chartConstants.DATA_DICTIONARY : {};
 const displayToDbField = Object.keys(dataDict).reduce((acc, key) => {
   const entry = dataDict[key];
   if (entry && entry.label && entry.dbPath) {

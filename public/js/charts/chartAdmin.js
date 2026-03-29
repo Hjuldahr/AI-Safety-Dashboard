@@ -131,7 +131,6 @@
                 </div>
             `).join('');
 
-            // ToDo: Don't hardcode the size values - use CHART_SIZES from constants.js
             formContainer.innerHTML = `
                 <label for="edit-title-${id}">Chart Title:</label>
                 <input type="text" id="edit-title-${id}" value="${config.title}">
@@ -224,7 +223,7 @@
                 body: JSON.stringify({
                     id,
                     title: newTitle,
-                    chartSize: newSize,
+                    size: newSize,
                     chartTimeRange: newTimeframe,
                     includedValues: newIncludedValues
                 })

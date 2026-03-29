@@ -2,21 +2,23 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <base href="<%= process.env.PUBLIC_URL || '/' %>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Model Demo</title>
+    <title>Demo [<%= currentModel %>] <%= currentScenario %> </title>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="css/fullSite.css">
-    <link rel="stylesheet" href="css/header.css">
-    <link rel="stylesheet" href="css/nav.css">
-    <link rel="stylesheet" href="css/demo.css">
+    <link rel="stylesheet" href="css/themes/colors-default.css">
+    <link rel="stylesheet" id="theme-colors" href="">
+    <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
+    <link rel="stylesheet" href="css/components/notifications.css">
+    <link rel="stylesheet" href="css/pages/demo.css">
     
     <!-- Scripts -->
-    <script src="js/demo.js"></script>
+    <script src="/js/sseManager.js"></script>
+    <script src="/js/demo.js"></script>
     <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
+    <script src="/js/notifications.js" defer></script>
 </head>
-<body>
+<body class="demo-page">
     <%- include('components/header') %>
     <%- include('components/nav') %>
 
@@ -28,7 +30,7 @@
                 <label for="modelSelect">Select Model:</label>
                 <select id="modelSelect">
                     <% models.forEach(function(model) { %>
-                        <option value="<%= model %>"><%= model %></option>
+                        <option value="<%= model %>" <%= (model === currentModel) ? "selected" : "" %>><%= model %></option>
                     <% }); %>
                 </select>
                 <br><br>

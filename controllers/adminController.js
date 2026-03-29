@@ -1,7 +1,10 @@
 import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
 import { Role } from '../models/role.js';
-import { roles as rolesConfig } from '../config/roles.js';
+import { roles as rolesConfig } from "../constants/roles.js";
+import { permissions as permissionsConfig } from "../constants/permissions.js";
+import SystemSetting from '../models/SystemSetting.js';
+import { AI_LOG_CUTOFF } from '../constants/sse.js';
 
 // Render the user management page
 export const getUsersPage = async (req, res) => {
@@ -91,8 +94,17 @@ export const listRoles = async (req, res) => {
 // Get available permissions
 export const getAvailablePermissions = async (req, res) => {
   try {
-    const validPermissions = Role.getValidPermissions();
-    res.json({ permissions: validPermissions });
+    // Convert permissions object to grouped format with category names
+    const groupedPermissions = {};
+    Object.entries(permissionsConfig).forEach(([category, perms]) => {
+      // Capitalize first letter of category
+      const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+      groupedPermissions[categoryName] = Object.entries(perms).map(([key, label]) => ({
+        key,
+        label
+      }));
+    });
+    res.json({ permissions: groupedPermissions });
   } catch (err) {
     console.error('Error getting permissions:', err);
     res.status(500).json({ message: 'Server error' });
@@ -186,6 +198,80 @@ export const deleteRole = async (req, res) => {
   }
 };
 
+// Delete a user account
+export const deleteUser = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+
+    // Prevent deleting self
+    if (req.user && String(req.user._id) === String(targetUserId)) {
+      return res.status(400).json({ message: 'You cannot delete your own account.' });
+    }
+
+    const userToDelete = await User.findById(targetUserId);
+    if (!userToDelete) return res.status(404).json({ message: 'User not found.' });
+
+    // If target is an owner, only allow owners to delete
+    if (userToDelete.roles && userToDelete.roles.includes('owner')) {
+      if (!(req.user && req.user.roles && req.user.roles.includes('owner'))) {
+        return res.status(403).json({ message: 'Only owners can delete owner accounts.' });
+      }
+
+      // Prevent deleting the last owner
+      const ownerCount = await User.countDocuments({ roles: 'owner' });
+      if (ownerCount <= 1) {
+        return res.status(409).json({ message: 'Cannot delete the last owner account.' });
+      }
+    }
+
+    await User.deleteOne({ _id: userToDelete._id });
+
+    // Log the deletion
+    User_Log.addLog(req.user._id, 'User_Deleted', `Deleted user account: ${userToDelete.username}`).catch(err => console.error('Failed to write log:', err));
+
+    res.json({ success: true, message: 'User deleted successfully.' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Get the current AI log cutoff setting
+export const getSystemSettings = async (req, res) => {
+  try {
+    const setting = await SystemSetting.findOne({ key: 'ai_log_cutoff' }).lean();
+    const aiLogCutoff = (setting && typeof setting.value === 'number') ? setting.value : AI_LOG_CUTOFF;
+    res.json({ aiLogCutoff });
+  } catch (err) {
+    console.error('Error fetching system settings:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update the AI log cutoff setting
+export const updateAiLogCutoff = async (req, res) => {
+  try {
+    const { value } = req.body;
+
+    if (typeof value !== 'number' || value <= 0) {
+      return res.status(400).json({ message: 'Invalid cutoff value.' });
+    }
+
+    await SystemSetting.findOneAndUpdate(
+      { key: 'ai_log_cutoff' },
+      { key: 'ai_log_cutoff', value },
+      { upsert: true }
+    );
+
+    User_Log.addLog(req.user._id, 'Setting_Changed', `Changed AI log cutoff to ${value}ms`).catch(err => console.error('Failed to write log:', err));
+
+    res.json({ success: true, aiLogCutoff: value });
+  } catch (err) {
+    console.error('Error updating AI log cutoff:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export default {
   getUsersPage,
   listUsers,
@@ -193,5 +279,8 @@ export default {
   listRoles,
   getAvailablePermissions,
   createRole,
-  deleteRole
+  deleteRole,
+  deleteUser,
+  getSystemSettings,
+  updateAiLogCutoff
 };

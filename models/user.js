@@ -22,10 +22,20 @@ const UserSchema = new mongoose.Schema({
     },
     roles: {
         type: [String],
-        default: ['visitor'] // Every new user is a 'visitor' by default
+        default: ['viewer'] // Every new user is a 'viewer' by default
+    },
+    preferredTheme: {
+        type: String,
+        enum: ['default', 'ocean', 'sunset', 'viridian', 'sakura', 'cosmic', 'contrast', 'compact'],
+        default: 'default'
+    },
+    preferredColour: {
+        type: String,
+        enum: ['light', 'dark', 'auto'],
+        default: 'auto'
     },
     // Timestamp of when user last saw notifications (server-side unread tracking)
-    alertsLastSeen: {
+    notificationsLastSeen: {
         type: Date,
         required: false,
         default: null
@@ -53,6 +63,6 @@ UserSchema.methods.comparePassword = function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-const User = mongoose.model('User', UserSchema);
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
 export default User;

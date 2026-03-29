@@ -1,14 +1,13 @@
 import scheduler from '../server_side_events/scheduler.js';
 import { schedulerState } from '../server_side_events/schedulerState.js';
-import constants from "../config/constants.js";
+import chartConstants from "../constants/charts.js";
 
 const getPage = async (req, res) => {
     try {
-        // Ensure permissions are passed explicitly to the template to avoid undefined errors
         res.render("index", {
             user: req.user,
             permissions: res.locals.permissions || [],
-            constants: constants
+            constants: chartConstants
         }); //renders the index.ejs 
     } catch (error) {
         console.error("Error fetching homepage content:", error);
@@ -33,7 +32,7 @@ const getParams = (req, res) => {
 const updateParams = (req, res) => {
     try {
         if (scheduler) {
-            scheduler.updateSchedulerSettings(req.body);
+            scheduler.updateSchedulerSettings(req.body, req.user);
             res.json({ success: true, state: req.body });
         }
         else {

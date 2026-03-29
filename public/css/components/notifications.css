@@ -1,0 +1,246 @@
+/* ==========================================================================
+   VARIABLES — ALERTS / NOTIFICATIONS
+   ========================================================================== */
+:root {
+  /* Primary / Brand */
+  --primary-color: var(--theme-primary-color);
+  --primary-light: var(--theme-primary-light);
+  --green-color: var(--theme-green-color);
+
+  /* Borders */
+  --border-color: var(--theme-border-color);
+  --border-light: var(--theme-border-light);
+  --border-lighter: var(--theme-border-lighter);
+
+  /* Backgrounds */
+  --card-bg: var(--theme-card-bg);
+  --body-bg: var(--theme-body-bg);
+
+  /* Text */
+  --text-dark: var(--theme-text-dark);
+  --text-light: var(--theme-text-light);
+  --text-muted: var(--theme-text-muted);
+  --color-white: var(--theme-color-white);
+
+  /* Shadows */
+  --shadow: var(--theme-shadow);
+
+  /* Alert / notification specific */
+  --alert-badge-bg: var(--theme-alert-badge-bg, var(--theme-critical-color, #ef4444));
+  --alert-badge-text: var(--theme-alert-badge-text, var(--color-white));
+  --alert-time-color: var(--theme-alert-time-color, var(--text-light));
+  --notification-hover-bg: var(--theme-notification-hover-bg, rgba(0,0,0,0.04));
+}
+
+/* ==========================================================================
+   ALERT POPUP / BELL
+   ========================================================================== */
+.alert-popup-container {
+  position: flex;
+  top: 4rem;
+  right: 2rem;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.alert-popup {
+  background-color: var(--card-bg);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.alert-popup-emphasis {
+  font-weight: 600;
+  margin: 0.25rem 0 0;
+}
+
+.notification-bell {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background-color: var(--alert-badge-bg);
+  color: var(--alert-badge-text);
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  display: none;
+}
+
+.notification-badge.show {
+  display: inline-block;
+}
+
+.notification-bell i.fa-bell {
+  color: var(--text-dark);
+  font-size: 1.25rem;
+}
+
+.notification-history {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 350px;
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.notification-history.show {
+  display: block;
+}
+
+.notification-history-header {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--body-bg);
+  font-size: 0.95rem;
+}
+
+.notification-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notification-history-item {
+  border-bottom: 1px solid var(--border-color);
+  line-height: 1.4;
+}
+
+.notification-history-item:last-child {
+  border-bottom: none;
+}
+
+.notification-history-item a {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.notification-history-item a:hover {
+  background-color: var(--notification-hover-bg);
+}
+
+.alert-text,
+.notification-slide-text {
+  display: block;
+}
+
+.alert-time,
+.notification-slide-time {
+  display: block;
+  font-size: 0.8em;
+  color: var(--alert-time-color);
+  margin-top: 0.35rem;
+  opacity: 0.9;
+}
+
+.notification-slide {
+  border-radius: 25px 0px 0px 25px;
+  color: var(--color-white);
+  padding: 15px 25px;
+  position: fixed;
+  z-index: 1000;
+  right: 0;
+  top: 75px;
+
+  transform: translateX(120%);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(.22, .9, .31, 1), opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.notification-slide.show {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.notification-slide.hidden {
+  transform: translateX(120%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   PAGINATION (example component)
+   ========================================================================== */
+.pagination {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+  border: 1px solid var(--border-lighter);
+}
+
+.pagination-left, 
+.pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination button {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-dark);
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.pagination button.active {
+  background: var(--primary-color);
+  color: var(--color-white);
+  border-color: var(--primary-color);
+}
+
+.pagination button:hover {
+  background-color: var(--body-bg);
+  transform: none;
+}
+
+.pagination button:disabled {
+  background-color: var(--body-bg);
+  color: var(--text-light);
+  cursor: not-allowed;
+}

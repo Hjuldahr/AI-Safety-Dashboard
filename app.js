@@ -11,7 +11,9 @@ import MongoStore from 'connect-mongo';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import mainRouter from "./routers/router.js";
-import { connectDB, seedDataBase, seedCharts } from './config/database.js';
+import { connectDB, seedDataBase, seedCharts, seedReportTemplates } from './config/database.js';
+import { sendNotification } from './controllers/notificationController.js';
+import { SHUTDOWN_MESSAGE } from "./constants/notification.js";
 
 let shuttingDown = false;
 
@@ -82,14 +84,14 @@ const startServer = async () => {
     app.use("/", mainRouter);
 
     const server = app.listen(PORT, () => {
-        console.log(`[App] Server running on [http://localhost:${PORT}/]`);
+        console.log(`[Server] Now running at [http://localhost:${PORT}/]`);
     });
 
     server.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {
-            console.error(`[App] Port ${PORT} is already in use.`);
+            console.error(`[Server] Port ${PORT} is already in use.`);
         } else {
-            console.error('[App] Server Error', err);
+            console.error('[Server] Server Error', err);
         }
         process.exit(1);
     });
@@ -98,7 +100,7 @@ const startServer = async () => {
     server.on('connection', (socket) => {
         if (shuttingDown) {
             socket.destroy();
-            console.log('[App] Client attempted to connect during shutdown');
+            console.log('[Server] Client attempted to connect during shutdown');
         }
     });
 
@@ -106,10 +108,14 @@ const startServer = async () => {
         if (shuttingDown) return;
         shuttingDown = true;
 
-        console.log(`\n[App] Received ${signal}! Shutting down...`);
+        console.log(`\n[Shutdown] Received ${signal}! Shutting down...`);
+
+        await sendNotification(SHUTDOWN_MESSAGE);
+
+        new Promise(resolve => setTimeout(resolve, 5000));
 
         const forceExitTimer = setTimeout(() => {
-            console.error("[App] Force exit");
+            console.error("[Shutdown] Force exit");
             process.exit(1);
         }, 10_000);
 
@@ -128,7 +134,7 @@ const startServer = async () => {
             clearTimeout(forceExitTimer);
             process.exit(0);
         } catch (err) {
-            console.error("[App] Shutdown failed:", err);
+            console.error("[Shutdown] Shutdown failed:", err);
             clearTimeout(forceExitTimer);
             process.exit(1);
         }
@@ -138,9 +144,14 @@ const startServer = async () => {
     process.on("SIGTERM", shutdown);
 }
 
-// Connect to the database and then start the server
-connectDB().then(async () => {
+connectDB()
+.then(async () => {
     await seedDataBase();
     await seedCharts();
+    await seedReportTemplates();
     startServer();
+})
+.catch((err) => {
+    console.error('[Startup Error] Failed to connect to database:', err);
+    process.exit(1);
 });

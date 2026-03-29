@@ -1,5 +1,5 @@
 // middleware/authorization.js
-import { roles as rolesConfig } from '../config/roles.js';
+import { roles as rolesConfig } from "../constants/roles.js";
 import { Role } from '../models/role.js';
 
 // Cache for role permissions to avoid repeated DB queries

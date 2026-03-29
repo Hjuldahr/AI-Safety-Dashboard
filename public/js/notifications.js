@@ -1,196 +1,356 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Notification Bell & History Logic
+    // =========================
+    // CONFIG
+    // =========================
+    const API = {
+        latest: '/notifications/latest',
+        history: '/notifications/history',
+        unreadCount: '/notifications/unread',
+        markRead: '/notifications/mark-read',
+        events: '/events'
+    };
 
-    // Fetch recent alert logs from server
-    const fetchRecentAlerts = async (limit = 10) => {
+    // =========================
+    // SLIDE NOTIFICATION UI
+    // =========================
+    let currentNotification = null;
+    let dismissTimer = null;
+
+    const container = document.createElement('div');
+    container.id = 'notificationBanner';
+    container.className = 'notification-slide hidden';
+    document.body.appendChild(container);
+
+    const content = document.createElement('div');
+    content.className = 'notificationBannerContent';
+    container.appendChild(content);
+
+    const safeJSON = async (resp) => {
+        try { return await resp.json(); } catch { return null; }
+    };
+
+    const formatTime = (date) => new Date(date).toLocaleString();
+
+    const fetchLatestNotification = async () => {
         try {
-            // Use the new paginated history API to fetch the most recent logs
-            const params = new URLSearchParams({ page: '1', limit: String(limit) });
-            const resp = await fetch(`alerts/api/history?${params.toString()}`);
-            if (!resp.ok) return [];
-            const data = await resp.json();
-            // data.logs is an array of { level, timestamp, alertName, modelName, humanRule }
-            return Array.isArray(data.logs) ? data.logs : [];
+            const resp = await fetch(API.latest);
+            if (!resp.ok) return null;
+            return await safeJSON(resp);
         } catch (e) {
-            console.error('Failed to fetch recent alerts for notifications:', e);
-            return [];
+            console.error('Failed to fetch latest notification:', e);
+            return null;
         }
     };
 
-    // Select DOM Elements
-    const bellButton = document.querySelector('.notification-bell');
-    const historyContainer = document.getElementById('notification-history');
-    const badgeEl = document.getElementById('notification-badge');
-
-    // Server-driven unread count helpers
     const fetchUnreadCount = async () => {
         try {
-            const resp = await fetch('alerts/unread-count');
+            const resp = await fetch(API.unreadCount);
             if (!resp.ok) return 0;
-            const data = await resp.json();
-            return Number(data && data.unread ? data.unread : 0);
-        } catch (e) {
-            console.error('Failed to fetch unread count:', e);
+            const json = await safeJSON(resp);
+            return Number(json?.unread || 0);
+        } catch {
             return 0;
         }
     };
 
-    const updateBadgeFromCount = (unread) => {
+    const fetchHistoryPage = async (pageNum = 1) => {
+        if (fetching) return [];
+        fetching = true;
         try {
-            if (!badgeEl) return;
-            if (unread > 0) {
-                badgeEl.textContent = unread > 99 ? '99+' : String(unread);
-                badgeEl.classList.add('show');
-            } else {
-                badgeEl.textContent = '';
-                badgeEl.classList.remove('show');
-            }
+            const params = new URLSearchParams({ page: pageNum, limit: pageSize });
+            const resp = await fetch(`${API.history}?${params}`);
+            if (!resp.ok) return [];
+            const data = await safeJSON(resp);
+            return Array.isArray(data?.notifications) ? data.notifications : [];
         } catch (e) {
-            console.error('Failed to update notification badge:', e);
+            console.error('Failed to fetch history:', e);
+            return [];
+        } finally {
+            fetching = false;
         }
     };
 
-    // Function to populate the alert history list from data
-    const populateAlertHistory = async () => {
-        historyContainer.innerHTML = ''; // Clear existing content
+    // =========================
+    // HISTORY STATE
+    // =========================
+    const bellButton = document.querySelector('.notification-bell');
+    const historyContainer = document.getElementById('notification-history');
+    const badgeEl = document.getElementById('notification-badge');
 
-        // Add a header
+    let allNotifications = [];
+    let page = 1;
+    let pageSize = 10;
+    let historyOpen = false;
+    let fetching = false;
+    let hasMorePages = true;
+
+    let historyList = null;
+
+    const updateBadge = (unread) => {
+        if (!badgeEl) return;
+
+        if (historyOpen) {
+            badgeEl.textContent = '';
+            badgeEl.classList.remove('show');
+            return;
+        }
+
+        if (unread > 0) {
+            badgeEl.textContent = unread > 99 ? '99+' : String(unread);
+            badgeEl.classList.add('show');
+        } else {
+            badgeEl.textContent = '';
+            badgeEl.classList.remove('show');
+        }
+    };
+
+    // =========================
+    // HISTORY RENDERING
+    // =========================
+
+    const appendNotifications = (notifications) => {
+        if (!historyList) return;
+
+        notifications.forEach(n => {
+            const li = document.createElement('li');
+            li.className = 'notification-history-item';
+            li.style.borderLeft = `5px solid ${n.trim}`;
+            li.style.backgroundColor = n.background || '#fff';
+
+            const link = document.createElement('a');
+            if (n.redirectUrl) link.href = n.redirectUrl;
+
+            const text = document.createElement('span');
+            text.className = 'alert-text';
+            text.textContent = n.message || 'Notification';
+
+            const time = document.createElement('span');
+            time.className = 'alert-time';
+            time.textContent = formatTime(n.createdAt || Date.now());
+
+            link.appendChild(text);
+            link.appendChild(time);
+            li.appendChild(link);
+            historyList.appendChild(li);
+        });
+    };
+
+    const handleScroll = async () => {
+        if (!hasMorePages || fetching) return;
+
+        const nearBottom =
+            historyContainer.scrollTop + historyContainer.clientHeight >=
+            historyContainer.scrollHeight - 50;
+
+        if (!nearBottom) return;
+
+        page++;
+        const newPage = await fetchHistoryPage(page);
+
+        if (newPage.length < pageSize) {
+            hasMorePages = false;
+        }
+
+        if (newPage.length) {
+            allNotifications = allNotifications.concat(newPage);
+            appendNotifications(newPage);
+        }
+    };
+
+    const renderHistoryWindow = () => {
+        if (!historyContainer) return;
+
+        historyContainer.innerHTML = '';
+
         const header = document.createElement('div');
         header.className = 'notification-history-header';
-        header.textContent = 'Recent Alerts';
+        header.textContent = 'Recent Notifications';
         historyContainer.appendChild(header);
 
-        // Create the list
-        const list = document.createElement('ul');
-        const alerts = await fetchRecentAlerts(10);
+        historyList = document.createElement('ul');
+        historyList.className = 'notification-history-list';
+        historyContainer.appendChild(historyList);
 
-        // Update badge from server unread count
-        try {
-            const unread = await fetchUnreadCount();
-            updateBadgeFromCount(unread);
-        } catch (e) {
-            // ignore
-        }
+        appendNotifications(allNotifications);
 
-        alerts.forEach(alert => {
-            const listItem = document.createElement('li');
-            const level = (alert.level || 'Info').toString().toLowerCase();
-            listItem.className = `notification-history-item ${level}`;
-
-            // Create the link element
-            const link = document.createElement('a');
-            link.href = 'alerts';
-
-            // Create a span for the alert text: prefer humanRule then alertName
-            const alertText = document.createElement('span');
-            alertText.className = 'alert-text';
-            // Include model name if present to clarify which model triggered the alert
-            const modelPart = alert.modelName ? `[${alert.modelName}] ` : '';
-            alertText.textContent = modelPart + (alert.humanRule || alert.alertName || 'Alert');
-
-            // Create a span for the timestamp
-            const alertTime = document.createElement('span');
-            alertTime.className = 'alert-time';
-            const ts = alert.timestamp ? new Date(alert.timestamp) : new Date();
-            alertTime.textContent = formatAlertTime(ts);
-
-            // Append text and time to the link, then link to the list item
-            link.appendChild(alertText);
-            link.appendChild(alertTime);
-            listItem.appendChild(link);
-            list.appendChild(listItem);
-        });
-
-        historyContainer.appendChild(list);
+        historyContainer.removeEventListener('scroll', handleScroll);
+        historyContainer.addEventListener('scroll', handleScroll);
     };
 
-    //  Event Listener to toggle the history list visibility
-    bellButton.addEventListener('click', async (event) => {
-        // Stop the click from bubbling up to the document, which would instantly close the list
-        event.stopPropagation();
+    const populateHistory = async () => {
+        page = 1;
+        hasMorePages = true;
+        allNotifications = await fetchHistoryPage(page);
+        renderHistoryWindow();
+    };
 
-        const willShow = !historyContainer.classList.contains('show');
-        if (willShow) {
-            // Populate and then mark as read
-            await populateAlertHistory();
-            historyContainer.classList.add('show');
-            // Mark read on server
-            try {
-                await fetch('alerts/mark-read', { method: 'POST' });
-            } catch (e) {
-                console.error('Failed to mark alerts read on server:', e);
+    // =========================
+    // SLIDE NOTIFICATIONS
+    // =========================
+
+    const showNotification = async (n) => {
+        if (!n || !n.message) return;
+        if (historyOpen) return;
+
+        const id = n.id;
+        if (id && localStorage.getItem('previousNotificationId') === id) return;
+
+        const alreadyVisible = container.classList.contains('show');
+
+        // Replace content
+        content.innerHTML = `
+            <span class='notification-slide-text'>${n.message}</span>
+            <span class='notification-slide-time'>
+                ${formatTime(n.createdAt || Date.now())}
+            </span>
+        `;
+
+        container.style.backgroundColor = n.trim;
+
+        // Only trigger animation if not already visible
+        if (!alreadyVisible) {
+            container.classList.remove('hidden');
+            container.offsetHeight;
+            container.classList.add('show');
+        }
+
+        if (id) localStorage.setItem('previousNotificationId', id);
+        currentNotification = n;
+
+        // Reset dismiss timer
+        if (n.dismissible !== false) {
+            if (dismissTimer) clearTimeout(dismissTimer);
+            if (n.timeout) {
+                dismissTimer = setTimeout(() => {
+                    container.classList.remove('show');
+                }, n.timeout * 1000);
             }
-            // clear badge UI
-            updateBadgeFromCount(0);
-        } else {
-            historyContainer.classList.remove('show');
+        }
+
+        if (n.dismissible === false) {
+            try { await fetch(API.markRead, { method: 'POST' }); } catch {}
+        }
+    };
+
+    const hideNotification = () => {
+        container.classList.remove('show');
+        container.classList.add('hidden');
+        if (dismissTimer) clearTimeout(dismissTimer);
+        dismissTimer = null;
+        currentNotification = null;
+    };
+
+    container.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!currentNotification) return;
+
+        if (currentNotification.redirectUrl) {
+            window.location.href = currentNotification.redirectUrl;
+        }
+
+        if (currentNotification.dismissible !== false) {
+            hideNotification();
         }
     });
 
-    //  Event Listener to close the list when clicking anywhere else on the page
-    document.addEventListener('click', () => {
-        if (historyContainer.classList.contains('show')) {
-            historyContainer.classList.remove('show');
-        }
+    document.body.addEventListener('click', (e) => {
+        if (!currentNotification) return;
+        if (container.contains(e.target)) return;
+        if (currentNotification.dismissible === false) return;
+        hideNotification();
     });
 
-    // Initial badge population on load using server unread count
-    (async () => {
-        try {
-            const unread = await fetchUnreadCount();
-            updateBadgeFromCount(unread);
-        } catch (e) {
-            console.error('Failed initial fetch for unread count:', e);
-        }
-    })();
+    // =========================
+    // BELL CLICK
+    // =========================
 
-    // Setup SSE to receive live alert events and refresh unread count
-    let __notificationsEvtSource = null;
-    try {
-        __notificationsEvtSource = new EventSource('events');
-        __notificationsEvtSource.addEventListener('alert', async (ev) => {
-            // When an alert arrives, refresh unread count
-            try {
-                const unread = await fetchUnreadCount();
-                updateBadgeFromCount(unread);
-            } catch (e) {
-                console.error('Failed to refresh unread count after alert event:', e);
+    if (bellButton && historyContainer) {
+        bellButton.addEventListener('click', async (e) => {
+            e.stopPropagation();
+
+            historyOpen = !historyContainer.classList.contains('show');
+
+            if (historyOpen) {
+                await populateHistory();
+                historyContainer.classList.add('show');
+                hideNotification();
+                updateBadge(0);
+
+                try { await fetch(API.markRead, { method: 'POST' }); } catch {}
+            } else {
+                historyContainer.classList.remove('show');
             }
         });
-        __notificationsEvtSource.onerror = (err) => console.error('SSE error (notifications):', err);
-    } catch (e) {
-        console.error('Failed to setup EventSource for notifications:', e);
-    }
 
-    // Close SSE when the page unloads to avoid lingering connections
-    window.addEventListener('beforeunload', () => {
-        try {
-            if (__notificationsEvtSource) {
-                __notificationsEvtSource.close();
-                __notificationsEvtSource = null;
+        document.addEventListener('click', () => {
+            if (historyOpen) {
+                historyContainer.classList.remove('show');
+                historyOpen = false;
             }
-        } catch (e) {
-            // ignore
-         }
-    });
-
-    const formatAlertTime = (date) => {
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-
-        let hours = date.getHours();
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const seconds = date.getSeconds().toString().padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-
-        hours = hours % 12;
-        hours = hours ? hours : 12; // The hour '0' should be '12'
-
-        return `${year}/${month}/${day}: ${hours}:${minutes}:${seconds}${ampm}`;
+        });
     }
 
-    populateAlertHistory();
+    // =========================
+    // SSE
+    // =========================
+
+    // SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
+    function getSharedEventSource() {
+        return window.__sseManager.getSharedEventSource();
+    }
+
+    let evtSource = null;
+
+    try {
+        evtSource = getSharedEventSource();
+
+        evtSource.addEventListener('notification', async (ev) => {
+            try {
+                const json = JSON.parse(ev.data);
+
+                allNotifications.unshift(json);
+
+                if (!historyOpen) {
+                    showNotification(json);
+                    const unread = await fetchUnreadCount();
+                    updateBadge(unread);
+                } else {
+                    if (historyList) {
+                        historyList.innerHTML = '';
+                        appendNotifications(allNotifications);
+                    }
+                    updateBadge(0);
+                    try { await fetch(API.markRead, { method: 'POST' }); } catch {}
+                }
+
+            } catch (err) {
+                console.error('Notification SSE parse error:', err);
+            }
+        });
+
+        evtSource.onerror = () => {
+            console.warn('Notification SSE disconnected — will auto-reconnect.');
+        };
+
+    } catch (e) {
+        console.error('Failed to init SSE:', e);
+    }
+
+    // =========================
+    // INITIAL LOAD
+    // =========================
+
+    (async () => {
+        const latest = await fetchLatestNotification();
+        if (latest) showNotification(latest);
+
+        const unread = await fetchUnreadCount();
+        updateBadge(unread);
+    })();
+
+    window.addEventListener('beforeunload', () => {
+        try { evtSource?.close(); } catch {}
+    });
 
 });

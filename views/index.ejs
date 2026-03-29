@@ -8,13 +8,11 @@
   <title>AI Safety Dashboard</title>
 
   <!-- CSS -->
-  <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/header.css">
-  <link rel="stylesheet" href="css/fullSite.css">
-  <link rel="stylesheet" href="css/controlPanel.css">
-  <link rel="stylesheet" href="css/nav.css">
-  <link rel="stylesheet" href="css/notifications.css">
-
+  <link rel="stylesheet" href="css/themes/colors-default.css">
+  <link rel="stylesheet" id="theme-colors" href="">
+  <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
+  <link rel="stylesheet" href="css/components/notifications.css">
+  <link rel="stylesheet" href="css/pages/dashboard.css">
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
@@ -23,9 +21,10 @@
   <script>
     //Grab the constants sent on page load
     window.CONSTANTS = <%- JSON.stringify(constants) %>;
-    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
   </script>
 
+  <!-- SSE SharedWorker (must load before any SSE consumers) -->
+  <script src="js/sseManager.js"></script>
   <!-- Chart Scripts -->
   <script src="js/charts/chartUtils.js" defer></script>
   <script src="js/charts/chartDataManager.js" defer></script>
@@ -40,7 +39,7 @@
 
 </head>
 
-<body>
+<body class="dashboard-page">
 
   <%- include('components/header') %>
 
@@ -49,7 +48,9 @@
   <main class="content">
     <!-- Charts -->
     <div class="controls-panel">
-      <h2>Dashboard Controls</h2>
+      <div class="controls-panel-header">
+        <h2>Dashboard Controls</h2>
+      </div>
 
       <%- include('components/controlPanel') %>
 
@@ -62,6 +63,7 @@
     <div class="charts-container" id="dynamic-charts-container">
     </div>
   </main>
+  <script src="js/dashboardFullscreen.js" defer></script>
 </body>
 
 </html>
