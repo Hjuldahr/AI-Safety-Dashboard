@@ -68,7 +68,7 @@ class DemoManager {
         if (!modelName) return;
 
         try {
-            const { response, data } = await this.postJSON('/demo/list', { modelName });
+            const { response, data } = await this.postJSON('demo/list', { modelName });
 
             if (!response.ok) {
                 this.updateStatus(data.error || 'Failed to load scenarios', 'error');
@@ -102,7 +102,7 @@ class DemoManager {
         if (!modelName || !scenarioName) return;
 
         try {
-            const { response, data } = await this.postJSON('/demo/apply', {
+            const { response, data } = await this.postJSON('demo/apply', {
                 modelName,
                 scenarioName
             });
@@ -128,7 +128,7 @@ class DemoManager {
         if (!modelName) return;
 
         try {
-            const { response, data } = await this.postJSON('/demo/reset', {
+            const { response, data } = await this.postJSON('demo/reset', {
                 modelName
             });
 
