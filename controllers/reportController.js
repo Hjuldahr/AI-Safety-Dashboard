@@ -9,6 +9,7 @@ import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { AI_LOG_CUTOFF } from '../constants/sse.js';
 import AI_Summary from '../models/AI_Summary.js';
 import AlertLog from '../models/alert_log.js';
+import User_Log from '../models/User_Log.js';
 import ReportRecord from '../models/ReportRecord.js';
 import * as h5wasm from 'h5wasm/node';
 import fs from "fs";
@@ -527,11 +528,11 @@ const createReport = async (req, res) => {
             ? fields
             : ['responseTime', 'policyCompliance'];
 
-        // Ensure the user actually wants the appendix
-        const includeAppendix = selectedFields.includes('flaggedOutputs');
-
-        // Remove flaggedOutputs from the numeric charting fields
-        const numericFields = selectedFields.filter(f => f !== 'flaggedOutputs');
+        // Extract appendix flags and remove them from numeric charting fields
+        const APPENDIX_KEYS = ['flaggedOutputs', 'appendixAiLogs', 'appendixAiSummaries', 'appendixUserLogs', 'appendixAlertLogs'];
+        const appendixFlags = {};
+        APPENDIX_KEYS.forEach(key => { appendixFlags[key] = selectedFields.includes(key); });
+        const numericFields = selectedFields.filter(f => !APPENDIX_KEYS.includes(f));
 
         // Calculate absolute timestamps for our timeframe
         const startMs = startDate ? new Date(startDate).getTime() : Date.now() - ONE_DAY_MS;
@@ -555,7 +556,7 @@ const createReport = async (req, res) => {
             stats = await getAggregatedStats(query, numericFields, AI_Log, 'AI_Log');
             timeSeriesData = await getTimeSeriesData(query, numericFields, AI_Log, startMs, endMs);
 
-            if (includeAppendix) {
+            if (appendixFlags.flaggedOutputs) {
                 appendixData = await getAppendixData(query);
             }
 
@@ -622,7 +623,7 @@ const createReport = async (req, res) => {
             });
 
             // Grab Appendix data just for the high-fidelity portion
-            if (includeAppendix) {
+            if (appendixFlags.flaggedOutputs) {
                 appendixData = await getAppendixData(highQuery);
             }
         }
@@ -634,20 +635,86 @@ const createReport = async (req, res) => {
         });
         await Promise.all(chartPromises);
 
+        // Fetch additional appendix data concurrently
+        const appendixPromises = [];
+        let aiLogsAppendix = [];
+        let aiSummariesAppendix = [];
+        let userLogsAppendix = [];
+        let alertLogsAppendix = [];
+
+        const baseQuery = buildReportQuery({ modelName, startDate, endDate });
+
+        if (appendixFlags.appendixAiLogs) {
+            appendixPromises.push(
+                AI_Log.find(baseQuery)
+                    .sort({ responseTimestamp: -1 })
+                    .limit(200)
+                    .lean().exec()
+                    .then(docs => { aiLogsAppendix = docs; })
+            );
+        }
+        if (appendixFlags.appendixAiSummaries) {
+            appendixPromises.push(
+                AI_Summary.find(baseQuery)
+                    .sort({ responseTimestamp: -1 })
+                    .limit(200)
+                    .lean().exec()
+                    .then(docs => { aiSummariesAppendix = docs; })
+            );
+        }
+        if (appendixFlags.appendixUserLogs) {
+            const userLogQuery = {};
+            if (startDate || endDate) {
+                userLogQuery.createdAt = {};
+                if (startDate) userLogQuery.createdAt.$gte = new Date(startDate);
+                if (endDate) userLogQuery.createdAt.$lte = new Date(endDate);
+            }
+            appendixPromises.push(
+                User_Log.find(userLogQuery)
+                    .sort({ createdAt: -1 })
+                    .limit(200)
+                    .populate('userID', 'username')
+                    .lean().exec()
+                    .then(docs => { userLogsAppendix = docs; })
+            );
+        }
+        if (appendixFlags.appendixAlertLogs) {
+            const alertQuery = {};
+            if (startDate || endDate) {
+                alertQuery.timestamp = {};
+                if (startDate) alertQuery.timestamp.$gte = new Date(startDate);
+                if (endDate) alertQuery.timestamp.$lte = new Date(endDate);
+            }
+            appendixPromises.push(
+                AlertLog.find(alertQuery)
+                    .sort({ timestamp: -1 })
+                    .limit(200)
+                    .lean().exec()
+                    .then(docs => { alertLogsAppendix = docs; })
+            );
+        }
+
+        await Promise.all(appendixPromises);
+
         // Build Template Payload & Render
         const templateData = {
             reportTitle,
             startDate,
             endDate,
             modelName,
-            fidelity, // Passes 'high', 'low', or 'split' to power the UI badge
+            fidelity,
             totalLogs: stats.count,
             lowLogs: stats.lowCount || 0,
             highLogs: stats.highCount || 0,
             selectedFields: numericFields,
             stats,
             chartImages,
-            appendixData
+            appendixData,
+            aiLogsAppendix,
+            aiSummariesAppendix,
+            userLogsAppendix,
+            alertLogsAppendix,
+            appendixFlags
         };
 
         const pdfBuffer = await renderPdfFromTemplate('reportTemplate', templateData);

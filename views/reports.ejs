@@ -119,11 +119,26 @@
             <h3>Appendices</h3>
           </div>
 
-          <!-- ToDo: update this section with new Appendices (AI Logs, Summaries, and Alerts) -->
           <div class="special-selection">
             <label class="check-item special">
               <input type="checkbox" name="fields" value="flaggedOutputs">
-              <strong>Include Raw Flagged Outputs</strong> (Detailed Appendix)
+              <strong>Flagged Outputs</strong> &mdash; Raw flagged safety outputs
+            </label>
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="appendixAiLogs">
+              <strong>AI Logs</strong> &mdash; High-fidelity log entries
+            </label>
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="appendixAiSummaries">
+              <strong>AI Summaries</strong> &mdash; 1-minute aggregated summaries
+            </label>
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="appendixUserLogs">
+              <strong>User Logs</strong> &mdash; User activity during timeframe
+            </label>
+            <label class="check-item special">
+              <input type="checkbox" name="fields" value="appendixAlertLogs">
+              <strong>Alert Logs</strong> &mdash; Triggered alerts during timeframe
             </label>
           </div>
         </section>

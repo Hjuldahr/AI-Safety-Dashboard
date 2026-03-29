@@ -143,14 +143,42 @@ const formatValue = (val) => {
       </div>
     </div>
 
-    <% selectedFields.forEach(function(field) { 
+    <!-- Table of Contents -->
+    <div class="toc-box">
+      <h2>Table of Contents</h2>
+      <ul class="toc-list">
+        <% selectedFields.forEach(function(field) {
+          const statData = stats[field];
+          if (!statData) return;
+        %>
+        <li><a href="#field-<%= field %>"><%= statData.label %></a></li>
+        <% }); %>
+        <% if (appendixData && appendixData.length > 0) { %>
+        <li><a href="#appendix-flagged">Appendix: Raw Flagged Outputs</a></li>
+        <% } %>
+        <% if (aiLogsAppendix && aiLogsAppendix.length > 0) { %>
+        <li><a href="#appendix-ai-logs">Appendix: AI Logs</a></li>
+        <% } %>
+        <% if (aiSummariesAppendix && aiSummariesAppendix.length > 0) { %>
+        <li><a href="#appendix-ai-summaries">Appendix: AI Summaries</a></li>
+        <% } %>
+        <% if (userLogsAppendix && userLogsAppendix.length > 0) { %>
+        <li><a href="#appendix-user-logs">Appendix: User Logs</a></li>
+        <% } %>
+        <% if (alertLogsAppendix && alertLogsAppendix.length > 0) { %>
+        <li><a href="#appendix-alert-logs">Appendix: Alert Logs</a></li>
+        <% } %>
+      </ul>
+    </div>
+
+    <% selectedFields.forEach(function(field) {
             const statData = stats[field];
             // Skip rendering if data is missing or it's a non-numeric field that slipped through
             if (!statData) return;
         %>
     <div class="page-break"></div>
 
-    <h2><%= statData.label %></h2>
+    <h2 id="field-<%= field %>"><%= statData.label %></h2>
     <% if (chartImages && chartImages[field]) { %>
     <div class="chart-container">
       <img src="<%= chartImages[field] %>" alt="<%= statData.label %> Chart" />
@@ -178,17 +206,27 @@ const formatValue = (val) => {
     </div>
 
     <% }); %>
+    <%
+    // Helper for alert level styling
+    const alertEmojis = { critical: '🚫', high: '⚠️', medium: '🔔', info: 'ℹ️' };
+    const alertStyles = {
+        critical: { border: '#ef4444', text: '#b91c1c', bg: '#fef2f2' },
+        high:     { border: '#f97316', text: '#c2410c', bg: '#fff7ed' },
+        medium:   { border: '#eab308', text: '#a16207', bg: '#fefce8' },
+        info:     { border: '#3b82f6', text: '#1d4ed8', bg: '#eff6ff' }
+    };
+    %>
+
     <% if (appendixData && appendixData.length > 0) { %>
     <div class="page-break"></div>
-    <h2>Appendix: Raw Flagged Outputs</h2>
+    <h2 id="appendix-flagged">Appendix: Raw Flagged Outputs</h2>
     <p class="text-muted" style="margin-bottom: 20px;">
       The following outputs were flagged by the AI safety system during this report's timeframe.
       <em>Note: This data is only available for the high-fidelity portion of this report.</em>
     </p>
 
-    <% appendixData.forEach(function(flaggedObj) { 
-                // Determine CSS class for the severity badge
-                const sevClass = flaggedObj.severity === 'severe' ? 'sev-severe' : 
+    <% appendixData.forEach(function(flaggedObj) {
+                const sevClass = flaggedObj.severity === 'severe' ? 'sev-severe' :
                                  flaggedObj.severity === 'moderate' ? 'sev-moderate' : 'sev-mild';
             %>
     <div class="appendix-card">
@@ -197,6 +235,118 @@ const formatValue = (val) => {
         Triggered on: <%= new Date(flaggedObj.timestamp).toLocaleString() %>
       </div>
       <div class="appendix-text"><%= flaggedObj.text %></div>
+    </div>
+    <% }); %>
+    <% } %>
+
+    <% if (aiLogsAppendix && aiLogsAppendix.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-ai-logs">Appendix: AI Logs</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      High-fidelity AI log entries recorded during this report's timeframe.
+      Showing up to 200 most recent entries.
+    </p>
+
+    <% aiLogsAppendix.forEach(function(log) { %>
+    <div class="appendix-card appendix-log-card">
+      <div class="appendix-log-header">
+        <span class="appendix-log-model"><%= log.modelName %></span>
+        <span class="appendix-log-time"><%= new Date(log.responseTimestamp).toLocaleString() %></span>
+      </div>
+      <div class="appendix-log-stats">
+        <% if (log.policyCompliance !== undefined) { %>
+          <span>Policy: <%= (log.policyCompliance ?? 0).toFixed(1) %>%</span>
+        <% } %>
+        <% if (log.responseTime !== undefined) { %>
+          <span>Response: <%= (log.responseTime ?? 0).toFixed(0) %>ms</span>
+        <% } %>
+        <% if (log.tokensUsed !== undefined) { %>
+          <span>Tokens: <%= (log.tokensUsed ?? 0).toLocaleString() %></span>
+        <% } %>
+        <% if (log.flaggedCount > 0) { %>
+          <span class="appendix-flagged-count">⚠️ <%= log.flaggedCount %> flagged</span>
+        <% } %>
+      </div>
+      <a href="<%= process.env.PUBLIC_URL || '' %>logs/view/ai/<%= log._id %>" class="appendix-log-link">📄 View Full Log</a>
+    </div>
+    <% }); %>
+    <% } %>
+
+    <% if (aiSummariesAppendix && aiSummariesAppendix.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-ai-summaries">Appendix: AI Summaries</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      1-minute aggregated AI summaries recorded during this report's timeframe.
+      Showing up to 200 most recent entries.
+    </p>
+
+    <% aiSummariesAppendix.forEach(function(summary) { %>
+    <div class="appendix-card appendix-log-card">
+      <div class="appendix-log-header">
+        <span class="appendix-log-model"><%= summary.modelName %></span>
+        <span class="appendix-log-time"><%= new Date(summary.responseTimestamp).toLocaleString() %></span>
+      </div>
+      <div class="appendix-log-stats">
+        <% if (summary.policyCompliance !== undefined) { %>
+          <span>Policy: <%= (summary.policyCompliance ?? 0).toFixed(1) %>%</span>
+        <% } %>
+        <% if (summary.responseTime !== undefined) { %>
+          <span>Response: <%= (summary.responseTime ?? 0).toFixed(0) %>ms</span>
+        <% } %>
+        <% if (summary.tokensUsed !== undefined) { %>
+          <span>Tokens: <%= (summary.tokensUsed ?? 0).toLocaleString() %></span>
+        <% } %>
+        <% if (summary.queryCount !== undefined) { %>
+          <span>Queries: <%= (summary.queryCount ?? 0).toLocaleString() %></span>
+        <% } %>
+      </div>
+      <!-- ToDo: Add deep link to AI Summary view once summary deep linking is implemented -->
+    </div>
+    <% }); %>
+    <% } %>
+
+    <% if (userLogsAppendix && userLogsAppendix.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-user-logs">Appendix: User Logs</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      User activity recorded during this report's timeframe.
+      Showing up to 200 most recent entries.
+    </p>
+
+    <% userLogsAppendix.forEach(function(ulog) { %>
+    <div class="appendix-card appendix-log-card">
+      <div class="appendix-log-header">
+        <span class="appendix-log-model"><%= ulog.userID?.username || 'Unknown User' %></span>
+        <span class="appendix-event-badge"><%= ulog.eventType %></span>
+        <span class="appendix-log-time"><%= new Date(ulog.createdAt).toLocaleString() %></span>
+      </div>
+      <div class="appendix-log-details"><%= ulog.details %></div>
+    </div>
+    <% }); %>
+    <% } %>
+
+    <% if (alertLogsAppendix && alertLogsAppendix.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-alert-logs">Appendix: Alert Logs</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      Alerts triggered during this report's timeframe.
+      Showing up to 200 most recent entries.
+    </p>
+
+    <% alertLogsAppendix.forEach(function(alog) {
+      const level = (alog.alertSnapshot?.alertLevel || 'info').toLowerCase();
+      const style = alertStyles[level] || alertStyles.info;
+      const emoji = alertEmojis[level] || '🚨';
+    %>
+    <div class="appendix-card appendix-alert-card" style="border-left: 4px solid <%= style.border %>; background-color: <%= style.bg %>;">
+      <div class="appendix-log-header">
+        <span style="color: <%= style.text %>; font-weight: 700;">
+          <%= emoji %> <%= (alog.alertSnapshot?.alertLevel || 'INFO').toUpperCase() %>
+        </span>
+        <span class="appendix-log-time"><%= new Date(alog.timestamp).toLocaleString() %></span>
+      </div>
+      <div class="appendix-alert-name"><%= alog.alertSnapshot?.alertName || 'Unknown Alert' %></div>
+      <a href="<%= process.env.PUBLIC_URL || '' %>alerts/view/<%= alog._id %>" class="appendix-log-link" style="color: <%= style.text %>;">🔔 View Alert Details</a>
     </div>
     <% }); %>
     <% } %>

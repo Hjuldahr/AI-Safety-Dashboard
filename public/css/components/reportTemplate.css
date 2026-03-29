@@ -260,3 +260,121 @@ h3 {
     border-radius: 4px;
     word-wrap: break-word;
 }
+
+/* Table of Contents */
+.toc-box {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.toc-box h2 {
+    margin-top: 0;
+    font-size: 1.4rem;
+}
+
+.toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.toc-list li {
+    padding: 6px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.toc-list li:last-child {
+    border-bottom: none;
+}
+
+.toc-list a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.toc-list a:hover {
+    text-decoration: underline;
+}
+
+/* Appendix Log Cards (shared across AI Logs, Summaries, User Logs) */
+.appendix-log-card {
+    padding: 12px 15px;
+}
+
+.appendix-log-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.appendix-log-model {
+    font-weight: 700;
+    color: #1e3a8a;
+}
+
+.appendix-log-time {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin-left: auto;
+}
+
+.appendix-log-stats {
+    display: flex;
+    gap: 14px;
+    font-size: 0.85rem;
+    color: #374151;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.appendix-flagged-count {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.appendix-log-link {
+    display: inline-block;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+.appendix-log-link:hover {
+    text-decoration: underline;
+}
+
+.appendix-log-details {
+    font-size: 0.88rem;
+    color: #4b5563;
+    margin-top: 4px;
+}
+
+.appendix-event-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #e0e7ff;
+    color: #3730a3;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Alert Appendix Cards */
+.appendix-alert-card {
+    padding: 12px 15px;
+}
+
+.appendix-alert-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
