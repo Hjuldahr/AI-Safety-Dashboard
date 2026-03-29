@@ -6,27 +6,9 @@
     const { DATA_DICTIONARY, TIMEFRAME_CONFIG } = window.CONSTANTS;
     const { CACHE_MAX_POINTS } = window.DashboardApp.constants;
 
+    // SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
     function getSharedEventSource() {
-        if (window.__sharedEventSource && window.__sharedEventSource.readyState !== EventSource.CLOSED) {
-            return window.__sharedEventSource;
-        }
-
-        const evtSource = new EventSource('events');
-
-        evtSource.addEventListener('open', () => console.log('Shared SSE connection opened (chartDataManager).'));
-        evtSource.addEventListener('error', () => {
-            console.warn('Shared SSE connection closed or disconnected (chartDataManager).');
-            // Let EventSource auto-reconnect; only close on unload.
-        });
-
-        window.__sharedEventSource = evtSource;
-
-        window.addEventListener('beforeunload', () => {
-            try { window.__sharedEventSource?.close(); } catch (e) { }
-            window.__sharedEventSource = null;
-        });
-
-        return evtSource;
+        return window.__sseManager.getSharedEventSource();
     }
 
     // reset the logs obj on reload

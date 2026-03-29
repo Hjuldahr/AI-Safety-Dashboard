@@ -2,7 +2,12 @@ import ModalManager from './components/modals.js';
 
 // --- STATE ---
 let currentPage = 1;
+let paginationSize = 10;
 let modalManager;
+
+function paginationSizeChange(newSize) {
+    paginationSize = newSize || 10;
+}
 
 // --- HELPERS ---
 
@@ -40,7 +45,7 @@ const fieldLabel = (fieldValue) => {
 // --- FETCH & RENDER ---
 
 const fetchHistory = async (page = 1) => {
-    const res = await fetch(`reports/history?page=${page}`);
+    const res = await fetch(`reports/history?page=${page}&limit=${paginationSize}`);
     if (!res.ok) throw new Error('Failed to fetch report history');
     return res.json();
 };
@@ -88,7 +93,7 @@ const loadPage = async (page) => {
         renderHistoryList(data.reports);
 
         const paginationEl = document.getElementById('history-pagination');
-        Pagination.render(paginationEl, data.totalPages, data.page, loadPage);
+        Pagination.render(paginationEl, data.total, data.page, paginationSize, (newPage) => loadPage(newPage), paginationSizeChange);
     } catch (err) {
         console.error('Failed to load report history:', err);
     }
