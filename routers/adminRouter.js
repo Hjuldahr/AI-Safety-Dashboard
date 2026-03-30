@@ -32,5 +32,6 @@ router.delete('/api/users/:id', isAuthenticated, authorize('manage:users'), cont
 // API: system settings
 router.get('/api/settings', isAuthenticated, authorize('manage:users'), controller.getSystemSettings);
 router.put('/api/settings/ai-log-cutoff', isAuthenticated, authorize('manage:users'), controller.updateAiLogCutoff);
+router.put('/api/settings/default-theme', isAuthenticated, authorize('manage:users'), controller.updateDefaultTheme);
 
 export default router;

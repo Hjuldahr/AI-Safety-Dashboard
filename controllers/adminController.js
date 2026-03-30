@@ -236,12 +236,16 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// Get the current AI log cutoff setting
+// Get the current system settings
 export const getSystemSettings = async (req, res) => {
   try {
-    const setting = await SystemSetting.findOne({ key: 'ai_log_cutoff' }).lean();
-    const aiLogCutoff = (setting && typeof setting.value === 'number') ? setting.value : AI_LOG_CUTOFF;
-    res.json({ aiLogCutoff });
+    const aiLogCutoffSetting = await SystemSetting.findOne({ key: 'ai_log_cutoff' }).lean();
+    const defaultThemeSetting = await SystemSetting.findOne({ key: 'default_theme' }).lean();
+
+    const aiLogCutoff = (aiLogCutoffSetting && typeof aiLogCutoffSetting.value === 'number') ? aiLogCutoffSetting.value : AI_LOG_CUTOFF;
+    const defaultTheme = (defaultThemeSetting && typeof defaultThemeSetting.value === 'string') ? defaultThemeSetting.value : 'default';
+
+    res.json({ aiLogCutoff, defaultTheme });
   } catch (err) {
     console.error('Error fetching system settings:', err);
     res.status(500).json({ message: 'Server error' });
@@ -272,6 +276,31 @@ export const updateAiLogCutoff = async (req, res) => {
   }
 };
 
+// Update the default theme for new accounts
+export const updateDefaultTheme = async (req, res) => {
+  try {
+    const { defaultTheme } = req.body;
+    const allowedThemes = ['default', 'ocean', 'sunset', 'compact'];
+
+    if (typeof defaultTheme !== 'string' || !allowedThemes.includes(defaultTheme)) {
+      return res.status(400).json({ message: 'Invalid theme selected.' });
+    }
+
+    await SystemSetting.findOneAndUpdate(
+      { key: 'default_theme' },
+      { key: 'default_theme', value: defaultTheme },
+      { upsert: true }
+    );
+
+    User_Log.addLog(req.user._id, 'Setting_Changed', `Changed default theme to ${defaultTheme}`).catch(err => console.error('Failed to write log:', err));
+
+    res.json({ success: true, defaultTheme });
+  } catch (err) {
+    console.error('Error updating default theme:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export default {
   getUsersPage,
   listUsers,
@@ -282,5 +311,6 @@ export default {
   deleteRole,
   deleteUser,
   getSystemSettings,
-  updateAiLogCutoff
+  updateAiLogCutoff,
+  updateDefaultTheme
 };

@@ -150,6 +150,31 @@
         </div>
       </section>
 
+      <!-- System Settings Section -->
+      <section class="collapsible-section" data-section="system-settings">
+        <button type="button" class="collapse-toggle" aria-expanded="false">System Settings ▾</button>
+        <div class="collapsible-content" id="system-settings-section">
+          <div class="panel-section">
+            <div class="admin-section">
+              <h4>Default Theme for New Users</h4>
+              <div id="default-theme-messages"></div>
+              <div class="form-group">
+                <label for="default-theme-select">Default Theme</label>
+                <select id="default-theme-select" class="form-control" aria-label="Select default theme for new users">
+                  <option value="default">Default</option>
+                  <option value="ocean">Ocean</option>
+                  <option value="sunset">Sunset</option>
+                  <option value="compact">Compact</option>
+                </select>
+              </div>
+              <div class="button-group" style="margin-top: 0.75rem;">
+                <button id="save-default-theme" type="button" class="btn btn-primary">Save Default Theme</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 

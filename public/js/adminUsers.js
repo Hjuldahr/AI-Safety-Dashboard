@@ -438,27 +438,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   const aiLogCutoffSelect = document.getElementById('ai-log-cutoff');
   const saveAiLogCutoffBtn = document.getElementById('save-ai-log-cutoff');
   const systemMessagesDiv = document.getElementById('system-messages');
+  const defaultThemeMessagesDiv = document.getElementById('default-theme-messages');
 
   function showSystemMessage(message, type = 'success') {
-    if (!systemMessagesDiv) return;
+    const msgDiv = defaultThemeMessagesDiv || systemMessagesDiv;
+    if (!msgDiv) return;
     const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
-    systemMessagesDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
-    setTimeout(() => { systemMessagesDiv.innerHTML = ''; }, 5000);
+    msgDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+    setTimeout(() => { msgDiv.innerHTML = ''; }, 5000);
   }
 
-  if (aiLogCutoffSelect) {
+  const defaultThemeSelect = document.getElementById('default-theme-select');
+  const saveDefaultThemeBtn = document.getElementById('save-default-theme');
+
+  if (aiLogCutoffSelect || defaultThemeSelect) {
     // Load current setting
     try {
       const res = await fetch('admin/api/settings');
       if (res.ok) {
         const data = await res.json();
-        aiLogCutoffSelect.value = String(data.aiLogCutoff);
-        // If the value doesn't match any option, it stays on the first option
+        if (aiLogCutoffSelect && data.aiLogCutoff !== undefined) {
+          aiLogCutoffSelect.value = String(data.aiLogCutoff);
+        }
+        if (defaultThemeSelect && data.defaultTheme) {
+          defaultThemeSelect.value = data.defaultTheme;
+        }
       }
     } catch (err) {
       console.error('Error loading system settings:', err);
     }
+  }
 
+  if (aiLogCutoffSelect) {
     saveAiLogCutoffBtn?.addEventListener('click', async () => {
       const value = Number(aiLogCutoffSelect.value);
       try {
@@ -477,6 +488,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       } catch (err) {
         console.error(err);
         showSystemMessage('Error updating setting.', 'error');
+      }
+    });
+  }
+
+  if (defaultThemeSelect) {
+    saveDefaultThemeBtn?.addEventListener('click', async () => {
+      const defaultTheme = defaultThemeSelect.value;
+      try {
+        const res = await fetch('admin/api/settings/default-theme', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ defaultTheme })
+        });
+
+        if (res.ok) {
+          showSystemMessage('Default theme updated successfully.');
+        } else {
+          const data = await res.json();
+          showSystemMessage(data.message || 'Error updating default theme.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showSystemMessage('Error updating default theme.', 'error');
       }
     });
   }
