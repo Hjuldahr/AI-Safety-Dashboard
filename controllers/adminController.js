@@ -301,6 +301,33 @@ export const updateDefaultTheme = async (req, res) => {
   }
 };
 
+export const shutdownServer = async (req, res) => {
+  try {
+    res.json({ success: true, message: 'Server shutdown initiated.' });
+
+    // let response flush
+    setTimeout(() => {
+      process.kill(process.pid, 'SIGTERM');
+    }, 100);
+  } catch (err) {
+    console.error('Error initiating shutdown:', err);
+    res.status(500).json({ message: 'Server shutdown failed.' });
+  }
+};
+
+export const restartServer = async (req, res) => {
+  try {
+    res.json({ success: true, message: 'Server restart initiated (process exit).'});
+
+    setTimeout(() => {
+      process.exit(1);
+    }, 100);
+  } catch (err) {
+    console.error('Error initiating restart:', err);
+    res.status(500).json({ message: 'Server restart failed.' });
+  }
+};
+
 export default {
   getUsersPage,
   listUsers,
@@ -312,5 +339,7 @@ export default {
   deleteUser,
   getSystemSettings,
   updateAiLogCutoff,
-  updateDefaultTheme
+  updateDefaultTheme,
+  shutdownServer,
+  restartServer
 };

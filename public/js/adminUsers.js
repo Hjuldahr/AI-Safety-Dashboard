@@ -512,4 +512,43 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+
+  const shutdownButton = document.getElementById('shutdown-server');
+  const restartButton = document.getElementById('restart-server');
+
+  if (shutdownButton) {
+    shutdownButton.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to shut down the server now?')) return;
+      try {
+        const res = await fetch('admin/api/settings/shutdown', { method: 'POST' });
+        if (res.ok) {
+          showSystemMessage('Server shutdown initiated.', 'success');
+        } else {
+          const data = await res.json();
+          showSystemMessage(data.message || 'Failed to initiate shutdown.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showSystemMessage('Failed to initiate shutdown.', 'error');
+      }
+    });
+  }
+
+  if (restartButton) {
+    restartButton.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to restart the server now?')) return;
+      try {
+        const res = await fetch('admin/api/settings/restart', { method: 'POST' });
+        if (res.ok) {
+          showSystemMessage('Server restart initiated.', 'success');
+        } else {
+          const data = await res.json();
+          showSystemMessage(data.message || 'Failed to initiate restart.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showSystemMessage('Failed to initiate restart.', 'error');
+      }
+    });
+  }
 });
