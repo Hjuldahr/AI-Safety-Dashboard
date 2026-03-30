@@ -18,6 +18,7 @@ const connectDB = async () => {
 };
 
 const seedDataBase = async () => {
+    await seedDefaultRoles();
     seedAdminUser();
 }
 
