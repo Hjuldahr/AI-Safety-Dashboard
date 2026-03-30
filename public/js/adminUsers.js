@@ -438,14 +438,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const aiLogCutoffSelect = document.getElementById('ai-log-cutoff');
   const saveAiLogCutoffBtn = document.getElementById('save-ai-log-cutoff');
   const systemMessagesDiv = document.getElementById('system-messages');
-  const defaultThemeMessagesDiv = document.getElementById('default-theme-messages');
 
   function showSystemMessage(message, type = 'success') {
-    const msgDiv = defaultThemeMessagesDiv || systemMessagesDiv;
-    if (!msgDiv) return;
+    if (!systemMessagesDiv) return;
     const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
-    msgDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
-    setTimeout(() => { msgDiv.innerHTML = ''; }, 5000);
+    systemMessagesDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+    setTimeout(() => { systemMessagesDiv.innerHTML = ''; }, 5000);
   }
 
   const defaultThemeSelect = document.getElementById('default-theme-select');
