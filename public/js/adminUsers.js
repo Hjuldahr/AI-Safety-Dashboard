@@ -515,8 +515,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const shutdownButton = document.getElementById('shutdown-server');
   const restartButton = document.getElementById('restart-server');
+  const hasShutdownPermission = (window.USER_PERMISSIONS || []).includes('shutdown:server');
+  const hasRestartPermission = (window.USER_PERMISSIONS || []).includes('restart:server');
 
-  if (shutdownButton) {
+  // Hide buttons if user lacks permission
+  if (shutdownButton && !hasShutdownPermission) {
+    shutdownButton.style.display = 'none';
+  }
+  if (restartButton && !hasRestartPermission) {
+    restartButton.style.display = 'none';
+  }
+
+  if (shutdownButton && hasShutdownPermission) {
     shutdownButton.addEventListener('click', async () => {
       if (!confirm('Are you sure you want to shut down the server now?')) return;
       try {
@@ -534,7 +544,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  if (restartButton) {
+  if (restartButton && hasRestartPermission) {
     restartButton.addEventListener('click', async () => {
       if (!confirm('Are you sure you want to restart the server now?')) return;
       try {

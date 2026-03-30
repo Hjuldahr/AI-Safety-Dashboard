@@ -280,7 +280,7 @@ export const updateAiLogCutoff = async (req, res) => {
 export const updateDefaultTheme = async (req, res) => {
   try {
     const { defaultTheme } = req.body;
-    const allowedThemes = ['default', 'ocean', 'sunset', 'compact'];
+    const allowedThemes = ['default', 'compact', 'contrast', 'cosmic', 'ocean', 'sakura', 'sunset', 'viridian'];
 
     if (typeof defaultTheme !== 'string' || !allowedThemes.includes(defaultTheme)) {
       return res.status(400).json({ message: 'Invalid theme selected.' });
