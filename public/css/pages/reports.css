@@ -34,10 +34,10 @@ body {
     color: var(--primary);
 }
 
-.report-header p {
+.report-header p, .card-header p{
     color: var(--secondary);
     margin: 0px;
-    margin-top: 10px;
+    margin-bottom: 10px ;
 }
 
 /* Cards */
@@ -87,7 +87,18 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    /* margin-bottom: 1rem; */
+}
+
+.card-header-no-space{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.card-header-no-space h3{
+    padding-bottom: 0px;
+    margin-bottom: 10px;
 }
 
 .template-pills {
@@ -109,6 +120,33 @@ body {
 .pill:hover {
     background: var(--primary);
     color: white;
+}
+
+.template-pill {
+    position: relative;
+    padding-right: 28px;
+}
+
+.pill-delete {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    font-weight: 700;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    line-height: 1;
+}
+
+.template-pill:hover .pill-delete {
+    opacity: 0.7;
+}
+
+.pill-delete:hover {
+    opacity: 1 !important;
+    color: #dc2626;
 }
 
 /* Checkbox Grid */
@@ -196,6 +234,14 @@ button:hover {
     background: var(--accent);
 }
 
+.btn-download.ai-logs {
+    background: #0891b2;
+}
+
+.btn-download.ai-summaries {
+    background: #7c3aed;
+}
+
 #report-preview-wrapper {
     display: none;
     margin-top: 20px;
@@ -206,4 +252,211 @@ button:hover {
     height: 600px;
     border: 1px solid var(--border);
     border-radius: 8px;
+}
+
+/* ===================================================
+   REPORT TABS
+   =================================================== */
+
+.reports-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+
+    justify-content: center;
+}
+
+.report-tab-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-tab-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.report-tab-btn:hover:not(.active) {
+    background: #f0f4ff;
+}
+
+.report-view.hidden {
+    display: none;
+}
+
+/* ===================================================
+   HISTORY LIST
+   =================================================== */
+
+.history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.history-row:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary);
+}
+
+.history-row-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.history-row-title {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-row-meta {
+    font-size: 0.85rem;
+    color: var(--secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.meta-sep {
+    color: var(--border);
+}
+
+.history-row-created {
+    font-size: 0.8rem;
+    color: var(--secondary);
+    margin-top: 4px;
+}
+
+.history-row-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    margin-left: 16px;
+}
+
+.history-row-actions .btn-download,
+.history-row-actions .btn-delete {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+}
+
+.btn-delete {
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-delete:hover {
+    opacity: 0.85;
+}
+
+/* Fidelity Badges */
+.fidelity-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-high {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-low {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.badge-split {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+/* History empty state */
+.history-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--secondary);
+}
+
+.history-empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.history-empty-state.hidden {
+    display: none;
+}
+
+/* ===================================================
+   REPORT DETAIL MODAL
+   =================================================== */
+
+.report-detail-modal .detail-section {
+    margin-bottom: 16px;
+}
+
+.report-detail-modal .detail-section label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--secondary);
+    margin-bottom: 4px;
+}
+
+.detail-fields-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.detail-field-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f0f4ff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 0.8rem;
+    color: var(--text);
+}
+
+.report-detail-footer {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.report-detail-footer .btn-download {
+    padding: 8px 14px;
+    font-size: 0.82rem;
 }

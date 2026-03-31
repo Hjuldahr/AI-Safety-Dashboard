@@ -20,6 +20,7 @@ const User_Log_Schema = new mongoose.Schema({
             'Role_Created',
             'Role_Deleted',
             'Role_Changed',
+            'Setting_Changed',
             'Alert_Created',
             'Alert_Modified',
             'Alert_Deleted',

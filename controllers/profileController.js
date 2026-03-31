@@ -1,17 +1,8 @@
 import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
 
-const ALLOWED_THEMES = new Set(['default', 'ocean', 'sunset', 'compact']);
+const ALLOWED_THEMES = new Set(['default', 'ocean', 'sunset', 'compact', 'viridian', 'sakura', 'cosmic', 'contrast']);
 const ALLOWED_COLOURS = new Set(['light', 'dark', 'auto']);
-
-const parseBoolean = (value) => {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') {
-    if (value.toLowerCase() === 'true') return true;
-    if (value.toLowerCase() === 'false') return false;
-  }
-  return null;
-};
 
 // Render profile page
 export const getProfilePage = async (req, res) => {

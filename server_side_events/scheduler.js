@@ -1,13 +1,13 @@
 // server_side_events/scheduler.js
 import { AIAnalyzer } from '../data_analysis_pipeline/AIAnalyzer.js';
-import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, AI_LOG_CUTOFF, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
+import { HEARTBEAT, SCHEDULER_INTERVAL, SUMMARY_INTERVAL, ALERTS_COOLDOWN, AI_MODELS } from '../constants/sse.js';
+import { getAiLogCutoff } from '../helpers/getAiLogCutoff.js';
 import { schedulerState } from './schedulerState.js';
 import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
 import { evaluateAndTagLogs, finalizeAlertLogs } from "./alertEvaluator.js";
-import Denque from "denque";
 import { sendNotification } from '../controllers/notificationController.js';
-import { NOTIFICATION_TYPES, BACKGROUND_COLOURS, TRIM_COLOURS } from '../constants/notification.js';
+import { NOTIFICATION_TYPES } from '../constants/notification.js';
 import User_Log from '../models/User_Log.js';
 
 // ---------- Shutdown Guard ----------
@@ -21,7 +21,7 @@ let summaryInterval = null;
 
 // ---------- Model Simulation ----------
 const MAX_PREV_GENS = 60;
-let previousGeneralizations = new Denque();
+let previousGeneralizations = []; //switching to array to avoid critical vulnerabilites
 
 //One method for all models
 //ToDo: Make this dynamic so that it follows constants/charts.js
@@ -30,7 +30,7 @@ async function generateModelData(modelName) {
     // Call the Data Evaluator, and ask it to evaluate data for this model, over the past second
     const summary = AIAnalyzer(modelName, SCHEDULER_INTERVAL / 1000, previousGeneralizations);
     previousGeneralizations.push(summary);
-    if (previousGeneralizations.length > MAX_PREV_GENS) previousGeneralizations.removeOne(0);
+    if (previousGeneralizations.length > MAX_PREV_GENS) previousGeneralizations.shift();
 
     // Format for DB/SSE
     return {
@@ -194,7 +194,8 @@ async function createSummary() {
             broadcastEvent('summary', summary);
 
             // Delete extra
-            const cutoff = Date.now() - AI_LOG_CUTOFF;
+            const aiLogCutoff = await getAiLogCutoff();
+            const cutoff = Date.now() - aiLogCutoff;
             await AI_Log.deleteMany({ responseTimestamp: { $lt: cutoff } });
         }
     } catch (err) {
@@ -232,7 +233,7 @@ function updateSchedulerSettings(newState, user) {
         schedulerState.isPaused = newState.isPaused;
         shouldRestart = true;
 
-        const action = newState.isPaused ? 'Paused' : 'Resumed';
+        const action = newState.isPaused ? 'paused' : 'resumed';
 
         console.log(`[Scheduler] ${action}`);
 
@@ -246,8 +247,7 @@ function updateSchedulerSettings(newState, user) {
                 category: NOTIFICATION_TYPES.Server,
                 redirectUrl: '/',
                 autoCalculateTimeout: true,
-                trim: TRIM_COLOURS[action],
-                background: BACKGROUND_COLOURS[action]
+                colour: action
             });
         }
     }

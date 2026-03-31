@@ -1,0 +1,3 @@
+This folder is where hdf5 files are stored before being sent to the user and deleted.
+
+If you don't have the folder created on your device then it can cause some issues - so leave this txt file here so it appears in git.

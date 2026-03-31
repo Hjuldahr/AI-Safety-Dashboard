@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Safety",
+        "icon": "🛡️",
+        "fields": ["policyCompliance", "toxicityScore", "piiDetected", "flaggedCount", "flaggedOutputs"]
+    },
+    {
+        "name": "Efficiency",
+        "icon": "⚡",
+        "fields": ["responseTime", "energyConsumption", "tokensUsed", "gigaFlopsUsed"]
+    },
+    {
+        "name": "Executive",
+        "icon": "📊",
+        "fields": ["policyCompliance", "responseHelpfulness", "queryCount"]
+    },
+    {
+        "name": "Full Audit",
+        "icon": "🌐",
+        "fields": ["policyCompliance", "responseHelpfulness", "responseTime", "energyConsumption", "tokensUsed", "gigaFlopsUsed", "webLookups", "toxicityScore", "piiDetected", "queryCount", "flaggedCount", "flaggedOutputs", "appendixAiLogs", "appendixAiSummaries", "appendixUserLogs", "appendixAlertLogs"]
+    }
+]

@@ -367,9 +367,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 
     // --- LIVE UPDATES (SSE) ---
+    // SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
+    function getSharedEventSource() {
+        return window.__sseManager.getSharedEventSource();
+    }
+
     function setupLiveUpdates() {
         try {
-            const evtSource = new EventSource('events');
+            const evtSource = getSharedEventSource();
 
             evtSource.addEventListener('alert', (event) => {
                 if (!isLive) return;

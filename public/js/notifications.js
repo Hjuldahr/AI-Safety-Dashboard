@@ -4,11 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // CONFIG
     // =========================
     const API = {
-        latest: '/notifications/latest',
-        history: '/notifications/history',
-        unreadCount: '/notifications/unread',
-        markRead: '/notifications/mark-read',
-        events: '/events'
+        latest: 'notifications/latest',
+        history: 'notifications/history',
+        unreadCount: 'notifications/unread',
+        markRead: 'notifications/mark-read',
+        events: 'events'
     };
 
     // =========================
@@ -113,10 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!historyList) return;
 
         notifications.forEach(n => {
+            const colour = n.colour.toLowerCase();
             const li = document.createElement('li');
             li.className = 'notification-history-item';
-            li.style.borderLeft = `5px solid ${n.trim}`;
-            li.style.backgroundColor = n.background || '#fff';
+            li.style.borderLeft = `5px solid var(--color-${colour}-border)`;
+            li.style.backgroundColor = `var(--color-${colour}-light)`;
 
             const link = document.createElement('a');
             if (n.redirectUrl) link.href = n.redirectUrl;
@@ -206,7 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </span>
         `;
 
-        container.style.backgroundColor = n.trim;
+        const colour = n.colour.toLowerCase();
+        container.style.backgroundColor = `var(--color-${colour})`;
 
         // Only trigger animation if not already visible
         if (!alreadyVisible) {
@@ -295,10 +297,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // SSE
     // =========================
 
+    // SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
+    function getSharedEventSource() {
+        return window.__sseManager.getSharedEventSource();
+    }
+
     let evtSource = null;
 
     try {
-        evtSource = new EventSource(API.events);
+        evtSource = getSharedEventSource();
 
         evtSource.addEventListener('notification', async (ev) => {
             try {
@@ -325,8 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         evtSource.onerror = () => {
-            console.warn('Notification SSE disconnected.');
-            evtSource.close();
+            console.warn('Notification SSE disconnected — will auto-reconnect.');
         };
 
     } catch (e) {

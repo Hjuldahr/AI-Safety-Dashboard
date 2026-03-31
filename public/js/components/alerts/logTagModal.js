@@ -30,6 +30,12 @@ export function initLogTagModal(modalManager, { tagsCache, onSaveSuccess }) {
 
         await tagSelect.init();
 
+        const cleanupTagSelect = () => {
+            tagSelect.destroy();
+            modalManager.unregisterCloseCallback(cleanupTagSelect);
+        };
+        modalManager.registerCloseCallback(cleanupTagSelect);
+
         tagSelect.setSelectedIds(currentTagIds);
 
         // Build the Footer Node

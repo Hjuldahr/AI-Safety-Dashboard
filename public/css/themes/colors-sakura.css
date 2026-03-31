@@ -1,0 +1,278 @@
+/* ==========================================================================
+   COLORS — SAKURA THEME
+   Full light + dark-mode variables
+   ========================================================================== */
+
+/* ---------- Sakura theme (light) ---------- */
+body.theme-sakura {
+  --primary-color: #f28ab2;
+  --primary-hover: #e06696;
+  --primary-light: #fde2ed;
+  --green-color: #ff7f91;
+
+  --body-bg: #fff0f6;
+  --card-bg: #ffffff;
+  --text-dark: #4b1f2b;
+  --text-light: #a35f78;
+  --text-muted: #7b4f63;
+  --color-muted: #cfa0b1;
+  --border-color: #f28ab2;
+  --border-light: #f5b8cd;
+  --border-lighter: #fde2ed;
+
+  --shadow: 0 4px 6px -1px rgba(242,138,178,.1), 0 2px 4px -2px rgba(242,138,178,.08);
+  --shadow-md: 0 4px 6px rgba(242,138,178,.1);
+  --shadow-lg: 0 4px 12px rgba(242,138,178,.08);
+  --shadow-card-hover: 0 6px 16px rgba(242,138,178,.15);
+  --input-bg: #ffffff;
+
+  --color-critical: #dc2626;
+  --color-critical-light: #fee2e2;
+  --color-critical-dark: #991b1b;
+  --color-high: #ea580c;
+  --color-high-light: #ffedd5;
+  --color-high-dark: #9a3412;
+  --color-medium: #d97706;
+  --color-medium-light: #fef3c7;
+  --color-medium-dark: #92400e;
+  --color-info: #f28ab2;
+  --color-info-light: #fde2ed;
+  --color-info-dark: #a35f78;
+  --color-success: #ff7f91;
+  --color-success-hover: #e06696;
+  --color-warning: #ffe066;
+
+  --btn-default-bg: #f28ab2;
+  --btn-default-hover: #e06696;
+  --btn-default-active: #c45a7d;
+  --color-danger: #dc2626;
+  --color-danger-hover: #991b1b;
+
+  --notification-badge-bg: #ff4b4b;
+
+  --error-bg: #fee2e2;
+  --error-border: #dc2626;
+  --error-text: #991b1b;
+  --alert-success-bg: #fde2ed;
+  --alert-success-text: #4b1f2b;
+  --alert-success-border: #f28ab2;
+  --alert-error-bg: #fee2e2;
+  --alert-error-text: #991b1b;
+  --alert-error-border: #dc2626;
+
+  --log-dot-login: #f28ab2;      
+  --log-dot-signup: #e06696;     
+  --log-dot-logout: #7b4f63;  
+  --log-dot-alert: #ffe066;       
+  --log-dot-report: #ff9ec2;   
+  --log-dot-delete: #dc2626;      
+  --log-dot-default: #f7b8d0;    
+
+  --color-rogue: #f7c1d7;
+  --color-rogue-bg: rgba(247,193,215,.2);
+  --color-teal: #f28ab2;
+  --color-teal-bg: rgba(242,138,178,.2);
+  --color-primary-btn: #f28ab2;
+  --demo-border-color: #f5b8cd;
+
+  --kpi-text-color: #4b1f2b;
+
+  --code-bg: #4b1f2b;
+  --code-text: #fde2ed;
+
+  --back-btn-bg: #e06696;
+
+  --timeframe-label-color: #4b1f2b;
+  --timeframe-bg: #fde2ed;
+  --card-edit-bg: #fff0f6;
+
+  --role-system-bg: #fde2ed;
+  --role-system-text: #4b1f2b;
+
+  --delete-hover-color: #dc2626;
+  --edit-hover-color: #f28ab2;
+
+  --degraded-bg: #fff3f6;
+  --degraded-border: #ffe066;
+  --degraded-text: #4b1f2b;
+
+  --focus-ring: rgba(242,138,178,.3);
+  --focus-ring-light: rgba(242,138,178,.12);
+
+  --overlay-bg: rgba(242,138,178,.05);
+  --overlay-light: rgba(242,138,178,.04);
+  --overlay-subtle: rgba(242,138,178,.1);
+  --overlay-medium: rgba(242,138,178,.2);
+
+  --shadow-xs: 0 1px 2px rgba(242,138,178,.05);
+  --shadow-sm: 0 1px 2px rgba(242,138,178,.12);
+
+  --tiny-group-border: rgba(242,138,178,.3);
+  --editing-header-bg: rgba(253,226,237,.95);
+
+  --header-text-color: #4b1f2b;
+  --header-bg-color: #fde2ed;
+  --button-bg-color: #f28ab2;
+  --button-hover-bg-color: #e06696;
+  --button-text-color: #ffffff;
+  --primary-accent-color: #e06696;
+
+  --nav-bg-color: #fff0f6;
+  --nav-link-color: #4b1f2b;
+  --nav-link-hover-bg: #fde2ed;
+  --nav-link-active-bg: #f28ab2;
+  --nav-link-active-color: #ffffff;
+  --nav-border-color: #f28ab2;
+
+  --color-shutdown: #e11d48;
+  --color-shutdown-border: #b91c1b;
+  --color-shutdown-light: #fde2e8;
+  --color-shutdown-dark: #7f1d2a;
+
+  --color-paused: #fb7185;
+  --color-paused-border: #f43f5e;
+  --color-paused-light: #ffe5ea;
+  --color-paused-dark: #a83a44;
+
+  --color-resumed: #ff7f91;
+  --color-resumed-border: #e06696;
+  --color-resumed-light: #ffd6da;
+  --color-resumed-dark: #b34758;
+}
+
+/* ---------- Sakura theme (dark) ---------- */
+body.theme-sakura.dark-mode {
+  --primary-color: #f28ab2;
+  --primary-hover: #e06696;
+  --primary-light: #4b1f2b;
+  --green-color: #ff7f91;
+
+  --body-bg: #4b1f2b;
+  --card-bg: #5c2f40;
+  --text-dark: #fde2ed;
+  --text-light: #f7c1d7;
+  --text-muted: #cfa0b1;
+  --color-muted: #7b4f63;
+  --border-color: #e06696;
+  --border-light: #f28ab2;
+  --border-lighter: #5c2f40;
+
+  --shadow: 0 4px 6px -1px rgba(242,138,178,.3), 0 2px 4px -2px rgba(242,138,178,.15);
+  --shadow-md: 0 4px 6px rgba(242,138,178,.3);
+  --shadow-lg: 0 4px 12px rgba(242,138,178,.2);
+  --shadow-card-hover: 0 6px 16px rgba(242,138,178,.25);
+  --input-bg: #e06696;
+
+  --color-critical: #ff6666;
+  --color-critical-light: #ffcccc;
+  --color-critical-dark: #cc0000;
+  --color-high: #ff8800;
+  --color-high-light: #ffddaa;
+  --color-high-dark: #994400;
+  --color-medium: #ffff00;
+  --color-medium-light: #ffff99;
+  --color-medium-dark: #999900;
+  --color-info: #f28ab2;
+  --color-info-light: #5c2f40;
+  --color-info-dark: #fde2ed;
+  --color-success: #f28ab2;
+  --color-success-hover: #e06696;
+  --color-warning: #ffe066;
+
+  --btn-default-bg: #f28ab2;
+  --btn-default-hover: #e06696;
+  --btn-default-active: #4b1f2b;
+  --color-danger: #ff6666;
+  --color-danger-hover: #cc0000;
+
+  --notification-badge-bg: #ff4b4b;
+
+  --error-bg: #450a0a;
+  --error-border: #ff6666;
+  --error-text: #ffffff;
+  --alert-success-bg: #5c2f40;
+  --alert-success-text: #fde2ed;
+  --alert-success-border: #f28ab2;
+  --alert-error-bg: #450a0a;
+  --alert-error-text: #ff6666;
+  --alert-error-border: #cc0000;
+
+  --log-dot-login: #f28ab2;      
+  --log-dot-signup: #e06696;     
+  --log-dot-logout: #7b4f63;    
+  --log-dot-alert: #ffe066;       
+  --log-dot-report: #f7c1d7;    
+  --log-dot-delete: #ff6666;     
+  --log-dot-default: #e06696;  
+
+  --color-rogue: #f7c1d7;
+  --color-rogue-bg: rgba(247,193,215,.3);
+  --color-teal: #f28ab2;
+  --color-teal-bg: rgba(242,138,178,.3);
+  --color-primary-btn: #f28ab2;
+  --demo-border-color: #e06696;
+
+  --kpi-text-color: #fde2ed;
+
+  --code-bg: #4b1f2b;
+  --code-text: #fde2ed;
+
+  --back-btn-bg: #e06696;
+
+  --timeframe-label-color: #fde2ed;
+  --timeframe-bg: #4b1f2b;
+  --card-edit-bg: #5c2f40;
+
+  --role-system-bg: #e06696;
+  --role-system-text: #fde2ed;
+
+  --delete-hover-color: #ff6666;
+  --edit-hover-color: #f28ab2;
+
+  --degraded-bg: #3f1a2a;
+  --degraded-border: #ffe066;
+  --degraded-text: #fde2ed;
+
+  --focus-ring: rgba(242,138,178,.35);
+  --focus-ring-light: rgba(242,138,178,.15);
+
+  --overlay-bg: rgba(0,0,0,.5);
+  --overlay-light: rgba(242,138,178,.04);
+  --overlay-subtle: rgba(242,138,178,.1);
+  --overlay-medium: rgba(242,138,178,.2);
+
+  --shadow-xs: 0 1px 2px rgba(242,138,178,.05);
+  --shadow-sm: 0 1px 2px rgba(242,138,178,.12);
+
+  --tiny-group-border: rgba(242,138,178,.3);
+  --editing-header-bg: rgba(92,47,64,.95);
+
+  --header-text-color: #fde2ed;
+  --header-bg-color: #5c2f40;
+  --button-bg-color: #e06696;
+  --button-hover-bg-color: #f28ab2;
+  --button-text-color: #ffffff;
+  --primary-accent-color: #f28ab2;
+
+  --nav-bg-color: #5c2f40;
+  --nav-link-color: #fde2ed;
+  --nav-link-hover-bg: #e06696;
+  --nav-link-active-bg: #f28ab2;
+  --nav-link-active-color: #ffffff;
+  --nav-border-color: #f28ab2;
+
+  --color-shutdown: #ff4d6d;
+  --color-shutdown-border: #ff1f3b;
+  --color-shutdown-light: #4b0515;
+  --color-shutdown-dark: #ff99a9;
+
+  --color-paused: #ff7f92;
+  --color-paused-border: #ff4d6d;
+  --color-paused-light: #4b0515;
+  --color-paused-dark: #ffb3bf;
+
+  --color-resumed: #ff7f91;
+  --color-resumed-border: #e06696;
+  --color-resumed-light: #5c2f40;
+  --color-resumed-dark: #ffb3bf;
+}

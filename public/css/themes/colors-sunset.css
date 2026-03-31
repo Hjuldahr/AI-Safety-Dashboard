@@ -10,6 +10,8 @@ body.theme-sunset {
   --primary-light: #fef3c7;
   --green-color: #16a34a;
   --body-bg: #fffbeb;
+  --card-bg: #ffffff;
+  --panel-header-bg: #fde68a;
   --text-dark: #78350f;
   --text-light: #92643a;
   --text-muted: #7a5c3a;
@@ -68,12 +70,28 @@ body.theme-sunset {
   --nav-link-hover-bg: #fef9c3;
   --nav-link-active-bg: #d97706;
   --nav-border-color: #fde68a;
+
+  --color-shutdown: #b91c1b;
+  --color-shutdown-border: #7f1d2a;
+  --color-shutdown-light: #fde2e2;
+  --color-shutdown-dark: #7f1d2a;
+
+  --color-paused: #f97316;
+  --color-paused-border: #b45309;
+  --color-paused-light: #fff4e6;
+  --color-paused-dark: #78350f;
+
+  --color-resumed: #fbbf24;
+  --color-resumed-border: #d97706;
+  --color-resumed-light: #fff7d6;
+  --color-resumed-dark: #b45309;
 }
 
 /* ---------- Sunset theme (dark) ---------- */
 body.theme-sunset.dark-mode {
   --body-bg: #1c1007;
   --card-bg: #2d1e0e;
+  --panel-header-bg: #4a3520;
   --header-bg-color: #2d1e0e;
   --nav-bg-color: #1c1007;
   --text-dark: #fef3c7;
@@ -116,4 +134,19 @@ body.theme-sunset.dark-mode {
   --focus-ring-light: rgba(251,191,36,.15);
   --tiny-group-border: rgba(251,191,36,.3);
   --editing-header-bg: rgba(45,30,14,.95);
+
+  --color-shutdown: #f87171;
+  --color-shutdown-border: #b91c1b;
+  --color-shutdown-light: #4a1007;
+  --color-shutdown-dark: #ff9e9e;
+
+  --color-paused: #fb923c;
+  --color-paused-border: #d97706;
+  --color-paused-light: #3b1907;
+  --color-paused-dark: #ffb366;
+
+  --color-resumed: #fbbf24;
+  --color-resumed-border: #d97706;
+  --color-resumed-light: #2d1e0e;
+  --color-resumed-dark: #ffea7f;
 }

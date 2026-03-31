@@ -4,6 +4,11 @@ import ModalManager from './components/modals.js';
 // --- GLOBAL STATE ---
 let isLive = true;
 
+// SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
+function getSharedEventSource() {
+    return window.__sseManager.getSharedEventSource();
+}
+
 let currentLogsPage = 1;
 let currentAiLogsPage = 1;
 let currentAiSummariesPage = 1;
@@ -226,21 +231,18 @@ function toggleViews(viewToShow, elements) {
 
     if (viewToShow === "user") {
         elements.manageTagsBtn.classList.add("hidden");
-        elements.liveUpdatesContainer.classList.add("hidden");
         elements.userLogsBtn.classList.add('active');
         elements.userLogView.classList.remove('hidden');
         elements.userFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "ai") {
         elements.manageTagsBtn.classList.remove("hidden");
-        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiLogsBtn.classList.add('active');
         elements.aiLogView.classList.remove('hidden');
         elements.aiFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "summary") {
         elements.manageTagsBtn.classList.remove("hidden");
-        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiSummariesBtn.classList.add('active');
         elements.aiSummaryView.classList.remove('hidden');
         elements.aiSummaryFilterForm.classList.remove('hidden');
@@ -583,7 +585,7 @@ async function handleAiSummaryFilter(elements, page = 1) {
 // --- LIVE UPDATES (SSE) ---
 function setupLiveUpdates(elements, getIsLive) {
     try {
-        const evtSource = new EventSource('events');
+        const evtSource = getSharedEventSource();
 
         // Helper to check if an incoming log matches the current form filters
         const passesFilters = (logData, formElement) => {
@@ -607,6 +609,34 @@ function setupLiveUpdates(elements, getIsLive) {
 
             return true;
         };
+
+        evtSource.addEventListener('user_log_update', (event) => {
+            if (!isLive || currentLogsPage !== 1) return;
+
+            const newLog = JSON.parse(event.data);
+            const tbody = document.getElementById('user-log-tbody');
+
+            if (tbody) {
+                const row = document.createElement('tr');
+
+                const timestamp = new Date(newLog.createdAt).toLocaleString();
+                const dotClass = getDotClass(newLog.eventType);
+
+                row.innerHTML = `
+                    <td><span class="log-dot ${dotClass}"></span></td>
+                    <td>${timestamp}</td>
+                    <td>${newLog.userID ? newLog.userID.username : 'System'}</td>
+                    <td>${newLog.eventType.replace('_', ' ')}</td>
+                    <td>${newLog.details}</td>
+                `;
+
+                tbody.insertBefore(row, tbody.firstChild);
+
+                if (tbody.children.length > paginationSize) {
+                    tbody.removeChild(tbody.lastChild);
+                }
+            }
+        });
 
         // AI Logs Listener
         evtSource.addEventListener('update', (event) => {

@@ -14,7 +14,9 @@ const AlertSnapshotSchema = new Schema({
     alertRule: Schema.Types.Mixed,
     // Preserve tags as simple objects at time of firing
     // (No longer preserving tags in the snapshot — tags are stored as refs on the log)
-    created: Date
+    created: Date,
+    disabled: Boolean,
+    muted: Boolean
 }, { _id: false });
 
 // Schema for AlertLog

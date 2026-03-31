@@ -14,6 +14,7 @@
   <script>
     window.CURRENT_USER_ID = "<%= user ? user._id : '' %>";
   </script>
+  <script src="js/sseManager.js"></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script src="js/notifications.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -69,9 +70,13 @@
       <label for="theme-select">Select Theme:</label>
       <select id="theme-select">
         <option value="default" <%= user.preferredTheme === 'default' ? 'selected' : '' %>>Default</option>
+        <option value="compact" <%= user.preferredTheme === 'compact' ? 'selected' : '' %>>Compact-Design</option>
+        <option value="contrast" <%= user.preferredTheme === 'contrast' ? 'selected' : '' %>>High-Contrast</option>
+        <option value="cosmic" <%= user.preferredTheme === 'cosmic' ? 'selected' : '' %>>Cosmic</option>
         <option value="ocean" <%= user.preferredTheme === 'ocean' ? 'selected' : '' %>>Ocean</option>
+        <option value="sakura" <%= user.preferredTheme === 'sakura' ? 'selected' : '' %>>Sakura</option>
         <option value="sunset" <%= user.preferredTheme === 'sunset' ? 'selected' : '' %>>Sunset</option>
-        <option value="compact" <%= user.preferredTheme === 'compact' ? 'selected' : '' %>>Compact (Top Nav)</option>
+        <option value="viridian" <%= user.preferredTheme === 'viridian' ? 'selected' : '' %>>Viridian</option>
       </select>
 </main>
   <script src="/js/profile.js" defer></script>

@@ -1,31 +1,31 @@
 <nav class="site-nav">
   
   <!-- ToDo: View Dashboard permission? -->
-  <a href="/">Dashboard</a>
+  <a href="">Dashboard</a>
 
   <% if (typeof permissions !== 'undefined' && permissions.includes('view:alerts')) { %>
-  <a href="/alerts">Alerts</a>
+  <a href="alerts">Alerts</a>
   <% } %>
 
   <% if (typeof permissions !== 'undefined' && permissions.includes('view:reports')) { %>
-  <a href="/reports">Reports</a>
+  <a href="reports">Reports</a>
   <% } %>
 
   <% if (typeof permissions !== 'undefined' && permissions.includes('view:logs')) { %>
-  <a href="/logs">Logs</a>
+  <a href="logs">Logs</a>
   <% } %>
 
   <% if (typeof permissions !== 'undefined' && permissions.includes('view:demo')) { %>
-  <a href="/demo">Demo</a>
+  <a href="demo">Demo</a>
   <% } %>
 
   <% if (typeof permissions !== 'undefined' && permissions.includes('manage:users')) { %>
-  <a href="/admin/users">User Management</a>
+  <a href="admin/users">Management</a>
   <% } %>
 
 
   <% if (typeof permissions !== 'undefined' && permissions.includes('read:docs')) { %>
-  <a href="/docs/">Documentation</a>
+  <a href="docs/">Documentation</a>
   <% } %>
 
 </nav>

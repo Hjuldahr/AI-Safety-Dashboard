@@ -221,8 +221,9 @@ input:checked+.slider:before {
   height: 12px;
   border-radius: 50%;
   margin-right: 0.5rem;
-  /* Provides a slight offset for visual centering */
   transform: translateY(1px);
+  
+  content: ""; 
 }
 
 .log-dot-login {

@@ -4,7 +4,6 @@ import { broadcastEvent } from './scheduler.js';
 import { sendNotification } from '../controllers/notificationController.js';
 import HistTag from "../models/historicalTag.js";
 import AI_Log from "../models/AI_Log.js";
-import { TRIM_COLOURS, BACKGROUND_COLOURS } from "../constants/notification.js";
 
 export async function evaluateAndTagLogs(rawLogsMap, options = {}) {
     const { cooldownMs = 60000 } = options;
@@ -12,7 +11,7 @@ export async function evaluateAndTagLogs(rawLogsMap, options = {}) {
 
     let alerts;
     try {
-        alerts = await Alert.find().populate('tags').lean();
+        alerts = await Alert.find({ disabled: { $ne: true } }).populate('tags').lean();
     } catch (err) {
         console.error('[AlertEvaluator] Failed to fetch alerts:', err);
         return [];
@@ -86,7 +85,9 @@ export async function finalizeAlertLogs(pendingAlertLogs, insertedLogsMap) {
                 alertLevel: alert.alertLevel,
                 modelName: matchedModelNames.join(', '),
                 alertRule: alert.alertRule,
-                created: alert.created
+                created: alert.created,
+                disabled: alert.disabled,
+                muted: alert.muted
             };
 
             const created = await AlertLog.create({
@@ -109,14 +110,15 @@ export async function finalizeAlertLogs(pendingAlertLogs, insertedLogsMap) {
                 originalTagIDs: alert.tags || []
             });
 
-            await sendNotification({
-                message: alertText,
-                category: "Alert",
-                redirectUrl: `/alerts/view/${created._id}`,
-                autoCalculateTimeout: true,
-                trim: TRIM_COLOURS[alert.alertLevel],
-                background: BACKGROUND_COLOURS[alert.alertLevel]
-            });
+            if (!alert.muted) {
+                await sendNotification({
+                    message: alertText,
+                    category: "Alert",
+                    redirectUrl: `/alerts/view/${created._id}`,
+                    autoCalculateTimeout: true,
+                    colour: alert.alertLevel
+                });
+            }
 
         } catch (err) {
             console.error('[AlertEvaluator] Failed to create AlertLog:', err);

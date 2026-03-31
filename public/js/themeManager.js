@@ -1,12 +1,16 @@
 (function () {
   'use strict';
 
-  const THEMES = ['default', 'ocean', 'sunset', 'compact'];
+  const THEMES = ['default', 'ocean', 'sunset', 'compact', 'viridian', 'sakura', 'cosmic', 'contrast'];
   const MODES = ['light', 'dark', 'auto'];
 
   const COLOR_FILES = {
     ocean: 'css/themes/colors-ocean.css',
-    sunset: 'css/themes/colors-sunset.css'
+    sunset: 'css/themes/colors-sunset.css',
+    viridian: 'css/themes/colors-viridian.css',
+    sakura: 'css/themes/colors-sakura.css',
+    cosmic: 'css/themes/colors-cosmic.css',
+    contrast: 'css/themes/colors-contrast.css'
   };
 
   const LAYOUT_DEFAULT = 'css/layouts/default.css';
@@ -43,7 +47,16 @@
   }
 
   function applyTheme(name) {
-    document.body.classList.remove('theme-ocean', 'theme-sunset', 'theme-compact');
+    document.body.classList.remove(
+      'theme-ocean', 
+      'theme-sunset', 
+      'theme-compact',
+      'theme-viridian',
+      'theme-sakura',
+      'theme-cosmic',
+      'theme-night',
+      'theme-contrast'
+    );
 
     if (name && name !== 'default') {
       document.body.classList.add('theme-' + name);
@@ -96,7 +109,7 @@
     if (!prefs.isAuthenticated) return;
 
     try {
-      await fetch('/api/profile/preferences', {
+      await fetch('api/profile/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)

@@ -1,386 +1,357 @@
 <%
-// Define a function to safely parse and display the date from the YYYY-MM-DD string.
-// This uses UTC methods to prevent the server's local timezone from shifting the date back one day.
+// ===============================================
+// === UTILITY & HELPER FUNCTIONS ================
+// ===============================================
+
+// Helper to format dates cleanly
 const formatDisplayDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
         const dateObj = new Date(dateString);
-        // Use UTC methods to extract the components.
-        const year = dateObj.getUTCFullYear();
-        // getUTCMonth is 0-indexed (0=Jan), so we add 1
-        const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getUTCDate()).padStart(2, '0');
-
-        // Return the date in MM/DD/YYYY format
-        return `${month}/${day}/${year}`;
-    } catch(e) {
-        return dateString;
-    }
+        return `${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}/${String(dateObj.getUTCDate()).padStart(2, '0')}/${dateObj.getUTCFullYear()}`;
+    } catch(e) { return dateString; }
 };
-/**
- * Helper function to generate a single metric card.
- * @param {string} title The title of the card (e.g., 'Average Response Time').
- * @param {number} value The numerical value of the metric.
- * @param {string} unit The unit (e.g., 'ms', 'score').
- * @param {string} color The Tailwind color (e.g., 'blue', 'green', 'red').
- */
-const statCard = (title, value, unit, color) => {
-    // Determine the border color class based on the input color
-    const borderColorClass = {
-        'blue': 'border-blue-500',
-        'green': 'border-green-500',
-        'red': 'border-red-500',
-        'gray': 'border-gray-500',
-        'purple': 'border-purple-500',
-        'yellow': 'border-yellow-500',
-        'orange': 'border-orange-500',
-        'fuchsia': 'border-fuchsia-500',
-        'sky': 'border-sky-500'
-    }[color] || 'border-blue-500';
 
-    return `
-        <div class="bg-white p-4 rounded-xl shadow-md border-l-4 ${borderColorClass}">
-            <p class="text-sm font-medium text-gray-500">${title}</p>
-            <p class="text-3xl font-extrabold mt-1">
-                ${value.toFixed(2)} 
-                <span class="text-base font-normal text-gray-500">${unit}</span>
-            </p>
-        </div>
+// --- EJS MACRO: Renders the Deep Dive Alerts logic for Min/Max ---
+const renderDeepDive = (title, logId, sourceModel, alerts) => {
+    if (!logId) return '';
+    
+    const alertEmojis = { critical: '🚫', high: '⚠️', medium: '🔔', info: 'ℹ️' };
+
+    // Mapping levels to specific colors (Border and Text)
+    const alertStyles = {
+        critical: { border: '#ef4444', text: '#b91c1c', bg: '#fef2f2' }, // Red
+        high:     { border: '#f97316', text: '#c2410c', bg: '#fff7ed' }, // Orange
+        medium:   { border: '#eab308', text: '#a16207', bg: '#fefce8' }, // Yellow/Gold
+        info:     { border: '#3b82f6', text: '#1d4ed8', bg: '#eff6ff' }  // Blue
+    };
+    
+    const routePrefix = sourceModel === 'AI_Log' ? 'ai' : 'summary';
+    const logUrl = `${process.env.PUBLIC_URL || ''}logs/view/${routePrefix}/${logId}`;
+    
+    let html = `
+        <div class="trigger-section">
+            <div class="trigger-header">${title} Trigger Log</div>
+            <a href="${logUrl}" class="log-link">📄 View Origin Log (${sourceModel})</a>
+            <div class="trigger-header" style="margin-top: 15px;">Associated Alerts</div>
     `;
+
+    if (!alerts || alerts.length === 0) {
+        html += `<div class="no-alerts">✅ No alerts triggered by this log.</div>`;
+    } else {
+        html += `<ul class="alerts-list">`;
+        const displayAlerts = alerts.slice(0, 5);
+        
+        displayAlerts.forEach(a => {
+            const level = a.alertLevel.toLowerCase();
+            const alertUrl = `${process.env.PUBLIC_URL || ''}alerts/view/${a.alertLogId}`;
+            const emoji = alertEmojis[level] || '🚨';
+            const style = alertStyles[level] || { border: '#6b7280', text: '#374151', bg: '#f3f4f6' };
+            
+            // Applying inline styles for the PDF engine
+            html += `
+                <li class="alert-item" style="border-left: 4px solid ${style.border}; background-color: ${style.bg}; margin-bottom: 5px; padding: 8px; border-radius: 4px;">
+                    <a href="${alertUrl}" style="color: ${style.text}; text-decoration: none;">
+                        ${emoji} <strong>${a.alertLevel.toUpperCase()}:</strong> ${a.alertName}
+                    </a>
+                </li>`;
+        });
+        html += `</ul>`;
+
+        if (alerts.length > 5) {
+            const searchUrl = `${process.env.PUBLIC_URL || ''}alerts?search=${logId}`;
+            html += `
+                <div class="alert-overflow">
+                    ⚠️ ${alerts.length - 5} additional alerts omitted for space. 
+                    <a href="${searchUrl}">Click here to view full alert history for this log.</a>
+                </div>`;
+        }
+    }
+    
+    html += `</div>`;
+    return html;
+};
+
+const formatValue = (val) => {
+    if (val === null || val === undefined || isNaN(val)) return 'N/A';
+    
+    const num = Number(val);
+
+    // 1. Handle very small decimals (e.g., safety probabilities)
+    if (num > 0 && num < 0.01) {
+        return num.toPrecision(3); // Shows something like 0.000452
+    }
+
+    // 2. Handle standard decimals
+    if (num % 1 !== 0) {
+        return num.toLocaleString('en-US', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        });
+    }
+
+    // 3. Handle large integers (adds commas: 1,250,000)
+    return num.toLocaleString('en-US');
 };
 %>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= reportTitle %></title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <style>
-        /* Base styles for printing */
-        body { 
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-            margin: 0; padding: 0; 
-            color: #1f2937; /* Gray-800 */
-        }
-        .report-container { 
-            max-width: 800px;
-            margin: 0 auto; 
-            padding: 40px; 
-        }
-        /* Crucial: Ensure page breaks for multi-page reports */
-        .page-break { page-break-after: always;
-        }
-        .stat-grid {
-            /* Now optimized for 3 columns (Avg, Min, Max) */
-            display: grid;
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 20px;
-        }
-        /* Style for the general KPI (total logs) to stand out */
-        .general-kpi {
-            width: 100%;
-            max-width: 300px; 
-            margin-bottom: 32px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title><%= reportTitle %></title>
+  <link rel="stylesheet" href="<%= process.env.PUBLIC_URL || '' %>css/components/reportTemplate.css">
 </head>
-<body class="bg-gray-50">
-    <div class="report-container">
 
-        <header class="text-center mb-12 border-b-4 border-blue-600 pb-4">
-            <h1 class="text-4xl font-extrabold text-blue-800 tracking-tight"><%= reportTitle %></h1>
-            <p class="text-md text-gray-600 mt-2">Log Analysis Report for Model: <%= modelName %></p>
-        </header>
+<body>
+  <div class="report-container">
 
-        <div class="bg-white p-6 rounded-xl shadow-lg mb-10 border border-gray-200">
-            <h2 class="text-xl font-bold text-gray-700 mb-3 border-b pb-2">Report Context</h2>
-            <div class="grid grid-cols-2 gap-4 text-sm text-gray-700">
-                <div><strong>Model Analyzed:</strong> <span class="text-blue-600"><%= modelName %></span></div>
-                <div><strong>Total Logs Counted:</strong> <span class="text-blue-600"><%= totalLogs.toLocaleString() %></span></div>
-                <div><strong>Start Date:</strong> <%= formatDisplayDate(startDate) %></div>
-                <div><strong>End Date:</strong> <%= formatDisplayDate(endDate) %></div>
-            </div>
-        </div>
+    <header>
+      <h1><%= reportTitle %></h1>
+      <p class="text-center text-muted">Log Analysis Report for Model: <strong><%= modelName %></strong></p>
+    </header>
 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5">Key Performance Indicators</h2>
-        
-        <div class="bg-white p-4 rounded-xl shadow-md border-l-4 border-gray-500 general-kpi">
-            <p class="text-sm font-medium text-gray-500">Total Logs Analyzed</p>
-            <p class="text-3xl font-extrabold mt-1">
-                <%= stats.count.toLocaleString() %> 
-                <span class="text-base font-normal text-gray-500">logs</span>
-            </p>
-        </div>
+    <% if (fidelity === 'high') { %>
+    <div class="fidelity-badge fidelity-high">
+      🟢 <strong>High Fidelity Report:</strong> Built using raw AI Logs (1-second resolution). Includes full trace links and flagged output appendix.
+    </div>
+    <% } else if (fidelity === 'low') { %>
+    <div class="fidelity-badge fidelity-low">
+      🟡 <strong>Summary Report:</strong> Built using AI Summaries (1-minute aggregated resolution).
+    </div>
+    <% } else if (fidelity === 'split') { %>
+    <div class="fidelity-badge fidelity-split">
+      🟠 <strong>Split Fidelity Report:</strong> This timeframe spans across your data retention cutoff. Older data uses 1-minute summaries, while recent data uses 1-second raw logs.
+    </div>
+    <% } %>
 
-
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-blue-200">Response Time (ms)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average Response Time", stats.responseTime.avg, "ms", "blue") %>
-            <%- statCard("Minimum Response Time", stats.responseTime.min, "ms", "green") %>
-            <%- statCard("Maximum Response Time", stats.responseTime.max, "ms", "red") %>
+    <div class="context-box">
+      <h2>Report Context</h2>
+      <div class="context-grid">
+        <div><strong>Start Date:</strong> <%= formatDisplayDate(startDate) %></div>
+        <div><strong>End Date:</strong> <%= formatDisplayDate(endDate) %></div>
+        <div><strong>Model Analyzed:</strong> <%= modelName %></div>
+        <div>
+          <strong>Total Logs Counted:</strong> <%= totalLogs.toLocaleString() %>
+          <% if (fidelity === 'split') { %>
+          <div style="font-size: 0.85rem; color: #6b7280; margin-top: 4px;">
+            (<%= highLogs.toLocaleString() %> AI Logs, <%= lowLogs.toLocaleString() %> AI Summaries)
+          </div>
+          <% } %>
         </div>
-
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-green-200">Policy Compliance (Score)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average Compliance", stats.policy.avg, "score", "blue") %>
-            <%- statCard("Minimum Compliance", stats.policy.min, "score", "green") %>
-            <%- statCard("Maximum Compliance", stats.policy.max, "score", "red") %>
-        </div>
-
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-pink-200">Response Helpfulness (Score)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average Helpfulness", stats.helpfulness.avg, "score", "blue") %>
-            <%- statCard("Minimum Helpfulness", stats.helpfulness.min, "score", "green") %>
-            <%- statCard("Maximum Helpfulness", stats.helpfulness.max, "score", "red") %>
-        </div>
-
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-gray-300">Energy Consumption (Units)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average Consumption", stats.energy.avg, "units", "blue") %>
-            <%- statCard("Minimum Consumption", stats.energy.min, "units", "green") %>
-            <%- statCard("Maximum Consumption", stats.energy.max, "units", "red") %>
-        </div>
-
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-purple-200">Token Usage (Tokens)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average Tokens Used", stats.tokens.avg, "tokens", "purple") %>
-            <%- statCard("Minimum Tokens Used", stats.tokens.min, "tokens", "green") %>
-            <%- statCard("Maximum Tokens Used", stats.tokens.max, "tokens", "red") %>
-        </div>
-
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-yellow-200">Giga Flops Used (GFLOPs)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average Giga Flops", stats.gigaFlops.avg, "GFLOPs", "yellow") %>
-            <%- statCard("Minimum Giga Flops", stats.gigaFlops.min, "GFLOPs", "green") %>
-            <%- statCard("Maximum Giga Flops", stats.gigaFlops.max, "GFLOPs", "red") %>
-        </div>
-
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-orange-200">Web Lookups (Lookups)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average Web Lookups", stats.webLookups.avg, "lookups", "orange") %>
-            <%- statCard("Minimum Web Lookups", stats.webLookups.min, "lookups", "green") %>
-            <%- statCard("Maximum Web Lookups", stats.webLookups.max, "lookups", "red") %>
-        </div>
-
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-fuchsia-200">Toxicity Score (Score)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average Toxicity Score", stats.toxicity.avg, "score", "fuchsia") %>
-            <%- statCard("Minimum Toxicity Score", stats.toxicity.min, "score", "green") %>
-            <%- statCard("Maximum Toxicity Score", stats.toxicity.max, "score", "red") %>
-        </div>
-        
-        <div class="page-break"></div> 
-        
-        <h3 class="text-xl font-semibold text-gray-700 mt-8 mb-3 border-b pb-1 border-sky-200">PII Detected (Count)</h3>
-        <div class="stat-grid mb-8">
-            <%- statCard("Average PII Count", stats.piiDetected.avg, "count", "sky") %>
-            <%- statCard("Minimum PII Count", stats.piiDetected.min, "count", "green") %>
-            <%- statCard("Maximum PII Count", stats.piiDetected.max, "count", "red") %>
-        </div>
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Response Time Time-Series</h2>
-        
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="responseTimeChart"></canvas>
-        </div>
-        
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Policy Compliance Time-Series</h2>
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="policyComplianceChart"></canvas>
-        </div>
-
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Response Helpfulness Time-Series</h2>
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="responseHelpfulnessChart"></canvas>
-        </div>
-
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Energy Consumption Time-Series</h2>
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="energyConsumptionChart"></canvas>
-        </div>
-        
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Token Usage Time-Series</h2>
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="tokensUsedChart"></canvas>
-        </div>
-
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Giga Flops Used Time-Series</h2>
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="gigaFlopsUsedChart"></canvas>
-        </div>
-
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Web Lookups Time-Series</h2>
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="webLookupsChart"></canvas>
-        </div>
-
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">Toxicity Score Time-Series</h2>
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="toxicityScoreChart"></canvas>
-        </div>
-
-        <div class="page-break"></div> 
-        <h2 class="text-2xl font-bold text-gray-700 mb-5 mt-8">PII Detected Time-Series</h2>
-        <div class="p-6 bg-white rounded-xl shadow-lg" style="height: 450px; width: 100%;">
-            <canvas id="piiDetectedChart"></canvas>
-        </div>
-        <footer class="text-center text-xs text-gray-400 mt-12 pt-4 border-t border-gray-200">
-            Generated on <%= new Date().toLocaleString() %>. Data accuracy dependent on log source availability.
-        </footer>
-
+      </div>
     </div>
 
-    <script>
-        // Data passed directly from the EJS template context.
-        const stats = <%- JSON.stringify(stats) %>; 
-        const timeSeriesData = <%- JSON.stringify(timeSeriesData) %>;
+    <!-- Table of Contents -->
+    <div class="toc-box">
+      <h2>Table of Contents</h2>
+      <ul class="toc-list">
+        <% selectedFields.forEach(function(field) {
+          const statData = stats[field];
+          if (!statData) return;
+        %>
+        <li><a href="#field-<%= field %>"><%= statData.label %></a></li>
+        <% }); %>
+        <% if (appendixData && appendixData.length > 0) { %>
+        <li><a href="#appendix-flagged">Appendix: Raw Flagged Outputs</a></li>
+        <% } %>
+        <% if (aiLogsAppendix && aiLogsAppendix.length > 0) { %>
+        <li><a href="#appendix-ai-logs">Appendix: AI Logs</a></li>
+        <% } %>
+        <% if (aiSummariesAppendix && aiSummariesAppendix.length > 0) { %>
+        <li><a href="#appendix-ai-summaries">Appendix: AI Summaries</a></li>
+        <% } %>
+        <% if (userLogsAppendix && userLogsAppendix.length > 0) { %>
+        <li><a href="#appendix-user-logs">Appendix: User Logs</a></li>
+        <% } %>
+        <% if (alertLogsAppendix && alertLogsAppendix.length > 0) { %>
+        <li><a href="#appendix-alert-logs">Appendix: Alert Logs</a></li>
+        <% } %>
+      </ul>
+    </div>
 
-        // Extract Labels (Dates) for the X-axis
-        const dates = timeSeriesData.map(d => d._id); // _id is the YYYY-MM-DD date string
+    <% selectedFields.forEach(function(field) {
+            const statData = stats[field];
+            // Skip rendering if data is missing or it's a non-numeric field that slipped through
+            if (!statData) return;
+        %>
+    <div class="page-break"></div>
 
-        /**
-         * Generates the configuration object for a time-series line chart.
-         */
-        const createChartConfig = (dataKey, title, yAxisText, color) => {
-            const dataValues = timeSeriesData.map(d => d[dataKey]);
-            return {
-                type: 'line',
-                data: {
-                    labels: dates,
-                    datasets: [{
-                        label: yAxisText,
-                        data: dataValues,
-                        borderColor: color,
-                        backgroundColor: `${color.slice(0, -1)}, 0.2)`, // Add 20% opacity for fill
-                        fill: true,
-                        tension: 0.2, // Makes the line smooth
-                        pointRadius: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: `${title} Daily Average (N=${dates.length} Days)`
-                        },
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            title: { display: true, text: 'Date' }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: yAxisText
-                            }
-                        }
-                    }
-                }
-            };
-        };
+    <h2 id="field-<%= field %>"><%= statData.label %></h2>
+    <% if (chartImages && chartImages[field]) { %>
+    <div class="chart-container">
+      <img src="<%= chartImages[field] %>" alt="<%= statData.label %> Chart" />
+    </div>
+    <% } %>
 
-        // --- Chart Generation ---
+    <div class="kpi-grid">
+      <div class="kpi-card" style="border-left-color: #10b981;">
+        <p class="kpi-card-title">Minimum</p>
+        <p class="kpi-card-value"><%= formatValue(statData.min) %> <span class="kpi-unit"></span></p>
+      </div>
+      <div class="kpi-card" style="border-left-color: <%= statData.color %>;">
+        <p class="kpi-card-title">Average</p>
+        <p class="kpi-card-value"><%= formatValue(statData.avg) %> <span class="kpi-unit"></span></p>
+      </div>
+      <div class="kpi-card" style="border-left-color: #ef4444;">
+        <p class="kpi-card-title">Maximum</p>
+        <p class="kpi-card-value"><%= formatValue(statData.max) %> <span class="kpi-unit"></span></p>
+      </div>
+    </div>
 
-        // 1. Response Time Chart
-        const responseTimeConfig = createChartConfig(
-            'avgResponseTime', 
-            'Response Time', 
-            'Response Time (ms)', 
-            'rgb(59, 130, 246)' // Blue
-        );
-        new Chart(document.getElementById('responseTimeChart').getContext('2d'), responseTimeConfig);
-            
-        // 2. Policy Compliance Chart
-        const policyComplianceConfig = createChartConfig(
-            'avgPolicyCompliance', 
-            'Policy Compliance', 
-            'Compliance Score', 
-            'rgb(22, 163, 74)' // Green
-        );
-        new Chart(document.getElementById('policyComplianceChart').getContext('2d'), policyComplianceConfig);
+    <div class="deep-dive-grid">
+      <%- renderDeepDive('Minimum', statData.minLogId, statData.minSourceModel, statData.minAlerts) %>
+      <%- renderDeepDive('Maximum', statData.maxLogId, statData.maxSourceModel, statData.maxAlerts) %>
+    </div>
 
-        // 3. Response Helpfulness Chart
-        const helpfulnessConfig = createChartConfig(
-            'avgResponseHelpfulness', 
-            'Response Helpfulness', 
-            'Helpfulness Score', 
-            'rgb(244, 114, 182)' // Pink
-        );
-        new Chart(document.getElementById('responseHelpfulnessChart').getContext('2d'), helpfulnessConfig);
-            
-        // 4. Energy Consumption Chart
-        const energyConfig = createChartConfig(
-            'avgEnergyConsumption', 
-            'Energy Consumption', 
-            'Energy Consumption (units)', 
-            'rgb(107, 114, 128)' // Gray
-        );
-        new Chart(document.getElementById('energyConsumptionChart').getContext('2d'), energyConfig);
+    <% }); %>
+    <%
+    // Helper for alert level styling
+    const alertEmojis = { critical: '🚫', high: '⚠️', medium: '🔔', info: 'ℹ️' };
+    const alertStyles = {
+        critical: { border: '#ef4444', text: '#b91c1c', bg: '#fef2f2' },
+        high:     { border: '#f97316', text: '#c2410c', bg: '#fff7ed' },
+        medium:   { border: '#eab308', text: '#a16207', bg: '#fefce8' },
+        info:     { border: '#3b82f6', text: '#1d4ed8', bg: '#eff6ff' }
+    };
+    %>
 
-        // === START: NEW METRICS CHART INITIALIZATION ===
-        
-        // 5. Tokens Used Chart
-        const tokensConfig = createChartConfig(
-            'avgTokensUsed', 
-            'Token Usage', 
-            'Tokens Used', 
-            'rgb(147, 51, 234)' // Purple
-        );
-        new Chart(document.getElementById('tokensUsedChart').getContext('2d'), tokensConfig);
-        
-        // 6. Giga Flops Used Chart
-        const flopsConfig = createChartConfig(
-            'avgGigaFlopsUsed', 
-            'Giga Flops Used', 
-            'GFLOPs', 
-            'rgb(250, 204, 21)' // Yellow
-        );
-        new Chart(document.getElementById('gigaFlopsUsedChart').getContext('2d'), flopsConfig);
-        
-        // 7. Web Lookups Chart
-        const lookupsConfig = createChartConfig(
-            'avgWebLookups', 
-            'Web Lookups', 
-            'Lookups', 
-            'rgb(249, 115, 22)' // Orange
-        );
-        new Chart(document.getElementById('webLookupsChart').getContext('2d'), lookupsConfig);
+    <% if (appendixData && appendixData.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-flagged">Appendix: Raw Flagged Outputs</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      The following outputs were flagged by the AI safety system during this report's timeframe.
+      <em>Note: This data is only available for the high-fidelity portion of this report.</em>
+    </p>
 
-        // 8. Toxicity Score Chart
-        const toxicityConfig = createChartConfig(
-            'avgToxicityScore', 
-            'Toxicity Score', 
-            'Toxicity Score', 
-            'rgb(192, 38, 211)' // Fuchsia
-        );
-        new Chart(document.getElementById('toxicityScoreChart').getContext('2d'), toxicityConfig);
+    <% appendixData.forEach(function(flaggedObj) {
+                const sevClass = flaggedObj.severity === 'severe' ? 'sev-severe' :
+                                 flaggedObj.severity === 'moderate' ? 'sev-moderate' : 'sev-mild';
+            %>
+    <div class="appendix-card">
+      <span class="severity-badge <%= sevClass %>"><%= flaggedObj.severity %></span>
+      <div style="margin-bottom: 8px; font-size: 0.85rem; color: #6b7280;">
+        Triggered on: <%= new Date(flaggedObj.timestamp).toLocaleString() %>
+      </div>
+      <div class="appendix-text"><%= flaggedObj.text %></div>
+    </div>
+    <% }); %>
+    <% } %>
 
-        // 9. PII Detected Chart
-        const piiConfig = createChartConfig(
-            'avgPiiDetected', 
-            'PII Detected', 
-            'PII Count', 
-            'rgb(14, 165, 233)' // Sky Blue
-        );
-        new Chart(document.getElementById('piiDetectedChart').getContext('2d'), piiConfig);
-        
-        // === END: NEW METRICS CHART INITIALIZATION ===
+    <% if (aiLogsAppendix && aiLogsAppendix.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-ai-logs">Appendix: AI Logs</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      High-fidelity AI log entries recorded during this report's timeframe.
+      Showing up to 200 most recent entries.
+    </p>
 
-        // Critical step for Puppeteer: Signal that all asynchronous rendering is complete
-        window.renderComplete = true;
-    </script>
+    <% aiLogsAppendix.forEach(function(log) { %>
+    <div class="appendix-card appendix-log-card">
+      <div class="appendix-log-header">
+        <span class="appendix-log-model"><%= log.modelName %></span>
+        <span class="appendix-log-time"><%= new Date(log.responseTimestamp).toLocaleString() %></span>
+      </div>
+      <div class="appendix-log-stats">
+        <% if (log.policyCompliance !== undefined) { %>
+          <span>Policy: <%= (log.policyCompliance ?? 0).toFixed(1) %>%</span>
+        <% } %>
+        <% if (log.responseTime !== undefined) { %>
+          <span>Response: <%= (log.responseTime ?? 0).toFixed(0) %>ms</span>
+        <% } %>
+        <% if (log.tokensUsed !== undefined) { %>
+          <span>Tokens: <%= (log.tokensUsed ?? 0).toLocaleString() %></span>
+        <% } %>
+        <% if (log.flaggedCount > 0) { %>
+          <span class="appendix-flagged-count">⚠️ <%= log.flaggedCount %> flagged</span>
+        <% } %>
+      </div>
+      <a href="<%= process.env.PUBLIC_URL || '' %>logs/view/ai/<%= log._id %>" class="appendix-log-link">📄 View Full Log</a>
+    </div>
+    <% }); %>
+    <% } %>
+
+    <% if (aiSummariesAppendix && aiSummariesAppendix.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-ai-summaries">Appendix: AI Summaries</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      1-minute aggregated AI summaries recorded during this report's timeframe.
+      Showing up to 200 most recent entries.
+    </p>
+
+    <% aiSummariesAppendix.forEach(function(summary) { %>
+    <div class="appendix-card appendix-log-card">
+      <div class="appendix-log-header">
+        <span class="appendix-log-model"><%= summary.modelName %></span>
+        <span class="appendix-log-time"><%= new Date(summary.responseTimestamp).toLocaleString() %></span>
+      </div>
+      <div class="appendix-log-stats">
+        <% if (summary.policyCompliance !== undefined) { %>
+          <span>Policy: <%= (summary.policyCompliance ?? 0).toFixed(1) %>%</span>
+        <% } %>
+        <% if (summary.responseTime !== undefined) { %>
+          <span>Response: <%= (summary.responseTime ?? 0).toFixed(0) %>ms</span>
+        <% } %>
+        <% if (summary.tokensUsed !== undefined) { %>
+          <span>Tokens: <%= (summary.tokensUsed ?? 0).toLocaleString() %></span>
+        <% } %>
+        <% if (summary.queryCount !== undefined) { %>
+          <span>Queries: <%= (summary.queryCount ?? 0).toLocaleString() %></span>
+        <% } %>
+      </div>
+      <!-- ToDo: Add deep link to AI Summary view once summary deep linking is implemented -->
+    </div>
+    <% }); %>
+    <% } %>
+
+    <% if (userLogsAppendix && userLogsAppendix.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-user-logs">Appendix: User Logs</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      User activity recorded during this report's timeframe.
+      Showing up to 200 most recent entries.
+    </p>
+
+    <% userLogsAppendix.forEach(function(ulog) { %>
+    <div class="appendix-card appendix-log-card">
+      <div class="appendix-log-header">
+        <span class="appendix-log-model"><%= ulog.userID?.username || 'Unknown User' %></span>
+        <span class="appendix-event-badge"><%= ulog.eventType %></span>
+        <span class="appendix-log-time"><%= new Date(ulog.createdAt).toLocaleString() %></span>
+      </div>
+      <div class="appendix-log-details"><%= ulog.details %></div>
+    </div>
+    <% }); %>
+    <% } %>
+
+    <% if (alertLogsAppendix && alertLogsAppendix.length > 0) { %>
+    <div class="page-break"></div>
+    <h2 id="appendix-alert-logs">Appendix: Alert Logs</h2>
+    <p class="text-muted" style="margin-bottom: 20px;">
+      Alerts triggered during this report's timeframe.
+      Showing up to 200 most recent entries.
+    </p>
+
+    <% alertLogsAppendix.forEach(function(alog) {
+      const level = (alog.alertSnapshot?.alertLevel || 'info').toLowerCase();
+      const style = alertStyles[level] || alertStyles.info;
+      const emoji = alertEmojis[level] || '🚨';
+    %>
+    <div class="appendix-card appendix-alert-card" style="border-left: 4px solid <%= style.border %>; background-color: <%= style.bg %>;">
+      <div class="appendix-log-header">
+        <span style="color: <%= style.text %>; font-weight: 700;">
+          <%= emoji %> <%= (alog.alertSnapshot?.alertLevel || 'INFO').toUpperCase() %>
+        </span>
+        <span class="appendix-log-time"><%= new Date(alog.timestamp).toLocaleString() %></span>
+      </div>
+      <div class="appendix-alert-name"><%= alog.alertSnapshot?.alertName || 'Unknown Alert' %></div>
+      <a href="<%= process.env.PUBLIC_URL || '' %>alerts/view/<%= alog._id %>" class="appendix-log-link" style="color: <%= style.text %>;">🔔 View Alert Details</a>
+    </div>
+    <% }); %>
+    <% } %>
+
+  </div>
 </body>
+
 </html>
