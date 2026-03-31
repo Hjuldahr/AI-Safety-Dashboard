@@ -83,8 +83,7 @@ const resetScenario = (req, res) => {
             category: "Demo",
             redirectUrl: `/demo?model=${modelName}`,
             autoCalculateTimeout: true,
-            trim: TRIM_COLOURS.Info,
-            background: BACKGROUND_COLOURS.Info
+            colour: "info"
         });
 
     } catch (error) {

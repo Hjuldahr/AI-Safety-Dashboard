@@ -616,40 +616,22 @@ function setupLiveUpdates(elements, getIsLive) {
             const newLog = JSON.parse(event.data);
             const tbody = document.getElementById('user-log-tbody');
 
-            console.log(newLog);
-
             if (tbody) {
-                // 2. Create the HTML for the new row
                 const row = document.createElement('tr');
-                row.style.backgroundColor = '#1e293b'; // Brief highlight color
-                
+
+                const timestamp = new Date(newLog.createdAt).toLocaleString();
+                const dotClass = getDotClass(newLog.eventType);
+
                 row.innerHTML = `
-                    <td class="px-4 py-2 text-sm text-gray-300">
-                        ${new Date(newLog.createdAt).toLocaleString()}
-                    </td>
-                    <td class="px-4 py-2 text-sm text-gray-300">
-                        ${newLog.userID ? newLog.userID.username : 'System'}
-                    </td>
-                    <td class="px-4 py-2 text-sm">
-                        <span class="px-2 py-1 rounded text-xs font-medium bg-blue-900 text-blue-200">
-                            ${newLog.eventType}
-                        </span>
-                    </td>
-                    <td class="px-4 py-2 text-sm text-gray-400">
-                        ${newLog.details}
-                    </td>
+                    <td><span class="log-dot ${dotClass}"></span></td>
+                    <td>${timestamp}</td>
+                    <td>${newLog.userID ? newLog.userID.username : 'System'}</td>
+                    <td>${newLog.eventType.replace('_', ' ')}</td>
+                    <td>${newLog.details}</td>
                 `;
 
-                // 3. Prepend to the top of the table
                 tbody.insertBefore(row, tbody.firstChild);
 
-                // 4. Fade out the highlight after 2 seconds
-                setTimeout(() => {
-                    row.style.transition = 'background-color 1s ease';
-                    row.style.backgroundColor = 'transparent';
-                }, 2000);
-
-                // 5. Keep the table size consistent (remove the 11th item)
                 if (tbody.children.length > paginationSize) {
                     tbody.removeChild(tbody.lastChild);
                 }
