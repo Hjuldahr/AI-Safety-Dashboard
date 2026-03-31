@@ -123,6 +123,21 @@ body.theme-sakura {
   --nav-link-active-bg: #f28ab2;
   --nav-link-active-color: #ffffff;
   --nav-border-color: #f28ab2;
+
+  --color-shutdown: #e11d48;
+  --color-shutdown-border: #b91c1b;
+  --color-shutdown-light: #fde2e8;
+  --color-shutdown-dark: #7f1d2a;
+
+  --color-paused: #fb7185;
+  --color-paused-border: #f43f5e;
+  --color-paused-light: #ffe5ea;
+  --color-paused-dark: #a83a44;
+
+  --color-resumed: #ff7f91;
+  --color-resumed-border: #e06696;
+  --color-resumed-light: #ffd6da;
+  --color-resumed-dark: #b34758;
 }
 
 /* ---------- Sakura theme (dark) ---------- */
@@ -245,4 +260,19 @@ body.theme-sakura.dark-mode {
   --nav-link-active-bg: #f28ab2;
   --nav-link-active-color: #ffffff;
   --nav-border-color: #f28ab2;
+
+  --color-shutdown: #ff4d6d;
+  --color-shutdown-border: #ff1f3b;
+  --color-shutdown-light: #4b0515;
+  --color-shutdown-dark: #ff99a9;
+
+  --color-paused: #ff7f92;
+  --color-paused-border: #ff4d6d;
+  --color-paused-light: #4b0515;
+  --color-paused-dark: #ffb3bf;
+
+  --color-resumed: #ff7f91;
+  --color-resumed-border: #e06696;
+  --color-resumed-light: #5c2f40;
+  --color-resumed-dark: #ffb3bf;
 }

@@ -123,6 +123,21 @@ body.theme-viridian {
   --nav-link-active-bg: #1b998b;
   --nav-link-active-color: #ffffff;
   --nav-border-color: #1b998b;
+
+  --color-shutdown: #b91c1b;
+  --color-shutdown-border: #7f1d2a;
+  --color-shutdown-light: #fde2e2;
+  --color-shutdown-dark: #7f1d2a;
+
+  --color-paused: #f97316;
+  --color-paused-border: #d97706;
+  --color-paused-light: #fff4e6;
+  --color-paused-dark: #92400e;
+
+  --color-resumed: #22c55e;
+  --color-resumed-border: #16a34a;
+  --color-resumed-light: #d1fae5;
+  --color-resumed-dark: #15803d;
 }
 
 /* ---------- Viridian theme (dark) ---------- */
@@ -245,4 +260,19 @@ body.theme-viridian.dark-mode {
   --nav-link-active-bg: #1b998b;
   --nav-link-active-color: #ffffff;
   --nav-border-color: #1b998b;
+
+  --color-shutdown: #f87171;
+  --color-shutdown-border: #b91c1b;
+  --color-shutdown-light: #0f1c1a;
+  --color-shutdown-dark: #ff9e9e;
+
+  --color-paused: #fb923c;
+  --color-paused-border: #d97706;
+  --color-paused-light: #1c1007;
+  --color-paused-dark: #ffb366;
+
+  --color-resumed: #22c55e;
+  --color-resumed-border: #16a34a;
+  --color-resumed-light: #0f5550;
+  --color-resumed-dark: #15803d;
 }

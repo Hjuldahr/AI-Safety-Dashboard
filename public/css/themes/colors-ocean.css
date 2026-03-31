@@ -66,6 +66,21 @@ body.theme-ocean {
   --nav-link-hover-bg: #ccfbf1;
   --nav-link-active-bg: #0891b2;
   --nav-border-color: #a5f3fc;
+
+  --color-shutdown: #e11d48;
+  --color-shutdown-border: #b91c1c;
+  --color-shutdown-light: #fcdada;
+  --color-shutdown-dark: #7f1d1d;
+
+  --color-paused: #fb7185;
+  --color-paused-border: #f43f5e;
+  --color-paused-light: #ffe5e8;
+  --color-paused-dark: #a83a44;
+
+  --color-resumed: #34d399;
+  --color-resumed-border: #059669;
+  --color-resumed-light: #d1f3eb;
+  --color-resumed-dark: #1f7a6a;
 }
 
 /* ---------- Ocean theme (dark) ---------- */
@@ -115,4 +130,19 @@ body.theme-ocean.dark-mode {
   --focus-ring-light: rgba(34,211,238,.15);
   --tiny-group-border: rgba(34,211,238,.3);
   --editing-header-bg: rgba(19,47,66,.95);
+
+  --color-shutdown: #ff4d6d;
+  --color-shutdown-border: #ff1f3b;
+  --color-shutdown-light: #4c0519;
+  --color-shutdown-dark: #ff99a9;
+
+  --color-paused: #ff7f92;
+  --color-paused-border: #ff4d6d;
+  --color-paused-light: #4c0519;
+  --color-paused-dark: #ffb3bf;
+
+  --color-resumed: #66f0c0;
+  --color-resumed-border: #10b981;
+  --color-resumed-light: #022c22;
+  --color-resumed-dark: #99ffdd;
 }
