@@ -231,21 +231,18 @@ function toggleViews(viewToShow, elements) {
 
     if (viewToShow === "user") {
         elements.manageTagsBtn.classList.add("hidden");
-        elements.liveUpdatesContainer.classList.add("hidden");
         elements.userLogsBtn.classList.add('active');
         elements.userLogView.classList.remove('hidden');
         elements.userFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "ai") {
         elements.manageTagsBtn.classList.remove("hidden");
-        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiLogsBtn.classList.add('active');
         elements.aiLogView.classList.remove('hidden');
         elements.aiFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "summary") {
         elements.manageTagsBtn.classList.remove("hidden");
-        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiSummariesBtn.classList.add('active');
         elements.aiSummaryView.classList.remove('hidden');
         elements.aiSummaryFilterForm.classList.remove('hidden');
@@ -612,6 +609,34 @@ function setupLiveUpdates(elements, getIsLive) {
 
             return true;
         };
+
+        evtSource.addEventListener('user_log_update', (event) => {
+            if (!isLive || currentLogsPage !== 1) return;
+
+            const newLog = JSON.parse(event.data);
+            const tbody = document.getElementById('user-log-tbody');
+
+            if (tbody) {
+                const row = document.createElement('tr');
+
+                const timestamp = new Date(newLog.createdAt).toLocaleString();
+                const dotClass = getDotClass(newLog.eventType);
+
+                row.innerHTML = `
+                    <td><span class="log-dot ${dotClass}"></span></td>
+                    <td>${timestamp}</td>
+                    <td>${newLog.userID ? newLog.userID.username : 'System'}</td>
+                    <td>${newLog.eventType.replace('_', ' ')}</td>
+                    <td>${newLog.details}</td>
+                `;
+
+                tbody.insertBefore(row, tbody.firstChild);
+
+                if (tbody.children.length > paginationSize) {
+                    tbody.removeChild(tbody.lastChild);
+                }
+            }
+        });
 
         // AI Logs Listener
         evtSource.addEventListener('update', (event) => {

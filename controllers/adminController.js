@@ -1,10 +1,11 @@
 import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
 import { Role } from '../models/role.js';
-import { roles as rolesConfig } from "../constants/roles.js";
+// import { roles as rolesConfig } from "../constants/roles.js";
 import { permissions as permissionsConfig } from "../constants/permissions.js";
 import SystemSetting from '../models/SystemSetting.js';
 import { AI_LOG_CUTOFF } from '../constants/sse.js';
+import { broadcastEvent } from '../server_side_events/scheduler.js';
 
 // Render the user management page
 export const getUsersPage = async (req, res) => {
@@ -64,8 +65,18 @@ export const updateUserRole = async (req, res) => {
     userToUpdate.roles = [role.toLowerCase()];
     await userToUpdate.save();
 
-    // Log the change
-    User_Log.addLog(req.user._id, 'Role_Changed', `Changed roles for ${userToUpdate.username} from [${previousRoles}] to [${role}]`).catch(err => console.error('Failed to write log:', err));
+    const logDetails = `Changed roles for ${userToUpdate.username} from [${previousRoles}] to [${role}]`;
+
+    // 1. Write to DB (Existing)
+    User_Log.addLog(req.user._id, 'Role_Changed', logDetails).catch(err => console.error(err));
+
+    // 2. Broadcast to Frontend (New)
+    broadcastEvent('user_log_update', {
+        createdAt: new Date(),
+        userID: { username: req.user.username, email: req.user.email }, // Actor info
+        eventType: 'Role_Changed',
+        details: logDetails
+    });
 
     res.json({ success: true, user: { id: userToUpdate._id, username: userToUpdate.username, roles: userToUpdate.roles } });
   } catch (err) {
@@ -148,8 +159,18 @@ export const createRole = async (req, res) => {
 
     await newRole.save();
 
-    // Log the action
-    User_Log.addLog(req.user._id, 'Role_Created', `Created new role: ${newRole.name}`).catch(err => console.error('Failed to write log:', err));
+    const logDetails = `Created new role: ${newRole.name}`;
+
+    // 1. Write to DB
+    User_Log.addLog(req.user._id, 'Role_Created', logDetails).catch(err => console.error(err));
+
+    // 2. Broadcast to Frontend
+    broadcastEvent('user_log_update', {
+        createdAt: new Date(),
+        userID: { username: req.user.username },
+        eventType: 'Role_Created',
+        details: logDetails
+    });
 
     res.status(201).json({
       success: true,
@@ -226,8 +247,16 @@ export const deleteUser = async (req, res) => {
 
     await User.deleteOne({ _id: userToDelete._id });
 
-    // Log the deletion
-    User_Log.addLog(req.user._id, 'User_Deleted', `Deleted user account: ${userToDelete.username}`).catch(err => console.error('Failed to write log:', err));
+    const logDetails = `Deleted user account: ${userToDelete.username}`;
+
+    User_Log.addLog(req.user._id, 'User_Deleted', logDetails).catch(err => console.error(err));
+
+    broadcastEvent('user_log_update', {
+        createdAt: new Date(),
+        userID: { username: req.user.username },
+        eventType: 'User_Deleted',
+        details: logDetails
+    });
 
     res.json({ success: true, message: 'User deleted successfully.' });
   } catch (err) {
@@ -258,12 +287,21 @@ export const updateAiLogCutoff = async (req, res) => {
     }
 
     await SystemSetting.findOneAndUpdate(
-      { key: 'ai_log_cutoff' },
-      { key: 'ai_log_cutoff', value },
-      { upsert: true }
+        { key: 'ai_log_cutoff' },
+        { key: 'ai_log_cutoff', value },
+        { upsert: true }
     );
 
-    User_Log.addLog(req.user._id, 'Setting_Changed', `Changed AI log cutoff to ${value}ms`).catch(err => console.error('Failed to write log:', err));
+    const logDetails = `Changed AI log cutoff to ${value}ms`;
+
+    User_Log.addLog(req.user._id, 'Setting_Changed', logDetails).catch(err => console.error(err));
+
+    broadcastEvent('user_log_update', {
+        createdAt: new Date(),
+        userID: { username: req.user.username },
+        eventType: 'Setting_Changed',
+        details: logDetails
+    });
 
     res.json({ success: true, aiLogCutoff: value });
   } catch (err) {

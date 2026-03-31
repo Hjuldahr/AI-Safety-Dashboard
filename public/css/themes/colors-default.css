@@ -43,11 +43,28 @@
   --color-medium-border: #f59e0b;
   --color-medium-dark: #92400e;
   --color-info: #3b82f6;
+  --color-info-border: #2563eb;
   --color-info-light: #dbeafe;
   --color-info-dark: #1e40af;
   --color-success: #28a745;
   --color-success-hover: #218838;
   --color-warning: #ffc107;
+
+  /* New colours */
+  --color-shutdown: #e11d48;
+  --color-shutdown-border: #b91c1c;
+  --color-shutdown-light: #fcdada;
+  --color-shutdown-dark: #7f1d1d;
+
+  --color-paused: #fb7185;
+  --color-paused-border: #e11d48;
+  --color-paused-light: #ffe5e8;
+  --color-paused-dark: #a83a44;
+
+  --color-resumed: #34d399;
+  --color-resumed-border: #059669;
+  --color-resumed-light: #d1f3eb;
+  --color-resumed-dark: #1f7a6a;
 
   /* Button defaults */
   --btn-default-bg: #007bff;
@@ -188,6 +205,14 @@ body.dark-mode {
   --color-medium-dark: #fcd34d;
   --color-info-light: #1e3a5f;
   --color-info-dark: #93c5fd;
+
+  /* New colours (dark-mode) */
+  --color-shutdown-light: #4c0519;
+  --color-shutdown-dark: #fda4af;
+  --color-paused-light: #4c0519;
+  --color-paused-dark: #fda4af;
+  --color-resumed-light: #022c22;
+  --color-resumed-dark: #6ee7b7;
 
   /* Buttons */
   --btn-default-bg: #3b82f6;

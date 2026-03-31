@@ -7,7 +7,7 @@ import AI_Log from "../models/AI_Log.js";
 import AI_Summary from "../models/AI_Summary.js";
 import { evaluateAndTagLogs, finalizeAlertLogs } from "./alertEvaluator.js";
 import { sendNotification } from '../controllers/notificationController.js';
-import { NOTIFICATION_TYPES, BACKGROUND_COLOURS, TRIM_COLOURS } from '../constants/notification.js';
+import { NOTIFICATION_TYPES } from '../constants/notification.js';
 import User_Log from '../models/User_Log.js';
 
 // ---------- Shutdown Guard ----------
@@ -233,7 +233,7 @@ function updateSchedulerSettings(newState, user) {
         schedulerState.isPaused = newState.isPaused;
         shouldRestart = true;
 
-        const action = newState.isPaused ? 'Paused' : 'Resumed';
+        const action = newState.isPaused ? 'paused' : 'resumed';
 
         console.log(`[Scheduler] ${action}`);
 
@@ -247,8 +247,7 @@ function updateSchedulerSettings(newState, user) {
                 category: NOTIFICATION_TYPES.Server,
                 redirectUrl: '/',
                 autoCalculateTimeout: true,
-                trim: TRIM_COLOURS[action],
-                background: BACKGROUND_COLOURS[action]
+                colour: action
             });
         }
     }

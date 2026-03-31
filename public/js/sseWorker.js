@@ -5,7 +5,7 @@ const ports = [];
 let eventSource = null;
 
 // SSE event types this application uses
-const SSE_EVENTS = ['update', 'summary', 'alert', 'notification'];
+const SSE_EVENTS = ['update', 'summary', 'alert', 'notification', 'user_log_update'];
 
 function startEventSource() {
     if (eventSource && eventSource.readyState !== EventSource.CLOSED) return;

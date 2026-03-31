@@ -60,13 +60,13 @@ body.theme-sakura {
   --alert-error-text: #991b1b;
   --alert-error-border: #dc2626;
 
-  --log-dot-login: #f28ab2;
-  --log-dot-signup: #e06696;
-  --log-dot-logout: #7b4f63;
-  --log-dot-alert: #ffe066;
-  --log-dot-report: #f28ab2;
-  --log-dot-delete: #dc2626;
-  --log-dot-default: #fde2ed;
+  --log-dot-login: #f28ab2;      
+  --log-dot-signup: #e06696;     
+  --log-dot-logout: #7b4f63;  
+  --log-dot-alert: #ffe066;       
+  --log-dot-report: #ff9ec2;   
+  --log-dot-delete: #dc2626;      
+  --log-dot-default: #f7b8d0;    
 
   --color-rogue: #f7c1d7;
   --color-rogue-bg: rgba(247,193,215,.2);
@@ -123,6 +123,21 @@ body.theme-sakura {
   --nav-link-active-bg: #f28ab2;
   --nav-link-active-color: #ffffff;
   --nav-border-color: #f28ab2;
+
+  --color-shutdown: #e11d48;
+  --color-shutdown-border: #b91c1b;
+  --color-shutdown-light: #fde2e8;
+  --color-shutdown-dark: #7f1d2a;
+
+  --color-paused: #fb7185;
+  --color-paused-border: #f43f5e;
+  --color-paused-light: #ffe5ea;
+  --color-paused-dark: #a83a44;
+
+  --color-resumed: #ff7f91;
+  --color-resumed-border: #e06696;
+  --color-resumed-light: #ffd6da;
+  --color-resumed-dark: #b34758;
 }
 
 /* ---------- Sakura theme (dark) ---------- */
@@ -182,13 +197,13 @@ body.theme-sakura.dark-mode {
   --alert-error-text: #ff6666;
   --alert-error-border: #cc0000;
 
-  --log-dot-login: #f28ab2;
-  --log-dot-signup: #e06696;
-  --log-dot-logout: #7b4f63;
-  --log-dot-alert: #ffe066;
-  --log-dot-report: #f28ab2;
-  --log-dot-delete: #ff6666;
-  --log-dot-default: #5c2f40;
+  --log-dot-login: #f28ab2;      
+  --log-dot-signup: #e06696;     
+  --log-dot-logout: #7b4f63;    
+  --log-dot-alert: #ffe066;       
+  --log-dot-report: #f7c1d7;    
+  --log-dot-delete: #ff6666;     
+  --log-dot-default: #e06696;  
 
   --color-rogue: #f7c1d7;
   --color-rogue-bg: rgba(247,193,215,.3);
@@ -245,4 +260,19 @@ body.theme-sakura.dark-mode {
   --nav-link-active-bg: #f28ab2;
   --nav-link-active-color: #ffffff;
   --nav-border-color: #f28ab2;
+
+  --color-shutdown: #ff4d6d;
+  --color-shutdown-border: #ff1f3b;
+  --color-shutdown-light: #4b0515;
+  --color-shutdown-dark: #ff99a9;
+
+  --color-paused: #ff7f92;
+  --color-paused-border: #ff4d6d;
+  --color-paused-light: #4b0515;
+  --color-paused-dark: #ffb3bf;
+
+  --color-resumed: #ff7f91;
+  --color-resumed-border: #e06696;
+  --color-resumed-light: #5c2f40;
+  --color-resumed-dark: #ffb3bf;
 }
