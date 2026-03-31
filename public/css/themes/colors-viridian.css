@@ -60,13 +60,13 @@ body.theme-viridian {
   --alert-error-text: #991b1b;
   --alert-error-border: #dc2626;
 
-  --log-dot-login: #1b998b;
-  --log-dot-signup: #138075;
-  --log-dot-logout: #4b6b63;
-  --log-dot-alert: #ffe066;
-  --log-dot-report: #1b998b;
-  --log-dot-delete: #dc2626;
-  --log-dot-default: #c2f0eb;
+  --log-dot-login: #138075;    
+  --log-dot-signup: #0a7062;   
+  --log-dot-logout: #4b6b63;   
+  --log-dot-alert: #ffe066;   
+  --log-dot-report: #22c55e; 
+  --log-dot-delete: #dc2626; 
+  --log-dot-default: #7fded7; 
 
   --color-rogue: #a3f7bf;
   --color-rogue-bg: rgba(163,247,191,.2);
@@ -197,13 +197,13 @@ body.theme-viridian.dark-mode {
   --alert-error-text: #ff6666;
   --alert-error-border: #cc0000;
 
-  --log-dot-login: #1b998b;
-  --log-dot-signup: #138075;
+  --log-dot-login: #22c55e;    
+  --log-dot-signup: #1b998b;   
   --log-dot-logout: #4b6b63;
-  --log-dot-alert: #ffe066;
-  --log-dot-report: #1b998b;
-  --log-dot-delete: #ff6666;
-  --log-dot-default: #0f5550;
+  --log-dot-alert: #ffe066;  
+  --log-dot-report: #138075;
+  --log-dot-delete: #ff6666; 
+  --log-dot-default: #1b998b; 
 
   --color-rogue: #a3f7bf;
   --color-rogue-bg: rgba(163,247,191,.3);

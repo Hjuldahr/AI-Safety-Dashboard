@@ -81,7 +81,7 @@ body.theme-cosmic {
   --log-dot-alert: #facc15;
   --log-dot-report: #22d3ee;
   --log-dot-delete: #dc2626;
-  --log-dot-default: #ede9fe;
+  --log-dot-default: #bfa5ff;
 
   --color-rogue: #f472b6;
   --color-rogue-bg: rgba(244,114,182,.2);
@@ -212,13 +212,13 @@ body.theme-cosmic.dark-mode {
   --alert-error-text: #ff6666;
   --alert-error-border: #cc0000;
 
-  --log-dot-login: #a78bfa;
-  --log-dot-signup: #7c3aed;
-  --log-dot-logout: #8b7ea0;
-  --log-dot-alert: #facc15;
-  --log-dot-report: #22d3ee;
-  --log-dot-delete: #ff6666;
-  --log-dot-default: #2a243f;
+  --log-dot-login: #a78bfa;     
+  --log-dot-signup: #7c3aed;     
+  --log-dot-logout: #8b7ea0;    
+  --log-dot-alert: #facc15;     
+  --log-dot-report: #c4b5fd;    
+  --log-dot-delete: #ff6666;    
+  --log-dot-default: #9d7aff;  
 
   --color-rogue: #f472b6;
   --color-rogue-bg: rgba(244,114,182,.3);
