@@ -231,21 +231,18 @@ function toggleViews(viewToShow, elements) {
 
     if (viewToShow === "user") {
         elements.manageTagsBtn.classList.add("hidden");
-        elements.liveUpdatesContainer.classList.add("hidden");
         elements.userLogsBtn.classList.add('active');
         elements.userLogView.classList.remove('hidden');
         elements.userFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "ai") {
         elements.manageTagsBtn.classList.remove("hidden");
-        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiLogsBtn.classList.add('active');
         elements.aiLogView.classList.remove('hidden');
         elements.aiFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "summary") {
         elements.manageTagsBtn.classList.remove("hidden");
-        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiSummariesBtn.classList.add('active');
         elements.aiSummaryView.classList.remove('hidden');
         elements.aiSummaryFilterForm.classList.remove('hidden');
@@ -612,6 +609,52 @@ function setupLiveUpdates(elements, getIsLive) {
 
             return true;
         };
+
+        evtSource.addEventListener('user_log_update', (event) => {
+            if (!isLive || currentLogsPage !== 1) return;
+
+            const newLog = JSON.parse(event.data);
+            const tbody = document.getElementById('user-log-tbody');
+
+            console.log(newLog);
+
+            if (tbody) {
+                // 2. Create the HTML for the new row
+                const row = document.createElement('tr');
+                row.style.backgroundColor = '#1e293b'; // Brief highlight color
+                
+                row.innerHTML = `
+                    <td class="px-4 py-2 text-sm text-gray-300">
+                        ${new Date(newLog.createdAt).toLocaleString()}
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-300">
+                        ${newLog.userID ? newLog.userID.username : 'System'}
+                    </td>
+                    <td class="px-4 py-2 text-sm">
+                        <span class="px-2 py-1 rounded text-xs font-medium bg-blue-900 text-blue-200">
+                            ${newLog.eventType}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-400">
+                        ${newLog.details}
+                    </td>
+                `;
+
+                // 3. Prepend to the top of the table
+                tbody.insertBefore(row, tbody.firstChild);
+
+                // 4. Fade out the highlight after 2 seconds
+                setTimeout(() => {
+                    row.style.transition = 'background-color 1s ease';
+                    row.style.backgroundColor = 'transparent';
+                }, 2000);
+
+                // 5. Keep the table size consistent (remove the 11th item)
+                if (tbody.children.length > paginationSize) {
+                    tbody.removeChild(tbody.lastChild);
+                }
+            }
+        });
 
         // AI Logs Listener
         evtSource.addEventListener('update', (event) => {
