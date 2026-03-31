@@ -113,10 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!historyList) return;
 
         notifications.forEach(n => {
+            const colour = n.colour.toLowerCase();
             const li = document.createElement('li');
             li.className = 'notification-history-item';
-            li.style.borderLeft = `5px solid ${n.trim}`;
-            li.style.backgroundColor = n.background || '#fff';
+            li.style.borderLeft = `5px solid var(--color-${colour}-border)`;
+            li.style.backgroundColor = `var(--color-${colour}-light)`;
 
             const link = document.createElement('a');
             if (n.redirectUrl) link.href = n.redirectUrl;
@@ -206,7 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </span>
         `;
 
-        container.style.backgroundColor = n.trim;
+        const colour = n.colour.toLowerCase();
+        container.style.backgroundColor = `var(--color-${colour})`;
 
         // Only trigger animation if not already visible
         if (!alreadyVisible) {
