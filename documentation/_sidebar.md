@@ -16,4 +16,5 @@
         * [Demo Controls](demo-controls.md)
     * [Errors](errors.md)
     * [Example Mermaid Chart](example_mermaid_chart.md)
+    * [Data Analysis Pipeline](data_analysis_pipeline.md)
     * [Back to Dashboard](http://localhost:2121/)
