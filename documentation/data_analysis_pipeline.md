@@ -327,11 +327,11 @@ flowchart LR
 #### Transition to Real AI
 
 **Replace:**
-* generateCalls() → real API call logs
+* `generateCalls()` → real API call logs
 * Randomized metrics → actual telemetry
 
 **Keep:**
-* AIAnalyzer (aggregation logic)
+* `AIAnalyzer` (aggregation logic)
 * Breakdown structure
 * Metric schema
 
