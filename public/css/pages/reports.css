@@ -1,20 +1,7 @@
-:root {
-    --primary: #4a79e0;
-    --secondary: #6b7280;
-    --success: #2c6f2c;
-    --accent: #5a57a9;
-    --bg: #f4f7fa;
-    --card-bg: #ffffff;
-    --border: #e2e8f0;
-    --text: #1e293b;
-}
-
-body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background-color: var(--bg);
-    color: var(--text);
-    margin: 0;
-}
+/* ==========================================================================
+   PAGE — REPORTS
+   All local variables removed — uses global theme variables from colors-*.css
+   ========================================================================== */
 
 .reports-container {
     max-width: 1000px;
@@ -31,32 +18,34 @@ body {
 .report-header h1 {
     margin: 0;
     font-size: 1.8rem;
-    color: var(--primary);
+    color: var(--primary-color);
 }
 
-.report-header p, .card-header p{
-    color: var(--secondary);
-    margin: 0px;
-    margin-bottom: 10px ;
+.report-header p,
+.card-header p {
+    color: var(--text-light);
+    margin: 0;
+    margin-bottom: 10px;
 }
 
 /* Cards */
-/* ToDo: during UI refactor this card class may be affected by other css */
 .card {
     background: var(--card-bg);
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+    color: var(--text-dark);
 }
 
 .card h3 {
     margin-top: 0;
     margin-bottom: 1.5rem;
     font-size: 1.1rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
+    color: var(--text-dark);
 }
 
 /* Grid Layouts */
@@ -71,36 +60,40 @@ body {
     font-weight: 600;
     margin-bottom: 8px;
     font-size: 0.9rem;
+    color: var(--text-dark);
 }
 
 .field-group input,
 .field-group select {
     width: 100%;
     padding: 10px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     box-sizing: border-box;
+    background: var(--input-bg);
+    color: var(--text-dark);
+    color-scheme: light dark;
 }
 
-/* Template Pills */
+/* Card Header */
 .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* margin-bottom: 1rem; */
 }
 
-.card-header-no-space{
+.card-header-no-space {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
 }
 
-.card-header-no-space h3{
-    padding-bottom: 0px;
+.card-header-no-space h3 {
+    padding-bottom: 0;
     margin-bottom: 10px;
 }
 
+/* Template Pills */
 .template-pills {
     display: flex;
     gap: 8px;
@@ -109,17 +102,17 @@ body {
 .pill {
     padding: 6px 12px;
     border-radius: 20px;
-    border: 1px solid var(--primary);
+    border: 1px solid var(--primary-color);
     background: transparent;
-    color: var(--primary);
+    color: var(--primary-color);
     cursor: pointer;
     font-size: 0.85rem;
     transition: all 0.2s;
 }
 
 .pill:hover {
-    background: var(--primary);
-    color: white;
+    background: var(--primary-color);
+    color: var(--color-white);
 }
 
 .template-pill {
@@ -146,7 +139,7 @@ body {
 
 .pill-delete:hover {
     opacity: 1 !important;
-    color: #dc2626;
+    color: var(--color-danger);
 }
 
 /* Checkbox Grid */
@@ -155,7 +148,7 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 12px;
     padding: 15px;
-    background: #f8fafc;
+    background: var(--body-bg);
     border-radius: 8px;
 }
 
@@ -165,16 +158,17 @@ body {
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    color: var(--text-dark);
 }
 
 .special-selection {
     margin-top: 20px;
     padding-top: 15px;
-    border-top: 1px dashed var(--border);
+    border-top: 1px dashed var(--border-color);
 }
 
 .check-item.special {
-    color: var(--accent);
+    color: var(--primary-color);
 }
 
 /* Actions */
@@ -203,35 +197,36 @@ button:hover {
 }
 
 .btn-primary {
-    background: var(--primary);
-    color: white;
+    background: var(--primary-color);
+    color: var(--color-white);
     padding: 12px 24px;
     font-size: 1rem;
 }
 
 .btn-secondary {
-    background: white;
-    border: 1px solid var(--border);
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-dark);
     padding: 8px 16px;
     font-size: 0.85rem;
 }
 
 .btn-download {
     padding: 10px 16px;
-    color: white;
+    color: var(--color-white);
     font-size: 0.85rem;
 }
 
 .btn-download.pdf {
-    background: var(--success);
+    background: var(--color-success);
 }
 
 .btn-download.csv {
-    background: var(--secondary);
+    background: #6b7280;
 }
 
 .btn-download.agg {
-    background: var(--accent);
+    background: #5a57a9;
 }
 
 .btn-download.ai-logs {
@@ -250,7 +245,7 @@ button:hover {
 #report-preview {
     width: 100%;
     height: 600px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
 }
 
@@ -262,7 +257,6 @@ button:hover {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
-
     justify-content: center;
 }
 
@@ -270,9 +264,9 @@ button:hover {
     padding: 0.6rem 1.2rem;
     font-size: 1rem;
     font-weight: 600;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     background: var(--card-bg);
-    color: var(--text);
+    color: var(--text-dark);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -282,13 +276,13 @@ button:hover {
 }
 
 .report-tab-btn.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
+    background: var(--primary-color);
+    color: var(--color-white);
+    border-color: var(--primary-color);
 }
 
 .report-tab-btn:hover:not(.active) {
-    background: #f0f4ff;
+    background: var(--body-bg);
 }
 
 .report-view.hidden {
@@ -304,7 +298,7 @@ button:hover {
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 10px;
     background: var(--card-bg);
@@ -313,8 +307,8 @@ button:hover {
 }
 
 .history-row:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
 }
 
 .history-row-info {
@@ -329,11 +323,12 @@ button:hover {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--text-dark);
 }
 
 .history-row-meta {
     font-size: 0.85rem;
-    color: var(--secondary);
+    color: var(--text-light);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -341,12 +336,12 @@ button:hover {
 }
 
 .meta-sep {
-    color: var(--border);
+    color: var(--border-color);
 }
 
 .history-row-created {
     font-size: 0.8rem;
-    color: var(--secondary);
+    color: var(--text-light);
     margin-top: 4px;
 }
 
@@ -364,8 +359,8 @@ button:hover {
 }
 
 .btn-delete {
-    background: #dc2626;
-    color: white;
+    background: var(--color-danger);
+    color: var(--color-white);
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -386,25 +381,25 @@ button:hover {
 }
 
 .badge-high {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--color-info-light);
+    color: var(--color-info-dark);
 }
 
 .badge-low {
-    background: #fef9c3;
-    color: #854d0e;
+    background: var(--color-medium-light);
+    color: var(--color-medium-dark);
 }
 
 .badge-split {
-    background: #ffedd5;
-    color: #9a3412;
+    background: var(--color-high-light);
+    color: var(--color-high-dark);
 }
 
 /* History empty state */
 .history-empty-state {
     text-align: center;
     padding: 60px 20px;
-    color: var(--secondary);
+    color: var(--text-light);
 }
 
 .history-empty-state i {
@@ -429,7 +424,7 @@ button:hover {
     display: block;
     font-weight: 600;
     font-size: 0.85rem;
-    color: var(--secondary);
+    color: var(--text-light);
     margin-bottom: 4px;
 }
 
@@ -443,11 +438,11 @@ button:hover {
 .detail-field-pill {
     display: inline-block;
     padding: 4px 10px;
-    background: #f0f4ff;
-    border: 1px solid var(--border);
+    background: var(--primary-light);
+    border: 1px solid var(--border-color);
     border-radius: 14px;
     font-size: 0.8rem;
-    color: var(--text);
+    color: var(--text-dark);
 }
 
 .report-detail-footer {

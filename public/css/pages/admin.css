@@ -301,3 +301,20 @@
 .user-info-display strong {
   color: #007bff;
 }
+
+/* Search & filter inputs */
+.form-control {
+  background: var(--input-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-control:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
+}

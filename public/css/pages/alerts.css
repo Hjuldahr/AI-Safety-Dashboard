@@ -178,10 +178,10 @@
 .alert-log-table th {
   text-align: left;
   padding: 1rem;
-  background: #f9fafb;
+  background: var(--panel-header-bg);
   border-bottom: 2px solid var(--border-color);
   font-weight: 600;
-  color: var(--text-light);
+  color: var(--text-dark);
 }
 
 .alert-log-table td {
@@ -316,20 +316,6 @@
   color: var(--text-muted, #888);
   font-style: italic;
   pointer-events: none;
-}
-
-.pagination button {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-color);
-  background: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.pagination button.active {
-  background: var(--primary-color);
-  color: #fff;
-  border-color: var(--primary-color);
 }
 
 /* Alert Builder Grid */
@@ -651,13 +637,23 @@
 }
 
 .btn-secondary {
-  background: #fff;
+  background: var(--input-bg);
   border: 1px solid var(--border-color);
   color: var(--text-dark);
 }
 
 .btn-secondary:hover {
-  background: #f3f4f6;
+  background: var(--body-bg);
+}
+
+input[type="date"] {
+  background: var(--input-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.875rem;
+  color-scheme: light dark;
 }
 
 .btn-icon {

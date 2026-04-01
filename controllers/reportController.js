@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import ejs from 'ejs';
 import puppeteer from 'puppeteer';
 import AI_Log from '../models/AI_Log.js';
-import chartConstants from "../constants/charts.js";
+import * as chartConstants from "../constants/charts.js";
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas';
 import { getAiLogCutoff } from '../helpers/getAiLogCutoff.js';
 import AI_Summary from '../models/AI_Summary.js';
