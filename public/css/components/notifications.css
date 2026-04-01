@@ -113,9 +113,12 @@
   border-radius: 8px;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow);
-  max-height: 250px;
+  max-height: 400px; /* Increased for better visibility */
   overflow-y: auto;
   z-index: 1000;
+  /* Add this to allow sticky headers to work inside the scroll container */
+  display: flex;
+  flex-direction: column;
 }
 
 .notification-history.show {
@@ -128,6 +131,26 @@
   border-bottom: 1px solid var(--border-color);
   background-color: var(--body-bg);
   font-size: 0.95rem;
+
+  /* Pin to top */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  /* Align dropdown to the right */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notification-history-header select {
+  background: var(--card-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.85rem;
+  outline: none;
 }
 
 .notification-history ul {
