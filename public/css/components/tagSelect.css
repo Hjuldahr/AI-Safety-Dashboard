@@ -11,7 +11,8 @@
   padding: 0.5rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--text-dark);
   min-height: 42px;
   cursor: text;
 }
@@ -61,6 +62,7 @@
   padding: 4px 0;
   font-size: 0.9rem;
   background: transparent;
+  color: var(--text-dark);
 }
 
 .tags-dropdown {
@@ -68,7 +70,7 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: #fff;
+  background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 4px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -85,7 +87,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-lighter);
+  color: var(--text-dark);
 }
 
 .tags-dropdown-item:last-child {
@@ -93,7 +96,7 @@
 }
 
 .tags-dropdown-item:hover {
-  background-color: #f9fafb;
+  background-color: var(--body-bg);
 }
 
 .color-dot {

@@ -367,7 +367,7 @@
   border-radius: 6px;
   font-size: 0.875rem;
   color: var(--text-dark);
-  background-color: #fff;
+  background-color: var(--input-bg);
   transition: border-color 0.2s, box-shadow 0.2s;
   height: 40px;
   /* Force consistent height across types */
@@ -399,7 +399,7 @@
   /* Balanced layout */
   gap: 0.75rem;
   align-items: center;
-  background: #f9fafb;
+  background: var(--body-bg);
   padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--border-color);
@@ -413,7 +413,7 @@
   color: var(--primary-color);
   text-align: center;
   text-transform: uppercase;
-  background: #eef2ff;
+  background: var(--primary-light);
   padding: 4px;
   border-radius: 4px;
 }
@@ -444,7 +444,7 @@
   gap: 0.5rem;
   margin-top: 0.5rem;
   padding: 0.5rem;
-  background: #fff;
+  background: var(--body-bg);
   border: 1px dashed var(--border-color);
   border-radius: 8px;
   justify-content: center;
