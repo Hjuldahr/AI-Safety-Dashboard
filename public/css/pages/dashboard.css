@@ -53,6 +53,16 @@
   margin-top: 0;
 }
 
+.controls-group select {
+  background: var(--input-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
 /* Fullscreen dashboard mode */
 body.dashboard-page.dashboard-fullscreen-active {
   grid-template-columns: 1fr;
@@ -420,6 +430,8 @@ body.dashboard-page.dashboard-fullscreen-active main.content {
   margin-bottom: 10px;
   border: 1px solid var(--border-light);
   border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text-dark);
 }
 .edit-chart-form .size-selector {
   display: flex;
@@ -467,7 +479,7 @@ body.dashboard-page.dashboard-fullscreen-active main.content {
   flex-shrink: 0;
 }
 .chart-tiny .form-actions button { width: 100%; }
-.chart-tiny .edit-chart-form input[type="text"] { padding: 4px; font-size: 0.9rem; margin-bottom: 5px; }
+.chart-tiny .edit-chart-form input[type="text"] { padding: 4px; font-size: 0.9rem; margin-bottom: 5px; background: var(--input-bg); color: var(--text-dark); }
 
 .chart-card.is-editing { padding-top: 4rem; }
 .chart-card.is-editing .zoom-btn { display: none !important; }

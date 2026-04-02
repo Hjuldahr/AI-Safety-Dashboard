@@ -178,10 +178,10 @@
 .alert-log-table th {
   text-align: left;
   padding: 1rem;
-  background: #f9fafb;
+  background: var(--panel-header-bg);
   border-bottom: 2px solid var(--border-color);
   font-weight: 600;
-  color: var(--text-light);
+  color: var(--text-dark);
 }
 
 .alert-log-table td {
@@ -306,18 +306,16 @@
   gap: 0.5rem;
 }
 
-.pagination button {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-color);
-  background: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.pagination button.active {
-  background: var(--primary-color);
-  color: #fff;
-  border-color: var(--primary-color);
+.chart-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  color: var(--text-muted, #888);
+  font-style: italic;
+  pointer-events: none;
 }
 
 /* Alert Builder Grid */
@@ -369,7 +367,7 @@
   border-radius: 6px;
   font-size: 0.875rem;
   color: var(--text-dark);
-  background-color: #fff;
+  background-color: var(--input-bg);
   transition: border-color 0.2s, box-shadow 0.2s;
   height: 40px;
   /* Force consistent height across types */
@@ -401,7 +399,7 @@
   /* Balanced layout */
   gap: 0.75rem;
   align-items: center;
-  background: #f9fafb;
+  background: var(--body-bg);
   padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--border-color);
@@ -415,7 +413,7 @@
   color: var(--primary-color);
   text-align: center;
   text-transform: uppercase;
-  background: #eef2ff;
+  background: var(--primary-light);
   padding: 4px;
   border-radius: 4px;
 }
@@ -446,7 +444,7 @@
   gap: 0.5rem;
   margin-top: 0.5rem;
   padding: 0.5rem;
-  background: #fff;
+  background: var(--body-bg);
   border: 1px dashed var(--border-color);
   border-radius: 8px;
   justify-content: center;
@@ -639,13 +637,23 @@
 }
 
 .btn-secondary {
-  background: #fff;
+  background: var(--input-bg);
   border: 1px solid var(--border-color);
   color: var(--text-dark);
 }
 
 .btn-secondary:hover {
-  background: #f3f4f6;
+  background: var(--body-bg);
+}
+
+input[type="date"] {
+  background: var(--input-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.875rem;
+  color-scheme: light dark;
 }
 
 .btn-icon {

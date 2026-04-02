@@ -16,11 +16,66 @@
 
     window.AlertCharts = {
         /**
+         * Shows an empty-state message overlay on a canvas's parent wrapper.
+         */
+        showEmpty(canvasId, message) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const wrapper = canvas.closest('.chart-wrapper');
+            if (!wrapper) return;
+
+            canvas.style.display = 'none';
+
+            // Avoid duplicating the overlay on re-renders
+            let overlay = wrapper.querySelector('.chart-empty-state');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'chart-empty-state';
+                wrapper.appendChild(overlay);
+            }
+            overlay.textContent = message;
+            overlay.style.display = 'flex';
+        },
+
+        /**
+         * Clears any empty-state overlay and restores the canvas.
+         */
+        clearEmpty(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            canvas.style.display = '';
+            const wrapper = canvas.closest('.chart-wrapper');
+            const overlay = wrapper && wrapper.querySelector('.chart-empty-state');
+            if (overlay) overlay.style.display = 'none';
+        },
+
+        /**
          * Main entry point to render all charts
          * @param {Object} data - { levelDistribution, timeSeries }
          */
         render(data) {
             if (!data) return;
+
+            const totalAlerts = data.levelDistribution
+                ? Object.values(data.levelDistribution).reduce((sum, v) => sum + v, 0)
+                : 0;
+
+            const emptyMessage = 'No alerts in the selected timeframe';
+
+            if (totalAlerts === 0) {
+                this.showEmpty('chart-pie', emptyMessage);
+                this.showEmpty('chart-bar', emptyMessage);
+                this.showEmpty('chart-line', emptyMessage);
+                // Destroy any stale chart instances
+                if (charts.pie) { charts.pie.destroy(); charts.pie = null; }
+                if (charts.bar) { charts.bar.destroy(); charts.bar = null; }
+                if (charts.line) { charts.line.destroy(); charts.line = null; }
+                return;
+            }
+
+            this.clearEmpty('chart-pie');
+            this.clearEmpty('chart-bar');
+            this.clearEmpty('chart-line');
             this.renderPie(data.levelDistribution);
             this.renderBar(data.levelDistribution);
             this.renderLine(data.timeSeries);

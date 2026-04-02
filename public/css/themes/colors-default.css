@@ -178,9 +178,9 @@ body.dark-mode {
   --text-light: #9ca3af;
   --text-muted: #a1a1aa;
   --color-muted: #71717a;
-  --border-color: #374151;
-  --border-light: #4b5563;
-  --border-lighter: #374151;
+  --border-color: #4b5563;
+  --border-light: #6b7280;
+  --border-lighter: #4b5563;
   --nav-border-color: #374151;
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
@@ -188,7 +188,7 @@ body.dark-mode {
   --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.4);
   --input-bg: #374151;
   --primary-color: #818cf8;
-  --primary-light: #312e81;
+  --primary-light: #3730a3;
   --header-text-color: #f9fafb;
   --button-bg-color: #374151;
   --button-hover-bg-color: #4b5563;

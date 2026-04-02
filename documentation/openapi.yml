@@ -1266,3 +1266,592 @@ paths:
           description: User not found
         500:
           description: Server error
+  /api/profile/preferences:
+    patch:
+      tags: [Profile]
+      summary: Update user theme/colour preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preferredTheme:
+                  type: string
+                  enum: [default, ocean, sunset, compact]
+                preferredColour:
+                  type: string
+                  enum: [light, dark, auto]
+      responses:
+        200:
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  preferences:
+                    type: object
+                    properties:
+                      preferredTheme:
+                        type: string
+                      preferredColour:
+                        type: string
+        400:
+          description: Invalid theme or colour selection
+        401:
+          description: Not authenticated
+        404:
+          description: User not found
+        500:
+          description: Server error
+
+  # ============================
+  # TAG ROUTER
+  # ============================
+  /tags:
+    get:
+      tags: [Tags]
+      summary: List all tags
+      responses:
+        200:
+          description: Array of tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        name:
+                          type: string
+                        color:
+                          type: string
+        500:
+          description: Failed to list tags.
+    post:
+      tags: [Tags]
+      summary: Create a new tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                  default: "#888888"
+      responses:
+        201:
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tag:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                      name:
+                        type: string
+                      color:
+                        type: string
+        200:
+          description: Tag already exists (returns existing)
+        500:
+          description: Failed to create tag.
+
+  /tags/sync:
+    post:
+      tags: [Tags]
+      summary: Sync tag list (create, update, delete in batch)
+      description: Position-based sync of the full tag list. Handles renames, new tags, and deletions in a single request.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                originalIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of existing tag IDs (positional)
+                newNames:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of tag names (positional, matching originalIds)
+                colors:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of tag colors (positional)
+                deletions:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of tag IDs to delete
+      responses:
+        200:
+          description: Updated tag list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+        400:
+          description: Invalid input
+        500:
+          description: Failed to sync tags.
+
+  /tags/hist:
+    get:
+      tags: [Tags]
+      summary: List all historical tags
+      responses:
+        200:
+          description: Array of historical tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        name:
+                          type: string
+                        color:
+                          type: string
+                        originalTagId:
+                          type: string
+        500:
+          description: Failed to list tags.
+
+  /tags/hist/{id}:
+    get:
+      tags: [Tags]
+      summary: Find a historical tag by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        201:
+          description: Historical tag found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tag:
+                    type: object
+        404:
+          description: Historical Tag not found.
+        500:
+          description: Failed to find historical tag.
+
+  # ============================
+  # NOTIFICATION ROUTER
+  # ============================
+  /notifications/latest:
+    get:
+      tags: [Notifications]
+      summary: Get the latest unseen notification
+      responses:
+        200:
+          description: Latest notification or empty object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  message:
+                    type: string
+                  redirectUrl:
+                    type: string
+                    nullable: true
+                  timeout:
+                    type: number
+                  dismissible:
+                    type: boolean
+                  trim:
+                    type: string
+                  background:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: object
+        500:
+          description: Error fetching latest notification.
+
+  /notifications/unread:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      responses:
+        200:
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread:
+                    type: integer
+        500:
+          description: Error fetching unread count.
+
+  /notifications/history:
+    get:
+      tags: [Notifications]
+      summary: Get paginated notification history
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: category
+          schema:
+            type: string
+            enum: [Generic, Alert, Demo, Server, Unknown, any]
+        - in: query
+          name: tag
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+      responses:
+        200:
+          description: Paginated notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  limit:
+                    type: integer
+        500:
+          description: Error fetching history.
+
+  /notifications/mark-read:
+    post:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      responses:
+        200:
+          description: Marked read
+        401:
+          description: Not authenticated
+        500:
+          description: Failed to mark read.
+
+  # ============================
+  # DEMO ROUTER
+  # ============================
+  /demo:
+    get:
+      tags: [Demo, "HTML Page"]
+      summary: Demo Controls Page
+      description: Returns the HTML of the Demo Controls Page.
+      parameters:
+        - in: query
+          name: model
+          schema:
+            type: string
+          description: Pre-select a model
+      responses:
+        200:
+          description: HTML content for the Demo Page.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /demo/list:
+    post:
+      tags: [Demo]
+      summary: List available scenarios for a model
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelName
+              properties:
+                modelName:
+                  type: string
+      responses:
+        200:
+          description: List of scenarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scenarios:
+                    type: array
+                    items:
+                      type: string
+                  currentScenario:
+                    type: string
+        400:
+          description: Model name is required or no scenarios found.
+
+  /demo/apply:
+    post:
+      tags: [Demo]
+      summary: Apply a scenario to a model
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelName
+                - scenarioName
+              properties:
+                modelName:
+                  type: string
+                scenarioName:
+                  type: string
+      responses:
+        200:
+          description: Scenario applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        400:
+          description: Model name is required.
+        500:
+          description: Error applying scenario.
+
+  /demo/reset:
+    post:
+      tags: [Demo]
+      summary: Reset a model to the Normal scenario
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelName
+              properties:
+                modelName:
+                  type: string
+      responses:
+        200:
+          description: Scenario reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        500:
+          description: Error resetting scenario.
+
+  /demo/components:
+    get:
+      tags: [Demo, "HTML Page"]
+      summary: Component Library Page
+      description: Returns the HTML of the Component Library Page.
+      responses:
+        200:
+          description: HTML content for the Component Library.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  # ============================
+  # SSE / SCHEDULER ROUTER
+  # ============================
+  /events:
+    get:
+      tags: [SSE]
+      summary: Server-Sent Events stream
+      description: >
+        Opens a persistent SSE connection. The server pushes real-time events
+        including AI log updates (every second), summary updates (every minute),
+        notifications, and alert events.
+      responses:
+        200:
+          description: SSE stream opened
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: "Events: update, summary, notification, alert"
+
+  # ============================
+  # LOG EXTRAS
+  # ============================
+  /logs/view/ai/{id}:
+    get:
+      tags: [Logs, "HTML Page"]
+      summary: View a specific AI log entry page
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: HTML page for the AI log entry
+          content:
+            text/html:
+              schema:
+                type: string
+        404:
+          description: Log not found
+        500:
+          description: Server error
+
+  /logs/ai/{id}:
+    get:
+      tags: [Logs]
+      summary: Get a specific AI log entry as JSON
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: AI log entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AILog"
+        404:
+          description: Log not found
+        500:
+          description: Server error
+
+  /logs/api/ai/{id}/tags:
+    put:
+      tags: [Logs]
+      summary: Update tags on an AI log entry
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of HistoricalTag IDs
+      responses:
+        200:
+          description: Tags updated
+        404:
+          description: Log not found
+        500:
+          description: Server error
+
+  /logs/api/summary:
+    get:
+      tags: [Logs]
+      summary: Get filtered AI summary logs
+      parameters:
+        - in: query
+          name: modelName
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+        - in: query
+          name: endDate
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Paginated AI summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      type: object
+        500:
+          description: Failed to fetch AI summaries.

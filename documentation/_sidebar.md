@@ -14,6 +14,10 @@
     * Side Pages
         * [User Management](user-management.md)
         * [Demo Controls](demo-controls.md)
+    * Reference
+        * [Constants Reference](constants.md)
+        * [Development Environment](development-environment.md)
+        * [AI Integration Guide](ai-integration.md)
     * [Errors](errors.md)
     * [Example Mermaid Chart](example_mermaid_chart.md)
     * [Data Analysis Pipeline](data_analysis_pipeline.md)
