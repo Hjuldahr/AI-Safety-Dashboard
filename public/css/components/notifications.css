@@ -2,31 +2,8 @@
    VARIABLES — ALERTS / NOTIFICATIONS
    ========================================================================== */
 :root {
-  /* Primary / Brand */
-  --primary-color: var(--theme-primary-color);
-  --primary-light: var(--theme-primary-light);
-  --green-color: var(--theme-green-color);
-
-  /* Borders */
-  --border-color: var(--theme-border-color);
-  --border-light: var(--theme-border-light);
-  --border-lighter: var(--theme-border-lighter);
-
-  /* Backgrounds */
-  --card-bg: var(--theme-card-bg);
-  --body-bg: var(--theme-body-bg);
-
-  /* Text */
-  --text-dark: var(--theme-text-dark);
-  --text-light: var(--theme-text-light);
-  --text-muted: var(--theme-text-muted);
-  --color-white: var(--theme-color-white);
-
-  /* Shadows */
-  --shadow: var(--theme-shadow);
-
   /* Alert / notification specific */
-  --alert-badge-bg: var(--theme-alert-badge-bg, var(--theme-critical-color, #ef4444));
+  --alert-badge-bg: var(--theme-alert-badge-bg, var(--color-critical, #ef4444));
   --alert-badge-text: var(--theme-alert-badge-text, var(--color-white));
   --alert-time-color: var(--theme-alert-time-color, var(--text-light));
   --notification-hover-bg: var(--theme-notification-hover-bg, rgba(0,0,0,0.04));
