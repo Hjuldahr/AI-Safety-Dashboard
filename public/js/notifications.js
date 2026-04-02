@@ -288,7 +288,8 @@ document.addEventListener('DOMContentLoaded', () => {
         bellButton.addEventListener('click', async (e) => {
             e.stopPropagation();
 
-            historyOpen = !historyContainer.classList.contains('show');
+            const isOpen = historyContainer.classList.contains('show');
+            historyOpen = !isOpen;
 
             if (historyOpen) {
                 await populateHistory();
@@ -299,8 +300,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 try { await fetch(API.markRead, { method: 'POST' }); } catch {}
             } else {
                 historyContainer.classList.remove('show');
-                historyOpen = false; // <-- explicitly mark as closed
+                historyOpen = false;
             }
+        });
+
+        // Close history popup when clicking anywhere outside bell/history.
+        document.addEventListener('click', (e) => {
+            if (!historyOpen) return;
+            if (historyContainer.contains(e.target)) return;
+            if (bellButton.contains(e.target)) return;
+
+            historyContainer.classList.remove('show');
+            historyOpen = false;
         });
     }
 

@@ -93,13 +93,11 @@
   max-height: 400px; /* Increased for better visibility */
   overflow-y: auto;
   z-index: 1000;
-  /* Add this to allow sticky headers to work inside the scroll container */
-  display: flex;
-  flex-direction: column;
 }
 
 .notification-history.show {
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 
 .notification-history-header {
