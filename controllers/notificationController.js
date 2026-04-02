@@ -34,7 +34,8 @@ const latest = async (req, res) => {
             timeout: notif.timeout ?? 10,
             dismissible: notif.dismissible ?? true,
             colour: notif.colour || "info",
-            tags: notif.tags || []
+            tags: notif.tags || [],
+            category: notif.category
         };
 
         return res.status(200).json(response);
@@ -129,7 +130,8 @@ const history = async (req, res) => {
             dismissible: n.dismissible ?? true,
             colour: n.colour || "info",
             tags: n.tags || [],
-            createdAt: n.createdAt
+            createdAt: n.createdAt,
+            category: n.category
         }));
 
         return res.status(200).json({
