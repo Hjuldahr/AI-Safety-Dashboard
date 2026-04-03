@@ -1,4 +1,5 @@
 import { initAILogModal } from './components/logs/AILogModal.js';
+import { openExportModal } from './components/logs/exportModal.js';
 import ModalManager from './components/modals.js';
 
 // --- GLOBAL STATE ---
@@ -59,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         liveToggle: document.getElementById('live-update-toggle'),
         liveUpdatesContainer: document.getElementById('live-updates-container'),
         manageTagsBtn: document.getElementById('open-tags-modal-btn'),
+        exportBtn: document.getElementById('export-logs-btn'),
     };
 
     // Initialize the Tag Modal Logic
@@ -70,6 +72,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (activeView === 'summary') handleAiSummaryFilter(elements, currentAiSummariesPage);
         }
     });
+
+    // Show and wire up Export button if user has permission
+    if (elements.exportBtn && hasPermission('export:logs')) {
+        elements.exportBtn.classList.remove('hidden');
+        elements.exportBtn.addEventListener('click', () => {
+            const activeView = document.querySelector('.log-tab-btn.active').dataset.view;
+            const filters = getActiveFilters(activeView, elements);
+            openExportModal(modalManager, { activeView, currentFilters: filters });
+        });
+    }
 
     if (elements.liveToggle) {
         elements.liveToggle.addEventListener('change', async (e) => {
@@ -386,6 +398,34 @@ function createAiAccordionItem(log, elements, isSummary = false,) {
 }
 
 // --- HELPER FUNCTIONS ---
+
+/**
+ * Reads the current filter values from the active view's form.
+ */
+function getActiveFilters(activeView, elements) {
+    if (activeView === 'user') {
+        const form = elements.userFilterForm;
+        return {
+            startDate: form.querySelector('#filter-start-date').value,
+            endDate: form.querySelector('#filter-end-date').value,
+            eventType: form.querySelector('#filter-event-type').value,
+        };
+    } else if (activeView === 'ai') {
+        const form = elements.aiFilterForm;
+        return {
+            startDate: form.querySelector('#ai-filter-start-date').value,
+            endDate: form.querySelector('#ai-filter-end-date').value,
+            modelName: form.querySelector('#filter-model').value,
+        };
+    } else {
+        const form = elements.aiSummaryFilterForm;
+        return {
+            startDate: form.querySelector('#summary-filter-start-date').value,
+            endDate: form.querySelector('#summary-filter-end-date').value,
+            modelName: form.querySelector('#summary-filter-model').value,
+        };
+    }
+}
 
 /**
  * Returns a CSS class name based on the event type

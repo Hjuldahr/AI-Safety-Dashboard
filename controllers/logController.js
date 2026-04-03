@@ -5,6 +5,15 @@ import User from '../models/user.js';
 import chartConstants from "../constants/charts.js";
 import HistTag from '../models/historicalTag.js';
 import Tag from '../models/tag.js';
+import {
+    generateDynamicCsv,
+    generateUserLogCsv,
+    sendCsvResponse,
+    handleEmptyExport,
+    writeStructuredData,
+    writeUserLogData,
+    createAndSendHdf5
+} from '../services/exportService.js';
 
 // === Helper Query Builders ===
 const buildUserLogQuery = async ({ userID, eventType, startDate, endDate, search }) => {
@@ -355,6 +364,109 @@ const tagAILog = async (req, res) => {
 
 
 
+// === Export Handlers ===
+
+const exportUserLogCSV = async (req, res) => {
+    try {
+        const { startDate, endDate, eventType } = req.body;
+        const query = await buildUserLogQuery({ eventType, startDate, endDate });
+        const logs = await User_Log.find(query)
+            .sort({ createdAt: -1 })
+            .populate('userID', 'email username')
+            .lean()
+            .exec();
+
+        if (!logs.length) return handleEmptyExport(res, 'User Logs');
+
+        const csv = generateUserLogCsv(logs);
+        sendCsvResponse(res, csv, `user-logs-${Date.now()}.csv`);
+    } catch (err) {
+        console.error('Export User Log CSV Error:', err);
+        res.status(500).json({ message: 'Failed to export user logs', error: err.message });
+    }
+};
+
+const exportUserLogHDF5 = async (req, res) => {
+    try {
+        const { startDate, endDate, eventType } = req.body;
+        const query = await buildUserLogQuery({ eventType, startDate, endDate });
+        const logs = await User_Log.find(query)
+            .sort({ createdAt: -1 })
+            .populate('userID', 'email username')
+            .lean()
+            .exec();
+
+        if (!logs.length) return handleEmptyExport(res, 'User Logs');
+
+        await createAndSendHdf5(res, 'user_logs', logs, writeUserLogData, `user-logs-${Date.now()}.h5`);
+    } catch (err) {
+        console.error('Export User Log HDF5 Error:', err);
+        res.status(500).json({ message: 'Failed to export user logs', error: err.message });
+    }
+};
+
+const exportAILogCSV = async (req, res) => {
+    try {
+        const { startDate, endDate, modelName } = req.body;
+        const query = await buildAILogQuery({ modelName, startDate, endDate });
+        const logs = await AI_Log.find(query).lean().exec();
+
+        if (!logs.length) return handleEmptyExport(res, 'AI Logs');
+
+        const csv = generateDynamicCsv(logs, 'AI Logs');
+        sendCsvResponse(res, csv, `ai-logs-${Date.now()}.csv`);
+    } catch (err) {
+        console.error('Export AI Log CSV Error:', err);
+        res.status(500).json({ message: 'Failed to export AI logs', error: err.message });
+    }
+};
+
+const exportAILogHDF5 = async (req, res) => {
+    try {
+        const { startDate, endDate, modelName } = req.body;
+        const query = await buildAILogQuery({ modelName, startDate, endDate });
+        const logs = await AI_Log.find(query).lean().exec();
+
+        if (!logs.length) return handleEmptyExport(res, 'AI Logs');
+
+        await createAndSendHdf5(res, 'ai_logs', logs, writeStructuredData, `ai-logs-${Date.now()}.h5`);
+    } catch (err) {
+        console.error('Export AI Log HDF5 Error:', err);
+        res.status(500).json({ message: 'Failed to export AI logs', error: err.message });
+    }
+};
+
+const exportAISummaryCSV = async (req, res) => {
+    try {
+        const { startDate, endDate, modelName } = req.body;
+        const query = await buildAILogQuery({ modelName, startDate, endDate });
+        const summaries = await AI_Summary.find(query).lean().exec();
+
+        if (!summaries.length) return handleEmptyExport(res, 'AI Summaries');
+
+        const csv = generateDynamicCsv(summaries, 'AI Summaries');
+        sendCsvResponse(res, csv, `ai-summaries-${Date.now()}.csv`);
+    } catch (err) {
+        console.error('Export AI Summary CSV Error:', err);
+        res.status(500).json({ message: 'Failed to export AI summaries', error: err.message });
+    }
+};
+
+const exportAISummaryHDF5 = async (req, res) => {
+    try {
+        const { startDate, endDate, modelName } = req.body;
+        const query = await buildAILogQuery({ modelName, startDate, endDate });
+        const summaries = await AI_Summary.find(query).lean().exec();
+
+        if (!summaries.length) return handleEmptyExport(res, 'AI Summaries');
+
+        await createAndSendHdf5(res, 'ai_summaries', summaries, writeStructuredData, `ai-summaries-${Date.now()}.h5`);
+    } catch (err) {
+        console.error('Export AI Summary HDF5 Error:', err);
+        res.status(500).json({ message: 'Failed to export AI summaries', error: err.message });
+    }
+};
+
 export default {
     getPage,
     getAILogView,
@@ -362,5 +474,11 @@ export default {
     getFilteredUserLogs,
     getFilteredAILogs,
     getFilteredAISummaries,
-    tagAILog
+    tagAILog,
+    exportUserLogCSV,
+    exportUserLogHDF5,
+    exportAILogCSV,
+    exportAILogHDF5,
+    exportAISummaryCSV,
+    exportAISummaryHDF5
 }

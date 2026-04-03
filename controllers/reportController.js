@@ -14,6 +14,11 @@ import ReportRecord from '../models/ReportRecord.js';
 import ReportTemplate from '../models/ReportTemplate.js';
 import * as h5wasm from 'h5wasm/node';
 import fs from "fs";
+import {
+    generateDynamicCsv,
+    writeStructuredData,
+    handleEmptyExport
+} from '../services/exportService.js';
 
 // Resolve __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -752,50 +757,9 @@ const createReport = async (req, res) => {
 };
 
 
-/**
- * Dynamically generates CSV content based on the DATA_DICTIONARY.
- * This ensures new metrics are added to exports automatically.
- */
-const generateDynamicCsv = (data, title = "Export") => {
-    if (!data || data.length === 0) return "";
-
-    // Identify numeric/categorical fields from dictionary to use as headers
-    const dictFields = Object.keys(DATA_DICTIONARY).filter(key =>
-        ['numeric', 'categorical', 'timestamp'].includes(DATA_DICTIONARY[key].dataType)
-    );
-
-    // Header row
-    const headers = ['id', 'displayDate', ...dictFields];
-    const rows = [headers.join(',')];
-
-    data.forEach(item => {
-        const values = headers.map(header => {
-            let val = '';
-            if (header === 'id') val = item._id?.toString();
-            else if (header === 'displayDate') val = new Date(item.responseTimestamp).toISOString();
-            else val = item[header] ?? '';
-
-            // Escape for CSV
-            return `"${('' + val).replace(/"/g, '""')}"`;
-        });
-        rows.push(values.join(','));
-    });
-
-    return rows.join('\n');
-};
-
 // ===============================================
 // === EXPRESS CONTROLLER FUNCTIONS ==============
 // ===============================================
-
-/**
- * Helper to handle the "No Data" response for exports
- */
-const handleEmptyExport = (res, type) => {
-    return res.status(404).json({
-        message: `No ${type} found for the selected criteria. The date range may be empty.`
-    });
-};
 
 /**
  * Raw AI Logs (High Fidelity)
@@ -863,41 +827,6 @@ export const downloadAggregatesCsv = async (req, res) => {
         console.error("Error Generating Aggregate Export: ", err);
         res.status(500).json({ message: 'Aggregate Export failed', error: err.message });
     }
-};
-
-/**
- * HDF5 Helpers
- */
-
-// Helper to resolve nested paths (e.g., "breakdown.topic")
-const getNestedValue = (obj, path) => {
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-};
-
-const writeStructuredData = (group, data) => {
-    if (!data.length) return;
-
-    // Iterate through every field defined in your dictionary
-    Object.entries(DATA_DICTIONARY).forEach(([key, config]) => {
-        const { dbPath, dataType } = config;
-
-        // 1. Extract the column from the array of objects
-        const columnData = data.map(item => {
-            const val = getNestedValue(item, dbPath);
-
-            if (dataType === 'numeric') return val ?? 0;
-            if (dataType === 'timestamp') return new Date(val).getTime(); // Store as numeric epoch
-            return val ? String(val) : ""; // Categorical/String
-        });
-
-        // 2. Create the dataset with the proper type
-        group.create_dataset({
-            name: key,
-            data: columnData,
-            // HDF5 optimization: store numbers as floats/ints, everything else as string
-            dtype: dataType === 'numeric' || dataType === 'timestamp' ? 'f8' : undefined
-        });
-    });
 };
 
 /**

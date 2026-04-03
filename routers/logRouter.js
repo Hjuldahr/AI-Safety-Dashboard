@@ -1,6 +1,5 @@
 import express from "express";
 import controller from "../controllers/logController.js";
-import unusedLogController from "../controllers/unusedLogController.js";
 import { isAuthenticated } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/authorization.js';
 
@@ -11,11 +10,9 @@ router.get("/", isAuthenticated, authorize('view:logs'), controller.getPage);
 
 // View Specific Page
 router.get("/view/ai/:id", authorize('view:logs'), controller.getAILogView);
-// router.get("/summary/:id", authorize('view:logs'), controller.getSummaryLog);
 
 // Get Specific Log
 router.get("/ai/:id", authorize('view:logs'), controller.getAILog);
-
 
 // Paginated Views
 router.get("/api/user", isAuthenticated, authorize('view:logs'), controller.getFilteredUserLogs);
@@ -26,10 +23,12 @@ router.get("/api/summary", isAuthenticated, authorize('view:logs'), controller.g
 // ToDo: give this its own permission
 router.put("/api/ai/:id/tags", isAuthenticated, authorize('view:logs'), controller.tagAILog);
 
-// ToDo: Implement these
-router.post("/api/user/export/csv", isAuthenticated, authorize('export:logs'), unusedLogController.exportUserLogCSV);
-router.post("/api/user/export/pdf", isAuthenticated, authorize('export:logs'), unusedLogController.exportUserLogPDF);
-router.post("/api/ai/export/csv", isAuthenticated, authorize('export:logs'), unusedLogController.exportAILogCSV);
-router.post("/api/ai/export/pdf", isAuthenticated, authorize('export:logs'), unusedLogController.exportAILogPDF);
+// Exports
+router.post("/api/user/export/csv", isAuthenticated, authorize('export:logs'), controller.exportUserLogCSV);
+router.post("/api/user/export/hdf5", isAuthenticated, authorize('export:logs'), controller.exportUserLogHDF5);
+router.post("/api/ai/export/csv", isAuthenticated, authorize('export:logs'), controller.exportAILogCSV);
+router.post("/api/ai/export/hdf5", isAuthenticated, authorize('export:logs'), controller.exportAILogHDF5);
+router.post("/api/summary/export/csv", isAuthenticated, authorize('export:logs'), controller.exportAISummaryCSV);
+router.post("/api/summary/export/hdf5", isAuthenticated, authorize('export:logs'), controller.exportAISummaryHDF5);
 
 export default router;
