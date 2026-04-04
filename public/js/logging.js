@@ -171,10 +171,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         await handleAiFilter(elements, page);
         await handleAiSummaryFilter(elements, 1);
 
+        // Find the target log on the loaded page
+        let targetElement = elements.aiLogAccordion.querySelector(`[data-id="${id}"]`);
 
+        // If not found, new logs may have shifted it to a different page since the
+        // server calculated the page number. Re-query for the current page and retry.
+        if (!targetElement) {
+            try {
+                const res = await fetch(`logs/api/ai/${id}/locate?limit=${paginationSize}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.page && data.page !== page) {
+                        await handleAiFilter(elements, data.page);
+                        targetElement = elements.aiLogAccordion.querySelector(`[data-id="${id}"]`);
+                    }
+                }
+            } catch (e) {
+                console.error('Deep link retry failed:', e);
+            }
+        }
 
         // Highlight and Scroll to the log
-        const targetElement = elements.aiLogAccordion.querySelector(`[data-id="${id}"]`);
         if (targetElement) {
             const header = targetElement.querySelector('.accordion-header');
             const body = targetElement.querySelector('.accordion-body');
@@ -186,7 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Scroll it into view
             targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-            // Optional: Add a temporary highlight class
+            // Add a temporary highlight class
             targetElement.classList.add('highlight-flash');
             setTimeout(() => targetElement.classList.remove('highlight-flash'), 3000);
         }

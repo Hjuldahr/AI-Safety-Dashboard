@@ -1791,6 +1791,46 @@ paths:
         500:
           description: Server error
 
+  /logs/api/ai/{id}/locate:
+    get:
+      tags: [Logs]
+      summary: Get the current page number for a specific AI log
+      description: >
+        Returns the page number that a specific AI log currently falls on,
+        based on the default descending responseTimestamp sort order.
+        Used by the deep link retry mechanism when new logs shift the
+        target log to a different page between the initial page render
+        and the client-side fetch.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The AI log's MongoDB ObjectId
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Page size used to calculate the page number
+      responses:
+        200:
+          description: The page containing the log
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page:
+                    type: integer
+                    example: 3
+        404:
+          description: Log not found
+        500:
+          description: Server error
+
   /logs/api/ai/{id}/tags:
     put:
       tags: [Logs]

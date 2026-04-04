@@ -311,6 +311,29 @@ const getAILogView = async (req, res) => {
     }
 };
 
+// Returns the current page number for a specific AI log (used by deep link retry)
+const locateAILog = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const limit = Number(req.query.limit) || DEFAULT_PAGE_LIMIT;
+
+        const targetLog = await AI_Log.findById(id);
+        if (!targetLog) {
+            return res.status(404).json({ error: 'LogNotFound' });
+        }
+
+        const countBefore = await AI_Log.countDocuments({
+            responseTimestamp: { $gt: targetLog.responseTimestamp }
+        });
+
+        const page = Math.floor(countBefore / limit) + 1;
+        res.json({ page });
+    } catch (error) {
+        console.error("Error locating AI log:", error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 const getAILog = async (req, res) => {
     try {
         const id = req.params.id
@@ -470,6 +493,7 @@ const exportAISummaryHDF5 = async (req, res) => {
 export default {
     getPage,
     getAILogView,
+    locateAILog,
     getAILog,
     getFilteredUserLogs,
     getFilteredAILogs,

@@ -11,6 +11,9 @@ router.get("/", isAuthenticated, authorize('view:logs'), controller.getPage);
 // View Specific Page
 router.get("/view/ai/:id", authorize('view:logs'), controller.getAILogView);
 
+// Locate a log's current page (for deep link retry)
+router.get("/api/ai/:id/locate", isAuthenticated, authorize('view:logs'), controller.locateAILog);
+
 // Get Specific Log
 router.get("/ai/:id", authorize('view:logs'), controller.getAILog);
 
