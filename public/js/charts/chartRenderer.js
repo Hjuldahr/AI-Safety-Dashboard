@@ -52,7 +52,7 @@
 
         if (config.chartSize === 'tiny') {
             options.plugins.legend.display = false;
-            options.maintainAspectRatio = true;
+            options.maintainAspectRatio = false;
             options.scales = { x: { display: false }, y: { display: true } };
             options.plugins.title.font.size = 12;
             options.plugins.title.padding = { top: 5, bottom: 5 };

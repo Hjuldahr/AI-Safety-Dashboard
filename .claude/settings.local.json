@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:muuri.dev)",
+      "WebFetch(domain:gridstackjs.com)",
+      "WebFetch(domain:bundlephobia.com)",
+      "WebFetch(domain:docs.muuri.dev)",
+      "WebFetch(domain:packery.metafizzy.co)"
+    ]
+  }
+}

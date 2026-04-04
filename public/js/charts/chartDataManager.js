@@ -19,9 +19,18 @@
         window.DashboardApp.logs[tf] = {};
     });
 
+    // Gridstack size mapping
+    const SIZE_TO_GRID = {
+        tiny:    { w: 2, h: 1 },
+        regular: { w: 4, h: 2 },
+        large:   { w: 6, h: 2 },
+        massive: { w: 12, h: 4 }
+    };
+
     // Local state only needed here
     let isReloadingCharts = false;
     let updateTickCounter = 0; // Used to throttle low-fi charts
+    let gridSaveTimeout = null;
 
     // Returns the selected model
     function getCurrentModel() {
@@ -31,12 +40,15 @@
 
     // Removes the live updating charts (all of them)
     function clearDynamicCharts() {
-        document.querySelectorAll('.dynamic-chart-card').forEach(card => card.remove());
-        document.querySelectorAll('.tiny-group-wrapper').forEach(wrapper => wrapper.remove());
-
+        // Destroy all Chart.js instances
         for (const id in charts) {
             if (charts[id] instanceof Chart) charts[id].destroy();
             delete charts[id];
+        }
+
+        // Clear the Gridstack grid if it exists
+        if (window.DashboardApp.gridInstance) {
+            window.DashboardApp.gridInstance.removeAll(true);
         }
     }
 
@@ -79,55 +91,142 @@
         }
     }
 
-    // A helper to wipe the board and place cards
+    // A helper to wipe the board and place cards using Gridstack
     function rebuildChartDOM() {
-        const container = document.querySelector('.charts-container');
+        const gridEl = document.getElementById('dashboard-grid');
 
         // Clear the page
         clearDynamicCharts();
 
-        let currentTinyGroup = null;
+        // Destroy previous grid instance if it exists
+        if (window.DashboardApp.gridInstance) {
+            window.DashboardApp.gridInstance.destroy(false);
+            window.DashboardApp.gridInstance = null;
+        }
 
-        // Create new cards
-        window.DashboardApp.configs.forEach(config => {
-            // each card
-            const chartCard = createChartCardDOM(config);
-
-            // Tiny Group Logic
-            if (config.chartSize === 'tiny') {
-                if (!currentTinyGroup || currentTinyGroup.childElementCount >= 4) {
-                    currentTinyGroup = document.createElement('div');
-                    currentTinyGroup.className = 'chart-card-group tiny-group-wrapper';
-                    container.appendChild(currentTinyGroup);
-
-                    // Init Sortable for this group
-                    if (window.Sortable) {
-                        new Sortable(currentTinyGroup, {
-                            group: {
-                                name: 'tiny-charts',
-                                put: (to) => to.el.children.length < 4
-                            },
-                            animation: 150,
-                            preventOnFilter: true,
-                            onEnd: window.DashboardApp.admin.saveNewOrder
-                        });
-                    }
-                }
-                currentTinyGroup.appendChild(chartCard);
-            } else {
-                currentTinyGroup = null;
-                container.appendChild(chartCard);
+        // Initialize Gridstack
+        const grid = GridStack.init({
+            column: 12,
+            cellHeight: 150,
+            margin: 10,
+            animate: true,
+            float: true,
+            disableResize: true,
+            columnOpts: {
+                breakpoints: [
+                    { w: 768, c: 1 },
+                    { w: 1200, c: 6 },
+                    { w: 1500, c: 12 }
+                ]
             }
+        }, gridEl);
+
+        window.DashboardApp.gridInstance = grid;
+
+        // Batch add all widgets for performance
+        grid.batchUpdate();
+
+        window.DashboardApp.configs.forEach(config => {
+            const chartCard = createChartCardDOM(config);
+            const dims = SIZE_TO_GRID[config.chartSize] || SIZE_TO_GRID.regular;
+
+            const w = config.gridW ?? dims.w;
+            const h = config.gridH ?? dims.h;
+            const hasGridPos = config.gridX != null && config.gridY != null;
+
+            // Create Gridstack widget structure with gs-* attributes
+            const widgetEl = document.createElement('div');
+            widgetEl.className = 'grid-stack-item';
+            widgetEl.setAttribute('gs-w', String(w));
+            widgetEl.setAttribute('gs-h', String(h));
+            widgetEl.setAttribute('gs-id', config._id);
+            widgetEl.setAttribute('gs-no-resize', 'true');
+
+            if (hasGridPos) {
+                widgetEl.setAttribute('gs-x', String(config.gridX));
+                widgetEl.setAttribute('gs-y', String(config.gridY));
+            } else {
+                widgetEl.setAttribute('gs-auto-position', 'true');
+            }
+
+            const contentEl = document.createElement('div');
+            contentEl.className = 'grid-stack-item-content';
+            contentEl.appendChild(chartCard);
+            widgetEl.appendChild(contentEl);
+
+            grid.addWidget(widgetEl);
 
             // Initialize Chart Instance
             if (config.chartType === 'measure') {
-                charts[config._id] = chartCard; // Store element for KPIs
+                charts[config._id] = chartCard;
             } else {
                 const ctx = chartCard.querySelector('canvas').getContext('2d');
                 const chart = window.DashboardApp.renderer.createChartFromConfig(config, ctx);
-                chart.customConfig = config; // Attach config to instance for easy access
+                chart.customConfig = config;
                 charts[config._id] = chart;
             }
+        });
+
+        grid.batchUpdate(false);
+
+        // Listen for layout changes to auto-save
+        grid.on('change', handleGridChange);
+
+        // Observe widget content for Chart.js canvas resizing
+        setupResizeObservers();
+
+        // Force Chart.js to recalculate canvas resolution after Gridstack finishes layout
+        requestAnimationFrame(() => {
+            for (const id in charts) {
+                if (charts[id] instanceof Chart) {
+                    charts[id].resize();
+                }
+            }
+        });
+    }
+
+    // Debounced handler for Gridstack layout changes
+    function handleGridChange() {
+        clearTimeout(gridSaveTimeout);
+        gridSaveTimeout = setTimeout(() => {
+            const grid = window.DashboardApp.gridInstance;
+            if (!grid) return;
+
+            const items = grid.save(false);
+            const layout = items.map(item => ({
+                id: item.id,
+                x: item.x,
+                y: item.y,
+                w: item.w,
+                h: item.h
+            }));
+
+            fetch('api/gridLayout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ layout })
+            }).then(res => {
+                if (!res.ok) console.error('Failed to save grid layout.');
+            }).catch(err => console.error('Error saving grid layout:', err));
+        }, 500);
+    }
+
+    // ResizeObserver to trigger Chart.js resize when Gridstack moves/resizes widgets
+    function setupResizeObservers() {
+        const observer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const card = entry.target.querySelector('.chart-card');
+                if (!card) continue;
+                const id = card.dataset.id;
+                const chartInstance = charts[id];
+                if (chartInstance instanceof Chart) {
+                    chartInstance.resize();
+                }
+            }
+        });
+
+        document.querySelectorAll('.grid-stack-item-content').forEach(el => {
+            observer.observe(el);
         });
     }
 
@@ -146,7 +245,6 @@
             let chartHeader = `<div class="chart-header">`;
 
             // Header / Zoom Controls (Only for non-tiny charts)
-            // ToDo: Implement click actions for zoom in / out
             if (chartSize !== 'tiny') {
                 chartHeader += `
                 <div class="left-chart-buttons">
@@ -413,16 +511,6 @@
             localStorage.setItem('scrollpos', window.scrollY);
         });
         document.getElementById('model-select')?.addEventListener('change', populateAllCharts);
-
-        const mainContainer = document.querySelector('.charts-container');
-        if (mainContainer) {
-            new Sortable(mainContainer, {
-                group: 'main-charts',
-                animation: 150,  // Smooth animation
-                preventOnFilter: true,
-                onEnd: window.DashboardApp.admin.saveNewOrder
-            });
-        }
 
         // Scrolling to page location on load
         var scrollpos = localStorage.getItem('scrollpos');

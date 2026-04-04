@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const ACTIVE_CLASS = 'dashboard-fullscreen-active';
-    const chartAnchor = document.getElementById('static-charts-container');
+    const chartAnchor = document.getElementById('dashboard-grid');
 
     let previousScrollY = 0;
 

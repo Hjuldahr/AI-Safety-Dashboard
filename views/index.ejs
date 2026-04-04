@@ -35,7 +35,8 @@
   <script src="js/controlPanel.js" defer></script>
   <script src="https://kit.fontawesome.com/dd0a7425a6.js" crossorigin="anonymous"></script>
   <script src="js/notifications.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack-all.js"></script>
 
 </head>
 
@@ -56,11 +57,8 @@
 
     </div>
 
-    <!-- Charts -->
-    <div class="charts-container" id="static-charts-container">
-    </div>
-
-    <div class="charts-container" id="dynamic-charts-container">
+    <!-- Charts (Gridstack.js grid) -->
+    <div class="grid-stack" id="dashboard-grid">
     </div>
   </main>
   <script src="js/dashboardFullscreen.js" defer></script>

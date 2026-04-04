@@ -4,6 +4,12 @@ import ChartConfig from '../models/Chart_Config.js';
 import User_Log from '../models/User_Log.js';
 import { TIMEFRAME_CONFIG, KNOWN_MODELS, DATA_DICTIONARY } from "../constants/charts.js";
 
+const SIZE_TO_GRID = {
+    tiny:    { w: 2, h: 1 },
+    regular: { w: 4, h: 2 },
+    large:   { w: 6, h: 2 },
+    massive: { w: 12, h: 4 }
+};
 
 const saveGraph = async (req, res) => {
     try {
@@ -18,16 +24,23 @@ const saveGraph = async (req, res) => {
         }
 
         // set values to null if they arent set (for charts that dont have these values)
+        const size = chartSize || 'regular';
+        const dims = SIZE_TO_GRID[size] || SIZE_TO_GRID.regular;
+
         const newChartConfig = new ChartConfig({
             title,
             chartType,
-            chartSize: chartSize || 'regular',
+            chartSize: size,
             chartTimeRange: timeframe,
             yAxis: yAxis || null,
             xAxis: xAxis || null,
             category: category || null,
             splitBy: splitBy || null,
-            includedValues: includedValues
+            includedValues: includedValues,
+            gridX: 0,
+            gridY: 9999,
+            gridW: dims.w,
+            gridH: dims.h
         });
 
         const savedChart = await newChartConfig.save();
@@ -158,9 +171,29 @@ const reorderCharts = async (req, res) => {
 
         // Execute all operations in one go
         await ChartConfig.bulkWrite(operations);
+        res.status(200).json({ message: 'Chart order updated.' });
     } catch (err) {
         console.error('Error updating chart order:', err);
         res.status(500).json({ error: 'Failed to update order.' });
+    }
+};
+
+const saveGridLayout = async (req, res) => {
+    const { layout } = req.body;
+
+    try {
+        const operations = layout.map(item => ({
+            updateOne: {
+                filter: { _id: item.id },
+                update: { $set: { gridX: item.x, gridY: item.y, gridW: item.w, gridH: item.h } }
+            }
+        }));
+
+        await ChartConfig.bulkWrite(operations);
+        res.status(200).json({ message: 'Grid layout saved.' });
+    } catch (err) {
+        console.error('Error saving grid layout:', err);
+        res.status(500).json({ error: 'Failed to save grid layout.' });
     }
 };
 
@@ -169,8 +202,14 @@ const reorderCharts = async (req, res) => {
 // Its being run every chart zoom, re-order, delete, etc.
 const getRecentData = async (req, res) => {
     try {
-        // get the chart configs
-        const configs = await ChartConfig.find().sort({ order: 1 });
+        // get the chart configs — use grid coordinates if migrated, fall back to order
+        let configs = await ChartConfig.find().lean();
+        const hasMigrated = configs.every(c => c.gridY !== null && c.gridY !== undefined);
+        if (hasMigrated) {
+            configs.sort((a, b) => (a.gridY - b.gridY) || (a.gridX - b.gridX));
+        } else {
+            configs.sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999));
+        }
 
         // Get the unique timeranges used in the charts
         const activeTimeframes = [...new Set(configs.map(c => c.chartTimeRange || '10s'))];
@@ -381,5 +420,6 @@ export default {
     updateGraph,
     patchGraph,
     getChartConfig,
-    reorderCharts
+    reorderCharts,
+    saveGridLayout
 }

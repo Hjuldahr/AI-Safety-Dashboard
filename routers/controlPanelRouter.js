@@ -18,6 +18,7 @@ router.delete("/api/graph", isAuthenticated, authorize('delete:graph'), chartCon
 
 router.get("/api/getChartConfig/:id", isAuthenticated, authorize('view:dashboard'), chartController.getChartConfig);
 router.post("/api/reorder", isAuthenticated, authorize('edit:graph'), chartController.reorderCharts);
+router.post("/api/gridLayout", isAuthenticated, authorize('edit:graph'), chartController.saveGridLayout);
 
 
 export default router;

@@ -4,37 +4,31 @@
     const { ZOOM_LEVELS } = window.CONSTANTS;
 
 
-    // ---------- Reorder ----------
+    // ---------- Reorder (Gridstack auto-saves via handleGridChange in chartDataManager) ----------
     async function saveNewOrder() {
-        const mainContainer = document.querySelector('.charts-container');
-        if (!mainContainer) return;
+        // Kept for backward compat — Gridstack auto-saves layout on change
+        const grid = window.DashboardApp.gridInstance;
+        if (!grid) return;
 
-        const newOrderArray = [];
-
-        for (const child of mainContainer.children) {
-            if (child.classList.contains('chart-card') && child.dataset.id) {
-                newOrderArray.push({ id: child.dataset.id });
-            }
-            if (child.classList.contains('tiny-group-wrapper')) {
-                for (const tinyCard of child.children) {
-                    if (tinyCard.dataset.id) newOrderArray.push({ id: tinyCard.dataset.id });
-                }
-            }
-        }
+        const items = grid.save(false);
+        const layout = items.map(item => ({
+            id: item.id,
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h
+        }));
 
         try {
-            const response = await fetch('api/reorder', {
+            const response = await fetch('api/gridLayout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ newOrder: newOrderArray })
+                body: JSON.stringify({ layout })
             });
-            if (!response.ok) throw new Error('Server failed to save new order.');
-            console.log('New chart order saved.');
-            alert('Chart order saved!');
-
-            await loadChartsFromDatabase();
+            if (!response.ok) throw new Error('Failed to save grid layout.');
+            console.log('Grid layout saved.');
         } catch (error) {
-            console.error('Error saving chart order:', error);
+            console.error('Error saving grid layout:', error);
         }
     }
 
@@ -51,26 +45,16 @@
         }
 
         try {
-            // CSS classes
-            const ALL_SIZE_CLASSES = ['chart-tiny', 'chart-regular', 'chart-large', 'chart-massive'];
-            let originalSize = ALL_SIZE_CLASSES.find(c => chartCard.classList.contains(c)) || 'chart-regular';
-            chartCard.dataset.originalSize = originalSize;
-
-            if (originalSize !== 'chart-massive') {
-
-                const wrapper = chartCard.closest('.tiny-group-wrapper');
-                if (wrapper) {
-                    if (!wrapper.id) {
-                        wrapper.id = 'tiny-wrapper-' + Math.random().toString(36).substr(2, 9);
-                    }
-                    chartCard.dataset.wrapperId = wrapper.id;
-                    wrapper.parentNode.insertBefore(chartCard, wrapper);
+            // Expand the Gridstack widget to full width for editing
+            const grid = window.DashboardApp.gridInstance;
+            const widgetEl = chartCard.closest('.grid-stack-item');
+            if (grid && widgetEl) {
+                const node = widgetEl.gridstackNode;
+                if (node) {
+                    widgetEl.dataset.origW = node.w;
+                    widgetEl.dataset.origH = node.h;
+                    grid.update(widgetEl, { w: 12, h: 6 });
                 }
-
-                // Remove whatever size it currently has
-                chartCard.classList.remove(...ALL_SIZE_CLASSES);
-                // Force it to massive
-                chartCard.classList.add('chart-massive');
             }
 
             const canvas = chartCard.querySelector('canvas');
@@ -172,24 +156,17 @@
         const canvas = chartCard.querySelector('canvas');
         const kpiWrapper = chartCard.querySelector('.kpi-content-wrapper');
 
-        // Revert Size Class
-        const originalSize = chartCard.dataset.originalSize || 'chart-regular';
-
-        // Remove ALL size classes to be safe, then add the original
-        chartCard.classList.remove('chart-tiny', 'chart-regular', 'chart-large', 'chart-massive');
-        chartCard.classList.add(originalSize);
-
-        // Revert DOM Position (for Tiny charts)
-        if (chartCard.dataset.wrapperId) {
-            const wrapper = document.getElementById(chartCard.dataset.wrapperId);
-            if (wrapper) {
-                // Append it back into the tiny group
-                wrapper.appendChild(chartCard);
-            }
-            delete chartCard.dataset.wrapperId;
+        // Revert Gridstack widget to original size
+        const grid = window.DashboardApp.gridInstance;
+        const widgetEl = chartCard.closest('.grid-stack-item');
+        if (grid && widgetEl && widgetEl.dataset.origW) {
+            grid.update(widgetEl, {
+                w: parseInt(widgetEl.dataset.origW),
+                h: parseInt(widgetEl.dataset.origH)
+            });
+            delete widgetEl.dataset.origW;
+            delete widgetEl.dataset.origH;
         }
-
-        delete chartCard.dataset.originalSize;
 
         chartCard.classList.remove('is-editing');
 
@@ -197,10 +174,23 @@
         if (canvas) canvas.style.display = 'block';
         if (kpiWrapper) kpiWrapper.style.display = 'flex';
 
+        // Resize Chart.js canvas after widget reverts
+        const chartInstance = charts[id];
+        if (chartInstance instanceof Chart) {
+            setTimeout(() => chartInstance.resize(), 300);
+        }
+
         // Hide Form
         formContainer.style.display = 'none';
         formContainer.innerHTML = '';
     }
+
+    const SIZE_TO_GRID = {
+        tiny:    { w: 2, h: 1 },
+        regular: { w: 4, h: 2 },
+        large:   { w: 6, h: 2 },
+        massive: { w: 12, h: 4 }
+    };
 
     async function handleSaveEdit(id) {
         const newTitle = document.getElementById(`edit-title-${id}`).value;
@@ -216,6 +206,9 @@
             checkboxes.forEach(cb => newIncludedValues.push(cb.value));
         }
 
+        // Compute new grid dimensions from size
+        const dims = SIZE_TO_GRID[newSize] || SIZE_TO_GRID.regular;
+
         try {
             const response = await fetch('api/graph', {
                 method: 'PATCH',
@@ -223,9 +216,11 @@
                 body: JSON.stringify({
                     id,
                     title: newTitle,
-                    size: newSize,
+                    chartSize: newSize,
                     chartTimeRange: newTimeframe,
-                    includedValues: newIncludedValues
+                    includedValues: newIncludedValues,
+                    gridW: dims.w,
+                    gridH: dims.h
                 })
             });
             if (!response.ok) throw new Error('Failed to save changes.');

@@ -47,12 +47,29 @@ const chartConfigSchema = new Schema({
     includedValues: {
         type: [String],
         default: []
+    },
+    gridX: {
+        type: Number,
+        default: null
+    },
+    gridY: {
+        type: Number,
+        default: null
+    },
+    gridW: {
+        type: Number,
+        default: null
+    },
+    gridH: {
+        type: Number,
+        default: null
     }
 }, {
     timestamps: true
 });
 
 chartConfigSchema.index({order: 1});
+chartConfigSchema.index({gridY: 1, gridX: 1});
 
 const ChartConfig = mongoose.model('ChartConfig', chartConfigSchema);
 
