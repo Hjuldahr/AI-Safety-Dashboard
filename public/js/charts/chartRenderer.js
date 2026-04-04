@@ -33,7 +33,7 @@
         const options = {
             responsive: true,
             maintainAspectRatio: false,
-            animation: false, //ToDo: See if this is good with or without
+            animation: false,
             interaction: {
                 mode: 'nearest',
                 axis: 'x',
@@ -47,8 +47,7 @@
                 x: { display: true, ticks: { font: { size: 12 } } },
                 y: { display: true, ticks: { font: { size: 12 } } }
             },
-            devicePixelRatio: window.devicePixelRatio || 1 //ToDo: See if this is better than 3
-            // devicePixelRatio: 3
+            devicePixelRatio: window.devicePixelRatio || 1
         };
 
         if (config.chartSize === 'tiny') {

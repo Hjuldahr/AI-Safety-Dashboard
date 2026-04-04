@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import chartConstants from "../constants/charts.js";
+import { ALERT_LEVELS, DEFAULT_ALERT_LEVEL } from "../constants/alerts.js";
 
 // === alert_model Schema ===
 const alert_model_Schema = new mongoose.Schema({
@@ -15,12 +16,11 @@ const alert_model_Schema = new mongoose.Schema({
     default: null,
   },
   // Alert level (e.g., Critical, High, Medium, Info)
-  // ToDo: Move this to a constants file.
   alertLevel: {
     type: String,
     required: true,
-    enum: ["Critical", "High", "Medium", "Info"],
-    default: "Info",
+    enum: ALERT_LEVELS,
+    default: DEFAULT_ALERT_LEVEL,
   },
   // Boolean condition
   alertRule: {

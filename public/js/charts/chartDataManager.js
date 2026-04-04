@@ -57,9 +57,6 @@
 
             window.DashboardApp.configs = data.configs || [];
 
-            // ToDo: See if this line is needed
-            // clearDynamicCharts();
-
             // Store the logs locally - per timeframe
             if (data.logs) {
                 Object.keys(data.logs).forEach(tf => {

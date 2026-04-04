@@ -3,6 +3,7 @@ import AI_Log from '../models/AI_Log.js';
 import AI_Summary from "../models/AI_Summary.js"
 import User from '../models/user.js';
 import chartConstants from "../constants/charts.js";
+import { DEFAULT_PAGE_LIMIT } from "../constants/pagination.js";
 import HistTag from '../models/historicalTag.js';
 import Tag from '../models/tag.js';
 import {
@@ -277,8 +278,7 @@ const getAILogView = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // ToDo: Avoid hardcoding this page limit
-        const limit = 10;
+        const limit = DEFAULT_PAGE_LIMIT;
 
         // Find the target log
         const targetLog = await AI_Log.findById(id);
