@@ -4,6 +4,7 @@ const mockFindOne = jest.fn();
 const mockSave = jest.fn();
 const mockAddLog = jest.fn().mockResolvedValue();
 const mockAuthenticate = jest.fn();
+const mockSettingsGet = jest.fn();
 
 jest.unstable_mockModule('../models/user.js', () => {
     const UserMock = jest.fn().mockImplementation(function (data) {
@@ -25,6 +26,12 @@ jest.unstable_mockModule('../models/User_Log.js', () => ({
     }
 }));
 
+jest.unstable_mockModule('../models/settings.js', () => ({
+    default: {
+        get: mockSettingsGet
+    }
+}));
+
 jest.unstable_mockModule('passport', () => ({
     default: {
         authenticate: mockAuthenticate
@@ -39,6 +46,8 @@ beforeEach(async () => {
     mockAddLog.mockClear();
     mockAddLog.mockResolvedValue();
     mockAuthenticate.mockClear();
+    mockSettingsGet.mockClear();
+    mockSettingsGet.mockResolvedValue('default');
     jest.resetModules();
     authController = (await import('../controllers/authController.js')).default;
 });
