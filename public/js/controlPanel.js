@@ -25,15 +25,19 @@ async function initAdminControls() {
 
     // Logic to hide admin controls for non-admin users:
     const isAdmin = document.querySelector("#isAdmin");
+    const canCreateGraph = document.querySelector("#canCreateGraph");
+    
+    if (!canCreateGraph) {
+        const addChartBtn = document.getElementById("add_new_chart");
+        if (addChartBtn) {
+            addChartBtn.style.display = 'none';
+        }
+    }
+    
     if (!isAdmin) {
         const toggleButton = document.querySelector("#toggle-button");
         if (toggleButton) {
             toggleButton.style.display = 'none';
-        }
-
-        const addChartBtn = document.getElementById("add_new_chart");
-        if (addChartBtn) {
-            addChartBtn.style.display = 'none';
         }
     }
 
