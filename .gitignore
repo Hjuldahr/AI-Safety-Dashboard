@@ -4,7 +4,7 @@ node_modules
 .obsidian
 docker-compose.override.yml
 storage/reports/*.pdf
-# .claude
+.claude
 tests/e2e/auth/*.json
 test-results/
 playwright-report/
