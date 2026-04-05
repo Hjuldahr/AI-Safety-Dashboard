@@ -73,6 +73,12 @@ const logout = (req, res, next) => {
 
 // Login Page
 const getPage = async (req, res) => {
+
+    if (Object.keys(req.query).length > 0) {
+        // Redirect to the same path but without the search string
+        return res.redirect(req.path);
+    }
+    
     res.render("login");
 };
 

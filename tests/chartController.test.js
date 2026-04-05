@@ -122,7 +122,9 @@ describe('chartController', () => {
         };
         const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         await chartController.saveGraph(req, res);
+        consoleErrorSpy.mockRestore();
 
         expect(res.status).toHaveBeenCalledWith(500);
         expect(res.json).toHaveBeenCalledWith({

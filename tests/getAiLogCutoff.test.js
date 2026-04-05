@@ -76,7 +76,9 @@ describe('getAiLogCutoff', () => {
             lean: mockLean
         });
 
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         const result = await getAiLogCutoff();
+        consoleErrorSpy.mockRestore();
 
         expect(result).toBe(AI_LOG_CUTOFF);
     });

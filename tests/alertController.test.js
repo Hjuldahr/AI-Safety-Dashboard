@@ -56,7 +56,9 @@ describe('alertController', () => {
         const req = { user: { username: 'testuser' } };
         const res = { render: jest.fn() };
 
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         await alertController.getPage(req, res);
+        consoleErrorSpy.mockRestore();
 
         expect(res.render).toHaveBeenCalledWith('alerts', {
             user: { username: 'testuser' },
