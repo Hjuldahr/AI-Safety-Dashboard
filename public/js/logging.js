@@ -198,6 +198,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Setup Live updates
     setupLiveUpdates(elements, () => isLive);
+
+    // Signal that all event listeners and initial data are ready
+    document.body.dataset.logsReady = 'true';
 });
 
 async function refreshTagCache() {

@@ -53,6 +53,12 @@ export class LogsPage extends BasePage {
 
   async waitForReady() {
     await this.userLogView.waitFor({ state: 'visible' });
+    // Wait for logging.js DOMContentLoaded handler to finish initializing
+    // (attaches tab click handlers, fetches initial data, etc.)
+    await this.page.waitForFunction(
+      () => document.body.dataset.logsReady === 'true',
+      { timeout: 10_000 }
+    );
   }
 
   /** Switch to a log tab: 'user', 'ai', or 'summary'. */
