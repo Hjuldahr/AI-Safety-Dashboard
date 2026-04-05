@@ -968,8 +968,8 @@ paths:
   /users:
     get:
       tags: [Admin, "HTML Page"]
-      summary: User management page
-      description: Returns the HTML of the User Management page.
+      summary: Administration Dashboard
+      description: Returns the HTML of the Administration Dashboard page, which manages users, roles, and system settings.
       responses:
         200:
           description: HTML content for the Users Page.
