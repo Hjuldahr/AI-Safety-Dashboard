@@ -60,17 +60,6 @@ This command installs all dependencies listed in `package.json`.
 
 The project uses [Playwright](https://playwright.dev/) for end-to-end testing. Tests are located in `tests/e2e/specs/` and cover authentication, dashboard, alerts, reports, profile, admin, navigation, logs, and smoke tests.
 
-## Prerequisites
-1. Install project dependencies (if you haven't already):
-   ```
-   npm install
-   ```
-2. Install Playwright browsers:
-   ```
-   npx playwright install
-   ```
-3. Make sure your `.env` file is set up (see Step 4 above) — the test config reads from it.
-
 ## Test Commands
 
 | Command | Description |
