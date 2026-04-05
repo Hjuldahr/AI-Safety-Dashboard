@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node app.js",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js"
+    "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "test": "npm run test:unit"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
