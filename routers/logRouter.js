@@ -10,11 +10,15 @@ const router = express.Router();
 router.get("/", isAuthenticated, authorize('view:logs'), controller.getPage);
 
 // View Specific Page
+<<<<<<< Updated upstream
 router.get("/view/ai/:id", authorize('view:logs'), controller.getAILogView);
 // router.get("/summary/:id", authorize('view:logs'), controller.getSummaryLog);
+=======
+router.get("/view/ai/:id", isAuthenticated, authorize('view:logs'), controller.getAILogView);
+>>>>>>> Stashed changes
 
 // Get Specific Log
-router.get("/ai/:id", authorize('view:logs'), controller.getAILog);
+router.get("/ai/:id", isAuthenticated, authorize('view:logs'), controller.getAILog);
 
 
 // Paginated Views
