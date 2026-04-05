@@ -4,7 +4,11 @@
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "test:e2e": "npx playwright test --config=tests/e2e/playwright.config.js",
+    "test:e2e:headed": "npx playwright test --config=tests/e2e/playwright.config.js --headed",
+    "test:e2e:smoke": "npx playwright test --config=tests/e2e/playwright.config.js --grep @smoke",
+    "test:e2e:report": "npx playwright show-report tests/e2e/playwright-report"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -29,5 +33,8 @@
     "swagger-ui-express": "^5.0.1",
     "url": "^0.11.4",
     "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
   }
 }
