@@ -56,6 +56,23 @@ This command installs all dependencies listed in `package.json`.
 
 ---
 
+# Running the Unit Tests
+
+The project uses [Jest](https://jestjs.io/) for unit testing. Unit tests are located in the `tests/` folder and cover middleware, controllers, services, models, and helpers.
+
+## Unit Test Commands
+
+| Command | Description |
+|---|---|
+| `npm test` | Run all unit tests. This is the default unit-test workflow. |
+| `npm run test:unit` | Run all unit tests explicitly using Jest. |
+
+## Notes
+- `npm test` runs only the unit test suite and ignores the Playwright E2E folder (`tests/e2e/`).
+- Use `npm run test:e2e` for end-to-end testing with Playwright instead of `npm test`.
+
+---
+
 # Running the E2E Tests
 
 The project uses [Playwright](https://playwright.dev/) for end-to-end testing. Tests are located in `tests/e2e/specs/` and cover authentication, dashboard, alerts, reports, profile, admin, navigation, logs, and smoke tests.
