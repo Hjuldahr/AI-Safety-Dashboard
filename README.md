@@ -53,3 +53,37 @@ This command installs all dependencies listed in `package.json`.
 ## Step 5 - Run the server
 - You should now be good to go.
 - Run `npm start` in the projects root directory, then head to `http://localhost:2121` to see the website or click on the hyperlink provided in the terminal.
+
+---
+
+# Running the E2E Tests
+
+The project uses [Playwright](https://playwright.dev/) for end-to-end testing. Tests are located in `tests/e2e/specs/` and cover authentication, dashboard, alerts, reports, profile, admin, navigation, logs, and smoke tests.
+
+## Prerequisites
+1. Install project dependencies (if you haven't already):
+   ```
+   npm install
+   ```
+2. Install Playwright browsers:
+   ```
+   npx playwright install
+   ```
+3. Make sure your `.env` file is set up (see Step 4 above) — the test config reads from it.
+
+## Test Commands
+
+| Command | Description |
+|---|---|
+| `npm run test:e2e` | Run all E2E tests headlessly. The server starts automatically on port 2121. |
+| `npm run test:e2e:headed` | Run all E2E tests in a visible browser window (useful for debugging). |
+| `npm run test:e2e:smoke` | Run only tests tagged with `@smoke` — a quick sanity check. |
+| `npm run test:e2e:report` | Open the HTML test report from the last run in your browser. |
+
+## Notes
+- The Playwright config (`tests/e2e/playwright.config.js`) automatically starts the app server before tests run, so you **do not** need to run `npm start` separately.
+- On failure, screenshots, videos, and traces are saved to `test-results/` for debugging.
+- To run a single test file, use:
+  ```
+  npx playwright test --config=tests/e2e/playwright.config.js tests/e2e/specs/<filename>.spec.js
+  ```
