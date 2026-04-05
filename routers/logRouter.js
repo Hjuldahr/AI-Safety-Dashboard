@@ -9,10 +9,11 @@ const router = express.Router();
 router.get("/", isAuthenticated, authorize('view:logs'), controller.getPage);
 
 // View Specific Page
-router.get("/view/ai/:id", authorize('view:logs'), controller.getAILogView);
+router.get("/view/ai/:id", isAuthenticated, authorize('view:logs'), controller.getAILogView);
 
 // Get Specific Log
-router.get("/ai/:id", authorize('view:logs'), controller.getAILog);
+router.get("/ai/:id", isAuthenticated, authorize('view:logs'), controller.getAILog);
+
 
 // Paginated Views
 router.get("/api/user", isAuthenticated, authorize('view:logs'), controller.getFilteredUserLogs);

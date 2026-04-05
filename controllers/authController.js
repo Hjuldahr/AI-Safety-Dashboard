@@ -1,6 +1,7 @@
 import passport from "passport";
 import User from '../models/user.js';
 import User_Log from '../models/User_Log.js';
+import Settings from '../models/settings.js';
 
 const BASE = process.env.PUBLIC_URL || '/';
 
@@ -16,8 +17,11 @@ const signUp = async (req, res) => {
             return res.status(409).json({ message: 'Username or email already exists.' });
         }
 
+        // Get default theme for new accounts
+        const defaultTheme = await Settings.get('default_theme', 'default');
+
         // Create a new user instance. The password will be hashed automatically by the pre-save hook defined in the User model.
-        const newUser = new User({ username, email, password });
+        const newUser = new User({ username, email, password, preferredTheme: defaultTheme });
         await newUser.save();
 
         await User_Log.addLog(newUser._id, 'Signup', `Successful signup from IP: ${req.ip}`);
