@@ -1,55 +1,95 @@
-# Installing the Project:
-To run the project you must install both node JS and mongo DB.
+# Installing the Project
 
-## Step 1: Node.js
-Ensure you have Node.js and npm (Node Package Manager) installed:
-- **Check** if they're installed, in cmd run:
+The project can be run either locally (Node.js + MongoDB) or via Docker.
+
+---
+
+## Option A: Local Development
+
+### Step 1: Node.js
+Ensure you have Node.js 20+ and npm installed:
+- **Check** if they're installed:
     - `node -v`
     - `npm -v`
-- **If not installed**, download and install them from the [official Node.js website](https://nodejs.org/).
+- **If not installed**, download from the [official Node.js website](https://nodejs.org/).
 
-## Step 2:  Mongo DB
-Download MonogoDB compass from the following link, and follow the installer to set it up (pretty sure I left everything as defaults)
-##### Mongo DB download link (Mongo Compass)
+### Step 2: MongoDB
+Download MongoDB Community Edition and MongoDB Compass from the following link:
 - https://www.mongodb.com/try/download/community
-Then download mongoDb CLI tools from the link below:
-https://www.mongodb.com/try/download/database-tools
 
-Here are some instructions you can follow to install the mongo CLI tools:
-##### Installing MongoDB Database Tools on Windows
-Follow these steps to install the MongoDB Database Tools on your Windows system:
-1. **Download the Tools:**
-    - Visit the [MongoDB Database Tools Download Center](https://www.mongodb.com/try/download/database-tools).
-    - Select your operating system (e.g., Windows x86_64).
-    - Choose the MSI installer package.
-    - Click the **Download** button.
-2. **Install the Tools:**
-    - Run the downloaded MSI installer.
-    - Follow the installation prompts to complete the setup.
-3. **Add Tools to System PATH:**
-    - After installation, add the tools to your system's PATH environment variable to access them from any command prompt:
-        - Open the **Start Menu** and search for "Environment Variables."
-        - Click on **"Edit the system environment variables."**
-        - In the **System Properties** window, click on the **"Environment Variables..."** button.
-        - Under **System variables**, find and select the **Path** variable, then click **Edit**.
-        - Click **New** and add the path to the `bin` directory where the MongoDB tools were installed. By default, this is:
-            `C:\Program Files\MongoDB\Tools\100\bin`
-        - Click **OK** to close all dialog boxes
+Then download MongoDB CLI tools:
+- https://www.mongodb.com/try/download/database-tools
 
-## Step 3 - Installing local project dependencies
+#### Installing MongoDB Database Tools on Windows
+1. Download the MSI installer from the [MongoDB Database Tools Download Center](https://www.mongodb.com/try/download/database-tools).
+2. Run the installer and follow the prompts.
+3. Add the tools to your system PATH:
+    - Open **Start Menu** → search "Environment Variables"
+    - Click **"Edit the system environment variables"**
+    - Click **"Environment Variables..."**
+    - Under **System variables**, find **Path** → click **Edit**
+    - Click **New** and add: `C:\Program Files\MongoDB\Tools\100\bin`
+    - Click **OK** to close all dialogs
+
+### Step 3: Install Dependencies
 In the project's root directory, run:
-- `npm install`
-- (i.e.: in cmd first "cd" to the location you unzipped the folder then run above command)
-This command installs all dependencies listed in `package.json`.
+```bash
+npm install
+```
 
-## Step 4 - Creating the ENV file:
-- Create a file named `.env` in the projects root directory.
-- Send an email request to receive the contents of this env file (should not be posted to github for security purposes)
+### Step 4: Create the ENV File
+Create a `.env` file in the project root. Use `.example.env` as a template:
 
-## Step 5 - Run the server
-- You should now be good to go.
-- Run `npm start` in the projects root directory, then head to `http://localhost:2121` to see the website or click on the hyperlink provided in the terminal.
+```env
+DEFAULT_APP_USER=admin
+DEFAULT_ADD_EMAIL=admin@example.com
+DEFAULT_APP_PASSWORD=yourpassword
+SESSION_SECRET=your-session-secret
+MONGO_URL=mongodb://127.0.0.1:27017/dashboardDB
+```
+
+See [Development Environment](development-environment.md) for a full list of environment variables.
+
+### Step 5: Run the Server
+```bash
+npm start
+```
+Then visit `http://localhost:2121`.
+
+---
+
+## Option B: Docker
+
+### Prerequisites
+- Docker and Docker Compose installed
+
+### Steps
+
+1. Create a `.env` file in the project root (same as Step 4 above)
+2. Run:
+   ```bash
+   docker compose up --build
+   ```
+3. Visit `http://localhost:2121`
+
+Docker Compose will start:
+- The Node.js application container
+- A MongoDB 7 container with persistent storage
+
+The `docker-compose.override.yml` maps port 2121 for local development. For production, you would configure your own port mapping and reverse proxy.
+
+---
+
+## First Startup
+
+On first startup, the server will automatically:
+1. Connect to MongoDB
+2. Create a default admin user from the `.env` credentials
+3. Seed default chart configurations
+4. Seed default roles (owner, admin, user, viewer, visitor)
+5. Start the real-time data scheduler
 
 ## Read Next
 * [Authentication](authentication.md)
+* [Development Environment](development-environment.md)
 * [API Documentation](http://localhost:2121/api/docs)

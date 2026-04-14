@@ -1,6 +1,5 @@
 // notificationsController.js
 import Notification from "../models/notification.js";
-import { BACKGROUND_COLOURS, TRIM_COLOURS } from "../constants/notification.js";
 import User from "../models/user.js";
 import { broadcastEvent } from "../server_side_events/scheduler.js";
 
@@ -34,9 +33,9 @@ const latest = async (req, res) => {
             redirectUrl: notif.redirectUrl || null,
             timeout: notif.timeout ?? 10,
             dismissible: notif.dismissible ?? true,
-            trim: notif.trim || TRIM_COLOURS.Info,
-            background: notif.background || BACKGROUND_COLOURS.Info,
-            tags: notif.tags || []
+            colour: notif.colour || "info",
+            tags: notif.tags || [],
+            category: notif.category
         };
 
         return res.status(200).json(response);
@@ -129,10 +128,10 @@ const history = async (req, res) => {
             redirectUrl: n.redirectUrl || null,
             timeout: n.timeout ?? 10,
             dismissible: n.dismissible ?? true,
-            trim: n.trim || "#ffffff",
-            background: n.background || "#ffffff",
+            colour: n.colour || "info",
             tags: n.tags || [],
-            createdAt: n.createdAt
+            createdAt: n.createdAt,
+            category: n.category
         }));
 
         return res.status(200).json({

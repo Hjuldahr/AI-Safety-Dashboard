@@ -7,7 +7,7 @@ import { authorize } from '../middleware/authorization.js';
 const router = express.Router();
 
 // Control Panel Parameters (Scheduler Settings)
-router.get("/api/params", indexController.getParams)
+router.get("/api/params", isAuthenticated, authorize('view:dashboard'), indexController.getParams)
 router.patch('/api/params', isAuthenticated, authorize('edit:system'), indexController.updateParams);
 
 // Graph CRUD

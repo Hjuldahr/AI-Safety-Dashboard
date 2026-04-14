@@ -145,6 +145,34 @@
                 </select>
               </div>
               <button id="save-ai-log-cutoff" type="button" class="btn btn-primary">Save</button>
+
+              <hr style="margin: 1.5rem 0;" />
+
+              <h4>Default Theme for New Users</h4>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">This theme will be assigned to accounts created going forward.</p>
+              <div class="form-group" style="max-width: 280px;">
+                <label for="default-theme-select">Default Theme</label>
+                <select id="default-theme-select" class="form-control" aria-label="Select default theme for new users">
+                  <option value="default">Default</option>
+                  <option value="compact">Compact-Design</option>
+                  <option value="contrast">High-Contrast</option>
+                  <option value="cosmic">Cosmic</option>
+                  <option value="ocean">Ocean</option>
+                  <option value="sakura">Sakura</option>
+                  <option value="sunset">Sunset</option>
+                  <option value="viridian">Viridian</option>
+                </select>
+              </div>
+              <button id="save-default-theme" type="button" class="btn btn-primary">Save Default Theme</button>
+
+              <hr style="margin: 1.5rem 0;" />
+
+              <h4>Server Control</h4>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Only use these actions when you intend to stop or restart the server process.</p>
+              <div class="button-group" style="gap: 0.75rem; flex-wrap: wrap;">
+                <button id="shutdown-server" type="button" class="btn btn-danger">Shutdown Server</button>
+                <button id="restart-server" type="button" class="btn btn-warning">Restart Server</button>
+              </div>
             </div>
           </div>
         </div>
@@ -156,6 +184,7 @@
   <script>
     window.AVAILABLE_ROLES = <%- JSON.stringify(rolesList || []) %>;
     window.CURRENT_USER_ID = "<%= user ? user._id : '' %>";
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
   </script>
   <script src="js/adminUsers.js" defer></script>
 </body>

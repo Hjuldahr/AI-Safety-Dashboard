@@ -42,6 +42,21 @@ body.theme-contrast {
   --color-success-hover: #006600;
   --color-warning: #ffea00;
 
+  --color-shutdown: #e11d48;
+  --color-shutdown-border: #b91c1c;
+  --color-shutdown-light: #fcdada;
+  --color-shutdown-dark: #7f1d1d;
+
+  --color-paused: #fb7185;
+  --color-paused-border: #f43f5e;
+  --color-paused-light: #ffe5e8;
+  --color-paused-dark: #a83a44;
+
+  --color-resumed: #34d399;
+  --color-resumed-border: #059669;
+  --color-resumed-light: #d1f3eb;
+  --color-resumed-dark: #1f7a6a;
+
   --btn-default-bg: #000000;
   --btn-default-hover: #111111;
   --btn-default-active: #222222;
@@ -163,6 +178,21 @@ body.theme-contrast.dark-mode {
   --color-success: #00ff00;
   --color-success-hover: #00cc00;
   --color-warning: #ffff00;
+
+  --color-shutdown: #ff6666;
+  --color-shutdown-light: #330000;
+  --color-shutdown-dark: #ffcccc;
+  --color-shutdown-border: #ff0000;
+
+  --color-paused: #ff9999;
+  --color-paused-light: #330000;
+  --color-paused-dark: #ffcccc;
+  --color-paused-border: #ff6666;
+
+  --color-resumed: #33ffcc;
+  --color-resumed-light: #003322;
+  --color-resumed-dark: #99fff0;
+  --color-resumed-border: #00cc99;
 
   --btn-default-bg: #ffffff;
   --btn-default-hover: #eeeeee;

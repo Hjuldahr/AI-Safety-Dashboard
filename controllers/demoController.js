@@ -3,7 +3,7 @@
 import { schedulerState } from '../server_side_events/schedulerState.js';
 import { LOADED_MODELS, setScenario, clearScenario, getScenarios, getCurrentScenario } from '../data_analysis_pipeline/utilities/modelRegistry.js';
 import { sendNotification } from './notificationController.js';
-import { TRIM_COLOURS, BACKGROUND_COLOURS } from "../constants/notification.js";
+import { NOTIFICATION_TYPES } from "../constants/notification.js";
 
 const viewDemoPage = (req, res) => {
     const requestedModel = req.query.model;
@@ -58,12 +58,11 @@ const applyScenario = (req, res) => {
 
         sendNotification({
             message: `[${modelName}] Was set to ${scenarioName} by ${req.user.username}.`,
-            category: "Demo",
+            category: NOTIFICATION_TYPES.Demo,
             dismissible: true,
             redirectUrl: `/demo?model=${modelName}`,
             autoCalculateTimeout: true,
-            trim: TRIM_COLOURS.Info,
-            background: BACKGROUND_COLOURS.Info
+            colour: "info"
         });
 
     } catch (error) {
@@ -82,11 +81,10 @@ const resetScenario = (req, res) => {
 
         sendNotification({
             message: `[${modelName}] Was reset to Normal by ${req.user.username}`,
-            category: "Demo",
+            category: NOTIFICATION_TYPES.Demo,
             redirectUrl: `/demo?model=${modelName}`,
             autoCalculateTimeout: true,
-            trim: TRIM_COLOURS.Info,
-            background: BACKGROUND_COLOURS.Info
+            colour: "info"
         });
 
     } catch (error) {

@@ -39,3 +39,16 @@
   color: var(--text-light);
   cursor: not-allowed;
 }
+.pagination input[type="number"],
+.pagination select {
+  background: var(--input-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.875rem;
+  color-scheme: light dark;
+}
+.pagination p {
+  color: var(--text-dark);
+}

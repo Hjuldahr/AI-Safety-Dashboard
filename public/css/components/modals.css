@@ -5,7 +5,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-bg);
   z-index: 1000;
   display: flex;
   justify-content: center;
@@ -26,13 +26,15 @@
 }
 
 .modal-content {
-  background: #fff;
+  background: var(--card-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
   max-height: 90vh;
 }
 
@@ -42,6 +44,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--text-dark);
 }
 
 .modal-body {
@@ -56,7 +63,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  background: #f9fafb;
+  background: var(--body-bg);
   border-radius: 0 0 8px 8px;
 }
 
@@ -64,6 +71,35 @@
   display: flex;
   direction: row;
   gap: 0.5rem;
+}
+
+.modal-overlay .close-modal-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-dark);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  line-height: 1;
+  font-size: 1.2rem;
+  box-shadow: none;
+}
+
+.modal-overlay .close-modal-btn:hover {
+  background: var(--body-bg);
+}
+
+/* Keep modal form fields readable in both light and dark mode. */
+.modal-overlay input,
+.modal-overlay select,
+.modal-overlay textarea {
+  background: var(--input-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+}
+
+.modal-overlay input::placeholder,
+.modal-overlay textarea::placeholder {
+  color: var(--text-light);
 }
 
 /* --- Tags Modal CSS --- */

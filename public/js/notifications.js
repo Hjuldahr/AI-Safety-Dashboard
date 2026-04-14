@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    let historyFilter = 'all';
+    
     // =========================
     // CONFIG
     // =========================
@@ -54,11 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const fetchHistoryPage = async (pageNum = 1) => {
+    // =========================
+    // HISTORY FETCHING (with filter)
+    // =========================
+    const fetchHistoryPage = async (pageNum = 1, category = historyFilter) => {
         if (fetching) return [];
         fetching = true;
         try {
             const params = new URLSearchParams({ page: pageNum, limit: pageSize });
+            if (category && category !== 'all') params.set('category', category); // send filter to API
             const resp = await fetch(`${API.history}?${params}`);
             if (!resp.ok) return [];
             const data = await safeJSON(resp);
@@ -108,15 +114,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     // HISTORY RENDERING
     // =========================
-
     const appendNotifications = (notifications) => {
         if (!historyList) return;
 
+        historyList.innerHTML = ''; // clear before rendering
+
         notifications.forEach(n => {
+            const colour = n.colour.toLowerCase();
             const li = document.createElement('li');
             li.className = 'notification-history-item';
-            li.style.borderLeft = `5px solid ${n.trim}`;
-            li.style.backgroundColor = n.background || '#fff';
+            li.style.borderLeft = `5px solid var(--color-${colour}-border)`;
+            li.style.backgroundColor = `var(--color-${colour}-light)`;
 
             const link = document.createElement('a');
             if (n.redirectUrl) link.href = n.redirectUrl;
@@ -146,15 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!nearBottom) return;
 
         page++;
-        const newPage = await fetchHistoryPage(page);
+        const newPage = await fetchHistoryPage(page, historyFilter);
 
-        if (newPage.length < pageSize) {
-            hasMorePages = false;
-        }
+        if (newPage.length < pageSize) hasMorePages = false;
 
         if (newPage.length) {
             allNotifications = allNotifications.concat(newPage);
-            appendNotifications(newPage);
+            appendNotifications(allNotifications); // already filtered by API
         }
     };
 
@@ -165,7 +171,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const header = document.createElement('div');
         header.className = 'notification-history-header';
-        header.textContent = 'Recent Notifications';
+
+        const title = document.createElement('span');
+        title.textContent = 'Recent Notifications';
+        header.appendChild(title);
+
+        const filter = document.createElement('select');
+        filter.innerHTML = `
+            <option value="all" selected>All</option>
+            <option value="alert">Alert</option>
+            <option value="demo">Demo</option>
+            <option value="generic">Generic</option>
+            <option value="server">Server</option>
+            <option value="user">User</option>
+        `;
+        
+        filter.addEventListener('change', async e => {
+            historyFilter = e.target.value;
+            page = 1;
+            hasMorePages = true;
+            allNotifications = await fetchHistoryPage(page, historyFilter); // fetch filtered
+            appendNotifications(allNotifications);
+        });
+
+        header.appendChild(filter);
         historyContainer.appendChild(header);
 
         historyList = document.createElement('ul');
@@ -181,14 +210,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const populateHistory = async () => {
         page = 1;
         hasMorePages = true;
-        allNotifications = await fetchHistoryPage(page);
+        allNotifications = await fetchHistoryPage(page, historyFilter); // fetch filtered
         renderHistoryWindow();
     };
 
     // =========================
     // SLIDE NOTIFICATIONS
     // =========================
-
     const showNotification = async (n) => {
         if (!n || !n.message) return;
         if (historyOpen) return;
@@ -198,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const alreadyVisible = container.classList.contains('show');
 
-        // Replace content
         content.innerHTML = `
             <span class='notification-slide-text'>${n.message}</span>
             <span class='notification-slide-time'>
@@ -206,9 +233,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </span>
         `;
 
-        container.style.backgroundColor = n.trim;
+        const colour = n.colour.toLowerCase();
+        container.style.backgroundColor = `var(--color-${colour})`;
 
-        // Only trigger animation if not already visible
         if (!alreadyVisible) {
             container.classList.remove('hidden');
             container.offsetHeight;
@@ -218,7 +245,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (id) localStorage.setItem('previousNotificationId', id);
         currentNotification = n;
 
-        // Reset dismiss timer
         if (n.dismissible !== false) {
             if (dismissTimer) clearTimeout(dismissTimer);
             if (n.timeout) {
@@ -244,14 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
     container.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!currentNotification) return;
-
-        if (currentNotification.redirectUrl) {
-            window.location.href = currentNotification.redirectUrl;
-        }
-
-        if (currentNotification.dismissible !== false) {
-            hideNotification();
-        }
+        if (currentNotification.redirectUrl) window.location.href = currentNotification.redirectUrl;
+        if (currentNotification.dismissible !== false) hideNotification();
     });
 
     document.body.addEventListener('click', (e) => {
@@ -264,12 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     // BELL CLICK
     // =========================
-
     if (bellButton && historyContainer) {
         bellButton.addEventListener('click', async (e) => {
             e.stopPropagation();
 
-            historyOpen = !historyContainer.classList.contains('show');
+            const isOpen = historyContainer.classList.contains('show');
+            historyOpen = !isOpen;
 
             if (historyOpen) {
                 await populateHistory();
@@ -280,22 +300,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 try { await fetch(API.markRead, { method: 'POST' }); } catch {}
             } else {
                 historyContainer.classList.remove('show');
+                historyOpen = false;
             }
         });
 
-        document.addEventListener('click', () => {
-            if (historyOpen) {
-                historyContainer.classList.remove('show');
-                historyOpen = false;
-            }
+        // Close history popup when clicking anywhere outside bell/history.
+        document.addEventListener('click', (e) => {
+            if (!historyOpen) return;
+            if (historyContainer.contains(e.target)) return;
+            if (bellButton.contains(e.target)) return;
+
+            historyContainer.classList.remove('show');
+            historyOpen = false;
         });
     }
 
     // =========================
     // SSE
     // =========================
-
-    // SSE connection is managed by sseManager.js (SharedWorker-backed, shared across tabs)
     function getSharedEventSource() {
         return window.__sseManager.getSharedEventSource();
     }
@@ -308,7 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
         evtSource.addEventListener('notification', async (ev) => {
             try {
                 const json = JSON.parse(ev.data);
-
                 allNotifications.unshift(json);
 
                 if (!historyOpen) {
@@ -316,14 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const unread = await fetchUnreadCount();
                     updateBadge(unread);
                 } else {
-                    if (historyList) {
-                        historyList.innerHTML = '';
-                        appendNotifications(allNotifications);
-                    }
+                    if (historyList) appendNotifications(allNotifications);
                     updateBadge(0);
                     try { await fetch(API.markRead, { method: 'POST' }); } catch {}
                 }
-
             } catch (err) {
                 console.error('Notification SSE parse error:', err);
             }
@@ -340,7 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     // INITIAL LOAD
     // =========================
-
     (async () => {
         const latest = await fetchLatestNotification();
         if (latest) showNotification(latest);

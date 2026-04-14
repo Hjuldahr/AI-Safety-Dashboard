@@ -1,4 +1,5 @@
 import { initAILogModal } from './components/logs/AILogModal.js';
+import { openExportModal } from './components/logs/exportModal.js';
 import ModalManager from './components/modals.js';
 
 // --- GLOBAL STATE ---
@@ -59,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         liveToggle: document.getElementById('live-update-toggle'),
         liveUpdatesContainer: document.getElementById('live-updates-container'),
         manageTagsBtn: document.getElementById('open-tags-modal-btn'),
+        exportBtn: document.getElementById('export-logs-btn'),
     };
 
     // Initialize the Tag Modal Logic
@@ -70,6 +72,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (activeView === 'summary') handleAiSummaryFilter(elements, currentAiSummariesPage);
         }
     });
+
+    // Show and wire up Export button if user has permission
+    if (elements.exportBtn && hasPermission('export:logs')) {
+        elements.exportBtn.classList.remove('hidden');
+        elements.exportBtn.addEventListener('click', () => {
+            const activeView = document.querySelector('.log-tab-btn.active').dataset.view;
+            const filters = getActiveFilters(activeView, elements);
+            openExportModal(modalManager, { activeView, currentFilters: filters });
+        });
+    }
 
     if (elements.liveToggle) {
         elements.liveToggle.addEventListener('change', async (e) => {
@@ -186,6 +198,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Setup Live updates
     setupLiveUpdates(elements, () => isLive);
+
+    // Signal that all event listeners and initial data are ready
+    document.body.dataset.logsReady = 'true';
 });
 
 async function refreshTagCache() {
@@ -231,21 +246,18 @@ function toggleViews(viewToShow, elements) {
 
     if (viewToShow === "user") {
         elements.manageTagsBtn.classList.add("hidden");
-        elements.liveUpdatesContainer.classList.add("hidden");
         elements.userLogsBtn.classList.add('active');
         elements.userLogView.classList.remove('hidden');
         elements.userFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "ai") {
         elements.manageTagsBtn.classList.remove("hidden");
-        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiLogsBtn.classList.add('active');
         elements.aiLogView.classList.remove('hidden');
         elements.aiFilterForm.classList.remove('hidden');
     }
     else if (viewToShow === "summary") {
         elements.manageTagsBtn.classList.remove("hidden");
-        elements.liveUpdatesContainer.classList.remove("hidden");
         elements.aiSummariesBtn.classList.add('active');
         elements.aiSummaryView.classList.remove('hidden');
         elements.aiSummaryFilterForm.classList.remove('hidden');
@@ -389,6 +401,34 @@ function createAiAccordionItem(log, elements, isSummary = false,) {
 }
 
 // --- HELPER FUNCTIONS ---
+
+/**
+ * Reads the current filter values from the active view's form.
+ */
+function getActiveFilters(activeView, elements) {
+    if (activeView === 'user') {
+        const form = elements.userFilterForm;
+        return {
+            startDate: form.querySelector('#filter-start-date').value,
+            endDate: form.querySelector('#filter-end-date').value,
+            eventType: form.querySelector('#filter-event-type').value,
+        };
+    } else if (activeView === 'ai') {
+        const form = elements.aiFilterForm;
+        return {
+            startDate: form.querySelector('#ai-filter-start-date').value,
+            endDate: form.querySelector('#ai-filter-end-date').value,
+            modelName: form.querySelector('#filter-model').value,
+        };
+    } else {
+        const form = elements.aiSummaryFilterForm;
+        return {
+            startDate: form.querySelector('#summary-filter-start-date').value,
+            endDate: form.querySelector('#summary-filter-end-date').value,
+            modelName: form.querySelector('#summary-filter-model').value,
+        };
+    }
+}
 
 /**
  * Returns a CSS class name based on the event type
@@ -612,6 +652,34 @@ function setupLiveUpdates(elements, getIsLive) {
 
             return true;
         };
+
+        evtSource.addEventListener('user_log_update', (event) => {
+            if (!isLive || currentLogsPage !== 1) return;
+
+            const newLog = JSON.parse(event.data);
+            const tbody = document.getElementById('user-log-tbody');
+
+            if (tbody) {
+                const row = document.createElement('tr');
+
+                const timestamp = new Date(newLog.createdAt).toLocaleString();
+                const dotClass = getDotClass(newLog.eventType);
+
+                row.innerHTML = `
+                    <td><span class="log-dot ${dotClass}"></span></td>
+                    <td>${timestamp}</td>
+                    <td>${newLog.userID ? newLog.userID.username : 'System'}</td>
+                    <td>${newLog.eventType.replace('_', ' ')}</td>
+                    <td>${newLog.details}</td>
+                `;
+
+                tbody.insertBefore(row, tbody.firstChild);
+
+                if (tbody.children.length > paginationSize) {
+                    tbody.removeChild(tbody.lastChild);
+                }
+            }
+        });
 
         // AI Logs Listener
         evtSource.addEventListener('update', (event) => {

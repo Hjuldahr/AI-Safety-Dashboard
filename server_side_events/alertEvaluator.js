@@ -4,7 +4,7 @@ import { broadcastEvent } from './scheduler.js';
 import { sendNotification } from '../controllers/notificationController.js';
 import HistTag from "../models/historicalTag.js";
 import AI_Log from "../models/AI_Log.js";
-import { TRIM_COLOURS, BACKGROUND_COLOURS } from "../constants/notification.js";
+import { NOTIFICATION_TYPES } from "../constants/notification.js";
 
 export async function evaluateAndTagLogs(rawLogsMap, options = {}) {
     const { cooldownMs = 60000 } = options;
@@ -114,11 +114,10 @@ export async function finalizeAlertLogs(pendingAlertLogs, insertedLogsMap) {
             if (!alert.muted) {
                 await sendNotification({
                     message: alertText,
-                    category: "Alert",
+                    category: NOTIFICATION_TYPES.Alert,
                     redirectUrl: `/alerts/view/${created._id}`,
                     autoCalculateTimeout: true,
-                    trim: TRIM_COLOURS[alert.alertLevel],
-                    background: BACKGROUND_COLOURS[alert.alertLevel]
+                    colour: alert.alertLevel
                 });
             }
 

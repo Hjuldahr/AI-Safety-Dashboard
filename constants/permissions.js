@@ -45,6 +45,8 @@ export const permissions = {
         'manage:roles': 'Manage roles',
         'view:system': 'View system settings',
         'edit:system': 'Edit system settings',
+        'shutdown:server': 'Shutdown server',
+        'restart:server': 'Restart server',
     },
 
     documentation: {

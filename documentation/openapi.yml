@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: AI Safety Dashboard API
   description: API documentation for the AI Safety Dashboard project.
-  version: 1.1.0
+  version: 1.2.0
 servers:
   - url: http://localhost:2121
     description: AI Dashboard - LocalHost
@@ -34,10 +34,18 @@ components:
           items:
             type: string
           default: ["viewer"]
-        alertsLastSeen:
+        notificationsLastSeen:
           type: string
           format: date-time
           nullable: true
+        preferredTheme:
+          type: string
+          enum: [default, ocean, sunset, viridian, sakura, cosmic, contrast, compact]
+          default: default
+        preferredColour:
+          type: string
+          enum: [light, dark, auto]
+          default: auto
         createdAt:
           type: string
           format: date-time
@@ -99,6 +107,19 @@ components:
         created:
           type: string
           format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+          description: ObjectId references to Tag
+        disabled:
+          type: boolean
+          default: false
+          description: Whether the alert is disabled
+        muted:
+          type: boolean
+          default: false
+          description: Whether the alert is muted (still logs but no notifications)
 
     AlertLog:
       type: object
@@ -129,6 +150,16 @@ components:
             created:
               type: string
               format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+          description: ObjectId references to HistoricalTag
+        logs:
+          type: array
+          items:
+            type: string
+          description: ObjectId references to AI_Logs
         timestamp:
           type: string
           format: date-time
@@ -170,6 +201,11 @@ components:
           type: array
           items:
             type: string
+        chartTimeRange:
+          type: string
+          enum: ['10s', '30s', '1min', '5min', '15min', '1h', '1d', '1w', '1mo']
+          default: '10s'
+          description: Time range for chart data
         createdAt:
           type: string
           format: date-time
@@ -230,6 +266,13 @@ components:
             - Login
             - Logout
             - Signup
+            - User_Created
+            - User_Deleted
+            - User_Updated
+            - Role_Created
+            - Role_Deleted
+            - Role_Changed
+            - Setting_Changed
             - Alert_Created
             - Alert_Modified
             - Alert_Deleted
@@ -241,6 +284,104 @@ components:
             - Unspecified_Event
         details:
           type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Notification:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        message:
+          type: string
+        category:
+          type: string
+          enum: [generic, alert, demo, user, server]
+        redirectUrl:
+          type: string
+          nullable: true
+        colour:
+          type: string
+          default: info
+        timeout:
+          type: number
+          default: 3
+        dismissible:
+          type: boolean
+          default: true
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReportRecord:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        title:
+          type: string
+        modelName:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        fields:
+          type: array
+          items:
+            type: string
+        fidelity:
+          type: string
+          enum: [high, low, split]
+          default: high
+        pdfFilename:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ReportTemplate:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        name:
+          type: string
+        icon:
+          type: string
+          default: ''
+        fields:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    SystemSetting:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+        key:
+          type: string
+        value:
+          description: Mixed type value
         createdAt:
           type: string
           format: date-time
@@ -470,32 +611,124 @@ paths:
         500:
           description: "Error fetching history."
 
-  /alerts/unread-count:
+  /alerts/api/log/{id}:
     get:
       tags: [Alerts]
-      summary: Get unread alert count for current user
+      summary: Get a specific alert log entry
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       responses:
         200:
-          description: Count returned
+          description: Alert log entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertLog"
+        404:
+          description: Alert Log not found.
+        500:
+          description: Error fetching alert log.
+
+  /alerts/api/aiLog/{id}:
+    get:
+      tags: [Alerts]
+      summary: Get alerts associated with an AI log
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Array of alert logs for the given AI log
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertLog"
+        404:
+          description: AI Log not found.
+        500:
+          description: Error fetching alerts for AI Log.
+
+  /alerts/view/{id}:
+    get:
+      tags: [Alerts, "HTML Page"]
+      summary: View a specific alert log entry page
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: HTML page deep-linking to the alert log entry
+          content:
+            text/html:
+              schema:
+                type: string
+        302:
+          description: Redirect to /alerts if not found
+
+  /alerts/api/stats:
+    get:
+      tags: [Alerts]
+      summary: Get alert statistics
+      description: Returns level distribution and time series data for alerts.
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+          description: Defaults to 24 hours before endDate
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+          description: Defaults to now
+      responses:
+        200:
+          description: Alert statistics
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  unread:
-                    type: integer
+                  levelDistribution:
+                    type: object
+                    properties:
+                      Critical:
+                        type: integer
+                      High:
+                        type: integer
+                      Medium:
+                        type: integer
+                      Info:
+                        type: integer
+                  timeSeries:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          x:
+                            type: string
+                          y:
+                            type: integer
+        400:
+          description: Invalid date range
         500:
-          description: Error fetching unread count.
-
-  /alerts/mark-read:
-    post:
-      tags: [Alerts]
-      summary: Mark alerts as read
-      responses:
-        200:
-          description: Marked successfully
-        500:
-          description: Error marking alerts read.
+          description: Error fetching statistics.
 
   /alerts/{id}:
     delete:
@@ -539,6 +772,114 @@ paths:
           description: Alert not found.
         500:
           description: Failed to update alert.
+
+  /alerts/api/logs/{id}/tags:
+    post:
+      tags: [Alerts]
+      summary: Add a tag to an alert log
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tagId:
+                  type: string
+                name:
+                  type: string
+                color:
+                  type: string
+      responses:
+        200:
+          description: Tag added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  tag:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                      name:
+                        type: string
+                      color:
+                        type: string
+        404:
+          description: Tag or alert log not found.
+        500:
+          description: Failed to add tag to alert log.
+    put:
+      tags: [Alerts]
+      summary: Set all tags on an alert log
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of active Tag IDs
+      responses:
+        200:
+          description: Tags updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of HistoricalTag IDs
+        404:
+          description: Alert log not found.
+        500:
+          description: Failed to set tags.
+
+  /alerts/api/logs/{id}/tags/{tagId}:
+    delete:
+      tags: [Alerts]
+      summary: Remove a tag from an alert log
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: tagId
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Tag removed from alert log.
+        404:
+          description: Alert log not found.
+        500:
+          description: Failed to remove tag.
 
   # ============================
   # LOG ROUTER
@@ -648,20 +989,34 @@ paths:
         500:
           description: Export User Log CSV Error.
 
-  /logs/api/user/export/pdf:
+  /logs/api/user/export/hdf5:
     post:
       tags: [Logs]
-      summary: Export User Logs to PDF
+      summary: Export User Logs to HDF5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+                eventType:
+                  type: string
       responses:
         200:
-          description: PDF file download
+          description: HDF5 file download
           content:
-            application/pdf:
+            application/octet-stream:
               schema:
                 type: string
                 format: binary
+        404:
+          description: No user logs found.
         500:
-          description: Export User Log PDF Error.
+          description: Export User Log HDF5 Error.
 
   /logs/api/ai/export/csv:
     post:
@@ -678,20 +1033,92 @@ paths:
         500:
           description: Export AI Log CSV Error.
 
-  /logs/api/ai/export/pdf:
+  /logs/api/ai/export/hdf5:
     post:
       tags: [Logs]
-      summary: Export AI Logs to PDF
+      summary: Export AI Logs to HDF5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+                modelName:
+                  type: string
       responses:
         200:
-          description: PDF file download
+          description: HDF5 file download
           content:
-            application/pdf:
+            application/octet-stream:
               schema:
                 type: string
                 format: binary
+        404:
+          description: No AI logs found.
         500:
-          description: Export AI Log PDF Error.
+          description: Export AI Log HDF5 Error.
+
+  /logs/api/summary/export/csv:
+    post:
+      tags: [Logs]
+      summary: Export AI Summaries to CSV
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+                modelName:
+                  type: string
+      responses:
+        200:
+          description: CSV file download
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: No AI summaries found.
+        500:
+          description: Export AI Summary CSV Error.
+
+  /logs/api/summary/export/hdf5:
+    post:
+      tags: [Logs]
+      summary: Export AI Summaries to HDF5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+                modelName:
+                  type: string
+      responses:
+        200:
+          description: HDF5 file download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: No AI summaries found.
+        500:
+          description: Export AI Summary HDF5 Error.
 
   # ============================
   # CONTROL PANEL ROUTER
@@ -790,6 +1217,26 @@ paths:
           description: Chart not found.
         500:
           description: Server error while deleting chart.
+    patch:
+      tags: [ControlPanel]
+      summary: Partial update to a graph configuration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Chart config ID (required)
+              additionalProperties: true
+      responses:
+        200:
+          description: Chart config updated successfully.
+        404:
+          description: Chart config not found.
+        500:
+          description: Server error while updating chart.
 
   /api/getChartConfig/{id}:
     get:
@@ -859,12 +1306,18 @@ paths:
               properties:
                 reportTitle:
                   type: string
+                  default: Dashboard Report
                 startDate:
                   type: string
                 endDate:
                   type: string
                 modelName:
                   type: string
+                fields:
+                  type: array
+                  items:
+                    type: string
+                  description: Metrics to include (e.g. responseTime, policyCompliance, appendixAiLogs)
       responses:
         200:
           description: PDF Report
@@ -876,10 +1329,10 @@ paths:
         500:
           description: Failed to generate report.
 
-  /reports/download-csv:
+  /reports/download-logs:
     post:
       tags: [Reports]
-      summary: Download raw logs CSV
+      summary: Download raw AI logs CSV
       requestBody:
         content:
           application/json:
@@ -933,6 +1386,259 @@ paths:
           description: No data found to calculate aggregates.
         500:
           description: Failed to generate aggregate CSV due to a server error.
+
+  /reports/download-summaries:
+    post:
+      tags: [Reports]
+      summary: Download AI summaries CSV
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelName:
+                  type: string
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+      responses:
+        200:
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: No summaries found for the selected criteria.
+        500:
+          description: Summary export failed.
+
+  /reports/download-hdf5:
+    post:
+      tags: [Reports]
+      summary: Download data as HDF5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelName:
+                  type: string
+                startDate:
+                  type: string
+                endDate:
+                  type: string
+      responses:
+        200:
+          description: HDF5 file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: No data found for the selected criteria.
+        500:
+          description: HDF5 generation failed.
+
+  /reports/history:
+    get:
+      tags: [Reports]
+      summary: Get paginated report history
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: Paginated report history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ReportRecord"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+        500:
+          description: Failed to fetch report history.
+
+  /reports/history/{id}/pdf:
+    get:
+      tags: [Reports]
+      summary: Download a historical report PDF
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: PDF file download
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: Report or PDF file not found.
+        500:
+          description: Failed to retrieve PDF.
+
+  /reports/history/{id}/download/{type}:
+    get:
+      tags: [Reports]
+      summary: Download data from a historical report
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum: [logs, summaries, aggregates, hdf5]
+      responses:
+        200:
+          description: File download (format varies by type)
+        400:
+          description: Unknown download type.
+        404:
+          description: Report not found.
+        500:
+          description: Failed to process download.
+
+  /reports/history/{id}:
+    delete:
+      tags: [Reports]
+      summary: Delete a report from history
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Report deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        404:
+          description: Report not found.
+        500:
+          description: Failed to delete report.
+
+  /reports/templates:
+    get:
+      tags: [Reports]
+      summary: List report templates
+      responses:
+        200:
+          description: Array of report templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  templates:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ReportTemplate"
+        500:
+          description: Failed to fetch templates.
+    post:
+      tags: [Reports]
+      summary: Create a report template
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - fields
+              properties:
+                name:
+                  type: string
+                icon:
+                  type: string
+                fields:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        201:
+          description: Template created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  template:
+                    $ref: "#/components/schemas/ReportTemplate"
+        400:
+          description: Template name and at least one field are required.
+        500:
+          description: Failed to create template.
+
+  /reports/templates/{id}:
+    delete:
+      tags: [Reports]
+      summary: Delete a report template
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Template deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        404:
+          description: Template not found.
+        500:
+          description: Failed to delete template.
+
   # ============================
   # DOCUMENTATION ROUTER
   # ============================
@@ -965,11 +1671,11 @@ paths:
   # ============================
   # ADMIN ROUTER
   # ============================
-  /users:
+  /admin/users:
     get:
       tags: [Admin, "HTML Page"]
-      summary: User management page
-      description: Returns the HTML of the User Management page.
+      summary: Administration Dashboard
+      description: Returns the HTML of the Administration Dashboard page, which manages users, roles, and system settings.
       responses:
         200:
           description: HTML content for the Users Page.
@@ -979,7 +1685,7 @@ paths:
                 type: string
               example: "<html>...</html>"
 
-  /api/users:
+  /admin/api/users:
     get:
       tags: [Admin]
       summary: Get list of users (no passwords)
@@ -998,7 +1704,7 @@ paths:
         500:
           description: Server error
 
-  /api/users/{id}/roles:
+  /admin/api/users/{id}/roles:
     patch:
       tags: [Admin]
       summary: Update a user's role
@@ -1046,7 +1752,7 @@ paths:
         500:
           description: Server error
 
-  /api/users/{id}:
+  /admin/api/users/{id}:
     delete:
       tags: [Admin]
       summary: Delete a user
@@ -1079,7 +1785,7 @@ paths:
         500:
           description: Server error
 
-  /api/roles:
+  /admin/api/roles:
     get:
       tags: [Admin]
       summary: List roles
@@ -1153,7 +1859,7 @@ paths:
         500:
           description: Server error
 
-  /api/roles/{name}:
+  /admin/api/roles/{name}:
     delete:
       tags: [Admin]
       summary: Delete a role by name
@@ -1184,7 +1890,7 @@ paths:
         500:
           description: Server error
 
-  /api/permissions:
+  /admin/api/permissions:
     get:
       tags: [Admin]
       summary: Get grouped available permissions
@@ -1207,6 +1913,57 @@ paths:
                             type: string
                           label:
                             type: string
+        500:
+          description: Server error
+
+  /admin/api/settings:
+    get:
+      tags: [Admin]
+      summary: Get system settings
+      responses:
+        200:
+          description: System settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  aiLogCutoff:
+                    type: integer
+                    description: AI log cutoff value in milliseconds
+        500:
+          description: Server error
+
+  /admin/api/settings/ai-log-cutoff:
+    put:
+      tags: [Admin]
+      summary: Update the AI log cutoff setting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - value
+              properties:
+                value:
+                  type: number
+                  description: Cutoff value in milliseconds (must be > 0)
+      responses:
+        200:
+          description: Cutoff updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  aiLogCutoff:
+                    type: number
+        400:
+          description: Invalid cutoff value
         500:
           description: Server error
 
@@ -1266,3 +2023,592 @@ paths:
           description: User not found
         500:
           description: Server error
+  /api/profile/preferences:
+    post:
+      tags: [Profile]
+      summary: Update user theme/colour preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preferredTheme:
+                  type: string
+                  enum: [default, ocean, sunset, viridian, sakura, cosmic, contrast, compact]
+                preferredColour:
+                  type: string
+                  enum: [light, dark, auto]
+      responses:
+        200:
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  preferences:
+                    type: object
+                    properties:
+                      preferredTheme:
+                        type: string
+                      preferredColour:
+                        type: string
+        400:
+          description: Invalid theme or colour selection
+        401:
+          description: Not authenticated
+        404:
+          description: User not found
+        500:
+          description: Server error
+
+  # ============================
+  # TAG ROUTER
+  # ============================
+  /tags:
+    get:
+      tags: [Tags]
+      summary: List all tags
+      responses:
+        200:
+          description: Array of tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        name:
+                          type: string
+                        color:
+                          type: string
+        500:
+          description: Failed to list tags.
+    post:
+      tags: [Tags]
+      summary: Create a new tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                  default: "#888888"
+      responses:
+        201:
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tag:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                      name:
+                        type: string
+                      color:
+                        type: string
+        200:
+          description: Tag already exists (returns existing)
+        500:
+          description: Failed to create tag.
+
+  /tags/sync:
+    post:
+      tags: [Tags]
+      summary: Sync tag list (create, update, delete in batch)
+      description: Position-based sync of the full tag list. Handles renames, new tags, and deletions in a single request.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                originalIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of existing tag IDs (positional)
+                newNames:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of tag names (positional, matching originalIds)
+                colors:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of tag colors (positional)
+                deletions:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of tag IDs to delete
+      responses:
+        200:
+          description: Updated tag list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+        400:
+          description: Invalid input
+        500:
+          description: Failed to sync tags.
+
+  /tags/hist:
+    get:
+      tags: [Tags]
+      summary: List all historical tags
+      responses:
+        200:
+          description: Array of historical tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                        name:
+                          type: string
+                        color:
+                          type: string
+                        originalTagId:
+                          type: string
+        500:
+          description: Failed to list tags.
+
+  /tags/hist/{id}:
+    get:
+      tags: [Tags]
+      summary: Find a historical tag by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        201:
+          description: Historical tag found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tag:
+                    type: object
+        404:
+          description: Historical Tag not found.
+        500:
+          description: Failed to find historical tag.
+
+  # ============================
+  # NOTIFICATION ROUTER
+  # ============================
+  /notifications/latest:
+    get:
+      tags: [Notifications]
+      summary: Get the latest unseen notification
+      responses:
+        200:
+          description: Latest notification or empty object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  message:
+                    type: string
+                  redirectUrl:
+                    type: string
+                    nullable: true
+                  timeout:
+                    type: number
+                  dismissible:
+                    type: boolean
+                  trim:
+                    type: string
+                  background:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: object
+        500:
+          description: Error fetching latest notification.
+
+  /notifications/unread:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      responses:
+        200:
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unread:
+                    type: integer
+        500:
+          description: Error fetching unread count.
+
+  /notifications/history:
+    get:
+      tags: [Notifications]
+      summary: Get paginated notification history
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: category
+          schema:
+            type: string
+            enum: [generic, alert, demo, user, server]
+        - in: query
+          name: tag
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+      responses:
+        200:
+          description: Paginated notifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  limit:
+                    type: integer
+        500:
+          description: Error fetching history.
+
+  /notifications/mark-read:
+    post:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      responses:
+        200:
+          description: Marked read
+        401:
+          description: Not authenticated
+        500:
+          description: Failed to mark read.
+
+  # ============================
+  # DEMO ROUTER
+  # ============================
+  /demo:
+    get:
+      tags: [Demo, "HTML Page"]
+      summary: Demo Controls Page
+      description: Returns the HTML of the Demo Controls Page.
+      parameters:
+        - in: query
+          name: model
+          schema:
+            type: string
+          description: Pre-select a model
+      responses:
+        200:
+          description: HTML content for the Demo Page.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /demo/list:
+    post:
+      tags: [Demo]
+      summary: List available scenarios for a model
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelName
+              properties:
+                modelName:
+                  type: string
+      responses:
+        200:
+          description: List of scenarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scenarios:
+                    type: array
+                    items:
+                      type: string
+                  currentScenario:
+                    type: string
+        400:
+          description: Model name is required or no scenarios found.
+
+  /demo/apply:
+    post:
+      tags: [Demo]
+      summary: Apply a scenario to a model
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelName
+                - scenarioName
+              properties:
+                modelName:
+                  type: string
+                scenarioName:
+                  type: string
+      responses:
+        200:
+          description: Scenario applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        400:
+          description: Model name is required.
+        500:
+          description: Error applying scenario.
+
+  /demo/reset:
+    post:
+      tags: [Demo]
+      summary: Reset a model to the Normal scenario
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - modelName
+              properties:
+                modelName:
+                  type: string
+      responses:
+        200:
+          description: Scenario reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        500:
+          description: Error resetting scenario.
+
+  /demo/components:
+    get:
+      tags: [Demo, "HTML Page"]
+      summary: Component Library Page
+      description: Returns the HTML of the Component Library Page.
+      responses:
+        200:
+          description: HTML content for the Component Library.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  # ============================
+  # SSE / SCHEDULER ROUTER
+  # ============================
+  /events:
+    get:
+      tags: [SSE]
+      summary: Server-Sent Events stream
+      description: >
+        Opens a persistent SSE connection. The server pushes real-time events
+        including AI log updates (every second), summary updates (every minute),
+        notifications, and alert events.
+      responses:
+        200:
+          description: SSE stream opened
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: "Events: update, summary, notification, alert"
+
+  # ============================
+  # LOG EXTRAS
+  # ============================
+  /logs/view/ai/{id}:
+    get:
+      tags: [Logs, "HTML Page"]
+      summary: View a specific AI log entry page
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: HTML page for the AI log entry
+          content:
+            text/html:
+              schema:
+                type: string
+        404:
+          description: Log not found
+        500:
+          description: Server error
+
+  /logs/ai/{id}:
+    get:
+      tags: [Logs]
+      summary: Get a specific AI log entry as JSON
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: AI log entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AILog"
+        404:
+          description: Log not found
+        500:
+          description: Server error
+
+  /logs/api/ai/{id}/tags:
+    put:
+      tags: [Logs]
+      summary: Update tags on an AI log entry
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of HistoricalTag IDs
+      responses:
+        200:
+          description: Tags updated
+        404:
+          description: Log not found
+        500:
+          description: Server error
+
+  /logs/api/summary:
+    get:
+      tags: [Logs]
+      summary: Get filtered AI summary logs
+      parameters:
+        - in: query
+          name: modelName
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+        - in: query
+          name: endDate
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Paginated AI summaries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      type: object
+        500:
+          description: Failed to fetch AI summaries.

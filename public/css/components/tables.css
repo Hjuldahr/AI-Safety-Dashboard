@@ -28,7 +28,7 @@
 .table th {
   text-align: left;
   padding: 0.75rem;
-  background-color: var(--body-bg);
+  background-color: var(--panel-header-bg);
   border-bottom: 2px solid var(--border-color);
   font-weight: 600;
   color: var(--text-dark);

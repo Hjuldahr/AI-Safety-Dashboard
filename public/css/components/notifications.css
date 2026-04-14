@@ -2,31 +2,8 @@
    VARIABLES — ALERTS / NOTIFICATIONS
    ========================================================================== */
 :root {
-  /* Primary / Brand */
-  --primary-color: var(--theme-primary-color);
-  --primary-light: var(--theme-primary-light);
-  --green-color: var(--theme-green-color);
-
-  /* Borders */
-  --border-color: var(--theme-border-color);
-  --border-light: var(--theme-border-light);
-  --border-lighter: var(--theme-border-lighter);
-
-  /* Backgrounds */
-  --card-bg: var(--theme-card-bg);
-  --body-bg: var(--theme-body-bg);
-
-  /* Text */
-  --text-dark: var(--theme-text-dark);
-  --text-light: var(--theme-text-light);
-  --text-muted: var(--theme-text-muted);
-  --color-white: var(--theme-color-white);
-
-  /* Shadows */
-  --shadow: var(--theme-shadow);
-
   /* Alert / notification specific */
-  --alert-badge-bg: var(--theme-alert-badge-bg, var(--theme-critical-color, #ef4444));
+  --alert-badge-bg: var(--theme-alert-badge-bg, var(--color-critical, #ef4444));
   --alert-badge-text: var(--theme-alert-badge-text, var(--color-white));
   --alert-time-color: var(--theme-alert-time-color, var(--text-light));
   --notification-hover-bg: var(--theme-notification-hover-bg, rgba(0,0,0,0.04));
@@ -113,13 +90,14 @@
   border-radius: 8px;
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow);
-  max-height: 250px;
+  max-height: 400px; /* Increased for better visibility */
   overflow-y: auto;
   z-index: 1000;
 }
 
 .notification-history.show {
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 
 .notification-history-header {
@@ -128,6 +106,26 @@
   border-bottom: 1px solid var(--border-color);
   background-color: var(--body-bg);
   font-size: 0.95rem;
+
+  /* Pin to top */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  /* Align dropdown to the right */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notification-history-header select {
+  background: var(--card-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.85rem;
+  outline: none;
 }
 
 .notification-history ul {
