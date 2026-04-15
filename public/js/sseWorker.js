@@ -3,14 +3,16 @@
 
 const ports = [];
 let eventSource = null;
+let eventsUrl = null;
 
 // SSE event types this application uses
 const SSE_EVENTS = ['update', 'summary', 'alert', 'notification', 'user_log_update'];
 
 function startEventSource() {
+    if (!eventsUrl) return;
     if (eventSource && eventSource.readyState !== EventSource.CLOSED) return;
 
-    eventSource = new EventSource('/events');
+    eventSource = new EventSource(eventsUrl);
 
     eventSource.addEventListener('open', () => {
         broadcast({ type: '__sse_status', readyState: EventSource.OPEN });
@@ -39,6 +41,11 @@ self.addEventListener('connect', (e) => {
     ports.push(port);
 
     port.addEventListener('message', (msg) => {
+        if (msg.data?.type === 'init' && msg.data.eventsUrl) {
+            eventsUrl = msg.data.eventsUrl;
+            startEventSource();
+            return;
+        }
         if (msg.data === 'close') {
             const idx = ports.indexOf(port);
             if (idx !== -1) ports.splice(idx, 1);
@@ -57,6 +64,6 @@ self.addEventListener('connect', (e) => {
         port.postMessage({ type: '__sse_status', readyState: eventSource.readyState });
     }
 
-    // Start the SSE connection on first tab connect
+    // Start the SSE connection if we already have the URL from a previous tab
     startEventSource();
 });

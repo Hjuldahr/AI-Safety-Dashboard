@@ -3,6 +3,8 @@ import AI_Log from '../models/AI_Log.js';
 import AI_Summary from "../models/AI_Summary.js"
 import User from '../models/user.js';
 import chartConstants from "../constants/charts.js";
+
+const BASE = process.env.PUBLIC_URL || '/';
 import HistTag from '../models/historicalTag.js';
 import Tag from '../models/tag.js';
 import {
@@ -307,7 +309,7 @@ const getAILogView = async (req, res) => {
         });
     } catch (error) {
         console.error("Error redirecting to AI log:", error);
-        res.redirect('/logs');
+        res.redirect(`${BASE}logs`);
     }
 };
 

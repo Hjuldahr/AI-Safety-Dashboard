@@ -60,7 +60,7 @@ const applyScenario = (req, res) => {
             message: `[${modelName}] Was set to ${scenarioName} by ${req.user.username}.`,
             category: NOTIFICATION_TYPES.Demo,
             dismissible: true,
-            redirectUrl: `/demo?model=${modelName}`,
+            redirectUrl: `demo?model=${modelName}`,
             autoCalculateTimeout: true,
             colour: "info"
         });
@@ -82,7 +82,7 @@ const resetScenario = (req, res) => {
         sendNotification({
             message: `[${modelName}] Was reset to Normal by ${req.user.username}`,
             category: NOTIFICATION_TYPES.Demo,
-            redirectUrl: `/demo?model=${modelName}`,
+            redirectUrl: `demo?model=${modelName}`,
             autoCalculateTimeout: true,
             colour: "info"
         });
