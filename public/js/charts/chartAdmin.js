@@ -38,46 +38,52 @@
         }
     }
 
+    // ---------- Chart Edit Modal ----------
+    let _modalBound = false;
+
+    function _bindModalClose() {
+        if (_modalBound) return;
+        _modalBound = true;
+        const overlay = document.getElementById("global-modal");
+        overlay.querySelectorAll(".close-modal-btn").forEach(btn => {
+            btn.addEventListener("click", () => closeChartEditModal());
+        });
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) closeChartEditModal();
+        });
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && overlay.style.display !== "none") closeChartEditModal();
+        });
+    }
+
+    function openChartEditModal(title, bodyNode, footerNode) {
+        const overlay = document.getElementById("global-modal");
+        const content = document.getElementById("global-modal-content");
+        const body = document.getElementById("global-modal-body");
+        const titleEl = document.getElementById("global-modal-title");
+        const footer = document.getElementById("global-modal-footer");
+
+        _bindModalClose();
+
+        titleEl.innerText = title;
+        body.replaceChildren(bodyNode);
+        footer.replaceChildren(footerNode);
+        content.className = "modal-content large-modal";
+        overlay.style.display = "flex";
+    }
+
+    function closeChartEditModal() {
+        const overlay = document.getElementById("global-modal");
+        const body = document.getElementById("global-modal-body");
+        const footer = document.getElementById("global-modal-footer");
+        body.innerHTML = "";
+        footer.innerHTML = "";
+        overlay.style.display = "none";
+    }
+
     // ---------- Editor ----------
     async function openEditForm(id) {
-        const formContainer = document.getElementById(`edit-form-${id}`);
-        if (!formContainer) return;
-        const chartCard = formContainer.closest('.chart-card');
-        if (!chartCard) return;
-
-        if (formContainer.innerHTML !== "") {
-            closeEditForm(id);
-            return;
-        }
-
         try {
-            // CSS classes
-            const ALL_SIZE_CLASSES = ['chart-tiny', 'chart-regular', 'chart-large', 'chart-massive'];
-            let originalSize = ALL_SIZE_CLASSES.find(c => chartCard.classList.contains(c)) || 'chart-regular';
-            chartCard.dataset.originalSize = originalSize;
-
-            if (originalSize !== 'chart-massive') {
-
-                const wrapper = chartCard.closest('.tiny-group-wrapper');
-                if (wrapper) {
-                    if (!wrapper.id) {
-                        wrapper.id = 'tiny-wrapper-' + Math.random().toString(36).substr(2, 9);
-                    }
-                    chartCard.dataset.wrapperId = wrapper.id;
-                    wrapper.parentNode.insertBefore(chartCard, wrapper);
-                }
-
-                // Remove whatever size it currently has
-                chartCard.classList.remove(...ALL_SIZE_CLASSES);
-                // Force it to massive
-                chartCard.classList.add('chart-massive');
-            }
-
-            const canvas = chartCard.querySelector('canvas');
-            const kpiWrapper = chartCard.querySelector('.kpi-content-wrapper');
-            if (canvas) canvas.style.display = 'none';
-            if (kpiWrapper) kpiWrapper.style.display = 'none';
-
             const response = await fetch(`api/getChartConfig/${id}`);
             if (!response.ok) throw new Error('Failed to fetch config');
             const { config } = await response.json();
@@ -112,7 +118,7 @@
                                 }).join('');
 
                                 filterHtml = `
-                        <div class="card-edit-filter-form" style="margin-top:10px; padding:10px; background:#f9f9f9; border-radius:4px;">
+                        <div class="card-edit-filter-form" style="margin-top:10px; padding:10px; border-radius:4px;">
                             <strong style="display:block; margin-bottom:5px;">Filter ${dictEntry.label}:</strong>
                             ${checkboxes}
                         </div>
@@ -122,8 +128,6 @@
 
 
 
-            chartCard.classList.add('is-editing'); // Signal for CSS
-
             const timeframeOptions = window.CONSTANTS.ZOOM_LEVELS.map(z => `
                 <div class="timeframe-option">
                     <input type="radio" id="edit-tf-${id}-${z}" name="edit-timeframe-${id}" value="${z}" ${config.chartTimeRange === z ? 'checked' : ''}>
@@ -131,10 +135,14 @@
                 </div>
             `).join('');
 
-            formContainer.innerHTML = `
+            // Build form body for the modal
+            const bodyNode = document.createElement('div');
+            bodyNode.className = 'edit-chart-form';
+            bodyNode.style.display = 'flex';
+            bodyNode.innerHTML = `
                 <label for="edit-title-${id}">Chart Title:</label>
                 <input type="text" id="edit-title-${id}" value="${config.title}">
-                
+
                 <label>Timeframe Range:</label>
                 <div class="edit-timeframe-selector">
                     ${timeframeOptions}
@@ -149,57 +157,24 @@
                 </div>
 
                 ${filterHtml}
-
-                <div class="form-actions">
-                    <button type="button" class="cancel-edit-btn" data-id="${id}">Cancel</button>
-                    <button type="button" class="save-edit-btn" data-id="${id}">Save</button>
-                </div>
             `;
-            formContainer.style.display = 'flex';
+
+            // Build footer with action buttons
+            const footerNode = document.createElement('div');
+            footerNode.className = 'form-actions';
+            footerNode.innerHTML = `
+                <button type="button" class="cancel-edit-btn" data-id="${id}">Cancel</button>
+                <button type="button" class="save-edit-btn" data-id="${id}">Save</button>
+            `;
+
+            openChartEditModal('Edit Chart', bodyNode, footerNode);
         } catch (error) {
             console.error('Error opening edit form:', error);
-            formContainer.innerHTML = '<p style="color:red;">Error loading data.</p>';
-            formContainer.style.display = 'block';
         }
     }
 
     function closeEditForm(id) {
-        const formContainer = document.getElementById(`edit-form-${id}`);
-        if (!formContainer) return;
-        const chartCard = formContainer.closest('.chart-card');
-        if (!chartCard) return;
-
-        const canvas = chartCard.querySelector('canvas');
-        const kpiWrapper = chartCard.querySelector('.kpi-content-wrapper');
-
-        // Revert Size Class
-        const originalSize = chartCard.dataset.originalSize || 'chart-regular';
-
-        // Remove ALL size classes to be safe, then add the original
-        chartCard.classList.remove('chart-tiny', 'chart-regular', 'chart-large', 'chart-massive');
-        chartCard.classList.add(originalSize);
-
-        // Revert DOM Position (for Tiny charts)
-        if (chartCard.dataset.wrapperId) {
-            const wrapper = document.getElementById(chartCard.dataset.wrapperId);
-            if (wrapper) {
-                // Append it back into the tiny group
-                wrapper.appendChild(chartCard);
-            }
-            delete chartCard.dataset.wrapperId;
-        }
-
-        delete chartCard.dataset.originalSize;
-
-        chartCard.classList.remove('is-editing');
-
-        // Restore Visibility
-        if (canvas) canvas.style.display = 'block';
-        if (kpiWrapper) kpiWrapper.style.display = 'flex';
-
-        // Hide Form
-        formContainer.style.display = 'none';
-        formContainer.innerHTML = '';
+        closeChartEditModal();
     }
 
     async function handleSaveEdit(id) {
@@ -223,12 +198,13 @@
                 body: JSON.stringify({
                     id,
                     title: newTitle,
-                    size: newSize,
+                    chartSize: newSize,
                     chartTimeRange: newTimeframe,
                     includedValues: newIncludedValues
                 })
             });
             if (!response.ok) throw new Error('Failed to save changes.');
+            closeChartEditModal();
             alert("Chart Updated Successfully!");
 
             // Update the UI
