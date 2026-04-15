@@ -1,15 +1,34 @@
-# User Management
+# Administration Dashboard
 
-The admin page lets you manage user accounts, roles, permissions, and system settings. It is available at `[Domain]/admin/users`.
+The admin management page lets you manage users, roles, permissions, and system settings. It is available at `[Domain]/admin/users`.
 
 Requires the `manage:users` permission (admin or owner role).
 
+## Dashboard Overview
+
+The management page is organized into three collapsible sections:
+- **Users** — Manage user accounts and roles
+- **Roles** — Create and manage custom roles with specific permissions
+- **System** — Configure system-level settings like AI log retention
+
 ## Managing Users
 
+The Users section provides a comprehensive interface for user management:
+
+### Search & Filter
+- **Search** by username or email address to quickly locate users
+- **Filter by role** to view only users with a specific role
+- **Refresh** button to reload the user list from the server
+
+### Bulk Actions
+- **Change role in bulk** — Select multiple users and assign them a new role at once
+- **Delete selected users** — Remove multiple accounts in a single action
+
+### Individual Actions
 Admins can:
-- View all registered accounts with their current roles
-- Change a user's role
-- Delete a user account
+- View all registered accounts with their current roles and status
+- Change any user's role individually
+- Delete user accounts
 
 ### Restrictions
 - You cannot change your own role
@@ -18,7 +37,7 @@ Admins can:
 - Only owners can delete other owner accounts
 - The last owner account cannot be deleted
 
-## Roles
+## Built-in Roles
 
 The system has five built-in roles (see [Constants Reference](constants.md) for full permission details):
 
@@ -30,17 +49,26 @@ The system has five built-in roles (see [Constants Reference](constants.md) for 
 | `viewer` | Read-only access to all pages |
 | `visitor` | Limited access — dashboard and profile only |
 
-### Custom Roles
+## Managing Custom Roles
 
-Admins can create custom roles with specific permission sets. Requires the `manage:roles` permission.
+The Roles section in the admin dashboard lets you create and manage custom roles tailored to your organization's needs.
 
-To create a custom role:
-1. Go to the admin page
-2. Use the role creation form
-3. Provide a name (3–50 characters), description (5–500 characters), and at least one permission
-4. The new role becomes available for assignment immediately
+### Creating a Custom Role
 
-Custom roles can be deleted as long as no users are currently assigned to them. System (built-in) roles cannot be deleted.
+To create a new custom role:
+
+1. Navigate to the **Roles** section on the admin dashboard
+2. Under "Create New Role", fill in:
+   - **Role Name** (3–50 characters, e.g., "moderator")
+   - **Description** (5–500 characters) — Explain the role's purpose
+   - **Permissions** — Select one or more permissions from the grouped list
+3. Click **Create Role**
+
+The new role becomes available for assignment to users immediately and appears in the "Existing Roles" list.
+
+### Deleting Custom Roles
+
+Custom roles can be deleted from the "Existing Roles" section as long as **no users are currently assigned to them**. Built-in system roles (owner, admin, user, viewer, visitor) cannot be deleted.
 
 ## Permissions
 
@@ -48,18 +76,30 @@ Permissions are granular access controls grouped by feature area. The available 
 
 The authorization middleware caches role permissions for 5 minutes to reduce database queries.
 
-## System Settings
+## System Configuration
 
-The admin page also exposes system-level configuration. Currently the only configurable setting is the AI log retention cutoff.
+The System section manages system-level settings that affect all users and data retention policies.
 
-### AI Log Cutoff
+### AI Log Retention
 
-Controls how long raw `AI_Log` entries are retained before the system falls back to `AI_Summary` data. The value is stored in milliseconds.
+Controls how long raw AI log entries (`AI_Log` documents) are retained in the database before the system falls back to summary data (`AI_Summary`). Configurable via a preset dropdown.
 
-- `GET /admin/api/settings` — returns the current `aiLogCutoff` value
-- `PUT /admin/api/settings/ai-log-cutoff` — updates the cutoff; body: `{ "value": <number in ms> }`
+**Available retention periods:**
+- 1 Hour
+- 6 Hours
+- 12 Hours
+- 1 Day
+- 3 Days
+- 1 Week
+- 2 Weeks
+- 1 Month
 
-Changing this setting is logged as a `Setting_Changed` user log event and broadcast via SSE.
+To update:
+1. Navigate to the **System** section
+2. Select a retention period from the "Keep AI logs for:" dropdown
+3. Click **Save**
+
+The setting is stored in milliseconds and broadcast via server-sent events (SSE) to notify connected clients of the change. Updates are logged as `Setting_Changed` user log events.
 
 ## API Reference
 

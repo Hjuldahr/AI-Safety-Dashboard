@@ -144,7 +144,10 @@
         card.dataset.timeframe = config.chartTimeRange || '10s';
 
         // Admin Controls (Edit/Delete)
-        if (document.querySelector("#isAdmin")) {
+        const hasEditPermission = window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes('edit:graph');
+        const hasDeletePermission = window.USER_PERMISSIONS && window.USER_PERMISSIONS.includes('delete:graph');
+        
+        if (hasEditPermission || hasDeletePermission) {
             // Wrap all elements in a header div
             let chartHeader = `<div class="chart-header">`;
 
@@ -164,8 +167,8 @@
 
             chartHeader += `
                 <div class="right-chart-buttons">
-                    <span class="edit-chart-btn" data-id="${config._id}">✏️</span>
-                    <span class="delete-chart-btn" data-id="${config._id}">&times;</span>
+                    ${hasEditPermission ? `<span class="edit-chart-btn" data-id="${config._id}">✏️</span>` : ''}
+                    ${hasDeletePermission ? `<span class="delete-chart-btn" data-id="${config._id}">&times;</span>` : ''}
                 </div>
             `;
 

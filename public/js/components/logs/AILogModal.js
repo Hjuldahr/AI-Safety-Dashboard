@@ -79,7 +79,7 @@ export function initAILogModal(modalManager, { onSaveSuccess }) {
             customContainer: bodyNode // Crucial: scopes the querySelectors to this unmounted DOM node
         });
 
-        const activeTagIds = tags.map(tag => tag.originalTagId);
+        const activeTagIds = (tags || []).map(tag => tag.originalTagId ? String(tag.originalTagId) : null).filter(Boolean);
 
         await tagSelect.init(activeTagIds);
 

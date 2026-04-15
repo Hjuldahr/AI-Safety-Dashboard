@@ -39,7 +39,7 @@ export default class TagSelect {
 
     async loadTags() {
         try {
-            const response = await fetch('/tags');
+            const response = await fetch('tags');
             const data = await response.json();
             const tags = data.tags || [];
             this.tagsCache = {};

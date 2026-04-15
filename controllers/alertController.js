@@ -6,6 +6,8 @@ import Tag from "../models/tag.js";
 import HistTag from "../models/historicalTag.js";
 import chartConstants from "../constants/charts.js";
 
+const BASE = process.env.PUBLIC_URL || '/';
+
 const getPage = async (req, res) => {
   try {
     const alerts = await Alert.find();
@@ -105,6 +107,7 @@ const getAlertHistory = async (req, res) => {
         humanRule,
         tags: (l.tags || []).map((t) => ({
           _id: t._id || t,
+          originalTagId: t.originalTagId ? String(t.originalTagId) : null,
           name: t.name || "",
           color: t.color || "#888888",
         })),
@@ -487,7 +490,7 @@ const getAlertLogView = async (req, res) => {
     // Find the target alert log
     const targetLog = await AlertLog.findById(id);
     if (!targetLog) {
-      return res.redirect('/alerts?error=LogNotFound');
+      return res.redirect(`${BASE}alerts?error=LogNotFound`);
     }
 
     // Calculate which page it is on based on your history sort (timestamp: -1)
@@ -521,7 +524,7 @@ const getAlertLogView = async (req, res) => {
     });
   } catch (error) {
     console.error("Error redirecting to Alert log:", error);
-    res.redirect('/alerts');
+    res.redirect(`${BASE}alerts`);
   }
 }
 

@@ -12,6 +12,7 @@
   <link rel="stylesheet" id="theme-colors" href="">
   <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
   <link rel="stylesheet" href="css/components/notifications.css">
+  <link rel="stylesheet" href="css/components/modals.css">
   <link rel="stylesheet" href="css/pages/dashboard.css">
 
   <!-- Scripts -->
@@ -21,6 +22,7 @@
   <script>
     //Grab the constants sent on page load
     window.CONSTANTS = <%- JSON.stringify(constants) %>;
+    window.USER_PERMISSIONS = <%- JSON.stringify(permissions || []) %>;
   </script>
 
   <!-- SSE SharedWorker (must load before any SSE consumers) -->
@@ -63,6 +65,7 @@
     <div class="charts-container" id="dynamic-charts-container">
     </div>
   </main>
+  <%- include('components/modal') %>
   <script src="js/dashboardFullscreen.js" defer></script>
 </body>
 

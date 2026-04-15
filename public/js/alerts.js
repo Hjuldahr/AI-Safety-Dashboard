@@ -276,7 +276,14 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 
     // tagsUpdated is called by tagModal.js when updating tags
-    document.addEventListener('tagsUpdated', () => {
+    document.addEventListener('tagsUpdated', async () => {
+        // Re-fetch tags so newly created/edited tags appear in the filter
+        try {
+            const tData = await apiListTags();
+            Object.keys(tagsCache).forEach(k => delete tagsCache[k]);
+            (tData || []).forEach(t => tagsCache[t._id] = t);
+        } catch (e) { console.warn('Tags refresh failed', e); }
+
         // Refresh the local data
         populateModelDropdowns();
         loadAlertHistory(currentHistoryPage);
@@ -319,7 +326,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         tr.style.cursor = 'pointer';
         const date = new Date(log.created || log.timestamp).toLocaleString('en-CA', { hour12: true }).replace(',', '');
         const tagsHtml = (log.tags || []).map(t => `<span class="tag-pill" style="background:${t.color}">${t.name}</span>`).join('');
-        const tagIds = (log.tags || []).map(t => t._id).join(',');
+        const tagIds = (log.tags || []).map(t => t.originalTagId).filter(Boolean).join(',');
         const snapshot = log.alertSnapshot || {};
 
         // Handle flattened or nested structure
