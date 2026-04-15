@@ -115,7 +115,7 @@ export async function finalizeAlertLogs(pendingAlertLogs, insertedLogsMap) {
                 await sendNotification({
                     message: alertText,
                     category: NOTIFICATION_TYPES.Alert,
-                    redirectUrl: `/alerts/view/${created._id}`,
+                    redirectUrl: `alerts/view/${created._id}`,
                     autoCalculateTimeout: true,
                     colour: alert.alertLevel
                 });
