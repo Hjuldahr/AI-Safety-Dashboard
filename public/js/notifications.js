@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     let historyFilter = 'all';
-    
+
     // =========================
     // CONFIG
     // =========================
@@ -34,64 +34,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const formatTime = (date) => new Date(date).toLocaleString();
 
-    const fetchLatestNotification = async () => {
-        try {
-            const resp = await fetch(API.latest);
-            if (!resp.ok) return null;
-            return await safeJSON(resp);
-        } catch (e) {
-            console.error('Failed to fetch latest notification:', e);
-            return null;
-        }
-    };
-
-    const fetchUnreadCount = async () => {
-        try {
-            const resp = await fetch(API.unreadCount);
-            if (!resp.ok) return 0;
-            const json = await safeJSON(resp);
-            return Number(json?.unread || 0);
-        } catch {
-            return 0;
-        }
-    };
-
     // =========================
-    // HISTORY FETCHING (with filter)
+    // STATE
     // =========================
-    const fetchHistoryPage = async (pageNum = 1, category = historyFilter) => {
-        if (fetching) return [];
-        fetching = true;
-        try {
-            const params = new URLSearchParams({ page: pageNum, limit: pageSize });
-            if (category && category !== 'all') params.set('category', category); // send filter to API
-            const resp = await fetch(`${API.history}?${params}`);
-            if (!resp.ok) return [];
-            const data = await safeJSON(resp);
-            return Array.isArray(data?.notifications) ? data.notifications : [];
-        } catch (e) {
-            console.error('Failed to fetch history:', e);
-            return [];
-        } finally {
-            fetching = false;
-        }
-    };
-
-    // =========================
-    // HISTORY STATE
-    // =========================
-    const bellButton = document.querySelector('.notification-bell');
-    const historyContainer = document.getElementById('notification-history');
-    const badgeEl = document.getElementById('notification-badge');
-
     let allNotifications = [];
     let page = 1;
     let pageSize = 10;
     let historyOpen = false;
     let fetching = false;
     let hasMorePages = true;
-
     let historyList = null;
+
+    const bellButton = document.querySelector('.notification-bell');
+    const historyContainer = document.getElementById('notification-history');
+    const badgeEl = document.getElementById('notification-badge');
+
+    // =========================
+    // HELPERS
+    // =========================
+
+    const normalizeId = (n) => n?.id || n?._id;
+
+    const dedupeNotifications = (list) => {
+        const seen = new Set();
+        return list.filter(n => {
+            const id = normalizeId(n);
+            if (!id || seen.has(id)) return false;
+            seen.add(id);
+            return true;
+        });
+    };
+
+    const getFilteredNotifications = () => {
+        if (historyFilter === 'all') return allNotifications;
+        return allNotifications.filter(n => n.category === historyFilter);
+    };
 
     const updateBadge = (unread) => {
         if (!badgeEl) return;
@@ -111,16 +88,74 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const fetchHistoryPage = async (pageNum = 1, category = historyFilter) => {
+        if (fetching) return [];
+        fetching = true;
+
+        try {
+            const params = new URLSearchParams({
+                page: pageNum,
+                limit: pageSize
+            });
+
+            if (category && category !== 'all') {
+                params.set('category', category);
+            }
+
+            const resp = await fetch(`${API.history}?${params}`);
+            if (!resp.ok) return [];
+
+            const data = await safeJSON(resp);
+            return Array.isArray(data?.notifications) ? data.notifications : [];
+
+        } catch (e) {
+            console.error('Failed to fetch history:', e);
+            return [];
+        } finally {
+            fetching = false;
+        }
+    };
+
+    const fetchUnreadCount = async () => {
+        try {
+            const resp = await fetch(API.unreadCount);
+            if (!resp.ok) return 0;
+            const json = await safeJSON(resp);
+            return Number(json?.unread || 0);
+        } catch {
+            return 0;
+        }
+    };
+
+    const fetchLatestNotification = async () => {
+        try {
+            const resp = await fetch(API.latest);
+            if (!resp.ok) return null;
+            return await safeJSON(resp);
+        } catch (e) {
+            console.error('Failed to fetch latest notification:', e);
+            return null;
+        }
+    };
+
     // =========================
-    // HISTORY RENDERING
+    // RENDERING
     // =========================
+
     const appendNotifications = (notifications) => {
         if (!historyList) return;
 
-        historyList.innerHTML = ''; // clear before rendering
+        const filtered = dedupeNotifications(
+            historyFilter === 'all'
+                ? notifications
+                : notifications.filter(n => n.category === historyFilter)
+        );
 
-        notifications.forEach(n => {
-            const colour = n.colour.toLowerCase();
+        historyList.innerHTML = '';
+
+        filtered.forEach(n => {
+            const colour = (n.colour || 'info').toLowerCase();
+
             const li = document.createElement('li');
             li.className = 'notification-history-item';
             li.style.borderLeft = `5px solid var(--color-${colour}-border)`;
@@ -154,13 +189,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!nearBottom) return;
 
         page++;
+
         const newPage = await fetchHistoryPage(page, historyFilter);
 
         if (newPage.length < pageSize) hasMorePages = false;
 
         if (newPage.length) {
-            allNotifications = allNotifications.concat(newPage);
-            appendNotifications(allNotifications); // already filtered by API
+            allNotifications = dedupeNotifications([
+                ...allNotifications,
+                ...newPage
+            ]);
+
+            appendNotifications(allNotifications);
         }
     };
 
@@ -178,19 +218,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const filter = document.createElement('select');
         filter.innerHTML = `
-            <option value="all" selected>All</option>
+            <option value="all">All</option>
             <option value="alert">Alert</option>
             <option value="demo">Demo</option>
             <option value="generic">Generic</option>
             <option value="server">Server</option>
-            <option value="user">User</option>
         `;
-        
-        filter.addEventListener('change', async e => {
+
+        filter.value = historyFilter;
+
+        filter.addEventListener('change', async (e) => {
             historyFilter = e.target.value;
             page = 1;
             hasMorePages = true;
-            allNotifications = await fetchHistoryPage(page, historyFilter); // fetch filtered
+
+            allNotifications = await fetchHistoryPage(page, historyFilter);
+            allNotifications = dedupeNotifications(allNotifications);
+
             appendNotifications(allNotifications);
         });
 
@@ -210,18 +254,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const populateHistory = async () => {
         page = 1;
         hasMorePages = true;
-        allNotifications = await fetchHistoryPage(page, historyFilter); // fetch filtered
+
+        allNotifications = await fetchHistoryPage(page, historyFilter);
+        allNotifications = dedupeNotifications(allNotifications);
+
         renderHistoryWindow();
     };
 
     // =========================
     // SLIDE NOTIFICATIONS
     // =========================
+
     const showNotification = async (n) => {
         if (!n || !n.message) return;
         if (historyOpen) return;
 
-        const id = n.id;
+        const id = normalizeId(n);
         if (id && localStorage.getItem('previousNotificationId') === id) return;
 
         const alreadyVisible = container.classList.contains('show');
@@ -233,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </span>
         `;
 
-        const colour = n.colour.toLowerCase();
+        const colour = (n.colour || 'info').toLowerCase();
         container.style.backgroundColor = `var(--color-${colour})`;
 
         if (!alreadyVisible) {
@@ -245,13 +293,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (id) localStorage.setItem('previousNotificationId', id);
         currentNotification = n;
 
-        if (n.dismissible !== false) {
+        if (n.dismissible !== false && n.timeout) {
             if (dismissTimer) clearTimeout(dismissTimer);
-            if (n.timeout) {
-                dismissTimer = setTimeout(() => {
-                    container.classList.remove('show');
-                }, n.timeout * 1000);
-            }
+
+            dismissTimer = setTimeout(() => {
+                container.classList.remove('show');
+            }, n.timeout * 1000);
         }
 
         if (n.dismissible === false) {
@@ -270,7 +317,11 @@ document.addEventListener('DOMContentLoaded', () => {
     container.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!currentNotification) return;
-        if (currentNotification.redirectUrl) window.location.href = currentNotification.redirectUrl;
+
+        if (currentNotification.redirectUrl) {
+            window.location.href = currentNotification.redirectUrl;
+        }
+
         if (currentNotification.dismissible !== false) hideNotification();
     });
 
@@ -284,6 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     // BELL CLICK
     // =========================
+
     if (bellButton && historyContainer) {
         bellButton.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -304,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Close history popup when clicking anywhere outside bell/history.
         document.addEventListener('click', (e) => {
             if (!historyOpen) return;
             if (historyContainer.contains(e.target)) return;
@@ -318,11 +369,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     // SSE
     // =========================
+
+    let evtSource = null;
+
     function getSharedEventSource() {
         return window.__sseManager.getSharedEventSource();
     }
-
-    let evtSource = null;
 
     try {
         evtSource = getSharedEventSource();
@@ -330,17 +382,24 @@ document.addEventListener('DOMContentLoaded', () => {
         evtSource.addEventListener('notification', async (ev) => {
             try {
                 const json = JSON.parse(ev.data);
-                allNotifications.unshift(json);
+
+                allNotifications = dedupeNotifications([json, ...allNotifications]);
 
                 if (!historyOpen) {
-                    showNotification(json);
+                    if (historyFilter === 'all' || json.category === historyFilter) {
+                        showNotification(json);
+                    }
+
                     const unread = await fetchUnreadCount();
                     updateBadge(unread);
+
                 } else {
-                    if (historyList) appendNotifications(allNotifications);
+                    appendNotifications(allNotifications);
                     updateBadge(0);
+
                     try { await fetch(API.markRead, { method: 'POST' }); } catch {}
                 }
+
             } catch (err) {
                 console.error('Notification SSE parse error:', err);
             }
@@ -357,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================
     // INITIAL LOAD
     // =========================
+
     (async () => {
         const latest = await fetchLatestNotification();
         if (latest) showNotification(latest);

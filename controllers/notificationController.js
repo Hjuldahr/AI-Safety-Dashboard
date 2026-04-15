@@ -91,7 +91,7 @@ const history = async (req, res) => {
         // Build query filters
         const query = {};
 
-        if (req.query.category && req.query.category !== "any") query.category = req.query.category;
+        if (req.query.category && req.query.category !== "all") query.category = req.query.category;
         if (req.query.tag && req.query.tag !== "all") query.tags = req.query.tag;
 
         if (req.query.startDate || req.query.endDate) {
