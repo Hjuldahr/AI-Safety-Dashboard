@@ -12,7 +12,7 @@ export function initLogTagModal(modalManager, { tagsCache, onSaveSuccess }) {
         const bodyNode = document.createElement('div');
         bodyNode.className = 'multiselect-container';
         // bodyNode.style.minHeight = "250px";
-        
+
         bodyNode.innerHTML = `
             <div class="tags-input-container" id="dyn-tags-input">
                 <input type="text" id="dyn-tags-search" class="tags-search-input" placeholder="Select tags..." readonly />
@@ -28,15 +28,13 @@ export function initLogTagModal(modalManager, { tagsCache, onSaveSuccess }) {
             customContainer: bodyNode // Pass the node so TagSelect finds internal elements
         });
 
-        await tagSelect.init();
+        await tagSelect.init(currentTagIds);
 
         const cleanupTagSelect = () => {
             tagSelect.destroy();
             modalManager.unregisterCloseCallback(cleanupTagSelect);
         };
         modalManager.registerCloseCallback(cleanupTagSelect);
-
-        tagSelect.setSelectedIds(currentTagIds);
 
         // Build the Footer Node
         const footerNode = document.createElement('div');
@@ -50,7 +48,7 @@ export function initLogTagModal(modalManager, { tagsCache, onSaveSuccess }) {
         const saveBtn = document.createElement('button');
         saveBtn.className = "btn btn-primary";
         saveBtn.innerText = "Save Tags";
-        
+
         saveBtn.onclick = async () => {
             const selected = tagSelect.getSelectedIds();
             try {
@@ -60,9 +58,9 @@ export function initLogTagModal(modalManager, { tagsCache, onSaveSuccess }) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tags: selected })
                 });
-                
+
                 if (!res.ok) throw new Error('Update failed');
-                
+
                 modalManager.close();
                 if (onSaveSuccess) onSaveSuccess();
             } catch (e) {
@@ -74,7 +72,7 @@ export function initLogTagModal(modalManager, { tagsCache, onSaveSuccess }) {
         footerNode.appendChild(saveBtn);
 
         // Open via Manager
-        modalManager.open("Tag Alert Log", bodyNode, footerNode, "medium-modal");
+        modalManager.open("Tag Alert Log", bodyNode, footerNode, "large-modal");
     }
 
     return openLogTagModal;

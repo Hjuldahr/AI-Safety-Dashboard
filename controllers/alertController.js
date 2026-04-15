@@ -105,6 +105,7 @@ const getAlertHistory = async (req, res) => {
         humanRule,
         tags: (l.tags || []).map((t) => ({
           _id: t._id || t,
+          originalTagId: t.originalTagId ? String(t.originalTagId) : null,
           name: t.name || "",
           color: t.color || "#888888",
         })),
