@@ -4,7 +4,7 @@
  */
 
 export function initActiveAlertsModal(modalManager, { onEdit, onDeleteSuccess }) {
-    
+
     // 1. Create the Footer (Static)
     const createFooter = () => {
         const footer = document.createElement('div');
@@ -119,6 +119,6 @@ export function initActiveAlertsModal(modalManager, { onEdit, onDeleteSuccess })
     return async function openActiveAlertsModal() {
         const bodyNode = await assembleBody();
         const footerNode = createFooter();
-        modalManager.open("Active Rules", bodyNode, footerNode, "medium-modal");
+        modalManager.open("Active Alerts", bodyNode, footerNode, "medium-modal");
     };
 }

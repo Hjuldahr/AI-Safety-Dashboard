@@ -16,8 +16,8 @@ This file contains information about the rest of the documentation available abo
 	- [Reports](reports.md)
 	- [Logs](logs.md)
 - There are several other pages used to drive functionality to the above pages:
-	- [Login / Signup](authentication.md)
-	- [User Management](user-management.md)
+	- [Profile](profile.md)
+	- [Management](management.md)
 	- [Demo Controls](demo-controls.md)
 
 ## API Documentation

@@ -375,16 +375,44 @@
 }
 
 .rule-row select:focus,
-.rule-row input:focus,
+.rule-row input:not([type="checkbox"]):focus,
 .form-group select:focus,
-.form-group input:focus {
+.form-group input:not([type="checkbox"]):focus {
   outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
   border-radius: 4px;
   background: var(--input-bg);
-  min-height: 42px;
   cursor: text;
+}
+
+/* Checkbox row — Disabled / Muted toggles in the alert builder */
+.checkbox-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.checkbox-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  cursor: pointer;
+  margin: 0;
+  user-select: none;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--primary-color);
 }
 
 .tags-input-container:focus-within {
@@ -794,33 +822,6 @@ input:checked+.slider:before {
       color: var(--text-light);
       text-transform: uppercase;
       font-size: 0.75rem;
-      margin-right: 1rem;
-    }
-
-    .control-bar {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .filter-group {
-      flex-direction: column;
-      width: 100%;
-    }
-
-    .filter-item {
-      width: 100%;
-    }
-
-    .filter-item select,
-    .filter-item input {
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    .alert-builder-grid {
-      grid-template-columns: 1fr;
-    }
-  }
 
   /* --- Dashboard Charts (Consolidated) --- */
   .charts-dashboard {
