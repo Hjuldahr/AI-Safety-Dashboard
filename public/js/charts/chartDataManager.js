@@ -329,7 +329,7 @@
         const overlay = document.getElementById(`overlay-${config._id}`);
 
         if (overlay) {
-            if (isLowFidelity && isBreakdownChart) {
+            if (isLowFidelity && isBreakdownChart && config.chartSize !== 'tiny') {
                 overlay.style.display = 'block';
             } else {
                 overlay.style.display = 'none';
