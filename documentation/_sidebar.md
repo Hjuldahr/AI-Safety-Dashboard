@@ -12,14 +12,15 @@
 	    * [Reports](reports.md)
 	    * [Logs](logs.md)
     * Side Pages
-        * [User Management](user-management.md)
+        * [Profile](profile.md)
+        * [Management](management.md)
         * [Demo Controls](demo-controls.md)
     * Reference
         * [Constants Reference](constants.md)
         * [Development Environment](development-environment.md)
         * [AI Integration Guide](ai-integration.md)
+        * [Themes](themes.md)
     * [Errors](errors.md)
     * [Site Diagram](site-diagram.md)
-    * [Example Mermaid Chart](example_mermaid_chart.md)
     * [Data Analysis Pipeline](data_analysis_pipeline.md)
     * [Back to Dashboard](http://localhost:2121/)

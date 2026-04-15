@@ -52,5 +52,5 @@ Logs can be exported in two formats:
 Export requires the `export:logs` permission.
 
 ## Read Next
-- [User Management](user-management.md)
+- [Management](management.md)
 - [Errors](errors.md)

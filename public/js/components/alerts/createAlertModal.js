@@ -121,11 +121,11 @@ function buildAlertModalBody(DATA_DICTIONARY, KNOWN_MODELS, tagsCache) {
           </div>
           <div class="tags-dropdown" id="modal-tags-dropdown" style="display: none;"></div>
         </div>
-        <div class="form-group full-width">
+        <div class="form-group full-width checkbox-row">
           <label>
             <input type="checkbox" class="disabled-checkbox" /> Disabled
           </label>
-          <label style="margin-left: 20px;">
+          <label>
             <input type="checkbox" class="muted-checkbox" /> Muted
           </label>
         </div>

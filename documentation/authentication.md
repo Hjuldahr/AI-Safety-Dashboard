@@ -41,11 +41,11 @@ Returns `201` on success, `409` if the username or email already exists.
 Destroys the session and redirects to the login page.
 
 ## Authorization
-After authentication, access to pages and API endpoints is controlled by role-based permissions. See [User Management](user-management.md) for details on roles and permissions.
+After authentication, access to pages and API endpoints is controlled by role-based permissions. See [Management](management.md) for details on roles and permissions.
 
 The authorization middleware checks the user's role against the required permission for each route. Permissions are cached for 5 minutes to reduce database queries.
 
 ## Read Next
 * [API Documentation](http://localhost:2121/api/docs)
-* [User Management](user-management.md)
+* [Management](management.md)
 * [Errors](errors.md)
