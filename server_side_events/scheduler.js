@@ -245,7 +245,7 @@ function updateSchedulerSettings(newState, user) {
             sendNotification({
                 message: `[Scheduler] was ${action} by ${user.username}`,
                 category: NOTIFICATION_TYPES.Server,
-                redirectUrl: '/',
+                redirectUrl: '',
                 autoCalculateTimeout: true,
                 colour: action
             });

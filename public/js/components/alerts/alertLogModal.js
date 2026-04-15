@@ -84,7 +84,7 @@ export function initAlertLogModal(modalManager) {
 
         return logs.map((logId, index) => {
             return `
-                <a href="/logs/view/ai/${logId}" class="ai-log-link-item">
+                <a href="logs/view/ai/${logId}" class="ai-log-link-item">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                     View AI Log Data (${logId.substring(logId.length - 6)})
                 </a>

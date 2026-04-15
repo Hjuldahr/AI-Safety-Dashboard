@@ -9,7 +9,7 @@
 
     // ---- Fallback: plain EventSource (same behaviour as before) ----
     function createPlainEventSource() {
-        const es = new EventSource('/events');
+        const es = new EventSource('events');
         window.__sharedEventSource = es;
         window.addEventListener('beforeunload', () => {
             try { es.close(); } catch { }
@@ -19,9 +19,10 @@
 
     // ---- SharedWorker path ----
     function createWorkerBacked() {
-        const worker = new SharedWorker('/js/sseWorker.js', { name: 'sse-shared' });
+        const worker = new SharedWorker('js/sseWorker.js', { name: 'sse-shared' });
         const port = worker.port;
         port.start();
+        port.postMessage({ type: 'init', eventsUrl: new URL('events', document.baseURI).href });
 
         // Lightweight EventTarget wrapper so consumers can call addEventListener / removeEventListener
         const listeners = {};
