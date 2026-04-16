@@ -16,11 +16,11 @@ router.post('/download-hdf5', isAuthenticated, authorize('export:report'), repor
 router.get('/history', isAuthenticated, authorize('view:reports'), reportController.getHistory);
 router.get('/history/:id/pdf', isAuthenticated, authorize('view:reports'), reportController.getHistoryPdf);
 router.get('/history/:id/download/:type', isAuthenticated, authorize('export:report'), reportController.downloadFromHistory);
-router.delete('/history/:id', isAuthenticated, authorize('create:report'), reportController.deleteReport);
+router.delete('/history/:id', isAuthenticated, authorize('delete:report'), reportController.deleteReport);
 
 // Report Templates
 router.get('/templates', isAuthenticated, authorize('view:reports'), reportController.getTemplates);
 router.post('/templates', isAuthenticated, authorize('create:report'), reportController.createTemplate);
-router.delete('/templates/:id', isAuthenticated, authorize('create:report'), reportController.deleteTemplate);
+router.delete('/templates/:id', isAuthenticated, authorize('delete:report'), reportController.deleteTemplate);
 
 export default router;

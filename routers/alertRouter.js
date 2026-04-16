@@ -22,7 +22,7 @@ router.get("/api/aiLog/:id", isAuthenticated, authorize('view:alerts'), controll
 router.get("/view/:id", isAuthenticated, authorize('view:alerts'), controller.getAlertLogView);
 
 // Return dashboard stats
-router.get("/api/stats", isAuthenticated, controller.getAlertStats);
+router.get("/api/stats", isAuthenticated, authorize('view:alerts'), controller.getAlertStats);
 // Delete an alert by id
 router.delete("/:id", isAuthenticated, authorize('delete:alert'), controller.removeAlertById);
 // Update an alert by id
@@ -30,8 +30,8 @@ router.put("/:id", isAuthenticated, authorize('edit:alert'), controller.updateAl
 // Add a tag to a specific alert log
 router.post('/api/logs/:id/tags', isAuthenticated, authorize('acknowledge:alert'), controller.addTagToAlertLog);
 // Remove a tag from a specific alert log
-router.delete('/api/logs/:id/tags/:tagId', authorize('acknowledge:alert'), isAuthenticated, controller.removeTagFromAlertLog);
+router.delete('/api/logs/:id/tags/:tagId', isAuthenticated, authorize('acknowledge:alert'), controller.removeTagFromAlertLog);
 // Replace tags on a specific alert log
-router.put('/api/logs/:id/tags', authorize('acknowledge:alert'), isAuthenticated, controller.setTagsForAlertLog);
+router.put('/api/logs/:id/tags', isAuthenticated, authorize('acknowledge:alert'), controller.setTagsForAlertLog);
 
 export default router;

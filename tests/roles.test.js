@@ -39,7 +39,7 @@ describe('Roles', () => {
     });
 
     test('visitor role should have minimal permissions', () => {
-        expect(roles.visitor.permissions).toEqual(['view:dashboard', 'view:profile', 'read:docs']);
+        expect(roles.visitor.permissions).toEqual(['view:dashboard', 'view:profile', 'edit:profile', 'read:docs']);
     });
 
     test('all roles should have descriptions', () => {

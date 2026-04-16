@@ -21,8 +21,7 @@ router.get("/api/ai", isAuthenticated, authorize('view:logs'), controller.getFil
 router.get("/api/summary", isAuthenticated, authorize('view:logs'), controller.getFilteredAISummaries);
 
 // Tagging
-// ToDo: give this its own permission
-router.put("/api/ai/:id/tags", isAuthenticated, authorize('view:logs'), controller.tagAILog);
+router.put("/api/ai/:id/tags", isAuthenticated, authorize('edit:logs'), controller.tagAILog);
 
 // Exports
 router.post("/api/user/export/csv", isAuthenticated, authorize('export:logs'), controller.exportUserLogCSV);

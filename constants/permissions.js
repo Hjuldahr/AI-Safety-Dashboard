@@ -35,6 +35,7 @@ export const permissions = {
     // Logs permissions
     logs: {
         'view:logs': 'View logs',
+        'edit:logs': 'Edit/tag logs',
         'export:logs': 'Export logs',
         'clear:logs': 'Clear logs',
     },
@@ -47,6 +48,16 @@ export const permissions = {
         'edit:system': 'Edit system settings',
         'shutdown:server': 'Shutdown server',
         'restart:server': 'Restart server',
+    },
+
+    // Notifications permissions
+    notifications: {
+        'view:notifications': 'View notifications',
+    },
+
+    // Real-time event stream permissions
+    realtime: {
+        'view:sse': 'View real-time event stream',
     },
 
     documentation: {

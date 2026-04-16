@@ -76,6 +76,7 @@
       </section>
 
       <!-- Roles Section -->
+      <% if (typeof permissions !== 'undefined' && permissions.includes('manage:roles')) { %>
       <section class="collapsible-section" data-section="roles">
         <button type="button" class="collapse-toggle" aria-expanded="true">Roles ▾</button>
         <div class="collapsible-content" id="roles-section">
@@ -119,8 +120,10 @@
           </div>
         </div>
       </section>
+      <% } %>
 
       <!-- System Section -->
+      <% if (typeof permissions !== 'undefined' && (permissions.includes('view:system') || permissions.includes('edit:system'))) { %>
       <section class="collapsible-section" data-section="system">
         <button type="button" class="collapse-toggle" aria-expanded="true">System ▾</button>
         <div class="collapsible-content" id="system-section">
@@ -159,7 +162,9 @@
                   </select>
                 </div>
               </div>
+              <% if (permissions.includes('edit:system')) { %>
               <button id="save-ai-log-cutoff" type="button" class="btn btn-primary" style="margin-top: 0.75rem;">Save</button>
+              <% } %>
 
               <hr style="margin: 1.5rem 0;" />
 
@@ -178,20 +183,29 @@
                   <option value="viridian">Viridian</option>
                 </select>
               </div>
+              <% if (permissions.includes('edit:system')) { %>
               <button id="save-default-theme" type="button" class="btn btn-primary">Save Default Theme</button>
+              <% } %>
 
+              <% if (permissions.includes('shutdown:server') || permissions.includes('restart:server')) { %>
               <hr style="margin: 1.5rem 0;" />
 
               <h4>Server Control</h4>
               <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Only use these actions when you intend to stop or restart the server process.</p>
               <div class="button-group" style="gap: 0.75rem; flex-wrap: wrap;">
+                <% if (permissions.includes('shutdown:server')) { %>
                 <button id="shutdown-server" type="button" class="btn btn-danger">Shutdown Server</button>
+                <% } %>
+                <% if (permissions.includes('restart:server')) { %>
                 <button id="restart-server" type="button" class="btn btn-warning">Restart Server</button>
+                <% } %>
               </div>
+              <% } %>
             </div>
           </div>
         </div>
       </section>
+      <% } %>
 
     </div>
   </main>

@@ -1,7 +1,8 @@
 <nav class="site-nav">
 
-  <!-- ToDo: View Dashboard permission? -->
+  <% if (typeof permissions !== 'undefined' && permissions.includes('view:dashboard')) { %>
   <a href="">Dashboard</a>
+  <% } %>
 
   <% if (typeof permissions !== 'undefined' && permissions.includes('view:alerts')) { %>
   <a href="alerts">Alerts</a>

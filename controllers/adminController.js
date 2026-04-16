@@ -6,6 +6,7 @@ import { permissions as permissionsConfig } from "../constants/permissions.js";
 import SystemSetting from '../models/SystemSetting.js';
 import { AI_LOG_CUTOFF } from '../constants/sse.js';
 import { broadcastEvent } from '../server_side_events/scheduler.js';
+import { invalidateRoleCache } from '../middleware/authorization.js';
 
 // Render the user management page
 export const getUsersPage = async (req, res) => {
@@ -159,6 +160,9 @@ export const createRole = async (req, res) => {
 
     await newRole.save();
 
+    // Invalidate the role cache so new role takes effect immediately
+    invalidateRoleCache();
+
     const logDetails = `Created new role: ${newRole.name}`;
 
     // 1. Write to DB
@@ -208,6 +212,9 @@ export const deleteRole = async (req, res) => {
     }
 
     await Role.deleteOne({ _id: role._id });
+
+    // Invalidate the role cache so deletion takes effect immediately
+    invalidateRoleCache();
 
     // Log the action
     User_Log.addLog(req.user._id, 'Role_Deleted', `Deleted role: ${role.name}`).catch(err => console.error('Failed to write log:', err));

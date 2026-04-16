@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { roles as systemRoles } from '../constants/roles.js';
 
 const UserSchema = new mongoose.Schema({
     username: {
@@ -22,7 +23,22 @@ const UserSchema = new mongoose.Schema({
     },
     roles: {
         type: [String],
-        default: ['viewer'] // Every new user is a 'viewer' by default
+        default: ['viewer'], // Every new user is a 'viewer' by default
+        validate: {
+            validator: async function(rolesArr) {
+                // Check each role against system roles and DB roles
+                const systemRoleNames = Object.keys(systemRoles);
+                for (const roleName of rolesArr) {
+                    if (systemRoleNames.includes(roleName)) continue;
+                    // Check if a custom role exists in the DB
+                    const Role = mongoose.model('Role');
+                    const exists = await Role.findOne({ name: roleName }).lean();
+                    if (!exists) return false;
+                }
+                return true;
+            },
+            message: 'One or more invalid role names provided'
+        }
     },
     preferredTheme: {
         type: String,

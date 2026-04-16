@@ -18,6 +18,8 @@ const roles = {
             ...Object.keys(permissions.logs),
             ...Object.keys(permissions.admin),
             ...Object.keys(permissions.common),
+            ...Object.keys(permissions.notifications),
+            ...Object.keys(permissions.realtime),
             ...Object.keys(permissions.documentation),
             ...Object.keys(permissions.demo),
         ]
@@ -29,9 +31,11 @@ const roles = {
             'create:graph', 'edit:graph',
             'view:alerts', 'create:alert', 'acknowledge:alert',
             'view:reports', 'create:report',
-            'view:logs',
+            'view:logs', 'edit:logs',
             "read:docs",
             ...Object.keys(permissions.common),
+            ...Object.keys(permissions.notifications),
+            ...Object.keys(permissions.realtime),
         ]
     },
     viewer: {
@@ -43,13 +47,15 @@ const roles = {
             'view:logs',
             "read:docs",
             ...Object.keys(permissions.common),
+            ...Object.keys(permissions.notifications),
+            ...Object.keys(permissions.realtime),
         ]
     },
     visitor: {
         description: 'Limited public access',
         permissions: [
             'view:dashboard',
-            'view:profile',
+            ...Object.keys(permissions.common),
             "read:docs",
         ]
     }
