@@ -6,6 +6,7 @@ services:
     environment:
       - PORT=2121
       - PUBLIC_URL=${PUBLIC_URL}
+      - DOMAIN=${DOMAIN}
       - MONGO_URL=mongodb://dashboard-mongo:27017/dashboardDB
       - NODE_ENV=${NODE_ENV}
       - DEFAULT_APP_USER=${DEFAULT_APP_USER}
