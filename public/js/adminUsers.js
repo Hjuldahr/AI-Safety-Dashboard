@@ -285,6 +285,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const container = document.getElementById('otp-modal-container');
     if (!container) return;
 
+    if (!confirm(`Force a password reset for "${username}"?\n\nThis will immediately invalidate their current password and generate a one-time login code.`)) return;
+
     // Show a loading state modal first
     container.innerHTML = buildOtpModalHtml(username, null, true);
     document.body.style.overflow = 'hidden';
