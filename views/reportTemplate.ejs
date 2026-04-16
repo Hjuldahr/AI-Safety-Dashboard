@@ -99,10 +99,10 @@ const formatValue = (val) => {
 <html lang="en">
 
 <head>
-  <base href="<%= process.env.PUBLIC_URL || '/' %>">
+  <base href="<%= process.env.DOMAIN || process.env.PUBLIC_URL || '/' %>">
   <meta charset="UTF-8">
   <title><%= reportTitle %></title>
-  <!-- <link rel="stylesheet" href="<%= process.env.DOMAIN || '/' %>css/components/reportTemplate.css"> -->
+  <!-- <link rel="stylesheet" href="< process.env.DOMAIN || '/' %>css/components/reportTemplate.css"> -->
   <!-- The css file wasn't working on prod (Danielbierman.ca/dashboard), so here is 300 lines in a style tag -->
 
   <style>
