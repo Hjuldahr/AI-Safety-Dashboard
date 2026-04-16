@@ -8,7 +8,8 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y \
     chromium \
-    libhdf5-dev 
+    fonts-noto-color-emoji \
+    libhdf5-dev
 
 # Copy package.json first (for better caching)
 COPY package.json ./
