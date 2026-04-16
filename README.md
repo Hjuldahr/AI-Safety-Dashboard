@@ -1,6 +1,8 @@
 # CST8414-Applied-Research-Project
 AI dashboard
 
+> **New to this project?** See [Students.md](Students.md) for an in-depth guide to the architecture (MVC, MongoDB, SSE, Chart.js, Puppeteer) written for students inheriting the codebase.
+
 
 # Installing the Project:
 To run the project you must install both node JS and mongo DB.
