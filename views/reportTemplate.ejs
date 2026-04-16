@@ -102,7 +102,7 @@ const formatValue = (val) => {
   <base href="<%= process.env.PUBLIC_URL || '/' %>">
   <meta charset="UTF-8">
   <title><%= reportTitle %></title>
-  <link rel="stylesheet" href="<%= process.env.DOMAIN || '/' %>css/components/reportTemplate.css">
+  <link rel="stylesheet" href="<%= process.env.DOMAIN + "/" || '/' %>css/components/reportTemplate.css">
 </head>
 
 <body>
@@ -110,7 +110,7 @@ const formatValue = (val) => {
 
     <header>
       <h1><%= reportTitle %></h1>
-      <h1>Sourcing data from: <%= process.env.PUBLIC_URL + "public/" || '/' %>css/components/reportTemplate.css</h1>
+      <h1>Sourcing data from: <%= process.env.DOMAIN || '/' %>css/components/reportTemplate.css</h1>
       <p class="text-center text-muted">Log Analysis Report for Model: <strong><%= modelName %></strong></p>
     </header>
 
