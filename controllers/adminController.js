@@ -96,7 +96,8 @@ export const listRoles = async (req, res) => {
       name: role.name,
       description: role.description,
       isSystemRole: role.isSystemRole,
-      isCustom: !role.isSystemRole
+      isCustom: !role.isSystemRole,
+      permissions: role.permissions
     }));
     res.json({ roles });
   } catch (err) {
