@@ -13,7 +13,8 @@ This guide is written for students inheriting this project who need to understan
 3. [Server-Sent Events (Real-Time Data)](#3-server-sent-events-real-time-data)
 4. [Chart.js Chart Rendering](#4-chartjs-chart-rendering)
 5. [PDF Generation with Puppeteer](#5-pdf-generation-with-puppeteer)
-6. [Quick Reference: Where Things Live](#6-quick-reference-where-things-live)
+6. [Testing (Unit & E2E)](#6-testing-unit--e2e)
+7. [Quick Reference: Where Things Live](#7-quick-reference-where-things-live)
 
 ---
 
@@ -567,7 +568,160 @@ Generated PDFs are stored as files in `storage/reports/` with the filename `{rep
 
 ---
 
-## 6. Quick Reference: Where Things Live
+## 6. Testing (Unit & E2E)
+
+### Overview
+
+The project has two layers of tests:
+
+- **Unit tests** (Jest) — Test individual functions in isolation (middleware, controllers, models, helpers). Fast, no browser or database needed.
+- **End-to-end tests** (Playwright) — Test the full app in a real browser. They start the server, log in, click around, and verify the UI works.
+
+### Running the tests
+
+```bash
+# Unit tests
+npm test                  # Run all unit tests
+npm run test:unit         # Same thing, explicit
+
+# End-to-end tests
+npm run test:e2e          # Run all E2E tests headlessly (auto-starts the server)
+npm run test:e2e:headed   # Run with a visible browser window (great for debugging)
+npm run test:e2e:smoke    # Run only the quick @smoke sanity checks
+npm run test:e2e:report   # Open the HTML report from the last run
+```
+
+You don't need to start the server before E2E tests — Playwright does that automatically.
+
+### Unit tests (Jest)
+
+Unit test files live in `tests/` and are named `*.test.js`. Each one tests a single module:
+
+| Test File | What It Tests |
+|-----------|---------------|
+| `authMiddleware.test.js` | `isAuthenticated` middleware — does it call `next()` or redirect? |
+| `authorization.test.js` | Permission checking — does it allow/deny based on role? |
+| `authController.test.js` | Login/signup controller logic |
+| `alertController.test.js` | Alert CRUD operations |
+| `chartController.test.js` | Chart config API endpoints |
+| `exportService.test.js` | CSV/HDF5 export formatting |
+| `getAiLogCutoff.test.js` | Log retention helper function |
+| `aiLog.model.test.js` | AI_Log schema validation and static methods |
+| `user.model.test.js` | User schema validation |
+| `role.model.test.js` | Role schema validation |
+| `report.model.test.js` | Report schema validation |
+| `notification.test.js` | Notification creation and delivery |
+| `permissions.test.js` | Permission constant structure |
+| `roles.test.js` | Role constant structure |
+| `charts.test.js` | Chart constant / data dictionary structure |
+
+Unit tests use **mocking** to avoid needing a real database or server. For example, the auth middleware test creates fake `req` and `res` objects:
+
+```javascript
+import { jest } from '@jest/globals';
+import { isAuthenticated } from '../middleware/authMiddleware.js';
+
+test('calls next when user is authenticated', () => {
+    const req = { isAuthenticated: () => true };
+    const res = {};
+    const next = jest.fn();
+
+    isAuthenticated(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+});
+```
+
+### End-to-end tests (Playwright)
+
+E2E tests live in `tests/e2e/` and are organized into three layers:
+
+```
+tests/e2e/
+|-- specs/              # Test files — one per page/feature
+|   |-- smoke.spec.js       # Quick sanity checks (@smoke tag)
+|   |-- auth.spec.js        # Login, signup, logout flows
+|   |-- dashboard.spec.js   # Dashboard charts and controls
+|   |-- alerts.spec.js      # Alert creation, editing, history
+|   |-- logs.spec.js        # Log viewing, filtering, export
+|   |-- reports.spec.js     # Report generation and history
+|   |-- admin.spec.js       # User management, roles, system settings
+|   |-- profile.spec.js     # Profile and theme preferences
+|   |-- navigation.spec.js  # Nav links, routing, permissions
+|
+|-- page-objects/       # Page Object classes (reusable page interactions)
+|   |-- BasePage.js          # Shared methods (nav, header, goto)
+|   |-- LoginPage.js         # Login form interactions
+|   |-- DashboardPage.js     # Dashboard-specific selectors and actions
+|   |-- AlertsPage.js        # Alerts page interactions
+|   |-- LogsPage.js          # Logs page interactions
+|   |-- ReportsPage.js       # Reports page interactions
+|   |-- AdminPage.js         # Admin page interactions
+|   |-- ProfilePage.js       # Profile page interactions
+|
+|-- fixtures/           # Test setup (authenticated sessions)
+|   |-- auth.fixture.js      # Provides pre-logged-in pages (adminPage, userPage)
+|
+|-- helpers/            # Shared utilities
+|   |-- test-data.js         # Test user credentials and constants
+|   |-- api.helpers.js       # Direct API calls for setup/teardown
+|
+|-- global-setup.js     # Runs once before all tests (seeds test data)
+|-- global-teardown.js  # Runs once after all tests (cleanup)
+|-- playwright.config.js
+```
+
+#### The Page Object pattern
+
+Instead of writing selectors directly in tests, each page has a **Page Object** class that wraps its interactions. This means if the HTML changes, you only update one file instead of every test.
+
+```javascript
+// In a test file:
+const dashboard = new DashboardPage(page);
+await dashboard.goto();
+await expect(dashboard.addChartButton).toBeVisible();
+
+// DashboardPage.js defines the selectors:
+class DashboardPage extends BasePage {
+    get addChartButton() { return this.page.locator('#add-chart-btn'); }
+    get staticChartsContainer() { return this.page.locator('#static-charts'); }
+}
+```
+
+#### Authentication fixtures
+
+Most tests need a logged-in user. Instead of logging in at the start of every test, the `auth.fixture.js` fixture provides pre-authenticated browser pages:
+
+```javascript
+import { test, expect } from '../fixtures/auth.fixture.js';
+
+test('admin can see user management', async ({ adminPage }) => {
+    // adminPage is already logged in as admin — no login step needed
+    await adminPage.goto('/admin/users');
+    // ...
+});
+```
+
+#### Configuration: `playwright.config.js`
+
+Key settings:
+- **`webServer`** — Automatically runs `node app.js` before tests and waits for port 2121
+- **`retries: 2`** in CI, `0` locally — Flaky tests get retried in CI but fail fast locally
+- **`screenshot/video/trace: 'retain-on-failure'`** — On failure, debugging artifacts are saved to `test-results/`
+- **`workers: 4`** locally — Tests run in parallel across 4 browser instances
+
+#### Writing a new test
+
+If you need to test a new feature:
+
+1. If needed, create a Page Object in `tests/e2e/page-objects/` (or add methods to an existing one)
+2. Create a spec file in `tests/e2e/specs/` (or add to an existing one)
+3. Import the auth fixture if you need a logged-in user
+4. Run with `npm run test:e2e:headed` to watch it in the browser while debugging
+
+---
+
+## 7. Quick Reference: Where Things Live
 
 ### Directory structure at a glance
 
@@ -596,7 +750,7 @@ project root/
 |-- helpers/                # Utility functions
 |-- documentation/          # Docsify markdown docs + OpenAPI spec
 |-- tests/
-|   |-- unit/               # Jest unit tests
+|   |-- *.test.js           # Jest unit tests
 |   |-- e2e/                # Playwright end-to-end tests
 |-- storage/reports/        # Generated PDF reports
 ```
@@ -615,6 +769,8 @@ project root/
 | **User management** | `controllers/adminController.js`, `views/admin/users.ejs`, `public/js/adminUsers.js` |
 | **Theming / Dark mode** | `public/css/themes/colors-default.css`, `public/js/themeManager.js`, `views/components/header.ejs` |
 | **Data simulation** | `data_analysis_pipeline/AIAnalyzer.js`, `constants/sse.js` |
+| **Unit tests** | `tests/*.test.js` (Jest) |
+| **E2E tests** | `tests/e2e/specs/*.spec.js`, `tests/e2e/page-objects/`, `tests/e2e/fixtures/auth.fixture.js` |
 
 ### Team & project context
 
