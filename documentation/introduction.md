@@ -6,7 +6,7 @@ This file contains information about the rest of the documentation available abo
 	- `[Domain]`: This refers to the domain the site is running on, whether it be `http://localhost:2121/`, `https://danielbierman.ca/dashboard`, or some other domain. When you see `[Domain]` in the documentation use whichever domain the application is active on.
 
 ## Authentication
-- Information about how to authenticate yourself as a user can be found in the [Authentication](/authentication.md) file.
+- Information about how to authenticate yourself as a user can be found in the [Authentication](authentication.md) file.
 - API endpoints which require authentication will be tagged "*requires authentication*" as well as include the level of authentication required.
 
 ## Pages
@@ -21,7 +21,7 @@ This file contains information about the rest of the documentation available abo
 	- [Demo Controls](demo-controls.md)
 
 ## API Documentation
-- We have created OpenAPI documentation which is available [here](http://localhost:2121/api/docs/).
+- We have created OpenAPI documentation which is available [here](https://danielbierman.ca/dashboard/api/docs/).
 - We are using [Swagger](https://swagger.io/) to render the API documentation.
 
 ## Reference
@@ -33,7 +33,7 @@ This file contains information about the rest of the documentation available abo
 - Information about how the site's errors are logged can be found in [Errors](errors.md).
 
 ## Open API Documentation
-- Open API documentation is provided at [API Documentation](http://localhost:2121/api/docs).
+- Open API documentation is provided at [API Documentation](https://danielbierman.ca/dashboard/api/docs).
 - It is also available at `[Domain]/api/docs/`.
 - More information about this in [About OpenAPI Documentation](openapi_documentation.md)
 

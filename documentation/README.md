@@ -22,7 +22,7 @@ This project is an AI Safety Dashboard that monitors live LLM-based AI systems a
 * [Introduction](introduction.md)
 * [Installation](installation.md)
 * [Authentication](authentication.md)
-* [API Documentation](http://localhost:2121/api/docs)
+* [API Documentation](https://danielbierman.ca/dashboard/api/docs)
 
 ## Reference
 * [Constants Reference](constants.md)
@@ -30,8 +30,7 @@ This project is an AI Safety Dashboard that monitors live LLM-based AI systems a
 * [AI Integration Guide](ai-integration.md)
 
 ## Head back to the Dashboard
-* [Development Dashboard](http://localhost:2121/)
-* [Production Dashboard](https://danielbierman.ca/dashboard)
+* [Dashboard](https://danielbierman.ca/dashboard/)
 
 ## Read Next
 * [Introduction](introduction.md)
