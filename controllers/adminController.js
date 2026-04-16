@@ -286,7 +286,7 @@ export const updateAiLogCutoff = async (req, res) => {
   try {
     const { value } = req.body;
 
-    if (typeof value !== 'number' || value <= 0) {
+    if (typeof value !== 'number' || (value !== -1 && value <= 0)) {
       return res.status(400).json({ message: 'Invalid cutoff value.' });
     }
 
@@ -296,7 +296,9 @@ export const updateAiLogCutoff = async (req, res) => {
         { upsert: true }
     );
 
-    const logDetails = `Changed AI log cutoff to ${value}ms`;
+    const logDetails = value === -1
+        ? 'Changed AI log cutoff to forever (never delete)'
+        : `Changed AI log cutoff to ${value}ms`;
 
     User_Log.addLog(req.user._id, 'Setting_Changed', logDetails).catch(err => console.error(err));
 

@@ -438,12 +438,47 @@ document.addEventListener('DOMContentLoaded', async () => {
   const aiLogCutoffSelect = document.getElementById('ai-log-cutoff');
   const saveAiLogCutoffBtn = document.getElementById('save-ai-log-cutoff');
   const systemMessagesDiv = document.getElementById('system-messages');
+  const customCutoffContainer = document.getElementById('custom-cutoff-container');
+  const customCutoffValue = document.getElementById('custom-cutoff-value');
+  const customCutoffUnit = document.getElementById('custom-cutoff-unit');
 
   function showSystemMessage(message, type = 'success') {
     if (!systemMessagesDiv) return;
     const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
     systemMessagesDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
     setTimeout(() => { systemMessagesDiv.innerHTML = ''; }, 5000);
+  }
+
+  // Preset values for matching loaded settings back to dropdown
+  const presetValues = [
+    '3600000', '21600000', '43200000', '86400000',
+    '259200000', '604800000', '1209600000', '2592000000', '-1'
+  ];
+
+  function setRetentionUI(ms) {
+    if (ms === -1) {
+      aiLogCutoffSelect.value = '-1';
+      if (customCutoffContainer) customCutoffContainer.style.display = 'none';
+    } else if (presetValues.includes(String(ms))) {
+      aiLogCutoffSelect.value = String(ms);
+      if (customCutoffContainer) customCutoffContainer.style.display = 'none';
+    } else {
+      // Non-preset value — show custom UI
+      aiLogCutoffSelect.value = 'custom';
+      if (customCutoffContainer) customCutoffContainer.style.display = '';
+      // Find the best unit to display
+      const units = [31536000000, 2592000000, 86400000, 3600000, 60000];
+      for (const unit of units) {
+        if (ms >= unit && ms % unit === 0) {
+          customCutoffUnit.value = String(unit);
+          customCutoffValue.value = ms / unit;
+          return;
+        }
+      }
+      // Fallback: show in minutes
+      customCutoffUnit.value = '60000';
+      customCutoffValue.value = Math.round(ms / 60000);
+    }
   }
 
   const defaultThemeSelect = document.getElementById('default-theme-select');
@@ -456,7 +491,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         const data = await res.json();
         if (aiLogCutoffSelect && data.aiLogCutoff !== undefined) {
-          aiLogCutoffSelect.value = String(data.aiLogCutoff);
+          setRetentionUI(data.aiLogCutoff);
         }
         if (defaultThemeSelect && data.defaultTheme) {
           defaultThemeSelect.value = data.defaultTheme;
@@ -467,9 +502,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Show/hide custom duration inputs
   if (aiLogCutoffSelect) {
+    aiLogCutoffSelect.addEventListener('change', () => {
+      if (customCutoffContainer) {
+        customCutoffContainer.style.display = aiLogCutoffSelect.value === 'custom' ? '' : 'none';
+      }
+    });
+
     saveAiLogCutoffBtn?.addEventListener('click', async () => {
-      const value = Number(aiLogCutoffSelect.value);
+      let value;
+      if (aiLogCutoffSelect.value === 'custom') {
+        const num = Number(customCutoffValue?.value);
+        const unit = Number(customCutoffUnit?.value);
+        if (!num || num < 1 || !unit) {
+          showSystemMessage('Please enter a valid duration.', 'error');
+          return;
+        }
+        value = num * unit;
+      } else {
+        value = Number(aiLogCutoffSelect.value);
+      }
+
       try {
         const res = await fetch('admin/api/settings/ai-log-cutoff', {
           method: 'PUT',

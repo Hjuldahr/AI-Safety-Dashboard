@@ -142,9 +142,24 @@
                   <option value="604800000">1 Week</option>
                   <option value="1209600000">2 Weeks</option>
                   <option value="2592000000">1 Month</option>
+                  <option value="-1">Forever (Never Delete)</option>
+                  <option value="custom">Custom Duration...</option>
                 </select>
               </div>
-              <button id="save-ai-log-cutoff" type="button" class="btn btn-primary">Save</button>
+              <div id="custom-cutoff-container" class="form-group" style="max-width: 300px; display: none; margin-top: 0.75rem;">
+                <label>Custom duration:</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <input type="number" id="custom-cutoff-value" class="form-control" min="1" placeholder="e.g. 30" style="flex: 1;">
+                  <select id="custom-cutoff-unit" class="form-control" style="flex: 1;">
+                    <option value="60000">Minutes</option>
+                    <option value="3600000">Hours</option>
+                    <option value="86400000" selected>Days</option>
+                    <option value="2592000000">Months (30d)</option>
+                    <option value="31536000000">Years (365d)</option>
+                  </select>
+                </div>
+              </div>
+              <button id="save-ai-log-cutoff" type="button" class="btn btn-primary" style="margin-top: 0.75rem;">Save</button>
 
               <hr style="margin: 1.5rem 0;" />
 

@@ -146,8 +146,8 @@ input:checked+.slider:before {
   font-size: 0.9rem;
   font-weight: 600;
   border: none;
-  background-color: #28a745;
-  color: white;
+  background-color: var(--color-success);
+  color: var(--color-white);
   border-radius: 4px;
   cursor: pointer;
 }
@@ -157,20 +157,16 @@ input:checked+.slider:before {
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
   font-weight: 600;
-  border: 1px solid #6c757d;
-  /* Gray border */
-  background-color: #ffffff;
-  /* White background */
-  color: #6c757d;
-  /* Gray text */
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  color: var(--text-dark);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background-color: #f8f9fa;
-  /* Light gray on hover */
+  background-color: var(--body-bg);
 }
 
 /* --- User Log Table --- */
@@ -325,13 +321,12 @@ input:checked+.slider:before {
 }
 
 .ai-log-info-btn {
-  background-color: #007bff;
+  background-color: var(--btn-default-bg);
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
   font-weight: 600;
-  border: 1px solid #6c757d;
-  color: #ffffff;
-  /* Gray text */
+  border: 1px solid var(--border-color);
+  color: var(--color-white);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
