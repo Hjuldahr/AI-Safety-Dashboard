@@ -313,6 +313,37 @@ const getAILogView = async (req, res) => {
     }
 };
 
+const getAISummaryView = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const limit = 10;
+
+        const targetSummary = await AI_Summary.findById(id);
+        if (!targetSummary) {
+            return res.redirect('logs?error=SummaryNotFound');
+        }
+
+        const countBefore = await AI_Summary.countDocuments({
+            responseTimestamp: { $gt: targetSummary.responseTimestamp }
+        });
+
+        const targetPage = Math.floor(countBefore / limit) + 1;
+
+        res.render("logs", {
+            user: req.user,
+            deepLink: {
+                view: 'summary',
+                id: id,
+                page: targetPage,
+            },
+            constants: chartConstants
+        });
+    } catch (error) {
+        console.error("Error redirecting to AI summary:", error);
+        res.redirect(`${BASE}logs`);
+    }
+};
+
 const getAILog = async (req, res) => {
     try {
         const id = req.params.id
@@ -472,6 +503,7 @@ const exportAISummaryHDF5 = async (req, res) => {
 export default {
     getPage,
     getAILogView,
+    getAISummaryView,
     getAILog,
     getFilteredUserLogs,
     getFilteredAILogs,
