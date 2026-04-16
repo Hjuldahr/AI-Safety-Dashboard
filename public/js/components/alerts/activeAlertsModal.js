@@ -51,7 +51,7 @@ export function initActiveAlertsModal(modalManager, { onEdit, onDeleteSuccess })
                             <i class="fa-solid ${alert.disabled ? 'fa-play' : 'fa-pause'}"></i>
                         </button>
                         <button class="btn btn-secondary btn-icon mute-btn" title="${alert.muted ? 'Unmute' : 'Mute'}">
-                            <i class="fa-solid ${alert.muted ? 'fa-volume-up' : 'fa-volume-mute'}"></i>
+                            <i class="fa-solid ${alert.muted ? 'fa-volume-mute' : 'fa-volume-up'}"></i>
                         </button>
                         <button class="btn btn-secondary btn-icon edit-btn" title="Edit">
                             <i class="fa-solid fa-pen"></i>
