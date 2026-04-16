@@ -28,5 +28,5 @@ Server-side errors appear in the running server console. Controllers use try/cat
 User actions are logged to the `User_Log` collection for audit purposes. This includes logins, logouts, chart/alert/report CRUD operations, and role changes. See [Logs](logs.md) for details.
 
 ## Read Next
-* [API Documentation](http://localhost:2121/api/docs)
+* [API Documentation](https://danielbierman.ca/dashboard/api/docs/)
 * [Logs](logs.md)

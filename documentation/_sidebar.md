@@ -4,7 +4,7 @@
     * [Introduction](introduction.md)
     * [Installation](installation.md)
     * [Authentication](authentication.md)
-    * [API Documentation](http://localhost:2121/api/docs)
+    * [API Documentation](https://danielbierman.ca/dashboard/api/docs/)
         * [About OpenAPI Documentation](openapi_documentation.md)
     * Main Pages
         * [Dashboard](dashboard.md)
@@ -23,4 +23,4 @@
     * [Errors](errors.md)
     * [Site Diagram](site-diagram.md)
     * [Data Analysis Pipeline](data_analysis_pipeline.md)
-    * [Back to Dashboard](http://localhost:2121/)
+    * [Back to Dashboard](https://danielbierman.ca/dashboard/)

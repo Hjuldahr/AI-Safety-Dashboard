@@ -46,6 +46,6 @@ After authentication, access to pages and API endpoints is controlled by role-ba
 The authorization middleware checks the user's role against the required permission for each route. Permissions are cached for 5 minutes to reduce database queries.
 
 ## Read Next
-* [API Documentation](http://localhost:2121/api/docs)
+* [API Documentation](https://danielbierman.ca/dashboard/api/docs/)
 * [Management](management.md)
 * [Errors](errors.md)
