@@ -1,5 +1,6 @@
 import express from "express";
 import controller from "../controllers/authController.js";
+import { isAuthenticated } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -10,5 +11,8 @@ router.get("/login", controller.getPage);
 router.post("/api/login", controller.login);
 router.post("/api/signup", controller.signUp);
 router.post("/api/logout", controller.logout);
+
+// Force-reset password (after OTP login)
+router.post("/api/reset-password", isAuthenticated, controller.resetPassword);
 
 export default router;

@@ -55,6 +55,23 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         required: false,
         default: null
+    },
+
+    // ----- Forced-reset OTP fields -----
+    // bcrypt hash of a one-time password issued by an admin (never stored in plain text)
+    otpHash: {
+        type: String,
+        default: null
+    },
+    // UTC expiry for the OTP (24 h from generation)
+    otpExpiresAt: {
+        type: Date,
+        default: null
+    },
+    // When true the user must set a new password before accessing the app
+    mustResetPassword: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true }); 
 

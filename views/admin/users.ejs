@@ -13,6 +13,7 @@
   <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
   <link rel="stylesheet" href="css/components/notifications.css">
   <link rel="stylesheet" href="css/components/tables.css">
+  <link rel="stylesheet" href="css/components/modals.css">
   <link rel="stylesheet" href="css/pages/admin.css">
 
   <!-- Scripts -->
@@ -209,6 +210,9 @@
 
     </div>
   </main>
+
+  <!-- OTP modal mount point (populated by adminUsers.js) -->
+  <div id="otp-modal-container"></div>
 
   <script>
     window.AVAILABLE_ROLES = <%- JSON.stringify(rolesList || []) %>;

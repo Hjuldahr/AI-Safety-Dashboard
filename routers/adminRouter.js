@@ -29,6 +29,9 @@ router.delete('/api/roles/:name', isAuthenticated, authorize('manage:roles'), co
 // API: delete a user
 router.delete('/api/users/:id', isAuthenticated, authorize('manage:users'), controller.deleteUser);
 
+// API: force password reset OTP for a user
+router.post('/api/users/:id/otp', isAuthenticated, authorize('manage:users'), controller.generateOtp);
+
 // API: system settings
 router.get('/api/settings', isAuthenticated, authorize('view:system'), controller.getSystemSettings);
 router.put('/api/settings/ai-log-cutoff', isAuthenticated, authorize('edit:system'), controller.updateAiLogCutoff);

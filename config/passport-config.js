@@ -1,5 +1,6 @@
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
+import bcrypt from 'bcryptjs';
 import User from '../models/user.js'; // Import our User model
 
 function initialize(passport) {
@@ -27,10 +28,24 @@ function initialize(passport) {
 
             if (isMatch) {
                 return done(null, user); // Pass the user object to Passport.
-            } else {
-                // Passwords do not match.
-                return done(null, false, { message: 'Password incorrect' });
             }
+
+            // --- OTP fallback ---
+            // Check if there is an active, unexpired OTP for this user.
+            if (user.otpHash && user.otpExpiresAt && new Date() < user.otpExpiresAt) {
+                const otpMatch = await bcrypt.compare(password, user.otpHash);
+                if (otpMatch) {
+                    // Consume the OTP: clear hash and expiry, leave mustResetPassword=true
+                    user.otpHash = null;
+                    user.otpExpiresAt = null;
+                    // mustResetPassword remains true — set by admin when OTP was generated
+                    await user.save({ validateBeforeSave: false });
+                    return done(null, user);
+                }
+            }
+
+            // Passwords do not match and no valid OTP.
+            return done(null, false, { message: 'Password incorrect' });
         } catch (error) {
             // An error occurred while querying the database.
             return done(error);

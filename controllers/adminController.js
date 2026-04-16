@@ -7,6 +7,8 @@ import SystemSetting from '../models/SystemSetting.js';
 import { AI_LOG_CUTOFF } from '../constants/sse.js';
 import { broadcastEvent } from '../server_side_events/scheduler.js';
 import { invalidateRoleCache } from '../middleware/authorization.js';
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 // Render the user management page
 export const getUsersPage = async (req, res) => {
@@ -348,6 +350,56 @@ export const updateDefaultTheme = async (req, res) => {
   }
 };
 
+// Generate a one-time password (OTP) for a forced password reset
+export const generateOtp = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+
+    // Prevent resetting own account via OTP
+    if (req.user && String(req.user._id) === String(targetUserId)) {
+      return res.status(400).json({ message: 'You cannot force-reset your own account.' });
+    }
+
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) return res.status(404).json({ message: 'User not found.' });
+
+    // Only owners can reset another owner's password
+    if (targetUser.roles && targetUser.roles.includes('owner')) {
+      if (!(req.user && req.user.roles && req.user.roles.includes('owner'))) {
+        return res.status(403).json({ message: 'Only owners can reset an owner account password.' });
+      }
+    }
+
+    // Generate a cryptographically secure 32-byte plain OTP (64 hex chars)
+    const plainOtp = crypto.randomBytes(32).toString('hex');
+
+    // Hash the OTP — never store or log the plain text
+    const otpHash = await bcrypt.hash(plainOtp, 10);
+
+    // Persist: set hash, 24-hour expiry, and force-reset flag
+    targetUser.otpHash = otpHash;
+    targetUser.otpExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    targetUser.mustResetPassword = true;
+    await targetUser.save({ validateBeforeSave: false });
+
+    // Audit log — no plain OTP in the log entry
+    const logDetails = `Admin generated a forced-reset OTP for user: ${targetUser.username}`;
+    User_Log.addLog(req.user._id, 'OTP_Generated', logDetails).catch(err => console.error(err));
+    broadcastEvent('user_log_update', {
+      createdAt: new Date(),
+      userID: { username: req.user.username, email: req.user.email },
+      eventType: 'OTP_Generated',
+      details: logDetails
+    });
+
+    // Return the plain OTP once — the admin is responsible for securely sharing it
+    res.json({ success: true, otp: plainOtp, username: targetUser.username });
+  } catch (err) {
+    console.error('Error generating OTP:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const shutdownServer = async (req, res) => {
   try {
     res.json({ success: true, message: 'Server shutdown initiated.' });
@@ -384,6 +436,7 @@ export default {
   createRole,
   deleteRole,
   deleteUser,
+  generateOtp,
   getSystemSettings,
   updateAiLogCutoff,
   updateDefaultTheme,

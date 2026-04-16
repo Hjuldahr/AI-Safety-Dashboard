@@ -87,3 +87,68 @@ body.auth-page {
   box-shadow: var(--shadow-xs);
   transition: background-color 0.2s;
 }
+
+/* --- Force Password Reset Panel --- */
+/* Shown in place of Sign In / Sign Up after a successful OTP login */
+.force-reset-panel {
+  display: none; /* shown via JS */
+  animation: fadeInUp 0.25s ease;
+}
+
+.force-reset-panel.visible {
+  display: block;
+}
+
+.force-reset-panel .reset-heading {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.force-reset-panel .reset-subtext {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-muted, var(--text-light));
+}
+
+.force-reset-panel .form-group {
+  margin-bottom: 1rem;
+}
+
+.force-reset-panel .form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--text-dark);
+}
+
+.force-reset-panel .form-group input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text-dark);
+  font-size: 0.95rem;
+}
+
+.force-reset-panel .form-group input:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 1px;
+}
+
+.force-reset-panel .reset-error {
+  font-size: 0.85rem;
+  color: var(--error-text, #dc3545);
+  min-height: 1.1em;
+  margin-bottom: 0.75rem;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+

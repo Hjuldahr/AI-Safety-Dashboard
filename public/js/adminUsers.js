@@ -144,61 +144,87 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Render users table
   function renderTable(users) {
+    if (!users.length) {
+      usersContainer.innerHTML = `
+        <table class="table">
+          <thead><tr>
+            <th><input type="checkbox" id="select-all-table"></th>
+            <th>Username</th><th>Email</th><th>Role</th><th>Joined</th><th>Actions</th>
+          </tr></thead>
+          <tbody><tr class="empty-state"><td colspan="6">No users found.</td></tr></tbody>
+        </table>`;
+      return;
+    }
+
+    const canManage = (window.USER_PERMISSIONS || []).includes('manage:users');
+
     const rows = users.map(u => {
       const currentRole = (u.roles && u.roles[0]) || '';
-      const options = window.AVAILABLE_ROLES.map(r => `<option value="${r}" ${r === currentRole ? 'selected' : ''}>${r}</option>`).join('');
+      const roleBadgeClass = ['owner','admin','user','viewer'].includes(currentRole) ? currentRole : '';
+      const options = window.AVAILABLE_ROLES.map(r =>
+        `<option value="${r}" ${r === currentRole ? 'selected' : ''}>${r}</option>`
+      ).join('');
       const isCurrentUser = String(window.CURRENT_USER_ID) === String(u._id);
-      const saveBtnDisabled = isCurrentUser ? 'disabled' : '';
-      const canDelete = (window.USER_PERMISSIONS || []).includes('manage:users');
-      const deleteDisabled = isCurrentUser ? 'disabled' : '';
+      const disAttr = isCurrentUser ? 'disabled' : '';
+
+      // Format joined date
+      const joined = u.createdAt
+        ? new Date(u.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '—';
 
       return `
         <tr data-user-id="${u._id}">
-          <td><input type="checkbox" class="select-user" data-user-id="${u._id}" ${isCurrentUser ? 'disabled' : ''}></td>
-          <td>${u.username || ''}</td>
-          <td>${u.email || ''}</td>
+          <td><input type="checkbox" class="select-user" data-user-id="${u._id}" ${disAttr}></td>
+          <td><strong>${u.username || ''}</strong></td>
+          <td style="color:var(--text-muted,var(--text-light));font-size:0.9rem">${u.email || ''}</td>
           <td>
-            <select class="role-select" ${isCurrentUser ? 'disabled' : ''}>
-              ${options}
-            </select>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <select class="role-select" ${disAttr}>${options}</select>
+              <span class="role-badge ${roleBadgeClass}">${currentRole}</span>
+            </div>
           </td>
-          <td><button class="save-role btn btn-primary" ${saveBtnDisabled}>Save</button></td>
-          <td>${canDelete ? `<button class="btn-danger delete-user" ${deleteDisabled}>Delete</button>` : ''}</td>
+          <td class="joined-date">${joined}</td>
+          <td>
+            <div class="user-table-actions">
+              <button class="save-role btn btn-primary" ${disAttr} title="Save role change">Save</button>
+              ${canManage && !isCurrentUser ? `<button class="btn btn-warning reset-pw-btn" data-user-id="${u._id}" data-username="${u.username}" title="Force password reset"><i class="fa-solid fa-key"></i> Reset PW</button>` : ''}
+              ${canManage && !isCurrentUser ? `<button class="btn btn-danger delete-user" title="Delete user"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </div>
+          </td>
         </tr>
       `;
     }).join('');
 
     usersContainer.innerHTML = `
-      <table class="table">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="select-all-table"></th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th></th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all-table"></th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
     `;
 
-    // Attach select-all behavior
-    const selectAll = document.getElementById('select-all-table');
-    selectAll?.addEventListener('change', (e) => {
-      const checked = e.target.checked;
-      usersContainer.querySelectorAll('.select-user').forEach(cb => {
-        cb.checked = checked;
-      });
+    // Select-all
+    document.getElementById('select-all-table')?.addEventListener('change', (e) => {
+      usersContainer.querySelectorAll('.select-user:not([disabled])').forEach(cb => { cb.checked = e.target.checked; });
     });
 
-    // Attach event listeners for in-row save
+    // Save role
     usersContainer.querySelectorAll('.save-role').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tr = e.target.closest('tr');
         const userId = tr.dataset.userId;
         const select = tr.querySelector('.role-select');
+        const badge  = tr.querySelector('.role-badge');
         const role = select.value;
 
         try {
@@ -207,34 +233,39 @@ document.addEventListener('DOMContentLoaded', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role })
           });
-
           if (res.ok) {
             showMessage('Role updated');
+            // Update badge inline
+            if (badge) {
+              badge.textContent = role;
+              badge.className = `role-badge ${['owner','admin','user','viewer'].includes(role) ? role : ''}`;
+            }
             load();
           } else {
             const text = await res.json();
             showMessage(`Error: ${text.message || 'Unable to update role'}`, 'error');
           }
         } catch (err) {
-          console.error(err);
           showMessage('Error updating role', 'error');
         }
       });
     });
 
-    // Attach delete listeners
+    // Reset PW (OTP modal)
+    usersContainer.querySelectorAll('.reset-pw-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openOtpModal(btn.dataset.userId, btn.dataset.username);
+      });
+    });
+
+    // Delete user
     usersContainer.querySelectorAll('.delete-user').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tr = e.target.closest('tr');
         const userId = tr.dataset.userId;
-
         if (!confirm('Are you sure you want to delete this user account?')) return;
-
         try {
-          const res = await fetch(`admin/api/users/${userId}`, {
-            method: 'DELETE'
-          });
-
+          const res = await fetch(`admin/api/users/${userId}`, { method: 'DELETE' });
           const data = await res.json();
           if (res.ok) {
             showMessage('User deleted');
@@ -243,11 +274,115 @@ document.addEventListener('DOMContentLoaded', async () => {
             showMessage(`Error: ${data.message || 'Unable to delete user'}`, 'error');
           }
         } catch (err) {
-          console.error(err);
           showMessage('Error deleting user', 'error');
         }
       });
     });
+  }
+
+  // ---- OTP Modal ----
+  async function openOtpModal(userId, username) {
+    const container = document.getElementById('otp-modal-container');
+    if (!container) return;
+
+    // Show a loading state modal first
+    container.innerHTML = buildOtpModalHtml(username, null, true);
+    document.body.style.overflow = 'hidden';
+
+    let otp = null;
+    try {
+      const res = await fetch(`admin/api/users/${userId}/otp`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        closeOtpModal();
+        showMessage(data.message || 'Failed to generate reset OTP', 'error');
+        return;
+      }
+      otp = data.otp;
+    } catch (err) {
+      closeOtpModal();
+      showMessage('Network error generating OTP', 'error');
+      return;
+    }
+
+    // Replace loading state with real OTP
+    container.innerHTML = buildOtpModalHtml(username, otp, false);
+
+    // Wire up copy button
+    const copyBtn = document.getElementById('otp-copy-btn');
+    const copiedMsg = document.getElementById('otp-copied-msg');
+    const otpInput = document.getElementById('otp-value');
+    copyBtn?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(otp);
+        copiedMsg.textContent = '✓ Copied to clipboard';
+        setTimeout(() => { copiedMsg.textContent = ''; }, 3000);
+      } catch {
+        otpInput.select();
+        document.execCommand('copy');
+        copiedMsg.textContent = '✓ Copied';
+        setTimeout(() => { copiedMsg.textContent = ''; }, 3000);
+      }
+    });
+
+    // Close buttons
+    container.querySelectorAll('[data-close-otp]').forEach(el => {
+      el.addEventListener('click', closeOtpModal);
+    });
+    // Close on backdrop click
+    container.querySelector('.modal-overlay')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeOtpModal();
+    });
+  }
+
+  function buildOtpModalHtml(username, otp, loading) {
+    const bodyContent = loading
+      ? `<div style="text-align:center;padding:2rem;color:var(--text-muted,var(--text-light))">
+           <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem"></i>
+           <p style="margin-top:0.75rem">Generating OTP&hellip;</p>
+         </div>`
+      : `<p style="margin:0 0 0.5rem;color:var(--text-dark)">
+           Share this one-time password with <strong>${username}</strong>.<br>
+           They can use it to log in and will be prompted to set a new password immediately.
+         </p>
+         <p style="margin:0 0 0.25rem;font-size:0.82rem;color:var(--text-muted,var(--text-light))">
+           <i class="fa-solid fa-clock"></i> Expires in 24 hours &nbsp;·&nbsp;
+           <i class="fa-solid fa-shield-halved"></i> Single-use only
+         </p>
+         <div class="otp-box">
+           <input type="text" id="otp-value" value="${otp}" readonly>
+           <button class="otp-copy-btn" id="otp-copy-btn" type="button">
+             <i class="fa-solid fa-copy"></i> Copy
+           </button>
+         </div>
+         <p class="otp-copied-msg" id="otp-copied-msg"></p>
+         <p style="margin:1rem 0 0;font-size:0.8rem;color:var(--text-muted,var(--text-light))">
+           <i class="fa-solid fa-triangle-exclamation" style="color:var(--color-warning,#f59e0b)"></i>
+           This OTP is not stored in plain text and will not be shown again.
+         </p>`;
+
+    return `
+      <div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Force Password Reset">
+        <div class="modal-content medium-modal">
+          <div class="modal-header">
+            <h2 style="font-size:1.1rem">
+              <i class="fa-solid fa-key" style="color:var(--color-warning,#f59e0b);margin-right:0.5rem"></i>
+              Force Password Reset &mdash; ${username}
+            </h2>
+            <button class="close-modal-btn" data-close-otp type="button" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">${bodyContent}</div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-otp type="button">Close</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function closeOtpModal() {
+    const container = document.getElementById('otp-modal-container');
+    if (container) container.innerHTML = '';
+    document.body.style.overflow = '';
   }
 
   // Render roles list
