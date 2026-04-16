@@ -572,27 +572,36 @@ document.addEventListener('DOMContentLoaded', async () => {
           </h4>
           <p>${role.description}</p>
           <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" data-role-name="${role.name}" data-permissions='${JSON.stringify(role.permissions || [])}' onclick="openRolePermissionsModal(this)">
+            <button class="btn btn-secondary view-perms-btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" data-role-name="${role.name}" data-permissions='${JSON.stringify(role.permissions || [])}'>
               <i class="fa-solid fa-list-check"></i> View Permissions
             </button>
-            ${role.isCustom ? `<button class="btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" onclick="deleteRole('${role.name}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
+            ${role.isCustom ? `<button class="btn-danger delete-role-btn" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" data-role-name="${role.name}"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
           </div>
         </div>
       </div>
     `).join('');
 
     rolesContainer.innerHTML = html || '<p>No roles found.</p>';
+
+    // Wire up View Permissions buttons (no inline onclick — CSP-safe)
+    rolesContainer.querySelectorAll('.view-perms-btn').forEach(btn => {
+      btn.addEventListener('click', () => openRolePermissionsModal(btn));
+    });
+
+    // Wire up Delete buttons
+    rolesContainer.querySelectorAll('.delete-role-btn').forEach(btn => {
+      btn.addEventListener('click', () => handleDeleteRole(btn.dataset.roleName));
+    });
   }
 
   // Open role permissions modal
-  window.openRolePermissionsModal = function(btn) {
+  function openRolePermissionsModal(btn) {
     const roleName = btn.dataset.roleName;
     const permissions = JSON.parse(btn.dataset.permissions || '[]');
     
     // Map available permissions to get their friendly labels
     const permMap = {};
     if (availablePermissions && typeof availablePermissions === 'object') {
-       // availablePermissions from fetchPermissions is { "Category": [{ key, label }, ...], ... }
        Object.values(availablePermissions).forEach(categoryPerms => {
            if (Array.isArray(categoryPerms)) {
                categoryPerms.forEach(p => { 
@@ -612,7 +621,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }).join('')
       : '<li style="padding: 1rem; text-align: center; color:var(--text-muted)">No specific permissions assigned to this role.</li>';
 
-    const container = document.getElementById('otp-modal-container'); // Reuse modal mount point
+    const container = document.getElementById('otp-modal-container');
     if (!container) return;
 
     container.innerHTML = `
@@ -623,7 +632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <i class="fa-solid fa-shield-halved" style="color:var(--primary-color);"></i>
                 Permissions: <span style="color: var(--text-dark);">${roleName}</span>
               </h2>
-              <button class="close-modal-btn" id="close-perm-modal" aria-label="Close">&times;</button>
+              <button class="close-modal-btn" id="close-perm-modal" type="button" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">
               <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.5rem; max-height: 50vh; overflow-y: auto;">
@@ -631,7 +640,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               </ul>
             </div>
             <div class="modal-footer">
-              <button class="btn btn-secondary" id="cancel-perm-modal">Close</button>
+              <button class="btn btn-secondary" id="cancel-perm-modal" type="button">Close</button>
             </div>
           </div>
         </div>
@@ -646,15 +655,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('close-perm-modal').addEventListener('click', closeModal);
     document.getElementById('cancel-perm-modal').addEventListener('click', closeModal);
-    
-    // allow clicking on backdrop to close
     container.querySelector('.modal-overlay').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeModal();
     });
-  };
+  }
 
-  // Delete role function (global so onclick can access it)
-  window.deleteRole = async (roleName) => {
+  // Delete role handler (CSP-safe, no inline onclick)
+  async function handleDeleteRole(roleName) {
     if (!confirm(`Are you sure you want to delete the "${roleName}" role?`)) {
       return;
     }
