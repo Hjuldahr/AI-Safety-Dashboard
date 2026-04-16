@@ -571,15 +571,77 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${role.isSystemRole ? '<span class="role-badge system">System</span>' : '<span class="role-badge">Custom</span>'}
           </h4>
           <p>${role.description}</p>
-          <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
-            ${role.isCustom ? `<button class="btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" onclick="deleteRole('${role.name}')">Delete</button>` : 'Cannot delete system roles'}
-          </p>
+          <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" data-role-name="${role.name}" data-permissions='${JSON.stringify(role.permissions || [])}' onclick="openRolePermissionsModal(this)">
+              <i class="fa-solid fa-list-check"></i> View Permissions
+            </button>
+            ${role.isCustom ? `<button class="btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.85rem;" onclick="deleteRole('${role.name}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
+          </div>
         </div>
       </div>
     `).join('');
 
     rolesContainer.innerHTML = html || '<p>No roles found.</p>';
   }
+
+  // Open role permissions modal
+  window.openRolePermissionsModal = function(btn) {
+    const roleName = btn.dataset.roleName;
+    const permissions = JSON.parse(btn.dataset.permissions || '[]');
+    
+    // Map available permissions to get their friendly labels
+    const permMap = {};
+    if (availablePermissions && typeof availablePermissions === 'object') {
+       // availablePermissions from fetchPermissions is { "Category": [{ key, label }, ...], ... }
+       Object.values(availablePermissions).forEach(categoryPerms => {
+           if (Array.isArray(categoryPerms)) {
+               categoryPerms.forEach(p => { 
+                   if (p.key) permMap[p.key] = p.label || p.key; 
+               });
+           }
+       });
+    }
+
+    const listHtml = permissions.length
+      ? permissions.map(p => {
+          const label = permMap[p] || p;
+          return `<li style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #f8f9fa); display: flex; align-items: center; justify-content: space-between;">
+                    <span><i class="fa-solid fa-check" style="color:var(--color-success); margin-right: 0.5rem;"></i> <strong>${label}</strong></span>
+                    <span style="color:var(--text-muted);font-size:0.8rem; font-family: monospace;">${p}</span>
+                  </li>`;
+        }).join('')
+      : '<li style="padding: 1rem; text-align: center; color:var(--text-muted)">No specific permissions assigned to this role.</li>';
+
+    const container = document.getElementById('otp-modal-container'); // Reuse modal mount point
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Role Permissions for ${roleName}">
+          <div class="modal-content medium-modal">
+            <div class="modal-header">
+              <h2 style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-shield-halved" style="color:var(--primary-color);"></i>
+                Permissions: <span style="color: var(--text-dark);">${roleName}</span>
+              </h2>
+              <button class="close-modal-btn" onclick="document.getElementById('otp-modal-container').innerHTML=''" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.5rem; max-height: 50vh; overflow-y: auto;">
+                ${listHtml}
+              </ul>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="document.getElementById('otp-modal-container').innerHTML=''">Close</button>
+            </div>
+          </div>
+        </div>
+    `;
+    
+    // allow clicking on backdrop to close
+    container.querySelector('.modal-overlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) container.innerHTML = '';
+    });
+  };
 
   // Delete role function (global so onclick can access it)
   window.deleteRole = async (roleName) => {
