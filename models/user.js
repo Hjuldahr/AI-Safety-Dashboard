@@ -72,6 +72,19 @@ const UserSchema = new mongoose.Schema({
     mustResetPassword: {
         type: Boolean,
         default: false
+    },
+
+    // ----- Account lock -----
+    // When true the account cannot be used to log in (without deleting the account)
+    isLocked: {
+        type: Boolean,
+        default: false
+    },
+
+    // Timestamp of the user's most recent successful login
+    lastLoginAt: {
+        type: Date,
+        default: null
     }
 }, { timestamps: true }); 
 

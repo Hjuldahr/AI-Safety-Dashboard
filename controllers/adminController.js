@@ -274,22 +274,6 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// Get the current system settings
-export const getSystemSettings = async (req, res) => {
-  try {
-    const aiLogCutoffSetting = await SystemSetting.findOne({ key: 'ai_log_cutoff' }).lean();
-    const defaultThemeSetting = await SystemSetting.findOne({ key: 'default_theme' }).lean();
-
-    const aiLogCutoff = (aiLogCutoffSetting && typeof aiLogCutoffSetting.value === 'number') ? aiLogCutoffSetting.value : AI_LOG_CUTOFF;
-    const defaultTheme = (defaultThemeSetting && typeof defaultThemeSetting.value === 'string') ? defaultThemeSetting.value : 'default';
-
-    res.json({ aiLogCutoff, defaultTheme });
-  } catch (err) {
-    console.error('Error fetching system settings:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
 // Update the AI log cutoff setting
 export const updateAiLogCutoff = async (req, res) => {
   try {
@@ -400,6 +384,149 @@ export const generateOtp = async (req, res) => {
   }
 };
 
+// Toggle account lock state for a user
+export const toggleUserLock = async (req, res) => {
+  try {
+    const targetUserId = req.params.id;
+
+    // Cannot lock your own account
+    if (req.user && String(req.user._id) === String(targetUserId)) {
+      return res.status(400).json({ message: 'You cannot lock your own account.' });
+    }
+
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) return res.status(404).json({ message: 'User not found.' });
+
+    // Only owners can lock another owner
+    if (targetUser.roles && targetUser.roles.includes('owner')) {
+      if (!(req.user && req.user.roles && req.user.roles.includes('owner'))) {
+        return res.status(403).json({ message: 'Only owners can lock an owner account.' });
+      }
+    }
+
+    targetUser.isLocked = !targetUser.isLocked;
+    await targetUser.save({ validateBeforeSave: false });
+
+    const action = targetUser.isLocked ? 'locked' : 'unlocked';
+    const logDetails = `${req.user.username} ${action} account: ${targetUser.username}`;
+    User_Log.addLog(req.user._id, 'Account_Lock_Changed', logDetails).catch(err => console.error(err));
+    broadcastEvent('user_log_update', {
+      createdAt: new Date(),
+      userID: { username: req.user.username, email: req.user.email },
+      eventType: 'Account_Lock_Changed',
+      details: logDetails
+    });
+
+    res.json({ success: true, isLocked: targetUser.isLocked, username: targetUser.username });
+  } catch (err) {
+    console.error('Error toggling user lock:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Admin-create a new user account
+export const createUser = async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+
+    if (!username || !email || !password || !role) {
+      return res.status(400).json({ message: 'Username, email, password, and role are required.' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    }
+
+    // Validate role
+    const roleExists = await Role.findOne({ name: role.toLowerCase() });
+    if (!roleExists) {
+      return res.status(400).json({ message: 'Invalid role specified.' });
+    }
+
+    // Only owners can create owner accounts
+    if (role === 'owner' && !(req.user && req.user.roles.includes('owner'))) {
+      return res.status(403).json({ message: 'Only owners can create owner accounts.' });
+    }
+
+    // Check uniqueness
+    const existing = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }] });
+    if (existing) {
+      return res.status(409).json({ message: 'Username or email already exists.' });
+    }
+
+    const newUser = new User({
+      username: username.toLowerCase().trim(),
+      email: email.toLowerCase().trim(),
+      password, // pre-save hook will hash this
+      roles: [role.toLowerCase()]
+    });
+    await newUser.save();
+
+    const logDetails = `Admin created new user account: ${newUser.username} with role: ${role}`;
+    User_Log.addLog(req.user._id, 'User_Created', logDetails).catch(err => console.error(err));
+    broadcastEvent('user_log_update', {
+      createdAt: new Date(),
+      userID: { username: req.user.username, email: req.user.email },
+      eventType: 'User_Created',
+      details: logDetails
+    });
+
+    res.status(201).json({
+      success: true,
+      user: { id: newUser._id, username: newUser.username, email: newUser.email, roles: newUser.roles }
+    });
+  } catch (err) {
+    console.error('Error creating user:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getSystemSettings = async (req, res) => {
+  try {
+    const aiLogCutoffSetting    = await SystemSetting.findOne({ key: 'ai_log_cutoff' }).lean();
+    const defaultThemeSetting   = await SystemSetting.findOne({ key: 'default_theme' }).lean();
+    const allowRegSetting       = await SystemSetting.findOne({ key: 'allow_registration' }).lean();
+
+    const aiLogCutoff      = (aiLogCutoffSetting  && typeof aiLogCutoffSetting.value  === 'number') ? aiLogCutoffSetting.value  : AI_LOG_CUTOFF;
+    const defaultTheme     = (defaultThemeSetting  && typeof defaultThemeSetting.value === 'string') ? defaultThemeSetting.value : 'default';
+    const allowRegistration = allowRegSetting ? Boolean(allowRegSetting.value) : true; // default open
+
+    res.json({ aiLogCutoff, defaultTheme, allowRegistration });
+  } catch (err) {
+    console.error('Error fetching system settings:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Toggle user registration open/closed
+export const updateRegistrationSetting = async (req, res) => {
+  try {
+    const { allowRegistration } = req.body;
+    if (typeof allowRegistration !== 'boolean') {
+      return res.status(400).json({ message: 'allowRegistration must be a boolean.' });
+    }
+
+    await SystemSetting.findOneAndUpdate(
+      { key: 'allow_registration' },
+      { key: 'allow_registration', value: allowRegistration },
+      { upsert: true }
+    );
+
+    const logDetails = `${allowRegistration ? 'Enabled' : 'Disabled'} new user registration`;
+    User_Log.addLog(req.user._id, 'Setting_Changed', logDetails).catch(err => console.error(err));
+    broadcastEvent('user_log_update', {
+      createdAt: new Date(),
+      userID: { username: req.user.username },
+      eventType: 'Setting_Changed',
+      details: logDetails
+    });
+
+    res.json({ success: true, allowRegistration });
+  } catch (err) {
+    console.error('Error updating registration setting:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const shutdownServer = async (req, res) => {
   try {
     res.json({ success: true, message: 'Server shutdown initiated.' });
@@ -437,9 +564,12 @@ export default {
   deleteRole,
   deleteUser,
   generateOtp,
+  toggleUserLock,
+  createUser,
   getSystemSettings,
   updateAiLogCutoff,
   updateDefaultTheme,
+  updateRegistrationSetting,
   shutdownServer,
   restartServer
 };

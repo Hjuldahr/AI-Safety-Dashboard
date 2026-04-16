@@ -8,6 +8,12 @@ const BASE = process.env.PUBLIC_URL || '/';
 // --- Sign Up ---
 const signUp = async (req, res) => {
     try {
+        // Check if registration is currently allowed
+        const allowRegistration = await Settings.get('allow_registration', true);
+        if (!allowRegistration) {
+            return res.status(403).json({ message: 'New user registration is currently disabled.' });
+        }
+
         const { username, email, password } = req.body;
 
         // Check if a user with this email or username already exists
@@ -52,6 +58,9 @@ const login = (req, res, next) => {
 
             req.session.save((err) => {
                 User_Log.addLog(req.user._id, 'Login', `Successful login from IP: ${req.ip}`).catch(err => console.error('Failed to write log:', err));
+
+                // Record last login timestamp (fire-and-forget)
+                User.findByIdAndUpdate(req.user._id, { lastLoginAt: new Date() }).catch(err => console.error('Failed to update lastLoginAt:', err));
 
                 // If the user must change their password (forced reset via OTP), signal the client
                 if (req.user.mustResetPassword) {

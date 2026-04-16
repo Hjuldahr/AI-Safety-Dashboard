@@ -44,7 +44,14 @@
 
             <!-- Search and Filter Section -->
             <div class="admin-section" style="margin-bottom: 1.5rem;">
-              <h4 style="margin-top: 0; font-size: 0.95rem; color: #666; margin-bottom: 0.75rem;">Search & Filter</h4>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                <h4 style="margin:0;font-size:0.95rem;color:var(--text-light);">Search &amp; Filter</h4>
+                <% if (typeof permissions !== 'undefined' && permissions.includes('manage:users')) { %>
+                <button id="create-user-btn" type="button" class="btn btn-primary" style="font-size:0.85rem;padding:0.4rem 0.9rem;">
+                  <i class="fa-solid fa-user-plus"></i> Create User
+                </button>
+                <% } %>
+              </div>
               <div class="filter-group">
                 <input type="text" id="user-search" class="form-control" placeholder="Search username or email..." />
                 <select id="role-filter" class="form-control">
@@ -186,6 +193,20 @@
               </div>
               <% if (permissions.includes('edit:system')) { %>
               <button id="save-default-theme" type="button" class="btn btn-primary">Save Default Theme</button>
+              <% } %>
+
+              <% if (permissions.includes('edit:system')) { %>
+              <hr style="margin: 1.5rem 0;" />
+
+              <h4>User Registration</h4>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Control whether new users can register accounts through the sign-up page.</p>
+              <div class="registration-toggle-row">
+                <label class="toggle-switch" for="allow-registration-toggle">
+                  <input type="checkbox" id="allow-registration-toggle">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span id="registration-status-label" style="font-size:0.9rem;color:var(--text-dark);">Loading&hellip;</span>
+              </div>
               <% } %>
 
               <% if (permissions.includes('shutdown:server') || permissions.includes('restart:server')) { %>

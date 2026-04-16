@@ -32,10 +32,17 @@ router.delete('/api/users/:id', isAuthenticated, authorize('manage:users'), cont
 // API: force password reset OTP for a user
 router.post('/api/users/:id/otp', isAuthenticated, authorize('manage:users'), controller.generateOtp);
 
+// API: toggle account lock
+router.patch('/api/users/:id/lock', isAuthenticated, authorize('manage:users'), controller.toggleUserLock);
+
+// API: admin-create a new user
+router.post('/api/users', isAuthenticated, authorize('manage:users'), controller.createUser);
+
 // API: system settings
 router.get('/api/settings', isAuthenticated, authorize('view:system'), controller.getSystemSettings);
 router.put('/api/settings/ai-log-cutoff', isAuthenticated, authorize('edit:system'), controller.updateAiLogCutoff);
 router.put('/api/settings/default-theme', isAuthenticated, authorize('edit:system'), controller.updateDefaultTheme);
+router.put('/api/settings/registration', isAuthenticated, authorize('edit:system'), controller.updateRegistrationSetting);
 router.post('/api/settings/shutdown', isAuthenticated, authorize('shutdown:server'), controller.shutdownServer);
 router.post('/api/settings/restart', isAuthenticated, authorize('restart:server'), controller.restartServer);
 

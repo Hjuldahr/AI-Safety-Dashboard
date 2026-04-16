@@ -24,6 +24,11 @@ function initialize(passport) {
                 return done(null, false, { message: 'No user with that email or username' });
             }
 
+            // Locked accounts cannot log in at all
+            if (user.isLocked) {
+                return done(null, false, { message: 'This account has been locked by an administrator.' });
+            }
+
             const isMatch = await user.comparePassword(password);
 
             if (isMatch) {
