@@ -19,8 +19,42 @@ const connectDB = async () => {
 
 const seedDataBase = async () => {
     await seedDefaultRoles();
-    seedAdminUser();
+    await seedOwnerUser();
+    await seedAdminUser();
 }
+
+const seedOwnerUser = async () => {
+    try {
+        const ownerUsername = process.env.DEFAULT_OWNER_USER;
+        const ownerEmail = process.env.DEFAULT_OWNER_EMAIL;
+        const ownerPassword = process.env.DEFAULT_OWNER_PASSWORD;
+
+        // Only seed if owner env vars are configured
+        if (!ownerUsername || !ownerEmail || !ownerPassword) {
+            console.log('-INFO- Owner env vars not set, skipping owner user seed.');
+            return;
+        }
+
+        const ownerExists = await User.findOne({ username: ownerUsername });
+
+        if (ownerExists) {
+            console.log('-INFO- An Owner user already exists.');
+        } else {
+            const ownerUser = new User({
+                username: ownerUsername,
+                email: ownerEmail,
+                password: ownerPassword,
+                roles: ['owner']
+            });
+
+            await ownerUser.save();
+            console.log('-INFO- Default owner user created successfully.');
+        }
+    } catch (error) {
+        console.error('Error seeding owner user:', error);
+        process.exit(1);
+    }
+};
 
 const seedAdminUser = async () => {
     try {

@@ -58,6 +58,22 @@ RoleSchema.pre('findByIdAndUpdate', async function(next) {
     next();
 });
 
+RoleSchema.pre('findOneAndUpdate', async function(next) {
+    const doc = await this.model.findOne(this.getFilter());
+    if (doc && doc.isSystemRole) {
+        throw new Error('System roles cannot be modified');
+    }
+    next();
+});
+
+RoleSchema.pre('updateOne', async function(next) {
+    const doc = await this.model.findOne(this.getFilter());
+    if (doc && doc.isSystemRole) {
+        throw new Error('System roles cannot be modified');
+    }
+    next();
+});
+
 // Method to check if a role has a specific permission
 RoleSchema.methods.hasPermission = function(permission) {
     return this.permissions.includes(permission);
@@ -83,6 +99,22 @@ RoleSchema.statics.getValidPermissions = function() {
 
 // Prevent deletion of system roles
 RoleSchema.pre('findByIdAndDelete', async function(next) {
+    const doc = await this.model.findOne(this.getFilter());
+    if (doc && doc.isSystemRole) {
+        throw new Error('System roles cannot be deleted');
+    }
+    next();
+});
+
+RoleSchema.pre('findOneAndDelete', async function(next) {
+    const doc = await this.model.findOne(this.getFilter());
+    if (doc && doc.isSystemRole) {
+        throw new Error('System roles cannot be deleted');
+    }
+    next();
+});
+
+RoleSchema.pre('deleteOne', { document: false, query: true }, async function(next) {
     const doc = await this.model.findOne(this.getFilter());
     if (doc && doc.isSystemRole) {
         throw new Error('System roles cannot be deleted');

@@ -31,7 +31,7 @@ describe('authorization middleware', () => {
     test('userHasPermission returns true for owner role', async () => {
         const { userHasPermission } = await loadAuthorization();
 
-        const result = await userHasPermission({ roles: ['owner'] }, 'anything:goes');
+        const result = await userHasPermission({ roles: ['owner'] }, 'manage:users');
 
         expect(result).toBe(true);
     });

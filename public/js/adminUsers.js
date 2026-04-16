@@ -72,13 +72,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderTable(filtered);
   }
 
-  // Show message in role section
+  // Show a floating toast notification (bottom-right, auto-dismisses)
   function showMessage(message, type = 'success') {
+    // Remove any existing toast so they don't stack
+    document.getElementById('admin-toast')?.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'admin-toast';
+    toast.className = `admin-toast admin-toast--${type}`;
+    toast.innerHTML = `
+      <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i>
+      <span>${message}</span>
+      <button class="admin-toast-close" aria-label="Dismiss">&times;</button>
+    `;
+    document.body.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(() => toast.classList.add('admin-toast--visible'));
+
+    // Auto-dismiss
+    const timer = setTimeout(() => dismissToast(toast), 5000);
+
+    // Manual dismiss
+    toast.querySelector('.admin-toast-close').addEventListener('click', () => {
+      clearTimeout(timer);
+      dismissToast(toast);
+    });
+  }
+
+  function dismissToast(toast) {
+    toast.classList.remove('admin-toast--visible');
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+  }
+
+  // Inline message helper for the role creation form only
+  function showRoleMessage(message, type = 'success') {
+    if (!roleMessagesDiv) return;
     const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
     roleMessagesDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
-    setTimeout(() => {
-      roleMessagesDiv.innerHTML = '';
-    }, 5000);
+    setTimeout(() => { roleMessagesDiv.innerHTML = ''; }, 5000);
   }
 
   // Handle role creation
@@ -109,15 +141,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       const data = await res.json();
 
       if (res.ok) {
-        showMessage(`Role "${name}" created successfully!`, 'success');
+        showRoleMessage(`Role "${name}" created successfully!`, 'success');
         createRoleForm.reset();
         loadRoles();
       } else {
-        showMessage(data.message || 'Error creating role', 'error');
+        showRoleMessage(data.message || 'Error creating role', 'error');
       }
     } catch (err) {
       console.error(err);
-      showMessage('Error creating role', 'error');
+      showRoleMessage('Error creating role', 'error');
     }
   });
 
@@ -144,61 +176,101 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Render users table
   function renderTable(users) {
+    if (!users.length) {
+      usersContainer.innerHTML = `
+        <table class="table">
+          <thead><tr>
+            <th><input type="checkbox" id="select-all-table"></th>
+            <th>Username</th><th>Email</th><th>Role</th><th>Joined</th><th>Last Login</th><th>Actions</th>
+          </tr></thead>
+          <tbody><tr class="empty-state"><td colspan="7">No users found.</td></tr></tbody>
+        </table>`;
+      return;
+    }
+
+    const canManage = (window.USER_PERMISSIONS || []).includes('manage:users');
+
     const rows = users.map(u => {
       const currentRole = (u.roles && u.roles[0]) || '';
-      const options = window.AVAILABLE_ROLES.map(r => `<option value="${r}" ${r === currentRole ? 'selected' : ''}>${r}</option>`).join('');
+      const roleBadgeClass = ['owner','admin','user','viewer'].includes(currentRole) ? currentRole : '';
+      const options = window.AVAILABLE_ROLES.map(r =>
+        `<option value="${r}" ${r === currentRole ? 'selected' : ''}>${r}</option>`
+      ).join('');
       const isCurrentUser = String(window.CURRENT_USER_ID) === String(u._id);
-      const saveBtnDisabled = isCurrentUser ? 'disabled' : '';
-      const canDelete = (window.USER_PERMISSIONS || []).includes('manage:users');
-      const deleteDisabled = isCurrentUser ? 'disabled' : '';
+      const disAttr = isCurrentUser ? 'disabled' : '';
+
+      // Format dates
+      const joined = u.createdAt
+        ? new Date(u.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '\u2014';
+      const lastLogin = u.lastLoginAt
+        ? new Date(u.lastLoginAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '\u2014';
+
+      // Lock status
+      const lockedBadge = u.isLocked
+        ? `<span class="user-locked-badge" title="Account locked"><i class="fa-solid fa-lock"></i> Locked</span>`
+        : '';
+      const lockBtnLabel = u.isLocked ? 'Unlock' : 'Lock';
+      const lockBtnIcon  = u.isLocked ? 'fa-lock-open' : 'fa-lock';
+      const lockBtnClass = u.isLocked ? 'btn btn-success lock-user-btn' : 'btn btn-secondary lock-user-btn';
 
       return `
-        <tr data-user-id="${u._id}">
-          <td><input type="checkbox" class="select-user" data-user-id="${u._id}" ${isCurrentUser ? 'disabled' : ''}></td>
-          <td>${u.username || ''}</td>
-          <td>${u.email || ''}</td>
+        <tr data-user-id="${u._id}" ${u.isLocked ? 'class="row-locked"' : ''}>
+          <td><input type="checkbox" class="select-user" data-user-id="${u._id}" ${disAttr}></td>
+          <td><strong>${u.username || ''}</strong>${lockedBadge}</td>
+          <td style="color:var(--text-muted,var(--text-light));font-size:0.9rem">${u.email || ''}</td>
           <td>
-            <select class="role-select" ${isCurrentUser ? 'disabled' : ''}>
-              ${options}
-            </select>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <select class="role-select" ${disAttr}>${options}</select>
+              <span class="role-badge ${roleBadgeClass}">${currentRole}</span>
+            </div>
           </td>
-          <td><button class="save-role btn btn-primary" ${saveBtnDisabled}>Save</button></td>
-          <td>${canDelete ? `<button class="btn-danger delete-user" ${deleteDisabled}>Delete</button>` : ''}</td>
+          <td class="joined-date">${joined}</td>
+          <td class="joined-date">${lastLogin}</td>
+          <td>
+            <div class="user-table-actions">
+              <button class="save-role btn btn-primary" ${disAttr} title="Save role change">Save</button>
+              ${canManage && !isCurrentUser ? `<button class="btn btn-warning reset-pw-btn" data-user-id="${u._id}" data-username="${u.username}" title="Force password reset"><i class="fa-solid fa-key"></i> Reset PW</button>` : ''}
+              ${canManage && !isCurrentUser ? `<button class="${lockBtnClass}" data-user-id="${u._id}" data-username="${u.username}" data-locked="${u.isLocked}" title="${lockBtnLabel} account"><i class="fa-solid ${lockBtnIcon}"></i> ${lockBtnLabel}</button>` : ''}
+              ${canManage && !isCurrentUser ? `<button class="btn btn-danger delete-user" title="Delete user"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </div>
+          </td>
         </tr>
       `;
     }).join('');
 
     usersContainer.innerHTML = `
-      <table class="table">
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="select-all-table"></th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th></th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all-table"></th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th>Last Login</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
     `;
 
-    // Attach select-all behavior
-    const selectAll = document.getElementById('select-all-table');
-    selectAll?.addEventListener('change', (e) => {
-      const checked = e.target.checked;
-      usersContainer.querySelectorAll('.select-user').forEach(cb => {
-        cb.checked = checked;
-      });
+    // Select-all
+    document.getElementById('select-all-table')?.addEventListener('change', (e) => {
+      usersContainer.querySelectorAll('.select-user:not([disabled])').forEach(cb => { cb.checked = e.target.checked; });
     });
 
-    // Attach event listeners for in-row save
+    // Save role
     usersContainer.querySelectorAll('.save-role').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tr = e.target.closest('tr');
         const userId = tr.dataset.userId;
         const select = tr.querySelector('.role-select');
+        const badge  = tr.querySelector('.role-badge');
         const role = select.value;
 
         try {
@@ -207,34 +279,63 @@ document.addEventListener('DOMContentLoaded', async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role })
           });
-
           if (res.ok) {
             showMessage('Role updated');
+            // Update badge inline
+            if (badge) {
+              badge.textContent = role;
+              badge.className = `role-badge ${['owner','admin','user','viewer'].includes(role) ? role : ''}`;
+            }
             load();
           } else {
             const text = await res.json();
             showMessage(`Error: ${text.message || 'Unable to update role'}`, 'error');
           }
         } catch (err) {
-          console.error(err);
           showMessage('Error updating role', 'error');
         }
       });
     });
 
-    // Attach delete listeners
+    // Reset PW (OTP modal)
+    usersContainer.querySelectorAll('.reset-pw-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openOtpModal(btn.dataset.userId, btn.dataset.username);
+      });
+    });
+
+    // Lock / Unlock account
+    usersContainer.querySelectorAll('.lock-user-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const userId   = btn.dataset.userId;
+        const username = btn.dataset.username;
+        const isLocked = btn.dataset.locked === 'true';
+        const action   = isLocked ? 'unlock' : 'lock';
+        if (!confirm(`Are you sure you want to ${action} the account for "${username}"?`)) return;
+
+        try {
+          const res = await fetch(`admin/api/users/${userId}/lock`, { method: 'PATCH' });
+          const data = await res.json();
+          if (res.ok) {
+            showMessage(`Account for "${data.username}" ${data.isLocked ? 'locked' : 'unlocked'}.`);
+            load();
+          } else {
+            showMessage(data.message || 'Failed to change lock state.', 'error');
+          }
+        } catch (err) {
+          showMessage('Network error toggling lock.', 'error');
+        }
+      });
+    });
+
+    // Delete user
     usersContainer.querySelectorAll('.delete-user').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const tr = e.target.closest('tr');
         const userId = tr.dataset.userId;
-
         if (!confirm('Are you sure you want to delete this user account?')) return;
-
         try {
-          const res = await fetch(`admin/api/users/${userId}`, {
-            method: 'DELETE'
-          });
-
+          const res = await fetch(`admin/api/users/${userId}`, { method: 'DELETE' });
           const data = await res.json();
           if (res.ok) {
             showMessage('User deleted');
@@ -243,10 +344,221 @@ document.addEventListener('DOMContentLoaded', async () => {
             showMessage(`Error: ${data.message || 'Unable to delete user'}`, 'error');
           }
         } catch (err) {
-          console.error(err);
           showMessage('Error deleting user', 'error');
         }
       });
+    });
+  }
+
+  // ---- OTP Modal ----
+  async function openOtpModal(userId, username) {
+    const container = document.getElementById('otp-modal-container');
+    if (!container) return;
+
+    if (!confirm(`Force a password reset for "${username}"?\n\nThis will immediately invalidate their current password and generate a one-time login code.`)) return;
+
+    // Show a loading state modal first
+    container.innerHTML = buildOtpModalHtml(username, null, true);
+    document.body.style.overflow = 'hidden';
+
+    let otp = null;
+    try {
+      const res = await fetch(`admin/api/users/${userId}/otp`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        closeOtpModal();
+        showMessage(data.message || 'Failed to generate reset OTP', 'error');
+        return;
+      }
+      otp = data.otp;
+    } catch (err) {
+      closeOtpModal();
+      showMessage('Network error generating OTP', 'error');
+      return;
+    }
+
+    // Replace loading state with real OTP
+    container.innerHTML = buildOtpModalHtml(username, otp, false);
+
+    // Wire up copy button
+    const copyBtn = document.getElementById('otp-copy-btn');
+    const copiedMsg = document.getElementById('otp-copied-msg');
+    const otpInput = document.getElementById('otp-value');
+    copyBtn?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(otp);
+        copiedMsg.textContent = '✓ Copied to clipboard';
+        setTimeout(() => { copiedMsg.textContent = ''; }, 3000);
+      } catch {
+        otpInput.select();
+        document.execCommand('copy');
+        copiedMsg.textContent = '✓ Copied';
+        setTimeout(() => { copiedMsg.textContent = ''; }, 3000);
+      }
+    });
+
+    // Close buttons
+    container.querySelectorAll('[data-close-otp]').forEach(el => {
+      el.addEventListener('click', closeOtpModal);
+    });
+    // Close on backdrop click
+    container.querySelector('.modal-overlay')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeOtpModal();
+    });
+  }
+
+  function buildOtpModalHtml(username, otp, loading) {
+    const bodyContent = loading
+      ? `<div style="text-align:center;padding:2rem;color:var(--text-muted,var(--text-light))">
+           <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem"></i>
+           <p style="margin-top:0.75rem">Generating OTP&hellip;</p>
+         </div>`
+      : `<p style="margin:0 0 0.5rem;color:var(--text-dark)">
+           Share this one-time password with <strong>${username}</strong>.<br>
+           They can use it to log in and will be prompted to set a new password immediately.
+         </p>
+         <p style="margin:0 0 0.25rem;font-size:0.82rem;color:var(--text-muted,var(--text-light))">
+           <i class="fa-solid fa-clock"></i> Expires in 24 hours &nbsp;·&nbsp;
+           <i class="fa-solid fa-shield-halved"></i> Single-use only
+         </p>
+         <div class="otp-box">
+           <input type="text" id="otp-value" value="${otp}" readonly>
+           <button class="otp-copy-btn" id="otp-copy-btn" type="button">
+             <i class="fa-solid fa-copy"></i> Copy
+           </button>
+         </div>
+         <p class="otp-copied-msg" id="otp-copied-msg"></p>
+         <p style="margin:1rem 0 0;font-size:0.8rem;color:var(--text-muted,var(--text-light))">
+           <i class="fa-solid fa-triangle-exclamation" style="color:var(--color-warning,#f59e0b)"></i>
+           This OTP is not stored in plain text and will not be shown again.
+         </p>`;
+
+    return `
+      <div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Force Password Reset">
+        <div class="modal-content medium-modal">
+          <div class="modal-header">
+            <h2 style="font-size:1.1rem">
+              <i class="fa-solid fa-key" style="color:var(--color-warning,#f59e0b);margin-right:0.5rem"></i>
+              Force Password Reset &mdash; ${username}
+            </h2>
+            <button class="close-modal-btn" data-close-otp type="button" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">${bodyContent}</div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" data-close-otp type="button">Close</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function closeOtpModal() {
+    const container = document.getElementById('otp-modal-container');
+    if (container) container.innerHTML = '';
+    document.body.style.overflow = '';
+  }
+
+  // Create User Modal
+  function openCreateUserModal() {
+    const container = document.getElementById('otp-modal-container'); // reuse same mount point
+    if (!container) return;
+
+    const roleOptions = (window.AVAILABLE_ROLES || []).map(r =>
+      `<option value="${r}">${r}</option>`
+    ).join('');
+
+    container.innerHTML = `
+      <div class="modal-overlay" role="dialog" aria-modal="true" aria-label="Create New User" id="create-user-overlay">
+        <div class="modal-content medium-modal">
+          <div class="modal-header">
+            <h2 style="font-size:1.1rem">
+              <i class="fa-solid fa-user-plus" style="color:var(--primary-color);margin-right:0.5rem"></i>
+              Create New User
+            </h2>
+            <button class="close-modal-btn" id="close-create-user" type="button" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="new-cu-username">Username</label>
+              <input type="text" id="new-cu-username" class="form-control" placeholder="e.g. jdoe" required autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="new-cu-email">Email</label>
+              <input type="email" id="new-cu-email" class="form-control" placeholder="user@example.com" required autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="new-cu-password">Temporary Password</label>
+              <input type="password" id="new-cu-password" class="form-control" placeholder="At least 8 characters" required minlength="8" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+              <label for="new-cu-role">Role</label>
+              <select id="new-cu-role" class="form-control">${roleOptions}</select>
+            </div>
+            <p class="create-user-error" id="create-user-error" style="color:var(--error-text,#dc3545);font-size:0.85rem;min-height:1.1em;margin:0.25rem 0 0;"></p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancel-create-user" type="button">Cancel</button>
+            <button class="btn btn-primary" id="submit-create-user" type="button">
+              <i class="fa-solid fa-user-plus"></i> Create User
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.style.overflow = 'hidden';
+
+    const closeModal = () => {
+      container.innerHTML = '';
+      document.body.style.overflow = '';
+    };
+
+    document.getElementById('close-create-user').addEventListener('click', closeModal);
+    document.getElementById('cancel-create-user').addEventListener('click', closeModal);
+    document.getElementById('create-user-overlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    document.getElementById('submit-create-user').addEventListener('click', async () => {
+      const username = document.getElementById('new-cu-username').value.trim();
+      const email    = document.getElementById('new-cu-email').value.trim();
+      const password = document.getElementById('new-cu-password').value;
+      const role     = document.getElementById('new-cu-role').value;
+      const errorEl  = document.getElementById('create-user-error');
+      errorEl.textContent = '';
+
+      if (!username || !email || !password || !role) {
+        errorEl.textContent = 'All fields are required.';
+        return;
+      }
+      if (password.length < 8) {
+        errorEl.textContent = 'Password must be at least 8 characters.';
+        return;
+      }
+
+      const submitBtn = document.getElementById('submit-create-user');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating…';
+
+      try {
+        const res = await fetch('admin/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password, role })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          closeModal();
+          showMessage(`User "${data.user.username}" created successfully.`);
+          load();
+        } else {
+          errorEl.textContent = data.message || 'Failed to create user.';
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create User';
+        }
+      } catch (err) {
+        errorEl.textContent = 'Network error. Please try again.';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create User';
+      }
     });
   }
 
@@ -427,6 +739,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       load();
     });
 
+    document.getElementById('create-user-btn')?.addEventListener('click', () => openCreateUserModal());
+
     load();
   }
 
@@ -483,9 +797,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const defaultThemeSelect = document.getElementById('default-theme-select');
   const saveDefaultThemeBtn = document.getElementById('save-default-theme');
+  const regToggle = document.getElementById('allow-registration-toggle');
+  const regLabel  = document.getElementById('registration-status-label');
 
-  if (aiLogCutoffSelect || defaultThemeSelect) {
-    // Load current setting
+  if (aiLogCutoffSelect || defaultThemeSelect || regToggle) {
+    // Load current settings
     try {
       const res = await fetch('admin/api/settings');
       if (res.ok) {
@@ -495,6 +811,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (defaultThemeSelect && data.defaultTheme) {
           defaultThemeSelect.value = data.defaultTheme;
+        }
+        if (regToggle && data.allowRegistration !== undefined) {
+          regToggle.checked = data.allowRegistration;
+          regLabel.textContent = data.allowRegistration ? 'Registration open — new users can sign up' : 'Registration closed — sign-up page is disabled';
+          regLabel.style.color = data.allowRegistration ? 'var(--color-success)' : 'var(--color-warning,#f59e0b)';
         }
       }
     } catch (err) {
@@ -563,6 +884,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       } catch (err) {
         console.error(err);
         showSystemMessage('Error updating default theme.', 'error');
+      }
+    });
+  }
+
+  // Registration toggle
+  if (regToggle) {
+    regToggle.addEventListener('change', async () => {
+      const allowRegistration = regToggle.checked;
+      try {
+        const res = await fetch('admin/api/settings/registration', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ allowRegistration })
+        });
+        if (res.ok) {
+          regLabel.textContent = allowRegistration ? 'Registration open — new users can sign up' : 'Registration closed — sign-up page is disabled';
+          regLabel.style.color = allowRegistration ? 'var(--color-success)' : 'var(--color-warning,#f59e0b)';
+          showSystemMessage(`Registration ${allowRegistration ? 'enabled' : 'disabled'}.`);
+        } else {
+          const data = await res.json();
+          showSystemMessage(data.message || 'Failed to update registration setting.', 'error');
+          regToggle.checked = !allowRegistration; // revert
+        }
+      } catch (err) {
+        showSystemMessage('Network error.', 'error');
+        regToggle.checked = !allowRegistration;
       }
     });
   }

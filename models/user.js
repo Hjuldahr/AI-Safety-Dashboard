@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { roles as systemRoles } from '../constants/roles.js';
 
 const UserSchema = new mongoose.Schema({
     username: {
@@ -22,7 +23,22 @@ const UserSchema = new mongoose.Schema({
     },
     roles: {
         type: [String],
-        default: ['viewer'] // Every new user is a 'viewer' by default
+        default: ['viewer'], // Every new user is a 'viewer' by default
+        validate: {
+            validator: async function(rolesArr) {
+                // Check each role against system roles and DB roles
+                const systemRoleNames = Object.keys(systemRoles);
+                for (const roleName of rolesArr) {
+                    if (systemRoleNames.includes(roleName)) continue;
+                    // Check if a custom role exists in the DB
+                    const Role = mongoose.model('Role');
+                    const exists = await Role.findOne({ name: roleName }).lean();
+                    if (!exists) return false;
+                }
+                return true;
+            },
+            message: 'One or more invalid role names provided'
+        }
     },
     preferredTheme: {
         type: String,
@@ -38,6 +54,36 @@ const UserSchema = new mongoose.Schema({
     notificationsLastSeen: {
         type: Date,
         required: false,
+        default: null
+    },
+
+    // ----- Forced-reset OTP fields -----
+    // bcrypt hash of a one-time password issued by an admin (never stored in plain text)
+    otpHash: {
+        type: String,
+        default: null
+    },
+    // UTC expiry for the OTP (24 h from generation)
+    otpExpiresAt: {
+        type: Date,
+        default: null
+    },
+    // When true the user must set a new password before accessing the app
+    mustResetPassword: {
+        type: Boolean,
+        default: false
+    },
+
+    // ----- Account lock -----
+    // When true the account cannot be used to log in (without deleting the account)
+    isLocked: {
+        type: Boolean,
+        default: false
+    },
+
+    // Timestamp of the user's most recent successful login
+    lastLoginAt: {
+        type: Date,
         default: null
     }
 }, { timestamps: true }); 

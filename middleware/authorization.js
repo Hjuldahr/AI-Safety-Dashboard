@@ -7,6 +7,12 @@ let roleCache = {};
 let cacheExpiry = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Invalidate the role cache (call after role create/update/delete)
+export const invalidateRoleCache = () => {
+  roleCache = {};
+  cacheExpiry = 0;
+};
+
 // Get all roles (from both config and database)
 const getAllRoles = async () => {
   const now = Date.now();
@@ -22,16 +28,16 @@ const getAllRoles = async () => {
     // Combine database roles with config roles
     const allRoles = {};
     
-    // Add config roles
-    Object.assign(allRoles, rolesConfig);
-    
-    // Add/override with database roles
+    // Add database roles first
     dbRoles.forEach(role => {
       allRoles[role.name] = {
         description: role.description,
         permissions: role.permissions
       };
     });
+    
+    // System config roles always take priority — prevent DB from shadowing them
+    Object.assign(allRoles, rolesConfig);
     
     roleCache = allRoles;
     cacheExpiry = now + CACHE_TTL;
@@ -61,8 +67,6 @@ export const getUserPermissions = async (user) => {
 
 export const userHasPermission = async (user, permission) => {
   const perms = await getUserPermissions(user);
-  // owners implicitly allowed
-  if (user?.roles?.includes('owner')) return true;
   return perms.has(permission);
 };
 

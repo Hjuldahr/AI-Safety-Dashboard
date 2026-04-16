@@ -1,8 +1,81 @@
 /* ==========================================================================
+   ADMIN TOAST NOTIFICATIONS  (bottom-right, theme-compliant)
+   ========================================================================== */
+.admin-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem 0.75rem 1.1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+  font-size: 0.92rem;
+  font-weight: 500;
+  max-width: 380px;
+  min-width: 220px;
+  background: var(--card-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+
+  /* start invisible + shifted right */
+  opacity: 0;
+  transform: translateX(110%);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.admin-toast.admin-toast--visible {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* Left accent stripe */
+.admin-toast::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 8px 0 0 8px;
+}
+
+.admin-toast--success { border-left: 4px solid var(--color-success); }
+.admin-toast--success i { color: var(--color-success); }
+.admin-toast--success::before { background: var(--color-success); }
+
+.admin-toast--error { border-left: 4px solid var(--error-text, #dc3545); }
+.admin-toast--error i { color: var(--error-text, #dc3545); }
+.admin-toast--error::before { background: var(--error-text, #dc3545); }
+
+.admin-toast span { flex: 1; }
+
+.admin-toast-close {
+  background: none;
+  border: none;
+  color: var(--text-muted, var(--text-light));
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.15rem;
+  box-shadow: none;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.admin-toast-close:hover { color: var(--text-dark); transform: none; }
+
+/* ========================================================================== */
+
+/* ==========================================================================
    PAGE — ADMIN / USER MANAGEMENT
    Admin panel grid, permissions, roles, badges, table overrides,
    and user info display.
    ========================================================================== */
+
 .admin-panel {
   display: flex;
   flex-direction: column;
@@ -318,3 +391,186 @@
   outline: 2px solid var(--primary-color);
   outline-offset: 1px;
 }
+
+/* ==========================================================================
+   IMPROVED USER TABLE STYLES
+   ========================================================================== */
+
+/* Zebra striping */
+.table tbody tr:nth-child(even) {
+  background: var(--panel-header-bg);
+}
+
+/* Row hover highlight */
+.table tbody tr {
+  transition: background 0.12s;
+}
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--card-bg));
+}
+
+/* Role badge inside table rows */
+.table .role-badge {
+  display: inline-block;
+  padding: 0.18rem 0.65rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--button-bg-color);
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+
+/* Per-role colour tints */
+.table .role-badge.owner  { background: color-mix(in srgb, var(--primary-color) 25%, var(--card-bg)); color: var(--primary-color); }
+.table .role-badge.admin  { background: color-mix(in srgb, #6366f1 22%, var(--card-bg)); color: #6366f1; }
+.table .role-badge.user   { background: color-mix(in srgb, var(--color-success) 18%, var(--card-bg)); color: var(--color-success); }
+.table .role-badge.viewer { background: color-mix(in srgb, #f59e0b 18%, var(--card-bg)); color: #b45309; }
+
+/* Tighten up the checkbox column */
+.table th:first-child,
+.table td:first-child {
+  width: 40px;
+  text-align: center;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+/* Action cell — packed horizontally */
+.user-table-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+/* Reset PW button — amber/warning style */
+.btn-warning {
+  background: var(--color-warning, #f59e0b);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+  white-space: nowrap;
+}
+.btn-warning:hover  { filter: brightness(0.9); }
+.btn-warning:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Joined date column — muted, monospace */
+.table .joined-date {
+  font-size: 0.82rem;
+  color: var(--text-muted, var(--text-light));
+  white-space: nowrap;
+}
+
+/* Empty-state row */
+.table .empty-state td {
+  text-align: center;
+  color: var(--text-muted, var(--text-light));
+  padding: 2rem;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   LOCK / STATUS STYLES
+   ========================================================================== */
+
+/* Locked row — subtle red-tint background */
+.table tbody tr.row-locked {
+  background: color-mix(in srgb, #ef4444 6%, var(--card-bg)) !important;
+}
+
+/* Locked account badge (inline next to username) */
+.user-locked-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: color-mix(in srgb, #ef4444 18%, var(--card-bg));
+  color: #dc2626;
+  vertical-align: middle;
+}
+
+/* Unlock (success-green) button variant */
+.btn.btn-success {
+  background: var(--color-success);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+  white-space: nowrap;
+}
+.btn.btn-success:hover    { filter: brightness(0.88); }
+.btn.btn-success:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ==========================================================================
+   TOGGLE SWITCH  (Registration setting)
+   ========================================================================== */
+.registration-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border-color);
+  border-radius: 26px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--color-white, #fff);
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--color-success);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+

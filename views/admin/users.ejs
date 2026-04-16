@@ -13,6 +13,7 @@
   <link rel="stylesheet" id="theme-layout" href="css/layouts/default.css">
   <link rel="stylesheet" href="css/components/notifications.css">
   <link rel="stylesheet" href="css/components/tables.css">
+  <link rel="stylesheet" href="css/components/modals.css">
   <link rel="stylesheet" href="css/pages/admin.css">
 
   <!-- Scripts -->
@@ -43,7 +44,14 @@
 
             <!-- Search and Filter Section -->
             <div class="admin-section" style="margin-bottom: 1.5rem;">
-              <h4 style="margin-top: 0; font-size: 0.95rem; color: #666; margin-bottom: 0.75rem;">Search & Filter</h4>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                <h4 style="margin:0;font-size:0.95rem;color:var(--text-light);">Search &amp; Filter</h4>
+                <% if (typeof permissions !== 'undefined' && permissions.includes('manage:users')) { %>
+                <button id="create-user-btn" type="button" class="btn btn-primary" style="font-size:0.85rem;padding:0.4rem 0.9rem;">
+                  <i class="fa-solid fa-user-plus"></i> Create User
+                </button>
+                <% } %>
+              </div>
               <div class="filter-group">
                 <input type="text" id="user-search" class="form-control" placeholder="Search username or email..." />
                 <select id="role-filter" class="form-control">
@@ -76,6 +84,7 @@
       </section>
 
       <!-- Roles Section -->
+      <% if (typeof permissions !== 'undefined' && permissions.includes('manage:roles')) { %>
       <section class="collapsible-section" data-section="roles">
         <button type="button" class="collapse-toggle" aria-expanded="true">Roles ▾</button>
         <div class="collapsible-content" id="roles-section">
@@ -119,8 +128,10 @@
           </div>
         </div>
       </section>
+      <% } %>
 
       <!-- System Section -->
+      <% if (typeof permissions !== 'undefined' && (permissions.includes('view:system') || permissions.includes('edit:system'))) { %>
       <section class="collapsible-section" data-section="system">
         <button type="button" class="collapse-toggle" aria-expanded="true">System ▾</button>
         <div class="collapsible-content" id="system-section">
@@ -159,7 +170,9 @@
                   </select>
                 </div>
               </div>
+              <% if (permissions.includes('edit:system')) { %>
               <button id="save-ai-log-cutoff" type="button" class="btn btn-primary" style="margin-top: 0.75rem;">Save</button>
+              <% } %>
 
               <hr style="margin: 1.5rem 0;" />
 
@@ -178,23 +191,49 @@
                   <option value="viridian">Viridian</option>
                 </select>
               </div>
+              <% if (permissions.includes('edit:system')) { %>
               <button id="save-default-theme" type="button" class="btn btn-primary">Save Default Theme</button>
+              <% } %>
 
+              <% if (permissions.includes('edit:system')) { %>
+              <hr style="margin: 1.5rem 0;" />
+
+              <h4>User Registration</h4>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Control whether new users can register accounts through the sign-up page.</p>
+              <div class="registration-toggle-row">
+                <label class="toggle-switch" for="allow-registration-toggle">
+                  <input type="checkbox" id="allow-registration-toggle">
+                  <span class="toggle-slider"></span>
+                </label>
+                <span id="registration-status-label" style="font-size:0.9rem;color:var(--text-dark);">Loading&hellip;</span>
+              </div>
+              <% } %>
+
+              <% if (permissions.includes('shutdown:server') || permissions.includes('restart:server')) { %>
               <hr style="margin: 1.5rem 0;" />
 
               <h4>Server Control</h4>
               <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Only use these actions when you intend to stop or restart the server process.</p>
               <div class="button-group" style="gap: 0.75rem; flex-wrap: wrap;">
+                <% if (permissions.includes('shutdown:server')) { %>
                 <button id="shutdown-server" type="button" class="btn btn-danger">Shutdown Server</button>
+                <% } %>
+                <% if (permissions.includes('restart:server')) { %>
                 <button id="restart-server" type="button" class="btn btn-warning">Restart Server</button>
+                <% } %>
               </div>
+              <% } %>
             </div>
           </div>
         </div>
       </section>
+      <% } %>
 
     </div>
   </main>
+
+  <!-- OTP modal mount point (populated by adminUsers.js) -->
+  <div id="otp-modal-container"></div>
 
   <script>
     window.AVAILABLE_ROLES = <%- JSON.stringify(rolesList || []) %>;

@@ -8,6 +8,12 @@ const BASE = process.env.PUBLIC_URL || '/';
 // --- Sign Up ---
 const signUp = async (req, res) => {
     try {
+        // Check if registration is currently allowed
+        const allowRegistration = await Settings.get('allow_registration', true);
+        if (!allowRegistration) {
+            return res.status(403).json({ message: 'New user registration is currently disabled.' });
+        }
+
         const { username, email, password } = req.body;
 
         // Check if a user with this email or username already exists
@@ -51,8 +57,20 @@ const login = (req, res, next) => {
             }
 
             req.session.save((err) => {
-                // If login is successful, send back a success message and user info
                 User_Log.addLog(req.user._id, 'Login', `Successful login from IP: ${req.ip}`).catch(err => console.error('Failed to write log:', err));
+
+                // Record last login timestamp (fire-and-forget)
+                User.findByIdAndUpdate(req.user._id, { lastLoginAt: new Date() }).catch(err => console.error('Failed to update lastLoginAt:', err));
+
+                // If the user must change their password (forced reset via OTP), signal the client
+                if (req.user.mustResetPassword) {
+                    return res.status(200).json({
+                        message: 'Login successful. Password reset required.',
+                        mustReset: true,
+                        user: { id: user.id, username: user.username, email: user.email }
+                    });
+                }
+
                 return res.status(200).json({
                     message: 'Login successful.',
                     user: { id: user.id, username: user.username, email: user.email }
@@ -61,7 +79,6 @@ const login = (req, res, next) => {
         });
     })(req, res, next);
 };
-
 
 // Handles logging the user out
 const logout = (req, res, next) => {
@@ -86,9 +103,49 @@ const getPage = async (req, res) => {
     res.render("login");
 };
 
+// --- Force-Reset Password (used after OTP login) ---
+const resetPassword = async (req, res) => {
+    try {
+        // Must be logged in AND flagged for reset
+        if (!req.isAuthenticated || !req.isAuthenticated()) {
+            return res.status(401).json({ message: 'Not authenticated.' });
+        }
+
+        // Fetch a fresh copy from DB (req.user may be from session cache)
+        const dbUser = await User.findById(req.user._id);
+        if (!dbUser || !dbUser.mustResetPassword) {
+            return res.status(403).json({ message: 'No password reset required for this account.' });
+        }
+
+        const { newPassword, confirmPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+        }
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ message: 'Passwords do not match.' });
+        }
+
+        // Set the new password — the pre-save hook will hash it
+        dbUser.password = newPassword;
+        dbUser.mustResetPassword = false;
+        dbUser.otpHash = null;
+        dbUser.otpExpiresAt = null;
+        await dbUser.save();
+
+        User_Log.addLog(dbUser._id, 'Password_Reset', 'User completed forced password reset.').catch(err => console.error('Failed to write log:', err));
+
+        res.status(200).json({ success: true, message: 'Password updated successfully.' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ message: 'An internal server error occurred.' });
+    }
+};
+
 export default {
     signUp,
     login,
     logout,
     getPage,
+    resetPassword,
 }

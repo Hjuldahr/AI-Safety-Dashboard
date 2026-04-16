@@ -29,7 +29,10 @@ const User_Log_Schema = new mongoose.Schema({
             'Chart_Created',
             'Chart_Modified',
             'Chart_Deleted',
-            'Unspecified_Event'
+            'Unspecified_Event',
+            'OTP_Generated',
+            'Password_Reset',
+            'Account_Lock_Changed'
         ],
         required: true,
         default: 'Unspecified_Event'
