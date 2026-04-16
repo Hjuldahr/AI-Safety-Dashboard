@@ -26,7 +26,7 @@ This file contains information about the rest of the documentation available abo
 
 ## Reference
 - [Constants Reference](constants.md) — documentation for all shared constants (charts, roles, permissions, notifications, SSE)
-- [Development Environment](development-environment.md) — how the dev environment works, project structure, Docker setup
+- [Installation](installation.md) — architecture, project structure, and setup guide
 - [AI Integration Guide](ai-integration.md) — how to replace the fake data generator with a real AI system
 
 ## Errors

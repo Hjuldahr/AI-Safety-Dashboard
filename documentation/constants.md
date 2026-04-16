@@ -233,5 +233,5 @@ Defines constants for the Server-Sent Events (SSE) scheduler that drives real-ti
 | `AI_MODELS` | `["GoodModel", "BadModel"]` | Which models the scheduler generates data for |
 
 ## Read Next
-- [Development Environment](development-environment.md)
+- [Installation](installation.md)
 - [AI Integration Guide](ai-integration.md)
