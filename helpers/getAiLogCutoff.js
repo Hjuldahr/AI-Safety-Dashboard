@@ -8,7 +8,7 @@ import { AI_LOG_CUTOFF } from '../constants/sse.js';
 export async function getAiLogCutoff() {
   try {
     const setting = await SystemSetting.findOne({ key: 'ai_log_cutoff' }).lean();
-    if (setting && typeof setting.value === 'number' && setting.value > 0) {
+    if (setting && typeof setting.value === 'number' && (setting.value > 0 || setting.value === -1)) {
       return setting.value;
     }
   } catch (err) {

@@ -193,10 +193,12 @@ async function createSummary() {
 
             broadcastEvent('summary', summary);
 
-            // Delete extra
+            // Delete extra (skip if retention is set to forever)
             const aiLogCutoff = await getAiLogCutoff();
-            const cutoff = Date.now() - aiLogCutoff;
-            await AI_Log.deleteMany({ responseTimestamp: { $lt: cutoff } });
+            if (aiLogCutoff > 0) {
+                const cutoff = Date.now() - aiLogCutoff;
+                await AI_Log.deleteMany({ responseTimestamp: { $lt: cutoff } });
+            }
         }
     } catch (err) {
         console.error('Summary Generation Error:', err);
