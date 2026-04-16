@@ -156,25 +156,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     // (We only run these if there ISN'T a deep link, or we let them run then override)
     await handleUserFilter(elements, 1);
 
-    if (window.DEEP_LINK && window.DEEP_LINK.view === 'ai') {
+    if (window.DEEP_LINK && (window.DEEP_LINK.view === 'ai' || window.DEEP_LINK.view === 'summary')) {
         // Handle the Deep Link
-        const { id, page } = window.DEEP_LINK;
+        const { view, id, page } = window.DEEP_LINK;
 
-        // Switch to AI tab visually
-        toggleViews('ai', elements);
+        // Switch to the correct tab visually
+        toggleViews(view === 'summary' ? 'summary' : 'ai', elements);
 
         // Stop the UI from updating live
         toggleLiveUpdates(elements, false);
         elements.liveToggle.checked = false;
 
-        // Load the specific page
-        await handleAiFilter(elements, page);
-        await handleAiSummaryFilter(elements, 1);
-
-
+        // Load the specific page for the target view, and page 1 for the other
+        if (view === 'summary') {
+            await handleAiSummaryFilter(elements, page);
+            await handleAiFilter(elements, 1);
+        } else {
+            await handleAiFilter(elements, page);
+            await handleAiSummaryFilter(elements, 1);
+        }
 
         // Highlight and Scroll to the log
-        const targetElement = elements.aiLogAccordion.querySelector(`[data-id="${id}"]`);
+        const accordion = view === 'summary' ? elements.aiSummaryAccordion : elements.aiLogAccordion;
+        const targetElement = accordion.querySelector(`[data-id="${id}"]`);
         if (targetElement) {
             const header = targetElement.querySelector('.accordion-header');
             const body = targetElement.querySelector('.accordion-body');

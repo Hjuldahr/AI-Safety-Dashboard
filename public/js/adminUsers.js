@@ -623,7 +623,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <i class="fa-solid fa-shield-halved" style="color:var(--primary-color);"></i>
                 Permissions: <span style="color: var(--text-dark);">${roleName}</span>
               </h2>
-              <button class="close-modal-btn" onclick="document.getElementById('otp-modal-container').innerHTML=''" aria-label="Close">&times;</button>
+              <button class="close-modal-btn" id="close-perm-modal" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">
               <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.5rem; max-height: 50vh; overflow-y: auto;">
@@ -631,15 +631,25 @@ document.addEventListener('DOMContentLoaded', async () => {
               </ul>
             </div>
             <div class="modal-footer">
-              <button class="btn btn-secondary" onclick="document.getElementById('otp-modal-container').innerHTML=''">Close</button>
+              <button class="btn btn-secondary" id="cancel-perm-modal">Close</button>
             </div>
           </div>
         </div>
     `;
+
+    document.body.style.overflow = 'hidden';
+
+    const closeModal = () => {
+      container.innerHTML = '';
+      document.body.style.overflow = '';
+    };
+
+    document.getElementById('close-perm-modal').addEventListener('click', closeModal);
+    document.getElementById('cancel-perm-modal').addEventListener('click', closeModal);
     
     // allow clicking on backdrop to close
     container.querySelector('.modal-overlay').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) container.innerHTML = '';
+      if (e.target === e.currentTarget) closeModal();
     });
   };
 

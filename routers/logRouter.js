@@ -10,6 +10,7 @@ router.get("/", isAuthenticated, authorize('view:logs'), controller.getPage);
 
 // View Specific Page
 router.get("/view/ai/:id", isAuthenticated, authorize('view:logs'), controller.getAILogView);
+router.get("/view/summary/:id", isAuthenticated, authorize('view:logs'), controller.getAISummaryView);
 
 // Get Specific Log
 router.get("/ai/:id", isAuthenticated, authorize('view:logs'), controller.getAILog);
