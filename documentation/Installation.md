@@ -92,4 +92,4 @@ On first startup, the server will automatically:
 ## Read Next
 * [Authentication](authentication.md)
 * [Development Environment](development-environment.md)
-* [API Documentation](https://danielbierman.ca/dashboard/api/docs)
+* [API Documentation](https://danielbierman.ca/dashboard/api/docs/)

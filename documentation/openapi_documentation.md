@@ -6,7 +6,7 @@
 
 ## Viewing the Docs
 You can view the interactive API documentation in your browser at:
-- Development: [http://localhost:2121/api/docs](https://danielbierman.ca/dashboard/api/docs)
+- Development: [http://localhost:2121/api/docs/](https://danielbierman.ca/dashboard/api/docs)
 - Production: [https://danielbierman.ca/dashboard/api/docs/](https://danielbierman.ca/dashboard/api/docs/)
 
 Or at `[Domain]/api/docs/`.
@@ -38,5 +38,5 @@ Most API endpoints require authentication via a session cookie. Log in via `POST
 Public endpoints (login, signup) are marked with `security: []` in the spec.
 
 ## Read Next
-- [API Documentation](https://danielbierman.ca/dashboard/api/docs)
+- [API Documentation](https://danielbierman.ca/dashboard/api/docs/)
 - [Authentication](authentication.md)

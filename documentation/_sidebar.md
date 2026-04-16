@@ -4,7 +4,7 @@
     * [Introduction](introduction.md)
     * [Installation](installation.md)
     * [Authentication](authentication.md)
-    * [API Documentation](https://danielbierman.ca/dashboard/api/docs)
+    * [API Documentation](https://danielbierman.ca/dashboard/api/docs/)
         * [About OpenAPI Documentation](openapi_documentation.md)
     * Main Pages
         * [Dashboard](dashboard.md)

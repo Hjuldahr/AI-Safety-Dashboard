@@ -22,7 +22,7 @@ This project is an AI Safety Dashboard that monitors live LLM-based AI systems a
 * [Introduction](introduction.md)
 * [Installation](installation.md)
 * [Authentication](authentication.md)
-* [API Documentation](https://danielbierman.ca/dashboard/api/docs)
+* [API Documentation](https://danielbierman.ca/dashboard/api/docs/)
 
 ## Reference
 * [Constants Reference](constants.md)

@@ -33,7 +33,7 @@ This file contains information about the rest of the documentation available abo
 - Information about how the site's errors are logged can be found in [Errors](errors.md).
 
 ## Open API Documentation
-- Open API documentation is provided at [API Documentation](https://danielbierman.ca/dashboard/api/docs).
+- Open API documentation is provided at [API Documentation](https://danielbierman.ca/dashboard/api/docs/).
 - It is also available at `[Domain]/api/docs/`.
 - More information about this in [About OpenAPI Documentation](openapi_documentation.md)
 
