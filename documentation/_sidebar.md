@@ -17,7 +17,7 @@
         * [Demo Controls](demo-controls.md)
     * Reference
         * [Constants Reference](constants.md)
-        * [Development Environment](development-environment.md)
+
         * [AI Integration Guide](ai-integration.md)
         * [Themes](themes.md)
     * [Errors](errors.md)

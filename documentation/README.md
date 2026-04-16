@@ -26,7 +26,6 @@ This project is an AI Safety Dashboard that monitors live LLM-based AI systems a
 
 ## Reference
 * [Constants Reference](constants.md)
-* [Development Environment](development-environment.md)
 * [AI Integration Guide](ai-integration.md)
 
 ## Head back to the Dashboard

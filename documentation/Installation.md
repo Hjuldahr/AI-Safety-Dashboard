@@ -1,95 +1,143 @@
-# Installing the Project
+# Installation Guide
 
-The project can be run either locally (Node.js + MongoDB) or via Docker.
-
----
-
-## Option A: Local Development
-
-### Step 1: Node.js
-Ensure you have Node.js 20+ and npm installed:
-- **Check** if they're installed:
-    - `node -v`
-    - `npm -v`
-- **If not installed**, download from the [official Node.js website](https://nodejs.org/).
-
-### Step 2: MongoDB
-Download MongoDB Community Edition and MongoDB Compass from the following link:
-- https://www.mongodb.com/try/download/community
-
-Then download MongoDB CLI tools:
-- https://www.mongodb.com/try/download/database-tools
-
-#### Installing MongoDB Database Tools on Windows
-1. Download the MSI installer from the [MongoDB Database Tools Download Center](https://www.mongodb.com/try/download/database-tools).
-2. Run the installer and follow the prompts.
-3. Add the tools to your system PATH:
-    - Open **Start Menu** → search "Environment Variables"
-    - Click **"Edit the system environment variables"**
-    - Click **"Environment Variables..."**
-    - Under **System variables**, find **Path** → click **Edit**
-    - Click **New** and add: `C:\Program Files\MongoDB\Tools\100\bin`
-    - Click **OK** to close all dialogs
-
-### Step 3: Install Dependencies
-In the project's root directory, run:
-```bash
-npm install
-```
-
-### Step 4: Create the ENV File
-Create a `.env` file in the project root. Use `.example.env` as a template:
-
-```env
-DEFAULT_APP_USER=admin
-DEFAULT_ADD_EMAIL=admin@example.com
-DEFAULT_APP_PASSWORD=yourpassword
-SESSION_SECRET=your-session-secret
-MONGO_URL=mongodb://127.0.0.1:27017/dashboardDB
-```
-
-See [Development Environment](development-environment.md) for a full list of environment variables.
-
-### Step 5: Run the Server
-```bash
-npm start
-```
-Then visit `http://localhost:2121`.
+This guide explains how to set up the AI Safety Dashboard and provides an overview of its architecture and development environment.
 
 ---
 
-## Option B: Docker
+## 1. Architecture Overview
 
-### Prerequisites
-- Docker and Docker Compose installed
+The AI Safety Dashboard is a Node.js/Express application designed for high-fidelity monitoring and alerting.
 
-### Steps
+- **Runtime**: Node.js 20
+- **Framework**: Express 5
+- **Database**: MongoDB 7
+- **Templating**: EJS (Server-side rendering)
+- **Real-time**: Server-Sent Events (SSE)
+- **Architecture**: A modular system where a background scheduler generates simulated AI safety data, which is then evaluated against user-defined alert rules.
 
-1. Create a `.env` file in the project root (same as Step 4 above)
-2. Run:
+```mermaid
+graph TD
+    Browser[Browser Client] -->|HTTP/SSE| Express[Express Server]
+    Express --> EJS[EJS Templates]
+    Express --> API[REST API]
+    Express --> SSE[SSE /events]
+    SSE --> Scheduler[Scheduler - 1s tick]
+    Scheduler --> Pipeline[Data Analysis Pipeline]
+    Pipeline --> AIModels[AI Model Configs]
+    Scheduler --> MongoDB[(MongoDB)]
+    API --> MongoDB
+    Scheduler --> AlertEval[Alert Evaluator]
+    AlertEval --> Notifications[Notification System]
+```
+
+---
+
+## 2. Prerequisites
+
+Ensure you have the following installed on your system:
+
+- **Node.js 20+**
+- **MongoDB 7** (Community Edition)
+- **Docker & Docker Compose** (Optional, for containerized setup)
+
+---
+
+## 3. Installation Steps
+
+### Option A: Local Development
+
+1. **Clone the repository**
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+3. **Set up Environment Variables**:
+   Create a `.env` file in the root directory. Use `.example.env` as a template:
+   ```env
+   DEFAULT_APP_USER=admin
+   DEFAULT_ADD_EMAIL=admin@example.com
+   DEFAULT_APP_PASSWORD=yourpassword
+   SESSION_SECRET=your-session-secret
+   MONGO_URL=mongodb://127.0.0.1:27017/dashboardDB
+   ```
+4. **Start MongoDB**: Ensure your local MongoDB service is running.
+5. **Run the application**:
+   ```bash
+   npm start
+   ```
+6. **Access the Dashboard**: Visit `http://localhost:2121`.
+
+### Option B: Docker Setup
+
+The project includes a `docker-compose.yaml` that orchestrates the Node.js app and a MongoDB instance.
+
+1. **Create the `.env` file** (as described in the local setup).
+2. **Build and start the containers**:
    ```bash
    docker compose up --build
    ```
-3. Visit `http://localhost:2121`
-
-Docker Compose will start:
-- The Node.js application container
-- A MongoDB 7 container with persistent storage
-
-The `docker-compose.override.yml` maps port 2121 for local development. For production, you would configure your own port mapping and reverse proxy.
+3. **Access the Dashboard**: Visit `http://localhost:2121`.
 
 ---
 
-## First Startup
+## 4. Environment Variables
 
-On first startup, the server will automatically:
-1. Connect to MongoDB
-2. Create a default admin user from the `.env` credentials
-3. Seed default chart configurations
-4. Seed default roles (owner, admin, user, viewer, visitor)
-5. Start the real-time data scheduler
+| Variable               | Description                                      | Required |
+| ---------------------- | ------------------------------------------------ | -------- |
+| `DEFAULT_APP_USER`     | Username for the seeded admin account            | Yes      |
+| `DEFAULT_ADD_EMAIL`    | Email for the seeded admin account               | Yes      |
+| `DEFAULT_APP_PASSWORD` | Password for the seeded admin account            | Yes      |
+| `SESSION_SECRET`       | Secret key for Express session encryption        | Yes      |
+| `MONGO_URL`            | MongoDB connection string                        | Yes      |
+| `PORT`                 | Server port (default: `2121`)                    | No       |
+| `NODE_ENV`             | Environment mode (`development` or `production`) | No       |
+
+---
+
+## 5. Project Structure
+
+```
+├── ai_models/              # AI model definitions
+├── config/                 # Database connection and seed data
+├── constants/              # Shared constants (charts, roles, etc.)
+├── controllers/            # Route handlers
+├── data_analysis_pipeline/ # Simulated AI data generation engine
+├── middleware/             # Auth and validation middleware
+├── models/                 # Mongoose schemas
+├── public/                 # Static assets (CSS, JS)
+├── server_side_events/     # SSE scheduler and alert evaluator
+└── views/                  # EJS templates
+```
+
+---
+
+## 6. How it Works
+
+### Real-Time Data Flow
+
+The Heart of the system is the scheduler (`server_side_events/scheduler.js`):
+
+1. **Every 1 second**: Generates simulated metric data for active AI models.
+2. **Alert Evaluation**: Checks if the new data triggers any active alert rules.
+3. **Broadcast**: Sends the data and any new notifications to the browser via **Server-Sent Events (SSE)**.
+
+### Demo Scenarios
+
+You can modify AI behavior via JSON configs in `data_analysis_pipeline/model_configs/`. This allows you to simulate different safety scenarios (e.g., high toxicity, PII leaks) without changing code.
+
+---
+
+## 7. First Startup
+
+On the first run, the system will automatically:
+
+1. Connect to MongoDB and create the database.
+2. Seed the default admin user using your `.env` credentials.
+3. Seed default roles, permissions, and dashboard chart configurations.
+4. Initialize the real-time data scheduler.
 
 ## Read Next
-* [Authentication](authentication.md)
-* [Development Environment](development-environment.md)
-* [API Documentation](http://localhost:2121/api/docs)
+
+- [Authentication](authentication.md)
+- [AI Integration Guide](ai-integration.md)
+- [Constants Reference](constants.md)

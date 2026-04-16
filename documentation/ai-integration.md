@@ -231,6 +231,6 @@ Similarly, adjust `SUMMARY_INTERVAL` and `AI_LOG_CUTOFF` based on your data rete
 | `data_analysis_pipeline/` | Can be removed entirely if not using fake data |
 
 ## Read Next
-- [Development Environment](development-environment.md)
+- [Installation](installation.md)
 - [Constants Reference](constants.md)
 - [Dashboard](dashboard.md)
