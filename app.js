@@ -112,7 +112,7 @@ const startServer = async () => {
 
         await sendNotification(SHUTDOWN_MESSAGE);
 
-        new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
         const forceExitTimer = setTimeout(() => {
             console.error("[Shutdown] Force exit");
