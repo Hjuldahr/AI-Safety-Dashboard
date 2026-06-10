@@ -59,12 +59,14 @@
     </div>
     <script>
         const logoutBtn = document.getElementById('logout-btn');
-        logoutBtn.addEventListener('mouseenter', () => 
-            logoutBtn.innerHTML = "<i class='fa-solid fa-door-open'></i> Logout"
-        );
-        logoutBtn.addEventListener('mouseleave', () => 
-            logoutBtn.innerHTML = "<i class='fa-solid fa-door-closed'></i> Logout"
-        );
+        if (logoutBtn) {
+            logoutBtn.addEventListener('mouseenter', () =>
+                logoutBtn.innerHTML = "<i class='fa-solid fa-door-open'></i> Logout"
+            );
+            logoutBtn.addEventListener('mouseleave', () =>
+                logoutBtn.innerHTML = "<i class='fa-solid fa-door-closed'></i> Logout"
+            );
+        }
     </script>
 </header>
 <script src="js/themeManager.js"></script>

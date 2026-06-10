@@ -2,6 +2,9 @@
 import { roles as rolesConfig } from "../constants/roles.js";
 import { Role } from '../models/role.js';
 
+// Base path for the login redirect (mirrors middleware/authMiddleware.js)
+const BASE = process.env.PUBLIC_URL || '/';
+
 // Cache for role permissions to avoid repeated DB queries
 let roleCache = {};
 let cacheExpiry = 0;
@@ -52,17 +55,20 @@ const getAllRoles = async () => {
 
 // return a Set of permissions for a user
 export const getUserPermissions = async (user) => {
-  if (!user || !Array.isArray(user.roles)) return new Set();
-
   const allRoles = await getAllRoles();
 
+  // Unauthenticated requests are treated as the virtual 'visitor' role
+  const roleNames = (user && Array.isArray(user.roles) && user.roles.length)
+    ? user.roles
+    : ['visitor'];
+
   // Owners implicitly have every permission
-  if (user.roles.includes('owner')) {
+  if (roleNames.includes('owner')) {
     const allPerms = Object.values(allRoles).flatMap(r => r.permissions || []);
     return new Set(allPerms);
   }
 
-  return new Set(user.roles.flatMap(r => allRoles[r]?.permissions || []));
+  return new Set(roleNames.flatMap(r => allRoles[r]?.permissions || []));
 };
 
 export const userHasPermission = async (user, permission) => {
@@ -77,9 +83,13 @@ export const requireRole = (roleName) => (req, res, next) => {
   return res.status(403).json({ message: 'Forbidden' });
 };
 
-// middleware - require a specific permission
+// middleware - require a specific permission.
+// Unauthenticated users are checked against the virtual 'visitor' role; if they
+// still lack the permission they are redirected to login (the old isAuthenticated
+// behavior, now folded in here). Authenticated users who lack it get a 403.
 export const authorize = (permission) => async (req, res, next) => {
   if (await userHasPermission(req.user, permission)) return next();
+  if (!req.isAuthenticated()) return res.redirect(`${BASE}login`);
   return res.status(403).json({ message: 'Forbidden' });
 };
 

@@ -54,9 +54,17 @@ const roles = {
     visitor: {
         description: 'Limited public access',
         permissions: [
+            // Unauthenticated users get this role virtually: read-only access to
+            // every page except Management (manage:* is intentionally excluded).
             'view:dashboard',
-            ...Object.keys(permissions.common),
+            'view:alerts',
+            'view:reports',
+            'view:logs',
+            'view:demo',
             "read:docs",
+            ...Object.keys(permissions.notifications), // view:notifications (header fetch)
+            ...Object.keys(permissions.realtime),      // view:sse (live feed)
+            ...Object.keys(permissions.common),
         ]
     }
 };

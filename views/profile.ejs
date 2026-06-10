@@ -30,8 +30,8 @@
     <div class="panel-section" style="max-width: 600px; margin-bottom: 2rem;">
       <h3>Welcome, <%= user ? user.username : 'User' %>!</h3>
       <div class="user-info-display">
-        <p><strong>Username:</strong> <%= user.username %></p>
-        <p><strong>Email:</strong> <%= user.email %></p>
+        <p><strong>Username:</strong> <%= user ? user.username : '' %></p>
+        <p><strong>Email:</strong> <%= user ? user.email : '' %></p>
       </div>
     </div>
 
