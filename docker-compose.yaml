@@ -14,8 +14,7 @@ services:
       - DEFAULT_APP_PASSWORD=${DEFAULT_APP_PASSWORD}
       - SESSION_SECRET=${SESSION_SECRET}
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-    networks:
-      - CST8414-Applied-Research-Project-net
+    networks: [ CST8414-Applied-Research-Project-net, web-main-net ]
     ports:
       - "2121:2121"
 
@@ -33,4 +32,6 @@ volumes:
 
 networks:
   CST8414-Applied-Research-Project-net:
+    external: true
+  web-main-net:
     external: true
