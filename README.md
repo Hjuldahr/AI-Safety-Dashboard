@@ -50,7 +50,7 @@ This command installs all dependencies listed in `package.json`.
 
 ## Step 4 - Creating the ENV file:
 - Create a file named `.env` in the projects root directory.
-- Send an email request to receive the contents of this env file (should not be posted to github for security purposes)
+- Check out the `.env.example` file for an example of how this file should look.
 
 ## Step 5 - Run the server
 - You should now be good to go.

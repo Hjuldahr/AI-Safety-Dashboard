@@ -15,7 +15,7 @@ services:
       - SESSION_SECRET=${SESSION_SECRET}
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
     networks:
-      - web-main-net
+      - CST8414-Applied-Research-Project-net
     ports:
       - "2121:2121"
 
@@ -26,11 +26,11 @@ services:
         - dashboard_mongo_data:/data/db
       expose:
         - "27017"
-      networks: [ web-main-net ]
+      networks: [ CST8414-Applied-Research-Project-net ]
 
 volumes:
   dashboard_mongo_data: {}
 
 networks:
-  web-main-net:
+  CST8414-Applied-Research-Project-net:
     external: true
