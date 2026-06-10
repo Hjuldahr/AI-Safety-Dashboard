@@ -38,8 +38,29 @@ describe('Roles', () => {
         expect(roles.viewer.permissions).not.toContain('create:alert');
     });
 
-    test('visitor role should have minimal permissions', () => {
-        expect(roles.visitor.permissions).toEqual(['view:dashboard', 'view:profile', 'edit:profile', 'read:docs']);
+    test('visitor role should grant read access to all pages except management', () => {
+        // The visitor role is applied virtually to unauthenticated users, so it
+        // should allow viewing every page but no management or write actions.
+        expect(roles.visitor.permissions).toEqual(expect.arrayContaining([
+            'view:dashboard',
+            'view:alerts',
+            'view:reports',
+            'view:logs',
+            'view:demo',
+            'read:docs',
+            'view:notifications',
+            'view:sse',
+        ]));
+
+        // No management permissions
+        expect(roles.visitor.permissions).not.toContain('manage:users');
+        expect(roles.visitor.permissions).not.toContain('manage:roles');
+
+        // No write/action permissions
+        expect(roles.visitor.permissions).not.toContain('create:graph');
+        expect(roles.visitor.permissions).not.toContain('create:alert');
+        expect(roles.visitor.permissions).not.toContain('create:report');
+        expect(roles.visitor.permissions).not.toContain('export:report');
     });
 
     test('all roles should have descriptions', () => {

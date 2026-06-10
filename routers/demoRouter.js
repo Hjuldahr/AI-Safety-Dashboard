@@ -5,12 +5,13 @@ import { authorize } from '../middleware/authorization.js';
 
 const router = express.Router();
 
-router.get('/components', isAuthenticated, authorize('view:demo'), controller.renderComponentLibrary);
+router.get('/components', authorize('view:demo'), controller.renderComponentLibrary);
 
+// apply/reset mutate live model state and use req.user — keep login required
 router.post('/apply', isAuthenticated, authorize('view:demo'), controller.applyScenario);
-router.post('/list', isAuthenticated, authorize('view:demo'), controller.listScenarios);
+router.post('/list', authorize('view:demo'), controller.listScenarios);
 router.post('/reset', isAuthenticated, authorize('view:demo'), controller.resetScenario);
 
-router.get('/', isAuthenticated, authorize('view:demo'), controller.viewDemoPage);
+router.get('/', authorize('view:demo'), controller.viewDemoPage);
 
 export default router;

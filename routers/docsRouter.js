@@ -3,7 +3,6 @@ import path from "path";
 import { fileURLToPath } from 'url';
 import swaggerUi from "swagger-ui-express";
 import YAML from 'yamljs';
-import { isAuthenticated } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/authorization.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,9 +12,9 @@ const router = express.Router();
 const swaggerDocument = YAML.load(path.join(__dirname, '../documentation/openapi.yml'));
 
 // Serve the Docsify Docs at /docs
-router.use("/docs/", isAuthenticated, authorize('read:docs'), express.static('documentation'));
+router.use("/docs/", authorize('read:docs'), express.static('documentation'));
 
 // Serve the Swagger API documentation at /api/docs
-router.use("/api/docs/", isAuthenticated, authorize('read:docs'), swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+router.use("/api/docs/", authorize('read:docs'), swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 export default router;
